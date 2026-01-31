@@ -42,18 +42,83 @@ curl -fsSL https://pixi.sh/install.sh | bash
 cd dhb_xr
 pixi install              # installs default env (dev tools, jupyter, casadi)
 
-# Install PyTorch with CUDA (for GPU features like CusADi, VLA tokenization)
-pixi run install-cuda     # installs torch with CUDA 12.4
-
 # Run tests
 pixi run test
 
 # Editable install
 pixi run build
 
-# Run notebooks
+# Run notebooks (CPU-only PyTorch)
 pixi run notebook
 ```
+
+### CUDA Environment (GPU acceleration)
+
+For GPU features (CusADi, VLA tokenization, faster PyTorch):
+
+```bash
+# Install the cuda environment (requires NVIDIA GPU with driver)
+pixi install -e cuda
+
+# Verify CUDA is available
+pixi run -e cuda check-cuda
+# Output: PyTorch 2.5.1, CUDA available: True, CUDA version: 12.4
+
+# Run notebooks with CUDA
+pixi run -e cuda notebook-cuda
+
+# Run tests with CUDA
+pixi run -e cuda test
+```
+
+**Performance (GPU position decode):**
+- 1000 trajectories: **6.8 ms** (146k traj/s)
+- Per-trajectory: **6.8 µs**
+
+<details>
+<summary><strong>Technical notes on pixi + PyTorch CUDA setup</strong></summary>
+
+Getting CUDA-enabled PyTorch to work with pixi required careful configuration. Here are the key insights:
+
+**Problem:** By default, pixi's dependency solver picks PyTorch from conda-forge, which is CPU-only (`pytorch-2.x.x-cpu_mkl_*`). Simply adding `pytorch-cuda` doesn't make it pick the CUDA build.
+
+**Solution:** The `cuda` feature in `pyproject.toml` uses these techniques:
+
+1. **Channel priority**: The cuda feature specifies `channels = ["pytorch", "nvidia", "conda-forge"]` with `channel-priority = "strict"` so PyTorch comes from the pytorch channel (which has CUDA builds), not conda-forge.
+
+2. **Explicit channel specification**: Dependencies use `{ version = ">=2.0", channel = "pytorch" }` to force the pytorch channel:
+   ```toml
+   [tool.pixi.feature.cuda]
+   channels = ["pytorch", "nvidia", "conda-forge"]
+   channel-priority = "strict"
+
+   [tool.pixi.feature.cuda.target.linux-64.dependencies]
+   pytorch = { version = ">=2.0", channel = "pytorch" }
+   pytorch-cuda = { version = ">=12.1", channel = "pytorch" }
+   ```
+
+3. **Platform-specific**: `pytorch-cuda` only exists for `linux-64`, so we use `target.linux-64.dependencies` to avoid solve failures on macOS.
+
+4. **Separate solve group**: The cuda environment uses `solve-group = "cuda"` to avoid conflicts with the default CPU environment.
+
+**Verification:**
+```bash
+# Check which pytorch package is installed
+pixi list -e cuda | grep pytorch
+# Should show: pytorch 2.x.x from pytorch channel (not conda-forge)
+# Should show: pytorch-cuda 12.x from pytorch channel
+
+# Verify CUDA is actually available
+pixi run -e cuda python -c "import torch; print(torch.version.cuda)"
+# Should print: 12.4 (not None)
+```
+
+**Common pitfalls:**
+- Using `pytorch-cuda = "12.4"` fails (ambiguous version); use `"12.4.*"` or `">=12.1"`
+- Not specifying channel priority causes conda-forge's CPU pytorch to be picked
+- Forgetting `target.linux-64` causes solve failures on non-Linux platforms
+
+</details>
 
 ## Quick start
 

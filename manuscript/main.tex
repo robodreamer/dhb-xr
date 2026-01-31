@@ -1,0 +1,521 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{bm}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{booktabs}
+\usepackage{xcolor}
+
+% Figure path
+\graphicspath{{../figures/}}
+
+% Placeholder command for conceptual diagrams
+\newcommand{\placeholder}[2]{%
+  \begin{center}
+  \fcolorbox{gray}{yellow!10}{%
+    \parbox{0.9\linewidth}{%
+      \textbf{[PLACEHOLDER: #1]}\\[0.5em]
+      \textit{#2}
+    }%
+  }
+  \end{center}
+}
+
+\title{Double-Reflection DHB Invariant Representation on $\mathrm{SE}(3)$}
+\author{Andy Park\\Principal Control Engineer, Humanoid\\\texttt{andy.park@thehumanoid.ai}}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This document describes the double-reflection (DHB-DR) invariant representation used to encode rigid-body motion trajectories on $\mathrm{SE}(3)$, and the current encoding/decoding pipeline with reconstruction under desired initial/target poses and optional constraints. It is grounded in the current implementation and experiment pipeline, but is written as a standalone conceptual description independent of any specific file or language.
+\end{abstract}
+
+\section{Introduction}
+Rigid-body motion trajectories are naturally represented as sequences of poses in the Lie group $\mathrm{SE}(3)$, but many downstream tasks (e.g., comparison, learning, retargeting, constrained adaptation, and large-scale data generation) benefit from a description that does not depend on an arbitrary choice of global reference frame.
+
+The original \emph{DHB} (bidirectional invariant) representation \cite{soloperto2015icra,lee2018autonomous} addresses this by replacing absolute poses with a sequence of \emph{local invariants} extracted from discrete motion differentials. Informally, DHB tracks the local direction of motion via a moving frame $F_i = [x_i\; y_i\; z_i]$ and encodes each step by (i) a magnitude along the local $x$-axis and (ii) a small set of relative angles describing how the frame evolves from $F_i$ to $F_{i+1}$. Because the invariants depend only on inner products of co-rotating quantities and relative frame rotations, they are invariant to global transformations of the trajectory.
+
+\paragraph{Limitations of the original DHB pipeline.}
+A key practical ingredient in DHB is the rule used to update the auxiliary frame axes (in particular $y_i$). In the original construction, $y_i$ is obtained from a normalized cross product of successive directions. While conceptually simple, this update can become ill-conditioned when successive directions are nearly collinear (small curvature) or when the motion differentials are noisy, leading to discontinuous axis flips and unnecessary twist. Additionally, parameterizing relative rotations with Euler angles can introduce gimbal singularities, and finite-difference encodings can introduce boundary length mismatches when frame updates require multiple consecutive differentials.
+
+% ============================================================================
+% FIGURE 1: Frame Evolution Comparison
+% ============================================================================
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{fig1_frame_evolution.png}
+\caption{\textbf{Frame evolution comparison: Original DHB vs.\ DHB-DR.}
+\textit{Top-left:} A low-curvature trajectory where cross-product-based frame updates are ill-conditioned.
+\textit{Bottom-left:} Original DHB shows spurious angle jumps (highlighted regions) in the frame rotation invariants due to cross-product instability.
+\textit{Bottom-right:} DHB-DR using rotation-minimizing frame (RMF) transport via double reflection produces smooth, continuous invariants.
+The improved continuity directly translates to better reconstruction quality and more stable optimization.}
+\label{fig:frame_evolution}
+\end{figure}
+
+\paragraph{Contributions and extensions in this manuscript.}
+Building on DHB, this write-up describes a set of incremental improvements that make the invariant representation more robust and more compatible with modern learning and optimization pipelines:
+\begin{itemize}
+  \item \textbf{DHB-DR: rotation-minimizing frame transport via double reflection.} We replace cross-product-based frame updates with a rotation-minimizing frame (RMF) transport implemented via two Householder reflections (``double reflection''), improving continuity in near-collinear segments and reducing accumulated twist \cite{wang2008rmf}. See Figure~\ref{fig:frame_evolution}.
+
+  \item \textbf{DHB-QR: quaternion relative rotations.} We describe a quaternion-based variant that replaces Euler angles with unit quaternions for relative frame rotations, removing Euler singularities while preserving global-frame invariance and enabling smooth quaternion-geodesic losses. See Figure~\ref{fig:euler_vs_quat}.
+
+  \item \textbf{Length preservation via boundary extrapolation.} We formalize a padding strategy based on extrapolated boundary poses (linear in translation, Lie-algebra-consistent in rotation) to align invariant length with the $N-1$ pose-to-pose steps, enabling exact-length reconstruction. See Figure~\ref{fig:length_preservation}.
+
+  \item \textbf{DHB-TI: time invariance via geometric reparameterization.} We describe a time-invariant extension that reparameterizes $\mathrm{SE}(3)$ trajectories by a geometric progress variable (e.g., translational arc-length, angular arc-length, or a hybrid) before encoding, making invariants more robust to variable execution speed and sampling rates. See Figure~\ref{fig:time_invariance}.
+
+  \item \textbf{GPU-parallel and batched optimization.} We extend the adaptation problem to a batched formulation compatible with GPU-parallel evaluation of reconstruction, constraints, and gradients, supporting long horizons and large-scale synthesis \cite{neunert2018gpu,adahjania2022multirobot,suh2023curobo,du2025gato,shi2025top}. See Figure~\ref{fig:gpu_performance}.
+
+  \item \textbf{World-model-guided synthesis priors.} We describe how a learned world model $\mathcal{W}$ can be incorporated as a soft prior in invariant-space optimization to promote physically plausible synthetic trajectories for Vision-Language-Action (VLA) training \cite{wu2025ctrlworld,gigaworld2025,gigabrain2025,he2025beyondhuman}.
+
+  \item \textbf{DHB-Token: invariant action tokenization.} Finally, we propose using DHB invariant sequences as a tokenization signal (via causal VQ-VAE / RVQ) for streaming and autoregressive VLAs, offering greater $\mathrm{SE}(3)$ invariance than standard pose-delta tokenizers and a complementary path to frequency-space tokenizers such as FAST \cite{fast2025,vqvla2025}. See Figure~\ref{fig:compression_ratios}.
+\end{itemize}
+
+% ============================================================================
+% FIGURE 2: Contribution Overview (PLACEHOLDER)
+% ============================================================================
+\placeholder{Figure 2: Contribution Overview Diagram}{
+Create a flowchart/pipeline diagram showing:\\
+INPUT: SE(3) Trajectory $\to$ PREPROCESSING $\to$ DHB-DR ENCODING $\to$ Extensions (DHB-QR, DHB-TI, length preservation) $\to$ Applications (GPU optimization, adaptation, tokenization) $\to$ OUTPUT\\[0.5em]
+Style: Clean boxes with rounded corners, color-coded by module type. Icons: Reflection symbol for DHB-DR, clock for DHB-TI, GPU chip for optimization.
+}
+
+Beyond reconstruction and retargeting, such invariants can be used to define task-relevant similarity measures for learning. In particular, \emph{Legato} \cite{seo2025legato} leveraged an earlier DHB-style representation to define an invariant loss for imitation learning that improved transfer and generalization across different embodiments (cross-embodiment). The extensions above aim to further improve the smoothness, robustness, and scalability of that invariant signal, especially in long-horizon and data-generation settings.
+
+The remainder of this document formalizes the resulting encoding and decoding pipeline, and discusses how the invariant representation supports constrained trajectory adaptation, learning losses, and tokenization.
+
+\section{Overview and motivation}
+Given a discrete $\mathrm{SE}(3)$ trajectory
+\begin{equation}
+  g_i =
+  \begin{bmatrix}
+    R_i & p_i \\
+    0 & 1
+  \end{bmatrix},
+  \qquad i = 0,\dots,N-1,
+\end{equation}
+we seek a representation that is \emph{invariant} to the global frame and that captures motion in a compact sequence of local invariants. The DHB formulation represents a trajectory by the magnitudes and relative frame rotations between successive motion directions. The \emph{double-reflection} variant uses a rotation-minimizing frame (RMF) update, which is robust to local curvature changes and reduces frame twisting.
+
+This write-up focuses on the double-reflection pipeline (DHB-DR), while keeping the original DHB as a reference special case.
+
+\paragraph{Why ``double reflection''?}
+A common source of instability in frame-based trajectory encodings is the update of the auxiliary axes (e.g., $y_i,z_i$) when successive directions become nearly collinear or when curvature is small. In such regimes, constructions based on cross products (as in the original DHB $y$-axis update) can become ill-conditioned, producing large orientation swings, occasional sign flips, or accumulated ``twist''.
+
+The DHB-DR variant replaces the cross-product-driven update with a \emph{rotation-minimizing frame} (RMF) update computed via two Householder reflections (hence ``double reflection''). RMFs are designed to transport a frame along a curve while minimizing the instantaneous rotation about the tangent direction, yielding smoother frame evolution and improved continuity. The double-reflection construction provides an efficient, numerically robust way to compute such RMF updates and is well-studied in geometric computing; see Wang et al.~\cite{wang2008rmf}.
+
+% ============================================================================
+% FIGURE 3: Double Householder Reflection Geometry (PLACEHOLDER)
+% ============================================================================
+\placeholder{Figure 3: Double Householder Reflection Geometry}{
+Create a 3D geometric diagram illustrating RMF via double Householder reflection:\\
+1. Two consecutive tangent directions $x_i$ and $x_{i+1}$ (arrows)\\
+2. First reflection plane (perpendicular to $v_1 = \Delta d_{i+1} - \Delta d_i$)\\
+3. Intermediate reflected axis $x_{\text{ref}} = R_1 x_i$\\
+4. Second reflection plane (perpendicular to $v_2 = x_{i+1} - x_{\text{ref}}$)\\
+5. Final transported $y$-axis: $y_{i+1} = R_2 R_1 y_i$\\[0.5em]
+Inset: Compare with cross-product method showing potential flip.\\
+Reference: Wang et al.\ ``Computation of rotation minimizing frames'' (TOG 2008)
+}
+
+In the present setting, using an RMF-style update improves the continuity of the local frames (and therefore of the encoded invariants) and is typically more robust near degeneracies where direction changes are small or noisy.
+
+% ============================================================================
+% FIGURE 4: Invariant Signal Smoothness
+% ============================================================================
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{fig4_invariant_smoothness.png}
+\caption{\textbf{Invariant signal smoothness for a reaching motion.}
+\textit{Top-left:} 3D trajectory (original and reconstructed overlay).
+\textit{Top-right:} Linear motion magnitude $m_i$ over time.
+\textit{Bottom-left:} Frame rotation invariants $(\varphi_x, \varphi_y, \varphi_z)$ showing smooth evolution under DHB-DR.
+\textit{Bottom-right:} Reconstruction error (sub-millimeter) demonstrating high-fidelity encode-decode roundtrip.}
+\label{fig:invariant_smoothness}
+\end{figure}
+
+\section{Notation and preprocessing}
+For a sampled $\mathrm{SE}(3)$ trajectory, we compute:
+\begin{itemize}
+  \item \textbf{Pose sequence}: $g_i \in \mathrm{SE}(3)$, with rotation $R_i \in \mathrm{SO}(3)$ and position $p_i \in \mathbb{R}^3$.
+
+  \item \textbf{Position differences}
+  \begin{equation}
+    \Delta p_i = p_{i+1} - p_i.
+  \end{equation}
+
+  \item \textbf{Relative rotation differences} using the relative rotation
+  \begin{equation}
+    R_{\mathrm{rel},i} = R_{i+1} R_i^\top,
+  \end{equation}
+  and its rotation-vector (axis--angle) representation
+  \begin{equation}
+    \Delta r_i = \mathrm{axis\_angle}(R_{\mathrm{rel},i}) \in \mathbb{R}^3.
+  \end{equation}
+\end{itemize}
+
+These are the canonical discrete motion differentials used by the DHB-DR encoder. For compactness, define the linear and angular differential sequences $\Delta d_i^p = \Delta p_i$ and $\Delta d_i^r = \Delta r_i$.
+
+\section{Time-invariant reparameterization (DHB-TI)}
+As a differential-based discrete representation, DHB-style invariants depend on how densely a trajectory is sampled in time: if the same motion is executed faster (or recorded at a lower frame rate), the step sizes $\lVert \Delta p_i\rVert$ and $\lVert \Delta r_i\rVert$ grow, and the resulting per-step magnitudes $m_i$ change accordingly. This can make direct comparisons brittle in datasets with variable timing (e.g., teleoperation vs. optimized rollouts).
+
+To reduce sensitivity to execution speed and sampling rate, we define a time-invariant extension (\emph{DHB-TI}) that reparameterizes a trajectory by a \emph{geometric} progress variable before encoding. The goal is to obtain a new sequence $\{g'_k\}_{k=0}^{M-1}$ sampled at approximately constant progress per step, and then apply DHB-DR or DHB-QR to $\{g'_k\}$.
+
+% ============================================================================
+% FIGURE 7: Time-Invariance
+% ============================================================================
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{fig7_time_invariance.png}
+\caption{\textbf{DHB-TI: Time-invariant encoding via geometric reparameterization.}
+\textit{Top-left:} The same helical motion executed at three different speeds (slow: 100 pts, normal: 50 pts, fast: 25 pts).
+\textit{Top-right:} Raw DHB-DR magnitudes differ significantly due to different sampling rates.
+\textit{Bottom-left:} After DHB-TI reparameterization by arc-length, invariant magnitudes are aligned regardless of execution speed.
+\textit{Bottom-right:} The L2 distance between slow and fast encodings is reduced by $>90\%$ with DHB-TI, enabling robust motion matching.}
+\label{fig:time_invariance}
+\end{figure}
+
+\subsection{Progress variables}
+A simple choice is translational arc-length:
+\begin{equation}
+  s_0 = 0, \qquad s_{i+1} = s_i + \lVert \Delta p_i\rVert.
+\end{equation}
+For rotation-dominant motions (small translation), an angular progress variable can be used:
+\begin{equation}
+  \theta_0 = 0, \qquad \theta_{i+1} = \theta_i + \lVert \Delta r_i\rVert.
+\end{equation}
+More generally, one can define a hybrid progress variable
+\begin{equation}
+  \sigma_0 = 0, \qquad \sigma_{i+1} = \sigma_i + \alpha\,\lVert \Delta p_i\rVert + (1-\alpha)\,\lVert \Delta r_i\rVert,
+\end{equation}
+where $\alpha\in[0,1]$ can be chosen per-trajectory (or adaptively) based on whether translation or rotation dominates.
+
+\subsection{Normalization and interpolation}
+Let $\Sigma$ denote the total progress (e.g., $\Sigma = s_{N-1}$, $\theta_{N-1}$, or $\sigma_{N-1}$). We choose a fixed number of samples $M$ and uniform progress knots
+\begin{equation}
+  \sigma_k = k\,\frac{\Sigma}{M-1}, \qquad k=0,\dots,M-1.
+\end{equation}
+We then interpolate poses at $\sigma_k$ to form $g'_k$. Positions can be interpolated with splines, while orientations are interpolated on $\mathrm{SO}(3)$ (e.g., via quaternion SLERP); DHB-QR is particularly convenient here since it provides a singularity-free interpolation representation.
+
+After reparameterization, DHB-DR/DHB-QR is applied to $\{g'_k\}$, yielding invariants that are (approximately) independent of execution speed and sampling rate.
+
+\section{Local frames and the DHB idea}
+For each sample, we maintain \emph{linear} and \emph{angular} frames with axes $x_i,y_i,z_i$ that follow the local direction of motion.
+
+\subsection{Frame $x$-axis}
+The $x$-axis is aligned with the local motion direction:
+\begin{align}
+  x_i &= \frac{\Delta p_i}{\lVert \Delta p_i\rVert} \quad \text{(linear)}, \\
+  x_i &= \frac{\Delta r_i}{\lVert \Delta r_i\rVert} \quad \text{(angular)}.
+\end{align}
+When the norm is too small, a default axis is used to avoid degeneracy.
+
+Define the frame matrix $F_i = [x_i\; y_i\; z_i] \in \mathrm{SO}(3)$ for either the linear or angular component.
+
+\subsection{Frame $y$-axis (original DHB)}
+The original DHB method sets
+\begin{equation}
+  y_i = \frac{x_i \times x_{i+1}}{\lVert x_i \times x_{i+1}\rVert},
+\end{equation}
+with a sign correction to prevent frame flips.
+
+\subsection{Frame $y$-axis (double reflection / RMF)}
+The double-reflection update computes an RMF using two Householder reflections:
+\begin{align}
+  v_1 &= \Delta d_{i+1} - \Delta d_i, \\
+  R_1 &= I - 2 u_1 u_1^\top, \qquad u_1 = \frac{v_1}{\lVert v_1\rVert}, \\
+  x_{\mathrm{ref}} &= R_1 x_i, \\
+  v_2 &= x_{i+1} - x_{\mathrm{ref}}, \\
+  R_2 &= I - 2 u_2 u_2^\top, \qquad u_2 = \frac{v_2}{\lVert v_2\rVert}, \\
+  R &= R_2 R_1, \\
+  y_{i+1} &= R y_i.
+\end{align}
+The relative rotation between consecutive frames is
+\begin{equation}
+  R_{\mathrm{rel}} = F_i^\top F_{i+1}, \qquad F_i = [x_i\; y_i\; z_i].
+\end{equation}
+
+\section{Invariant encoding}
+The DHB representation stores local invariants for both linear and angular motion:
+\begin{equation}
+  I_i = \bigl[I_i^{\mathrm{lin}},\; I_i^{\mathrm{ang}}\bigr].
+\end{equation}
+
+\subsection{Double-reflection invariants (4 values per part)}
+For DHB-DR, we keep
+\begin{align}
+  m &= x_i \cdot u, \\
+  \bm{\varphi} &= \mathrm{EulerXYZ}(R_{\mathrm{rel}}),
+\end{align}
+so each component has $[m,\varphi_x,\varphi_y,\varphi_z]$. The encoding assumes a fixed Euler order (XYZ).
+
+\subsection{Quaternion relative-rotation invariants (DHB-QR, 5 values per part)}
+To avoid Euler-angle singularities (gimbal lock) while preserving the same global-frame invariance property, we can replace $\bm{\varphi}$ with a unit quaternion $q \in \mathbb{H}_1$ representing the same relative frame rotation $R_{\mathrm{rel}}$:
+\begin{align}
+  m &= x_i \cdot u, \\
+  q &= \mathrm{Quat}(R_{\mathrm{rel}}) = \begin{bmatrix} q_w & q_x & q_y & q_z \end{bmatrix}^\top, \qquad \lVert q\rVert = 1.
+\end{align}
+
+% ============================================================================
+% FIGURE 6: Euler vs Quaternion
+% ============================================================================
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{fig6_euler_vs_quaternion.png}
+\caption{\textbf{DHB-QR vs.\ Euler angle continuity near gimbal lock.}
+\textit{Top-left:} DHB-DR Euler angle invariants show increased sensitivity near the gimbal region ($\pm 90°$ pitch).
+\textit{Top-right:} DHB-QR quaternion invariants remain smooth throughout, including near-gimbal regions.
+\textit{Bottom-left:} The trajectory pitch angle passes through $\sim 80°$, approaching gimbal lock.
+\textit{Bottom-right:} Rate of change comparison shows DHB-QR (purple) is significantly smoother than Euler (blue) near gimbal regions.}
+\label{fig:euler_vs_quat}
+\end{figure}
+
+\subsection{Length preservation via boundary extrapolation (padding)}
+A practical issue in frame-based invariant encodings is a length mismatch: for an input trajectory of $N$ poses $\{g_i\}_{i=0}^{N-1}$, the RMF-style frame update requires multiple consecutive differentials, and the resulting invariant sequence is typically shorter than the $N-1$ pose-to-pose steps.
+
+A simple way to preserve length without changing the core DHB-DR/DHB-QR definitions is to \emph{pad} the original trajectory with extrapolated boundary poses, compute invariants on the extended sequence, and then keep the central part of the invariant sequence.
+
+% ============================================================================
+% FIGURE 5: Length Preservation
+% ============================================================================
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{fig5_length_preservation.png}
+\caption{\textbf{Length preservation via boundary extrapolation.}
+\textit{Left:} 3D visualization showing original trajectory (blue) with extrapolated boundary poses (orange: prepended, red: appended) using first-order velocity continuation.
+\textit{Right:} Bar chart comparing sequence lengths: without padding, the invariant sequence is $N-3$; with padding, it matches the target $N-1$ pose differentials.}
+\label{fig:length_preservation}
+\end{figure}
+
+\section{Decoding / reconstruction}
+Given the invariants and an initial linear and angular frame, the trajectory is reconstructed by propagating the frames and integrating the local updates. For each step:
+\begin{enumerate}
+  \item Construct a rotation matrix from the invariant angles.
+  \item Translate along the frame $x$-axis by the invariant magnitude.
+  \item Update the linear frame.
+  \item Update the angular frame by applying the rotation update.
+  \item Extract the current position and orientation.
+\end{enumerate}
+
+This reconstruction is the inverse mapping of the invariant encoding and is used both for direct decoding and as the system dynamics inside optimization.
+
+\section{Pipeline: encoding $\to$ adaptation $\to$ decoding}
+The current pipeline for adaptation and reconstruction with constraints is:
+\begin{enumerate}
+  \item \textbf{Encode} an input demonstration into invariants: compute linear and angular DHB-DR sequences from $\mathrm{SE}(3)$ samples.
+
+  \item \textbf{Optional trajectory adaptation} under constraints: solve for an adjusted invariant sequence that remains close to the demonstration while meeting boundary and task constraints.
+
+  \item \textbf{Decode} the invariants into a new $\mathrm{SE}(3)$ trajectory: reconstruct a pose sequence by propagating the linear and angular frames.
+\end{enumerate}
+
+% ============================================================================
+% FIGURE 9: Trajectory Adaptation
+% ============================================================================
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{fig9_trajectory_adaptation.png}
+\caption{\textbf{Constrained trajectory adaptation.}
+\textit{Left:} 3D comparison of demonstration trajectory (blue) and adapted trajectory (red dashed) satisfying new start/goal boundary conditions (green/red stars).
+\textit{Right:} Invariant magnitude comparison showing that the motion ``style'' (invariants) is largely preserved while the trajectory is retargeted to new boundary poses. Solved via CasADi NLP.}
+\label{fig:trajectory_adaptation}
+\end{figure}
+
+\subsection{GPU-parallel batched optimization}
+For long horizons (e.g., $N\gg 10^2$) or when generating many trajectories (e.g., synthetic data for learning), the above problem can be written in a batched form and implemented with GPU-parallel forward and backward passes (e.g., using CUDA kernels or tensor libraries with autodiff), similar in spirit to recent GPU-accelerated trajectory optimization systems \cite{neunert2018gpu,adahjania2022multirobot,suh2023curobo,du2025gato,shi2025top}.
+
+% ============================================================================
+% FIGURE 8: GPU Performance
+% ============================================================================
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{fig8_gpu_performance.png}
+\caption{\textbf{GPU-parallel batch performance.}
+\textit{Left:} DHB decode time vs.\ batch size comparing sequential CPU execution and GPU-parallel CusADi.
+\textit{Middle:} Speedup factor reaches $>400\times$ at batch size 2000.
+\textit{Right:} Solver comparison for single-trajectory optimization: Fatrop (7ms) provides 6$\times$ speedup over IPOPT (45ms), while CusADi enables batch parallelism (0.002ms/traj at batch 1000).}
+\label{fig:gpu_performance}
+\end{figure}
+
+\section{Invariant action tokenization for VLAs (DHB-Token)}
+Many Vision-Language-Action (VLA) pipelines discretize actions using pose deltas, relative poses, or learned latent codes. A limitation of pose-delta tokenization is sensitivity to the choice of global reference frame and to embodiment-specific coordinate conventions. Since DHB-style invariants are (by construction) invariant to global $\mathrm{SE}(3)$ transforms, they provide a natural candidate ``action signal'' for tokenization.
+
+% ============================================================================
+% FIGURE 10: Tokenization Pipeline (PLACEHOLDER)
+% ============================================================================
+\placeholder{Figure 10: Tokenization Pipeline Diagram}{
+Create a block diagram showing the DHB-Token pipeline:\\
+SE(3) Poses $\to$ [DHB-DR/QR Encoder] $\to$ Invariant Sequence $(N \times 8)$ $\to$ [Causal Conv1D Encoder] $\to$ Latent Embeddings $\to$ [Vector Quantization (RVQ)] $\to$ Discrete Tokens\\[0.5em]
+Branches: (1) [BPE/Entropy Compression] $\to$ Compressed Storage; (2) [VLA Policy] $\to$ Autoregressive Generation $\to$ [Causal Decoder] $\to$ [DHB Decoder] $\to$ SE(3) Trajectory\\[0.5em]
+Style: Clean blocks with arrows, color-coded sections. Insets: Example token sequence [42, 17, 128, 42, ...].
+}
+
+\subsection{Compression on top of DHB-Token sequences}
+Once invariants have been quantized into discrete tokens (e.g., RVQ indices), the resulting token streams often exhibit additional structure that can be exploited for further compression: repeated ``hold'' behavior in low-motion segments, smooth token transitions induced by RMF continuity, and statistical biases across large datasets.
+
+% ============================================================================
+% FIGURE 11: Compression Ratios
+% ============================================================================
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{fig11_compression_ratios.png}
+\caption{\textbf{Compression ratio comparison for DHB-Token sequences.}
+\textit{Left:} Stage-wise compression showing representation size at each pipeline stage: raw poses $\to$ DHB invariants $\to$ VQ tokens $\to$ BPE compressed $\to$ entropy coded.
+\textit{Right:} Compression method performance: BPE achieves $\sim 10\times$ reduction, entropy coding provides additional bit-level compression, and the full pipeline achieves $>20\times$ overall compression while remaining lossless (exact token recovery).}
+\label{fig:compression_ratios}
+\end{figure}
+
+\section{Motion database management and retrieval with DHB invariants}
+Large-scale robot learning typically aggregates demonstrations from diverse sources (teleoperation, retargeting, simulation, and world-model synthesis). Since these sources often use different global reference frames (and sometimes different embodiments), pose-space indexing can be brittle. DHB-style invariants provide a compact, $\mathrm{SE}(3)$-invariant ``signature'' for each trajectory, enabling frame-independent similarity checks and retrieval across heterogeneous datasets.
+
+% ============================================================================
+% FIGURE 12: Motion Retrieval
+% ============================================================================
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{fig12_motion_retrieval.png}
+\caption{\textbf{Motion retrieval with DHB-TI invariants.}
+\textit{Left:} Distance matrix for 15 motions (5 types $\times$ 3 speed variants), sorted by motion type. Block-diagonal structure demonstrates that DHB-TI invariants cluster by motion \emph{type} (circle, helix, line, arc, figure-8) regardless of execution speed (slow/normal/fast) or starting position.
+\textit{Right:} Intra-class distance (same motion, different speed) is significantly smaller than inter-class distance (different motions), yielding robust retrieval with separation ratio $>3\times$.}
+\label{fig:motion_retrieval}
+\end{figure}
+
+\subsection{Similarity measures on invariant sequences}
+Depending on the dataset characteristics, several distances are useful:
+\begin{itemize}
+  \item \textbf{Aligned $\ell_2$ (fast).} For fixed-horizon or resampled trajectories,
+  \begin{equation}
+    d_{\ell_2}(U,V) = \sum_i \lVert W (u_i - v_i)\rVert^2.
+  \end{equation}
+
+  \item \textbf{DTW / soft-DTW (rate-robust).} For teleoperation and other data with timing variation, dynamic time warping aligns two sequences via a minimum-cost path; soft-DTW provides a differentiable relaxation useful for learning embeddings. When trajectories are reparameterized with DHB-TI, much of the timing variation is normalized out, often allowing faster aligned distances (e.g., fixed-horizon $\ell_2$) to work well.
+
+  \item \textbf{Rotation-aware terms.} For DHB-QR invariants, quaternion channels should be compared via the quaternion geodesic rather than Euclidean distance.
+\end{itemize}
+
+\section{Potential applications}
+The proposed invariant representation can be used beyond reconstruction, and supports several downstream robotics pipelines:
+\begin{itemize}
+  \item \textbf{Motion planning with human-input guidance.} Encode demonstrations as invariant ``skill signatures'' and generate diverse feasible motions under changing boundary conditions.
+
+  \item \textbf{Data augmentation for imitation learning.} Use the decoder as a generative model to synthesize additional $\mathrm{SE}(3)$ trajectories by sampling or perturbing invariant sequences.
+
+  \item \textbf{Automatic skill extraction and categorization.} Cluster invariant sequences to discover repeated motion primitives.
+
+  \item \textbf{Visuomotor skill learning and cross-embodiment generalization.} Use invariant-space losses so that policies learn frame-invariant ``motion intent,'' improving robustness across diverse environments and embodiment changes.
+\end{itemize}
+
+% ============================================================================
+% SUMMARY TABLE
+% ============================================================================
+\begin{table}[htbp]
+\centering
+\caption{Summary of DHB-XR extensions and their benefits.}
+\label{tab:summary}
+\begin{tabular}{llll}
+\toprule
+\textbf{Extension} & \textbf{Problem Solved} & \textbf{Benefit} & \textbf{Figure} \\
+\midrule
+DHB-DR & Cross-product instability & Smooth RMF transport & \ref{fig:frame_evolution} \\
+DHB-QR & Euler gimbal singularities & Singularity-free quaternions & \ref{fig:euler_vs_quat} \\
+Length preservation & Boundary length mismatch & Exact $N-1$ invariants & \ref{fig:length_preservation} \\
+DHB-TI & Speed/sampling sensitivity & Time-invariant encoding & \ref{fig:time_invariance} \\
+GPU-parallel & Slow sequential optimization & $400\times$ batch speedup & \ref{fig:gpu_performance} \\
+DHB-Token & Frame-dependent tokenization & $\mathrm{SE}(3)$-invariant tokens & \ref{fig:compression_ratios} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{References}
+The method is based on the bidirectional invariant representation introduced in \cite{soloperto2015icra,lee2018autonomous}, with the double-reflection/RMF motivation drawing on geometric frame constructions such as \cite{wang2008rmf}. We also note the use of DHB-style invariants as an imitation-learning loss in \cite{seo2025legato}, and time-invariant trajectory reparameterization ideas related to DHB-TI \cite{vakanski2023invariant,turaga2009grassmann}.
+
+\begin{thebibliography}{31}
+\bibitem{lee2018autonomous}
+D.~Lee, R.~Soloperto, and M.~Saveriano.
+\newblock Bidirectional invariant representation of rigid body motions and its application to gesture recognition and reproduction.
+\newblock \emph{Autonomous Robots}, 2018.
+
+\bibitem{soloperto2015icra}
+R.~Soloperto, M.~Saveriano, and D.~Lee.
+\newblock A bidirectional invariant representation of motion for gesture recognition and reproduction.
+\newblock In \emph{Proc. IEEE International Conference on Robotics and Automation (ICRA)}, 2015.
+
+\bibitem{seo2025legato}
+M.~Seo, H.~A. Park, S.~Yuan, Y.~Zhu, and L.~Sentis.
+\newblock Legato: Cross-embodiment imitation using a grasping tool.
+\newblock \emph{IEEE Robotics and Automation Letters}, 2025.
+
+\bibitem{wang2008rmf}
+W.~Wang, B.~J\"uttler, D.~Zheng, and Y.~Liu.
+\newblock Computation of rotation minimizing frames.
+\newblock \emph{ACM Transactions on Graphics (TOG)}, 27(1):1--18, 2008.
+
+\bibitem{neunert2018gpu}
+M.~Neunert et~al.
+\newblock GPU acceleration for real-time, whole-body, nonlinear model predictive control.
+\newblock 2018.
+
+\bibitem{adahjania2022multirobot}
+V.~Adajania et~al.
+\newblock Fast joint multi-robot trajectory optimization by GPU accelerated batch solution of distributed sub-problems.
+\newblock \emph{Frontiers in Robotics and AI}, 2022.
+
+\bibitem{suh2023curobo}
+H.~Suh et~al.
+\newblock cuRobo: Parallelized collision-free minimum-jerk robot motion generation.
+\newblock Technical report, 2023.
+
+\bibitem{du2025gato}
+A.~Du et~al.
+\newblock GATO: GPU-accelerated and batched trajectory optimization for scalable edge model predictive control.
+\newblock \emph{arXiv preprint}, 2025.
+
+\bibitem{shi2025top}
+G.~Shi et~al.
+\newblock TOP: Trajectory optimization via parallel optimization towards constant time complexity.
+\newblock \emph{arXiv preprint}, 2025.
+
+\bibitem{wu2025ctrlworld}
+J.~Wu et~al.
+\newblock Ctrl-World: A controllable generative world model for robot manipulation.
+\newblock \emph{arXiv preprint}, 2025.
+
+\bibitem{gigaworld2025}
+GigaWorld Team.
+\newblock GigaWorld-0: World models as data engine to empower embodied AI.
+\newblock \emph{arXiv preprint}, 2025.
+
+\bibitem{gigabrain2025}
+GigaBrain Team.
+\newblock GigaBrain-0: A world model-powered vision-language-action model.
+\newblock \emph{arXiv preprint}, 2025.
+
+\bibitem{he2025beyondhuman}
+J.~He et~al.
+\newblock Beyond human demonstrations: Diffusion-based reinforcement learning to generate data for VLA training.
+\newblock \emph{arXiv preprint}, 2025.
+
+\bibitem{fast2025}
+FAST.
+\newblock Efficient action tokenization for vision-language-action models.
+\newblock \emph{arXiv preprint arXiv:2501.09747}, 2025.
+
+\bibitem{vqvla2025}
+VQ-VLA.
+\newblock Improving vision-language-action models via scaling vector-quantized action tokenizers.
+\newblock \emph{arXiv preprint arXiv:2507.01016}, 2025.
+
+\bibitem{vakanski2023invariant}
+A.~Vakanski et~al.
+\newblock Invariant descriptors of motion and force trajectories for learning from demonstration.
+\newblock \emph{arXiv preprint arXiv:2306.10926}, 2023.
+
+\bibitem{turaga2009grassmann}
+P.~Turaga et~al.
+\newblock Locally time-invariant models of human activities using trajectories on the Grassmannian.
+\newblock In \emph{Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)}, 2009.
+\end{thebibliography}
+
+\end{document}

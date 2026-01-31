@@ -79,7 +79,7 @@ warn_unused_configs = true
 ignore_missing_imports = true
 
 [tool.pixi.project]
-channels = ["conda-forge", "pytorch"]
+channels = ["conda-forge", "pytorch", "nvidia"]
 platforms = ["linux-64", "osx-arm64", "osx-64"]
 
 [tool.pixi.dependencies]
@@ -106,8 +106,18 @@ casadi = ">=3.5"
 pip = ">=23.0"
 
 [tool.pixi.feature.gpu.dependencies]
-# PyTorch (CPU from conda). For CUDA, use: pixi run -e gpu pip install torch --index-url https://download.pytorch.org/whl/cu121
+# PyTorch CPU for basic GPU feature (use cuda feature for actual GPU)
 pytorch = ">=2.0"
+
+[tool.pixi.feature.cuda]
+# CUDA feature needs pytorch channel first to get CUDA build
+channels = ["pytorch", "nvidia", "conda-forge"]
+channel-priority = "strict"
+
+[tool.pixi.feature.cuda.target.linux-64.dependencies]
+# CUDA-enabled PyTorch from pytorch channel (linux only)
+pytorch = { version = ">=2.0", channel = "pytorch" }
+pytorch-cuda = { version = ">=12.1", channel = "pytorch" }
 
 [tool.pixi.feature.optimization.dependencies]
 casadi = ">=3.5"
@@ -115,6 +125,7 @@ casadi = ">=3.5"
 [tool.pixi.environments]
 default = { features = ["dev"], solve-group = "default" }
 gpu = { features = ["dev", "gpu"], solve-group = "gpu" }
+cuda = { features = ["dev", "cuda", "optimization"], solve-group = "cuda" }
 full = { features = ["dev", "gpu", "optimization"], solve-group = "full" }
 
 [tool.pixi.tasks]
@@ -131,5 +142,7 @@ docs = "sphinx-build docs docs/_build -b html"
 build-docs = "sphinx-build docs docs/_build -b html"
 build-cpp = "cmake -B build -S . -DCMAKE_BUILD_TYPE=Release && cmake --build build && (cp build/src/dhb_xr/_cpp/_dhb_xr_cpp*.so src/dhb_xr/ 2>/dev/null || true)"
 notebook = "pip install -e . && jupyter notebook notebooks/"
+notebook-cuda = "pip install -e . && pip install -e /home/andypark/Projects/repos/cusadi && jupyter notebook notebooks/"
+download-xdof = "python scripts/download_xdof_samples.py"
 install-rockit = "python3 -m pip install rockit-meco"
-install-cuda = "python3 -m pip install torch --index-url https://download.pytorch.org/whl/cu124"
+check-cuda = "python -c \"import torch; print(f'PyTorch {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}'); print(f'CUDA version: {torch.version.cuda}' if torch.cuda.is_available() else 'No CUDA')\""
