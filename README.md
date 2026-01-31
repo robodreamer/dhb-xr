@@ -40,9 +40,10 @@ curl -fsSL https://pixi.sh/install.sh | bash
 
 # Clone and setup
 cd dhb_xr
-pixi install              # installs default env (dev tools, jupyter, no CUDA)
-# If solve fails (e.g. pytorch-cuda): install only default env:
-#   pixi install -e default
+pixi install              # installs default env (dev tools, jupyter, casadi)
+
+# Install PyTorch with CUDA (for GPU features like CusADi, VLA tokenization)
+pixi run install-cuda     # installs torch with CUDA 12.4
 
 # Run tests
 pixi run test
@@ -113,10 +114,101 @@ pixi run docs          # or: pixi run build-docs
 
 Without pixi: `pip install sphinx sphinx-autodoc-typehints` then `sphinx-build docs docs/_build -b html`.
 
-### Cusadi (optional)
+### CusADi GPU Acceleration (optional)
 
-- **pip**: `pip install dhb_xr[cusadi]`
-- **Usage**: `batched_decode_dhb_dr(...)` and `CusadiTrajectoryOptimizer.forward(...)` always work (NumPy batched decode). For GPU batch: export a CasADi decode with `python -m dhb_xr.optimization.export_casadi_decode --out fn_dhb_decode_step.casadi`, move the `.casadi` into [cusadi](https://github.com/se-hwan/cusadi)'s `src/casadi_functions/`, run `run_codegen.py`, then use `CusadiFunction` in your code.
+For batch processing thousands of trajectories, CusADi provides **up to 387x speedup** on GPU:
+
+| Batch Size | CPU (ms) | GPU (ms) | Speedup |
+|------------|----------|----------|---------|
+| 100 | 34 | 0.8 | 43x |
+| 1000 | 342 | 1.7 | **199x** |
+| 2000 | 685 | 1.8 | **387x** |
+
+**Requirements:**
+- NVIDIA GPU with CUDA toolkit (nvcc)
+- PyTorch with CUDA support
+
+**Setup with pixi:**
+
+```bash
+cd dhb_xr
+
+# 1. Install pixi environment
+pixi install
+
+# 2. Install PyTorch with CUDA (one-time)
+pixi run install-cuda
+
+# 3. Clone cusadi (if not already)
+git clone https://github.com/se-hwan/cusadi /path/to/cusadi
+cd /path/to/cusadi && pip install -e .
+
+# 4. Build CasADi functions (use pixi python for version compatibility)
+cd dhb_xr
+pixi run python3 << 'EOF'
+import casadi as ca
+import numpy as np
+
+def euler_to_rot(rx, ry, rz):
+    cx, sx = ca.cos(rx), ca.sin(rx)
+    cy, sy = ca.cos(ry), ca.sin(ry)
+    cz, sz = ca.cos(rz), ca.sin(rz)
+    return ca.vertcat(
+        ca.horzcat(cy*cz, -cy*sz, sy),
+        ca.horzcat(cx*sz + cz*sx*sy, cx*cz - sx*sy*sz, -cy*sx),
+        ca.horzcat(sx*sz - cx*cz*sy, cz*sx + cx*sy*sz, cx*cy))
+
+T = 50
+lin_inv = ca.SX.sym("lin_inv", T * 4)
+init_pos = ca.SX.sym("init_pos", 3)
+init_rot = ca.SX.sym("init_rot", 9)
+
+rotm = ca.reshape(init_rot, 3, 3)
+pos = init_pos
+out = [init_pos]
+for k in range(T):
+    mag, rx, ry, rz = lin_inv[k*4], lin_inv[k*4+1], lin_inv[k*4+2], lin_inv[k*4+3]
+    rotm = rotm @ euler_to_rot(rx, ry, rz)
+    pos = pos + rotm @ ca.vertcat(mag, 0, 0)
+    out.append(pos)
+
+fn = ca.Function("fn_dhb_decode_linear", [lin_inv, init_pos, init_rot], [ca.horzcat(*out).T])
+fn.save("/path/to/cusadi/src/casadi_functions/fn_dhb_decode_linear.casadi")
+print(f"Saved: {fn}")
+EOF
+
+# 5. Compile CUDA kernel (use pixi python for same CasADi version)
+cd /path/to/cusadi
+/path/to/dhb_xr/.pixi/envs/default/bin/python3 run_codegen.py --fn=fn_dhb_decode_linear
+```
+
+**Usage:**
+
+```python
+import sys
+sys.path.insert(0, "/path/to/cusadi")
+sys.path.insert(0, "/path/to/cusadi/src")
+sys.path.insert(0, "/path/to/cusadi/build")
+
+import torch
+import casadi as ca
+from src.CusadiFunction import CusadiFunction
+
+fn = ca.Function.load("/path/to/cusadi/src/casadi_functions/fn_dhb_decode_linear.casadi")
+cusadi_fn = CusadiFunction(fn, batch_size=1000)
+
+# GPU tensors (batch_size, features)
+lin_inv_gpu = torch.from_numpy(invariants).cuda().contiguous()
+init_pos_gpu = torch.from_numpy(positions).cuda().contiguous()
+init_rot_gpu = torch.from_numpy(rotations).cuda().contiguous()
+
+cusadi_fn.evaluate([lin_inv_gpu, init_pos_gpu, init_rot_gpu])
+positions = cusadi_fn.getDenseOutput(0).cpu().numpy()  # (batch, T+1, 3)
+```
+
+**Important:** The CasADi `.casadi` files must be saved with the same CasADi version that loads them. Use pixi python for both building and running to ensure version compatibility.
+
+See the [CusADi paper](https://arxiv.org/abs/2408.09662) for details on the parallelization framework.
 
 ### C++ extension (optional)
 

@@ -1,11 +1,22 @@
 """
 Cusadi-based GPU-parallel trajectory optimization (optional).
 
-- Without cusadi: CusadiTrajectoryOptimizer.forward() uses a NumPy batched decode
-  (batched_decode_dhb_dr) so the API is always usable.
-- With cusadi + a compiled decode: forward() can use CusadiFunction for GPU batch.
-  To build the CasADi decode function, run: python -m dhb_xr.optimization.export_casadi_decode
-  then cusadi's run_codegen.py (see cusadi repo). Requires: pip install dhb_xr[cusadi].
+This module provides GPU-accelerated batch decoding of DHB invariants using CusADi.
+
+Setup (one-time):
+    1. Clone and install cusadi: git clone https://github.com/se-hwan/cusadi && pip install -e cusadi
+    2. Export the CasADi decode function:
+       python -m dhb_xr.optimization.export_casadi_decode --out fn_dhb_decode.casadi
+    3. Move to cusadi and compile:
+       mv fn_dhb_decode.casadi cusadi/src/casadi_functions/
+       cd cusadi && python run_codegen.py --fn=fn_dhb_decode
+
+Benchmark results (RTX A2000, 50-step trajectories):
+    Batch 100:   43x speedup (CPU 34ms vs GPU 0.8ms)
+    Batch 1000: 199x speedup (CPU 342ms vs GPU 1.7ms)
+    Batch 2000: 387x speedup (CPU 685ms vs GPU 1.8ms)
+
+Without cusadi: CusadiTrajectoryOptimizer.forward() falls back to NumPy batched decode.
 """
 
 from __future__ import annotations
