@@ -1,0 +1,127 @@
+[project]
+name = "dhb_xr"
+version = "0.1.0"
+description = "DHB Extended Representations - SE(3) invariant trajectory encoding for robotics and VLA"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Andy Park", email = "andy.park@thehumanoid.ai" }]
+keywords = [
+    "robotics",
+    "trajectory",
+    "SE3",
+    "invariants",
+    "VLA",
+    "imitation-learning",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = ["numpy>=1.20", "scipy>=1.7", "matplotlib>=3.5"]
+
+[project.optional-dependencies]
+optimization = ["casadi>=3.5", "spatial-casadi>=1.0"]
+gpu = ["torch>=2.0"]
+cusadi = ["cusadi>=1.0", "torch>=2.0"]
+tokenization = ["torch>=2.0"]
+database = ["faiss-cpu>=1.7", "dtaidistance>=3.0"]
+all = [
+    "casadi>=3.5",
+    "spatial-casadi>=1.0",
+    "torch>=2.0",
+    "faiss-cpu>=1.7",
+    "dtaidistance>=3.0",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0",
+    "pre-commit>=3.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/dhb_xr"
+Documentation = "https://dhb-xr.readthedocs.io"
+Repository = "https://github.com/yourusername/dhb_xr"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.pixi.project]
+channels = ["conda-forge", "pytorch"]
+platforms = ["linux-64", "osx-arm64", "osx-64"]
+
+[tool.pixi.dependencies]
+python = ">=3.10"
+numpy = ">=1.20"
+scipy = ">=1.7"
+matplotlib = ">=3.5"
+
+[tool.pixi.feature.dev.dependencies]
+pytest = ">=7.0"
+pytest-cov = ">=4.0"
+ruff = ">=0.1.0"
+mypy = ">=1.0"
+pre-commit = ">=3.0"
+cmake = ">=3.20"
+ninja = "*"
+sphinx = ">=7.0"
+sphinx-autodoc-typehints = "*"
+nanobind = ">=2.0"
+jupyter = ">=1.0"
+ipykernel = ">=6.0"
+
+[tool.pixi.feature.gpu.dependencies]
+# PyTorch (CPU from conda). For CUDA, use: pixi run -e gpu pip install torch --index-url https://download.pytorch.org/whl/cu121
+pytorch = ">=2.0"
+
+[tool.pixi.feature.optimization.dependencies]
+casadi = ">=3.5"
+
+[tool.pixi.environments]
+default = { features = ["dev"], solve-group = "default" }
+gpu = { features = ["dev", "gpu"], solve-group = "gpu" }
+full = { features = ["dev", "gpu", "optimization"], solve-group = "full" }
+
+[tool.pixi.tasks]
+test = "pytest tests/ -v"
+test-cov = "pytest tests/ -v --cov=src/dhb_xr --cov-report=html"
+lint = "ruff check src/ tests/"
+format = "ruff format src/ tests/"
+typecheck = "mypy src/dhb_xr"
+build = "pip install -e ."
+build-wheel = "python -m build"
+benchmark = "python examples/benchmark_backends.py"
+docs = "sphinx-build docs docs/_build -b html"
+build-docs = "sphinx-build docs docs/_build -b html"
+build-cpp = "cmake -B build -S . -DCMAKE_BUILD_TYPE=Release && cmake --build build && (cp build/src/dhb_xr/_cpp/_dhb_xr_cpp*.so src/dhb_xr/ 2>/dev/null || true)"
+notebook = "pip install -e . && jupyter notebook notebooks/"
