@@ -99,6 +99,8 @@ sphinx-autodoc-typehints = "*"
 nanobind = ">=2.0"
 jupyter = ">=1.0"
 ipykernel = ">=6.0"
+pytorch = ">=2.0"
+casadi = ">=3.5"
 
 [tool.pixi.feature.gpu.dependencies]
 # PyTorch (CPU from conda). For CUDA, use: pixi run -e gpu pip install torch --index-url https://download.pytorch.org/whl/cu121
@@ -114,6 +116,7 @@ full = { features = ["dev", "gpu", "optimization"], solve-group = "full" }
 
 [tool.pixi.tasks]
 test = "pytest tests/ -v"
+test-casadi = "pytest tests/test_casadi_solver.py tests/test_cusadi.py -v"
 test-cov = "pytest tests/ -v --cov=src/dhb_xr --cov-report=html"
 lint = "ruff check src/ tests/"
 format = "ruff format src/ tests/"
