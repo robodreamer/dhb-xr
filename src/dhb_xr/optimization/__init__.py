@@ -1,4 +1,4 @@
-"""Trajectory optimization: CasADi, Cusadi, PyTorch."""
+"""Trajectory optimization: CasADi, Cusadi, Fatrop, PyTorch."""
 
 from dhb_xr.optimization.casadi_solver import generate_trajectory
 
@@ -17,9 +17,35 @@ try:
 except ImportError:
     BatchedTrajectoryOptimizer = None
 
+try:
+    from dhb_xr.optimization.fatrop_solver import (
+        FatropTrajectoryGenerator,
+        ConstrainedTrajectoryGenerator,
+        generate_trajectory_fatrop,
+    )
+    __all__.extend([
+        "FatropTrajectoryGenerator",
+        "ConstrainedTrajectoryGenerator",
+        "generate_trajectory_fatrop",
+    ])
+except ImportError:
+    FatropTrajectoryGenerator = None
+    ConstrainedTrajectoryGenerator = None
+    generate_trajectory_fatrop = None
 
-def get_optimizer(backend="auto", batch_size=1, device="cpu"):
-    """Factory for optimal backend selection."""
+
+def get_optimizer(backend="auto", batch_size=1, device="cpu", **kwargs):
+    """Factory for optimal backend selection.
+
+    Args:
+        backend: One of "auto", "torch", "cusadi", "fatrop", "ipopt"
+        batch_size: Batch size for batched optimizers
+        device: Device for torch-based optimizers
+        **kwargs: Additional arguments passed to the optimizer
+
+    Returns:
+        Optimizer instance or None
+    """
     if backend == "auto":
         if batch_size == 1:
             return None  # Use CasADi generate_trajectory
@@ -34,5 +60,13 @@ def get_optimizer(backend="auto", batch_size=1, device="cpu"):
     if backend == "cusadi":
         if CusadiTrajectoryOptimizer is not None:
             return CusadiTrajectoryOptimizer(batch_size=batch_size)
+        return None
+    if backend == "fatrop":
+        if FatropTrajectoryGenerator is not None:
+            return FatropTrajectoryGenerator(use_fatrop=True, **kwargs)
+        return None
+    if backend == "ipopt":
+        if FatropTrajectoryGenerator is not None:
+            return FatropTrajectoryGenerator(use_fatrop=False, **kwargs)
         return None
     return None

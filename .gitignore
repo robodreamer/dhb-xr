@@ -68,3 +68,7 @@ Thumbs.db
 *.mat
 *.h5
 *.hdf5
+
+# Code-generation
+**/build_fatrop_rockit/
+**/dhb_gen_*/

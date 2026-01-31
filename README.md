@@ -210,6 +210,51 @@ positions = cusadi_fn.getDenseOutput(0).cpu().numpy()  # (batch, T+1, 3)
 
 See the [CusADi paper](https://arxiv.org/abs/2408.09662) for details on the parallelization framework.
 
+### Fatrop Fast Optimization (optional)
+
+For **single trajectory optimization** with constraints, [Fatrop](https://github.com/meco-group/fatrop) provides ~10x speedup over IPOPT:
+
+| Solver | Use Case | Speed |
+|--------|----------|-------|
+| IPOPT | General NLP | ~50-100ms |
+| **Fatrop** | Structured OCP | ~5-10ms |
+
+**Installation:**
+
+```bash
+# Rockit (required for OCP formulation)
+pip install rockit-meco
+# or with pixi:
+pixi run install-rockit
+
+# Fatrop is bundled with conda casadi (no separate install needed)
+# The pixi environment includes casadi with Fatrop support
+```
+
+**Usage:**
+
+```python
+from dhb_xr.optimization import generate_trajectory_fatrop
+
+result = generate_trajectory_fatrop(
+    demo_positions, demo_quaternions,
+    start_pose={'position': start_pos, 'quaternion': start_quat},
+    goal_pose={'position': goal_pos, 'quaternion': goal_quat},
+    traj_length=50,
+    use_fatrop=True,  # False for IPOPT fallback
+)
+print(f"Solved in {result['solve_time']*1000:.1f} ms")
+```
+
+**Use cases:**
+- Real-time MPC (100+ Hz replanning)
+- Constrained trajectory generation (obstacles, joint limits)
+- Online trajectory adaptation
+
+**CusADi vs Fatrop:**
+- CusADi: Best for **batch evaluation** (1000 trajectories in 2ms)
+- Fatrop: Best for **single optimization** with constraints (5-10ms)
+
 ### C++ extension (optional)
 
 - **Build** (from repo root, with pixi): `pixi run build-cpp` (requires nanobind in dev feature). This builds the nanobind module into `src/dhb_xr/` so `import dhb_xr._dhb_xr_cpp` works.
