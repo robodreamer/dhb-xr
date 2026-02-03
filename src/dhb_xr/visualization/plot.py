@@ -123,7 +123,7 @@ def plot_se3_trajectory(
     if ax is None:
         fig = plt.figure()
         ax = fig.add_subplot(111, projection="3d")
-    ax.plot(positions[:, 0], positions[:, 1], positions[:, 2], f"{color}-", label=label or "position", alpha=0.8)
+    ax.plot(positions[:, 0], positions[:, 1], positions[:, 2], "-", color=color, label=label or "position", alpha=0.8)
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_zlabel("z")

@@ -87,10 +87,10 @@ def encode_dhb_qr(
         lx3 = _compute_frame_axis_x(position_diff[i + 2], lx2)
         ax3 = _compute_frame_axis_x(rotation_diff[i + 2], ax2)
 
-        ly2, linear_R_rel = _double_reflection_step(
+        ly2, linear_R_rel, _ = _double_reflection_step(
             lx, ly, lx2, position_diff[i], position_diff[i + 1]
         )
-        ay2, angular_R_rel = _double_reflection_step(
+        ay2, angular_R_rel, _ = _double_reflection_step(
             ax, ay, ax2, rotation_diff[i], rotation_diff[i + 1]
         )
 
