@@ -72,6 +72,84 @@ if HAS_TORCH:
             codebook = F.mse_loss(z_q, z.detach())
             return rec_loss + beta * commitment + codebook
 
+        # ---- Flow matching integration API ----
+
+        def encode_continuous(self, invariants: torch.Tensor) -> torch.Tensor:
+            """
+            Encode invariants to continuous latent space (before quantization).
+
+            This is useful for flow matching which operates in continuous space.
+
+            Args:
+                invariants: Input invariant sequences (B, T, C).
+
+            Returns:
+                Continuous latent z (B, T, latent_dim).
+            """
+            return self.encoder(invariants)
+
+        def decode_from_latent(self, z: torch.Tensor) -> torch.Tensor:
+            """
+            Decode from continuous latent to invariants.
+
+            Bypasses the VQ step, useful for flow matching generation.
+
+            Args:
+                z: Continuous latent (B, T, latent_dim).
+
+            Returns:
+                Reconstructed invariants (B, T, invariant_dim).
+            """
+            return self.decoder(z)
+
+        def quantize(self, z: torch.Tensor) -> tuple:
+            """
+            Quantize continuous latent to discrete tokens.
+
+            Args:
+                z: Continuous latent (B, T, latent_dim).
+
+            Returns:
+                Tuple of (indices, z_q_st, z_q).
+            """
+            return self.vq(z)
+
+        def get_codebook_embeddings(self) -> torch.Tensor:
+            """
+            Get the VQ codebook embeddings.
+
+            Useful for flow matching in embedding space or visualization.
+
+            Returns:
+                Codebook embeddings (codebook_size, latent_dim).
+            """
+            return self.vq.embedding.weight.data
+
+        def embed_tokens(self, indices: torch.Tensor) -> torch.Tensor:
+            """
+            Convert token indices to embeddings.
+
+            Args:
+                indices: Token indices (B, T).
+
+            Returns:
+                Token embeddings (B, T, latent_dim).
+            """
+            return self.vq.embedding(indices)
+
+        def decode_tokens(self, indices: torch.Tensor) -> torch.Tensor:
+            """
+            Decode token indices to invariants.
+
+            Args:
+                indices: Token indices (B, T).
+
+            Returns:
+                Reconstructed invariants (B, T, invariant_dim).
+            """
+            z_q = self.embed_tokens(indices)
+            return self.decoder(z_q)
+
 else:
     DHBTokenizer = None
     VectorQuantizer = None
