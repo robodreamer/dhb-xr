@@ -173,7 +173,8 @@ See `examples/08_dhb_ti_time_invariant.py`.
 
 📚 **[Read the Docs](https://dhb-xr.readthedocs.io/)** - Complete API documentation with examples
 
-The documentation is built with MkDocs and automatically deployed to GitHub Pages on every push to main.
+The documentation is built with MkDocs and can be deployed to GitHub Pages on pushes to `main`
+when Pages is enabled and set to build using GitHub Actions.
 
 ### Build locally
 
