@@ -220,6 +220,109 @@ jupyter notebook notebooks/
 
 ---
 
+---
+
+## Integration Examples (LIBERO / RoboCASA)
+
+Located in `examples/integration/`, these scripts demonstrate DHB-XR with VLA benchmarks.
+
+### test_libero_adapter.py — Load LIBERO datasets
+
+**What it does:** Tests the `LiberoAdapter` for loading LIBERO HDF5 datasets.
+
+**Prerequisites:** Download LIBERO-Spatial dataset:
+```bash
+mkdir -p ~/Projects/data/libero && cd ~/Projects/data/libero
+wget -O libero_spatial.zip "https://utexas.box.com/shared/static/04k94hyizn4huhbv5sz4ev9p2h1p6s7f.zip"
+unzip libero_spatial.zip
+```
+
+**Run:**
+```bash
+pixi run python examples/integration/test_libero_adapter.py
+```
+**Expected output:** 50 episodes loaded with positions (N, 3) and quaternions (N, 4).
+
+---
+
+### test_libero_encoding.py — DHB encoding on LIBERO data
+
+**What it does:** Loads LIBERO demos and encodes them with DHB-DR.
+
+**Run:**
+```bash
+pixi run python examples/integration/test_libero_encoding.py
+```
+**Expected output:** Linear/angular invariant shapes for 5 episodes, no NaN/Inf values.
+
+---
+
+### test_libero_retrieval.py — Motion retrieval across tasks
+
+**What it does:** Builds a motion database from 5 LIBERO tasks and queries similar motions using DTW.
+
+**Run:**
+```bash
+pixi run python examples/integration/test_libero_retrieval.py
+```
+**Expected output:** Top-5 similar motions for each query, showing that DHB captures motion structure rather than spatial location (SAME/DIFF task labels).
+
+---
+
+### libero_simulation_demo.py — Basic LIBERO demo
+
+**What it does:** Demonstrates DHB encoding/decoding with LIBERO. If LIBERO is installed, runs the demo in simulation.
+
+**Run (without LIBERO installed):**
+```bash
+pixi run python examples/integration/libero_simulation_demo.py
+```
+**Expected output:** DHB encoding/decoding roundtrip with near-zero reconstruction error.
+
+---
+
+### libero_full_demo.py — Complete LIBERO integration demo
+
+**What it does:** Comprehensive demo showing:
+1. DHB encoding/decoding on real LIBERO data
+2. Trajectory adaptation (retargeting to new poses)
+3. Full simulation with LIBERO environment
+4. Motion retrieval across tasks
+
+**Run modes:**
+
+```bash
+# DHB-only mode (no simulation dependencies required)
+pixi run python examples/integration/libero_full_demo.py --dhb-only
+
+# Motion retrieval demo
+pixi run python examples/integration/libero_full_demo.py --retrieval
+
+# Full simulation (requires libero conda environment)
+~/miniforge3/bin/mamba run -n libero python examples/integration/libero_full_demo.py
+
+# With OpenCV display (requires X11 display, press 'q' to quit)
+~/miniforge3/bin/mamba run -n libero python examples/integration/libero_full_demo.py --render
+
+# Save video for later viewing (works headless)
+~/miniforge3/bin/mamba run -n libero python examples/integration/libero_full_demo.py --save-video demo.mp4
+
+# Both display and save video
+~/miniforge3/bin/mamba run -n libero python examples/integration/libero_full_demo.py --render --save-video demo.mp4
+```
+
+**Expected output:**
+- DHB-only: Encoding shape `(100, 4)`, reconstruction error ~0.000 mm, trajectory adaptation demo, plot saved to `/tmp/dhb_demo_plot.png`
+- Simulation: Task completion at step 78 (varies by task)
+- Retrieval: Top-5 matches with distances showing similar task structures grouped together
+- Video: 3-4 second MP4 showing the robot executing the pick-and-place task
+
+**Visualizations:**
+- DHB-only mode saves a matplotlib plot showing 3D trajectories (original vs adapted) and invariant magnitudes
+- Full simulation mode can display live OpenCV window or save video
+
+---
+
 ## Running all examples
 
 ```bash

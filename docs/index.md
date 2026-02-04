@@ -8,7 +8,7 @@ DHB-XR (DHB Extended Representations) provides SE(3) invariant trajectory encodi
 
 This library implements the double-reflection (DHB-DR) and quaternion-relative (DHB-QR) invariant representations for rigid-body motion trajectories on SE(3), as described in the manuscript **"Double-Reflection DHB Invariant Representation on SE(3)"**.
 
-**Author:** Andy Park (andy.park@thehumanoid.ai)
+**Author:** Andy Park (andypark.purdue@gmail.com)
 
 **Version:** 0.1.0
 
@@ -66,6 +66,15 @@ print(f"Decoded shape: {decoded['positions'].shape}")
 
 See [Examples](examples_walkthrough.md) for a walkthrough of the example scripts and how to run them.
 
+## VLA Integration
+
+DHB-XR integrates with Vision-Language-Action (VLA) benchmarks:
+
+- **LIBERO**: Load trajectories, encode to DHB invariants, run in simulation
+- **RoboCASA**: HDF5 dataset support with motion retrieval
+
+See [VLA Integration Guide](integration/vla_integration.md) for setup and usage.
+
 ## API Reference
 
 ::: dhb_xr
@@ -74,4 +83,4 @@ See [Examples](examples_walkthrough.md) for a walkthrough of the example scripts
 
 MIT License.
 
-**Copyright (c) 2026 Andy Park <andy.park@thehumanoid.ai>**
+**Copyright (c) 2026 Andy Park <andypark.purdue@gmail.com>**

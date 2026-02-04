@@ -344,62 +344,111 @@ print(f"Solved in {result['solve_time']*1000:.1f} ms")
 
 ## VLA Integration (LIBERO / RoboCASA)
 
-DHB-XR includes adapters for loading trajectory data from popular VLA benchmarks:
+DHB-XR includes adapters for loading trajectory data from popular VLA benchmarks.
 
-### Quick Start with LIBERO
+### Quick Start: DHB Encoding Only
+
+No simulation required - just load and process trajectory data:
 
 ```bash
-# 1. Download LIBERO-Spatial dataset (smallest, ~6GB)
+# 1. Download LIBERO-Spatial dataset (smallest, ~2.8GB compressed)
 mkdir -p ~/Projects/data/libero && cd ~/Projects/data/libero
 wget -O libero_spatial.zip "https://utexas.box.com/shared/static/04k94hyizn4huhbv5sz4ev9p2h1p6s7f.zip"
 unzip libero_spatial.zip
 
-# 2. Test the adapter
+# 2. Test DHB encoding (works with pixi environment)
 pixi run python examples/integration/test_libero_adapter.py
-
-# 3. Run DHB encoding
 pixi run python examples/integration/test_libero_encoding.py
 
-# 4. Run motion retrieval demo
-pixi run python examples/integration/test_libero_retrieval.py
+# 3. Run full demo (DHB-only mode, no simulation, saves plot to /tmp/dhb_demo_plot.png)
+pixi run python examples/integration/libero_full_demo.py --dhb-only
+
+# 4. Motion retrieval demo
+pixi run python examples/integration/libero_full_demo.py --retrieval
+
+# 5. View generated plot
+xdg-open /tmp/dhb_demo_plot.png  # Linux
 ```
 
 ### Programmatic Usage
 
 ```python
 from dhb_xr.integration.vla.libero import LiberoAdapter
-from dhb_xr.database.motion_db import MotionDatabase
+from dhb_xr.encoder.dhb_dr import encode_dhb_dr
+from dhb_xr.core.types import EncodingMethod, DHBMethod
 
-# Load episodes
+# Load episodes from LIBERO HDF5
 adapter = LiberoAdapter()
-episodes = list(adapter.load_dataset("/path/to/libero_task.hdf5"))
+for episode in adapter.load_dataset("/path/to/libero_task.hdf5"):
+    positions = episode["positions"]      # (N, 3) end-effector positions
+    quaternions = episode["quaternions"]  # (N, 4) quaternions (x, y, z, w)
 
-# Build motion database with DHB encoding
-db = MotionDatabase(dhb_method="double_reflection")
-for ep in episodes:
-    db.add(positions=ep["positions"], quaternions=ep["quaternions"], metadata=ep["metadata"])
-
-# Query similar motions (uses DTW for variable-length trajectories)
-results = db.retrieve(query_positions, query_quaternions, k=5, use_dtw=True)
+    # Encode to SE(3)-invariant representation
+    result = encode_dhb_dr(
+        positions, quaternions,
+        method=EncodingMethod.POSITION,
+        dhb_method=DHBMethod.DOUBLE_REFLECTION,
+    )
+    invariants = result["linear_motion_invariants"]  # Shape: (N+2, 4)
 ```
 
-### LIBERO Simulation
+### Full LIBERO Simulation
 
-For running LIBERO in simulation with DHB-XR trajectory generation:
+For running LIBERO tasks in simulation with DHB-XR trajectory adaptation:
 
 ```bash
-# 1. Create conda environment
-conda create -n libero python=3.10
-conda activate libero
+# 1. Install Miniforge (if conda/mamba not available)
+curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
+bash Miniforge3-$(uname)-$(uname -m).sh -b -p ~/miniforge3
 
-# 2. Install LIBERO and dependencies
-pip install robosuite mujoco
-git clone https://github.com/Lifelong-Robot-Learning/LIBERO.git
-cd LIBERO && pip install -e .
+# 2. Create and configure libero environment
+~/miniforge3/bin/mamba create -n libero python=3.10 -y
+~/miniforge3/bin/mamba run -n libero pip install robosuite==1.4.0 mujoco bddl==1.0.1 robomimic==0.2.0
+~/miniforge3/bin/mamba run -n libero pip install future easydict hydra-core cloudpickle 'gym==0.25.2'
 
-# 3. Run example with DHB-XR
-python examples/integration/libero_simulation_demo.py
+# 3. Clone and install LIBERO
+git clone https://github.com/Lifelong-Robot-Learning/LIBERO.git ~/Projects/repos/LIBERO
+~/miniforge3/bin/mamba run -n libero pip install -e ~/Projects/repos/LIBERO --config-settings editable_mode=compat
+
+# 4. Configure LIBERO paths (creates ~/.libero/config.yaml)
+mkdir -p ~/.libero
+cat > ~/.libero/config.yaml << 'EOF'
+benchmark_root: ~/Projects/repos/LIBERO/libero/libero
+bddl_files: ~/Projects/repos/LIBERO/libero/libero/bddl_files
+init_states: ~/Projects/repos/LIBERO/libero/libero/init_files
+datasets: ~/Projects/data/libero
+assets: ~/Projects/repos/LIBERO/libero/libero/assets
+EOF
+
+# 5. Install dhb_xr and visualization dependencies
+~/miniforge3/bin/mamba run -n libero pip install dhb_xr opencv-python imageio imageio-ffmpeg
+
+# 6. Run simulation demo
+~/miniforge3/bin/mamba run -n libero python examples/integration/libero_full_demo.py
 ```
+
+### Viewing Simulations
+
+```bash
+# Option 1: Real-time display with OpenCV (requires X11 display)
+~/miniforge3/bin/mamba run -n libero python examples/integration/libero_full_demo.py --render
+
+# Option 2: Save video for later viewing (works headless)
+~/miniforge3/bin/mamba run -n libero python examples/integration/libero_full_demo.py --save-video demo.mp4
+
+# Option 3: Both display and save
+~/miniforge3/bin/mamba run -n libero python examples/integration/libero_full_demo.py --render --save-video demo.mp4
+
+# Play saved video
+vlc demo.mp4  # or: ffplay demo.mp4
+```
+
+For remote servers without display, use `--save-video` and download the video locally.
+
+**Key version requirements:**
+- robosuite==1.4.0 (LIBERO is incompatible with robosuite 1.5+)
+- Python 3.10 recommended
+- bddl==1.0.1, robomimic==0.2.0
 
 See [VLA Integration Guide](docs/integration/vla_integration.md) for full documentation.
 
