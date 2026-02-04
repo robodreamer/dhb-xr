@@ -49,7 +49,7 @@ pip install dhb_xr[all]
 For development and testing:
 
 ```bash
-git clone https://github.com/yourusername/dhb_xr.git
+git clone https://github.com/robodreamer/dhb_xr.git
 cd dhb_xr
 pip install -e ".[dev]"
 ```

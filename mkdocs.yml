@@ -1,9 +1,9 @@
 site_name: DHB-XR Documentation
 site_description: SE(3) invariant trajectory encoding for robotics and VLA applications (v0.1.0)
 site_author: Andy Park
-site_url: https://yourusername.github.io/dhb_xr/
-repo_url: https://github.com/yourusername/dhb_xr
-repo_name: yourusername/dhb_xr
+site_url: https://robodreamer.github.io/dhb_xr/
+repo_url: https://github.com/robodreamer/dhb_xr
+repo_name: robodreamer/dhb_xr
 edit_uri: edit/main/docs/
 copyright: Copyright &copy; 2026 Andy Park
 extra:

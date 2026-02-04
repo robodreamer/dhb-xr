@@ -4,7 +4,7 @@
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/dhb_xr.git
+git clone https://github.com/robodreamer/dhb_xr.git
 cd dhb_xr
 
 # Install in development mode with all dependencies

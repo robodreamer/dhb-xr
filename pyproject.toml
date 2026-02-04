@@ -55,9 +55,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/dhb_xr"
-Documentation = "https://yourusername.github.io/dhb_xr/"
-Repository = "https://github.com/yourusername/dhb_xr"
+Homepage = "https://github.com/robodreamer/dhb_xr"
+Documentation = "https://robodreamer.github.io/dhb_xr/"
+Repository = "https://github.com/robodreamer/dhb_xr"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
