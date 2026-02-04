@@ -5,7 +5,7 @@ description = "DHB Extended Representations - SE(3) invariant trajectory encodin
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [{ name = "Andy Park", email = "andy.park@thehumanoid.ai" }]
+authors = [{ name = "Andy Park", email = "andypark.purdue@gmail.com" }]
 keywords = [
     "robotics",
     "trajectory",
@@ -24,7 +24,12 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 
-dependencies = ["numpy>=1.20", "scipy>=1.7", "matplotlib>=3.5"]
+dependencies = [
+    "numpy>=1.20",
+    "scipy>=1.7",
+    "matplotlib>=3.5",
+    "scikit-learn>=1.0",
+]
 
 [project.optional-dependencies]
 optimization = ["casadi>=3.5", "spatial-casadi>=1.0"]
@@ -78,7 +83,7 @@ warn_return_any = true
 warn_unused_configs = true
 ignore_missing_imports = true
 
-[tool.pixi.project]
+[tool.pixi.workspace]
 channels = ["conda-forge", "pytorch", "nvidia"]
 platforms = ["linux-64", "osx-arm64", "osx-64"]
 
@@ -87,6 +92,7 @@ python = ">=3.10"
 numpy = ">=1.20"
 scipy = ">=1.7"
 matplotlib = ">=3.5"
+h5py = ">=3.15.1,<4"
 
 [tool.pixi.feature.dev.dependencies]
 pytest = ">=7.0"
@@ -139,6 +145,7 @@ test-cov = "pytest tests/ -v --cov=src/dhb_xr --cov-report=html"
 lint = "ruff check src/ tests/"
 format = "ruff format src/ tests/"
 typecheck = "mypy src/dhb_xr"
+install = "pip install -e ."
 build = "pip install -e ."
 build-wheel = "python -m build"
 benchmark = "python examples/benchmark_backends.py"

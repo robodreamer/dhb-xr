@@ -8,7 +8,7 @@ edit_uri: edit/main/docs/
 copyright: Copyright &copy; 2026 Andy Park
 extra:
   version: "0.1.0"
-  author_email: "andy.park@thehumanoid.ai"
+  author_email: "andypark.purdue@gmail.com"
 
 # Ensure proper URL handling - use directory URLs (transforms/ instead of transforms.html)
 use_directory_urls: true
@@ -88,4 +88,6 @@ nav:
     - Visualization: api/visualization.md
   - Examples:
     - Overview: examples_walkthrough.md
+  - Integration:
+    - VLA Integration: integration/vla_integration.md
   - Development: development.md

@@ -342,6 +342,67 @@ print(f"Solved in {result['solve_time']*1000:.1f} ms")
 - **Build** (from repo root, with pixi): `pixi run build-cpp` (requires nanobind in dev feature). This builds the nanobind module into `src/dhb_xr/` so `import dhb_xr._dhb_xr_cpp` works.
 - **Use**: `from dhb_xr import cpp_version` (returns `None` if not built). See `src/dhb_xr/_cpp/README.md` for extending with encode/decode.
 
+## VLA Integration (LIBERO / RoboCASA)
+
+DHB-XR includes adapters for loading trajectory data from popular VLA benchmarks:
+
+### Quick Start with LIBERO
+
+```bash
+# 1. Download LIBERO-Spatial dataset (smallest, ~6GB)
+mkdir -p ~/Projects/data/libero && cd ~/Projects/data/libero
+wget -O libero_spatial.zip "https://utexas.box.com/shared/static/04k94hyizn4huhbv5sz4ev9p2h1p6s7f.zip"
+unzip libero_spatial.zip
+
+# 2. Test the adapter
+pixi run python examples/integration/test_libero_adapter.py
+
+# 3. Run DHB encoding
+pixi run python examples/integration/test_libero_encoding.py
+
+# 4. Run motion retrieval demo
+pixi run python examples/integration/test_libero_retrieval.py
+```
+
+### Programmatic Usage
+
+```python
+from dhb_xr.integration.vla.libero import LiberoAdapter
+from dhb_xr.database.motion_db import MotionDatabase
+
+# Load episodes
+adapter = LiberoAdapter()
+episodes = list(adapter.load_dataset("/path/to/libero_task.hdf5"))
+
+# Build motion database with DHB encoding
+db = MotionDatabase(dhb_method="double_reflection")
+for ep in episodes:
+    db.add(positions=ep["positions"], quaternions=ep["quaternions"], metadata=ep["metadata"])
+
+# Query similar motions (uses DTW for variable-length trajectories)
+results = db.retrieve(query_positions, query_quaternions, k=5, use_dtw=True)
+```
+
+### LIBERO Simulation
+
+For running LIBERO in simulation with DHB-XR trajectory generation:
+
+```bash
+# 1. Create conda environment
+conda create -n libero python=3.10
+conda activate libero
+
+# 2. Install LIBERO and dependencies
+pip install robosuite mujoco
+git clone https://github.com/Lifelong-Robot-Learning/LIBERO.git
+cd LIBERO && pip install -e .
+
+# 3. Run example with DHB-XR
+python examples/integration/libero_simulation_demo.py
+```
+
+See [VLA Integration Guide](docs/integration/vla_integration.md) for full documentation.
+
 ## Testing
 
 ### Full test suite (pixi)
