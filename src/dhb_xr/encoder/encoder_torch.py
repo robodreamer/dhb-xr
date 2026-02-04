@@ -11,7 +11,7 @@ if torch is not None:
 
     import numpy as np
     from dhb_xr.encoder.dhb_dr import encode_dhb_dr
-    from dhb_xr.core.types import DHBMethod
+    from dhb_xr.core.types import DHBMethod, EncodingMethod
 
     class DHBEncoderTorch(nn.Module):
         """
@@ -40,7 +40,7 @@ if torch is not None:
                 quat = quaternions[b].detach().cpu().numpy()
                 out = encode_dhb_dr(
                     pos, quat,
-                    method="pos",
+                    method=EncodingMethod.POSITION,
                     use_default_initial_frames=True,
                     dhb_method=self.dhb_method,
                 )

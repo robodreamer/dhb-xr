@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from dhb_xr.core.types import DHBMethod
+from dhb_xr.core.types import DHBMethod, EncodingMethod
 
 
 def test_batched_decode_dhb_dr_single_batch():
@@ -15,7 +15,7 @@ def test_batched_decode_dhb_dr_single_batch():
     ang = np.random.randn(1, T, 4).astype(np.float64)
     inits = [{"position": np.zeros(3), "quaternion": np.array([1.0, 0, 0, 0])}]
     pos, quat = batched_decode_dhb_dr(
-        lin, ang, inits, method="pos", dhb_method=DHBMethod.DOUBLE_REFLECTION, drop_padded=True
+        lin, ang, inits, method=EncodingMethod.POSITION, dhb_method=DHBMethod.DOUBLE_REFLECTION, drop_padded=True
     )
     assert pos.shape[0] == 1
     assert quat.shape[0] == 1
@@ -37,7 +37,7 @@ def test_batched_decode_dhb_dr_multiple_batches():
         for i in range(B)
     ]
     pos, quat = batched_decode_dhb_dr(
-        lin, ang, inits, method="pos", dhb_method=DHBMethod.DOUBLE_REFLECTION, drop_padded=True
+        lin, ang, inits, method=EncodingMethod.POSITION, dhb_method=DHBMethod.DOUBLE_REFLECTION, drop_padded=True
     )
     assert pos.shape == (B, T - 2, 3)
     assert quat.shape == (B, T - 2, 4)
@@ -53,11 +53,11 @@ def test_batched_decode_matches_single_decode():
     ang = np.random.randn(T, 4).astype(np.float64)
     init = {"position": np.array([0.1, 0, 0]), "quaternion": np.array([1.0, 0, 0, 0])}
     single = decode_dhb_dr(
-        lin, ang, init, method="pos", dhb_method=DHBMethod.DOUBLE_REFLECTION, drop_padded=True
+        lin, ang, init, method=EncodingMethod.POSITION, dhb_method=DHBMethod.DOUBLE_REFLECTION, drop_padded=True
     )
     batched_pos, batched_quat = batched_decode_dhb_dr(
         lin[np.newaxis], ang[np.newaxis], [init],
-        method="pos", dhb_method=DHBMethod.DOUBLE_REFLECTION, drop_padded=True
+        method=EncodingMethod.POSITION, dhb_method=DHBMethod.DOUBLE_REFLECTION, drop_padded=True
     )
     np.testing.assert_allclose(single["positions"], batched_pos[0], atol=1e-12)
     np.testing.assert_allclose(single["quaternions"], batched_quat[0], atol=1e-12)
@@ -75,7 +75,7 @@ def test_cusadi_trajectory_optimizer_forward():
         {"position": np.ones(3) * 0.05, "quaternion": np.array([1.0, 0, 0, 0])},
     ]
     opt = CusadiTrajectoryOptimizer(batch_size=B, dhb_method=DHBMethod.DOUBLE_REFLECTION)
-    pos, quat = opt.forward(lin, ang, inits, method="pos", drop_padded=True)
+    pos, quat = opt.forward(lin, ang, inits, method=EncodingMethod.POSITION, drop_padded=True)
     assert pos.shape == (B, T - 2, 3)
     assert quat.shape == (B, T - 2, 4)
 

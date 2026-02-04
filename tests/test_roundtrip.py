@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from dhb_xr.encoder.dhb_dr import encode_dhb_dr
 from dhb_xr.decoder.dhb_dr import decode_dhb_dr
-from dhb_xr.core.types import DHBMethod
+from dhb_xr.core.types import DHBMethod, EncodingMethod
 
 
 def test_roundtrip_dhb_dr():
@@ -14,13 +14,13 @@ def test_roundtrip_dhb_dr():
     quaternions = np.tile(np.array([1.0, 0.0, 0.0, 0.0]), (n, 1))
     out = encode_dhb_dr(
         positions, quaternions,
-        method="pos", use_default_initial_frames=True, dhb_method=DHBMethod.DOUBLE_REFLECTION,
+        method=EncodingMethod.POSITION, use_default_initial_frames=True, dhb_method=DHBMethod.DOUBLE_REFLECTION,
     )
     decoded = decode_dhb_dr(
         out["linear_motion_invariants"],
         out["angular_motion_invariants"],
         out["initial_pose"],
-        method="pos",
+        method=EncodingMethod.POSITION,
         dhb_method=DHBMethod.DOUBLE_REFLECTION,
         drop_padded=True,
     )

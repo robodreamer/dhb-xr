@@ -13,7 +13,7 @@ import warnings
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
 
-from dhb_xr.core.types import DHBMethod
+from dhb_xr.core.types import DHBMethod, EncodingMethod
 from dhb_xr.core import geometry as geom
 
 EPSILON = 1e-10
@@ -63,7 +63,7 @@ def decode_dhb_dr(
     linear_motion_invariants: np.ndarray,
     angular_motion_invariants: np.ndarray,
     initial_pose: Dict[str, np.ndarray],
-    method: str = "pos",
+    method: EncodingMethod = EncodingMethod.POSITION,
     dhb_method: DHBMethod = DHBMethod.DOUBLE_REFLECTION,
     drop_padded: bool = True,
     robust_mode: bool = False,
@@ -121,7 +121,7 @@ def decode_dhb_dr(
         angular_magnitude = angular_inv[:, 0]
         angular_angles = angular_inv[:, 1:4]
 
-    position_mode = method == "pos"
+    position_mode = method == EncodingMethod.POSITION
     init_pos = np.asarray(initial_pose["position"]).reshape(3)
     init_quat = np.asarray(initial_pose["quaternion"]).reshape(4)
 
@@ -228,7 +228,7 @@ def reconstruct_trajectory_single_step(
         angular_magnitude = float(angular_invariants[0])
         angular_angles = angular_invariants[1:4]
 
-    position_mode = method == "pos"
+    position_mode = method == EncodingMethod.POSITION
     if position_mode:
         new_position = current_linear_frame[:3, 3].copy()
 

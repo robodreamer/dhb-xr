@@ -41,7 +41,7 @@ if torch is not None:
                     "position": initial_poses[b]["position"].cpu().numpy() if hasattr(initial_poses[b]["position"], "cpu") else np.asarray(initial_poses[b]["position"]),
                     "quaternion": initial_poses[b]["quaternion"].cpu().numpy() if hasattr(initial_poses[b]["quaternion"], "cpu") else np.asarray(initial_poses[b]["quaternion"]),
                 }
-                out = decode_dhb_dr(lin, ang, init, method="pos", dhb_method=self.dhb_method, drop_padded=True)
+                out = decode_dhb_dr(lin, ang, init, method=EncodingMethod.POSITION, dhb_method=self.dhb_method, drop_padded=True)
                 pos_list.append(torch.from_numpy(out["positions"]))
                 quat_list.append(torch.from_numpy(out["quaternions"]))
             positions = torch.stack(pos_list, dim=0)

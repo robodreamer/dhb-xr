@@ -20,7 +20,7 @@ from typing import Dict, Any, Optional, Literal
 from scipy.interpolate import CubicSpline
 
 from dhb_xr.core import geometry as geom
-from dhb_xr.core.types import DHBMethod
+from dhb_xr.core.types import DHBMethod, EncodingMethod
 
 ProgressKind = Literal["translation", "angular", "hybrid"]
 _EPS = 1e-12
@@ -143,7 +143,7 @@ def encode_dhb_dr_ti(
     M: int,
     progress_kind: ProgressKind = "hybrid",
     alpha: float = 0.5,
-    method: str = "pos",
+    method: Union[str, EncodingMethod] = EncodingMethod.POSITION,
     use_default_initial_frames: bool = True,
     init_pose: Optional[Dict[str, np.ndarray]] = None,
     dhb_method: DHBMethod = DHBMethod.DOUBLE_REFLECTION,
@@ -178,7 +178,7 @@ def encode_dhb_qr_ti(
     M: int,
     progress_kind: ProgressKind = "hybrid",
     alpha: float = 0.5,
-    method: str = "pos",
+    method: EncodingMethod = EncodingMethod.POSITION,
     use_default_initial_frames: bool = True,
     init_pose: Optional[Dict[str, np.ndarray]] = None,
     min_step: float = _MIN_STEP,

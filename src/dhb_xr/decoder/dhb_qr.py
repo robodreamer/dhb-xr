@@ -6,6 +6,7 @@ Per-step: magnitude + unit quaternion (5 values per component).
 import numpy as np
 from typing import Dict, Any
 
+from dhb_xr.core.types import EncodingMethod
 from dhb_xr.core import geometry as geom
 
 
@@ -43,7 +44,7 @@ def decode_dhb_qr(
         if n > 1e-12:
             angular_quat[i] /= n
 
-    position_mode = method == "pos"
+    position_mode = method == EncodingMethod.POSITION
     init_pos = np.asarray(initial_pose["position"]).reshape(3)
     init_quat = np.asarray(initial_pose["quaternion"]).reshape(4)
 

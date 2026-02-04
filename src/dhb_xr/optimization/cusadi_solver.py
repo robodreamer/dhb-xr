@@ -23,10 +23,10 @@ from __future__ import annotations
 
 import os
 import numpy as np
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional, Tuple, Union
 
 from dhb_xr.decoder.dhb_dr import decode_dhb_dr
-from dhb_xr.core.types import DHBMethod
+from dhb_xr.core.types import DHBMethod, EncodingMethod
 
 # Check for CasADi
 try:
@@ -190,7 +190,7 @@ def batched_decode_dhb_dr(
     linear_invariants_batch: np.ndarray,
     angular_invariants_batch: np.ndarray,
     initial_poses: List[Dict[str, np.ndarray]],
-    method: str = "pos",
+    method: EncodingMethod = EncodingMethod.POSITION,
     dhb_method: DHBMethod = DHBMethod.DOUBLE_REFLECTION,
     drop_padded: bool = True,
     use_gpu: bool = False,
@@ -290,7 +290,7 @@ class CusadiTrajectoryOptimizer:
         linear_invariants: np.ndarray,
         angular_invariants: np.ndarray,
         initial_poses: List[Dict[str, np.ndarray]],
-        method: str = "pos",
+        method: EncodingMethod = EncodingMethod.POSITION,
         drop_padded: bool = True,
     ) -> tuple:
         """

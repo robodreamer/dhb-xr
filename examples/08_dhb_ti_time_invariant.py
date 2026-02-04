@@ -14,7 +14,7 @@ from dhb_xr.encoder.dhb_ti import (
     encode_dhb_qr_ti,
 )
 from dhb_xr.encoder.dhb_dr import encode_dhb_dr
-from dhb_xr.core.types import DHBMethod
+from dhb_xr.core.types import DHBMethod, EncodingMethod
 
 def main():
     np.random.seed(42)
@@ -42,7 +42,7 @@ def main():
     out_ti = encode_dhb_dr_ti(
         positions, quaternions, M,
         progress_kind="hybrid", alpha=0.5,
-        method="pos", use_default_initial_frames=True,
+        method=EncodingMethod.POSITION, use_default_initial_frames=True,
         dhb_method=DHBMethod.DOUBLE_REFLECTION,
     )
     print("DHB-TI (DR) linear invariants shape:", out_ti["linear_motion_invariants"].shape)
@@ -50,7 +50,7 @@ def main():
     # Compare: raw encode vs TI encode (raw depends on sampling density)
     out_raw = encode_dhb_dr(
         positions, quaternions,
-        method="pos", use_default_initial_frames=True,
+        method=EncodingMethod.POSITION, use_default_initial_frames=True,
         dhb_method=DHBMethod.DOUBLE_REFLECTION,
     )
     print("DHB-DR (raw) linear invariants shape:", out_raw["linear_motion_invariants"].shape)
@@ -60,7 +60,7 @@ def main():
         out_ti_qr = encode_dhb_qr_ti(
             positions, quaternions, M,
             progress_kind="hybrid", alpha=0.5,
-            method="pos", use_default_initial_frames=True,
+            method=EncodingMethod.POSITION, use_default_initial_frames=True,
         )
         print("DHB-TI (QR) linear invariants shape:", out_ti_qr["linear_motion_invariants"].shape)
     except ImportError:

@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 import importlib.util
 
-from dhb_xr.core.types import DHBMethod
+from dhb_xr.core.types import DHBMethod, EncodingMethod
 
 # Check if CasADi is available
 HAS_CASADI = importlib.util.find_spec("casadi") is not None
@@ -210,7 +210,7 @@ class TestCasadiSolver:
         orig_inv = encode_dhb_dr(
             positions, quaternions,
             init_pose=pose_init,
-            method="pos",
+            method=EncodingMethod.POSITION,
             use_default_initial_frames=False,
             dhb_method=DHBMethod.DOUBLE_REFLECTION,
         )

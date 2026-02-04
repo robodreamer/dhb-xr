@@ -8,7 +8,7 @@ from dhb_xr.encoder.dhb_ti import (
     encode_dhb_dr_ti,
     encode_dhb_qr_ti,
 )
-from dhb_xr.core.types import DHBMethod
+from dhb_xr.core.types import DHBMethod, EncodingMethod
 
 
 def test_compute_progress_translation():
@@ -74,7 +74,7 @@ def test_encode_dhb_dr_ti():
     out = encode_dhb_dr_ti(
         positions, quaternions, M,
         progress_kind="hybrid", alpha=0.5,
-        method="pos", use_default_initial_frames=True,
+        method=EncodingMethod.POSITION, use_default_initial_frames=True,
         dhb_method=DHBMethod.DOUBLE_REFLECTION,
     )
     assert "linear_motion_invariants" in out
@@ -117,7 +117,7 @@ def test_encode_dhb_qr_ti():
     out = encode_dhb_qr_ti(
         positions, quaternions, M,
         progress_kind="hybrid", alpha=0.5,
-        method="pos", use_default_initial_frames=True,
+        method=EncodingMethod.POSITION, use_default_initial_frames=True,
     )
     assert "linear_motion_invariants" in out
     assert out["linear_motion_invariants"].shape[1] == 5

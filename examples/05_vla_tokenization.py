@@ -6,7 +6,7 @@ def main():
     try:
         import torch
         from dhb_xr.encoder.dhb_dr import encode_dhb_dr
-        from dhb_xr.core.types import DHBMethod
+        from dhb_xr.core.types import DHBMethod, EncodingMethod
         from dhb_xr.tokenization.vqvae import DHBTokenizer
     except ImportError as e:
         print("Skipping: torch required for tokenization.", e)
@@ -18,7 +18,7 @@ def main():
     quaternions = np.tile(np.array([1.0, 0.0, 0.0, 0.0]), (n, 1))
     out = encode_dhb_dr(
         positions, quaternions,
-        method="pos", use_default_initial_frames=True, dhb_method=DHBMethod.DOUBLE_REFLECTION,
+        method=EncodingMethod.POSITION, use_default_initial_frames=True, dhb_method=DHBMethod.DOUBLE_REFLECTION,
     )
     invariants = np.concatenate([
         out["linear_motion_invariants"],

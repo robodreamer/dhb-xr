@@ -74,4 +74,4 @@ See [Examples](examples_walkthrough.md) for a walkthrough of the example scripts
 
 MIT License.
 
-**Copyright (c) 2025 Andy Park <andy.park@thehumanoid.ai>**
+**Copyright (c) 2026 Andy Park <andy.park@thehumanoid.ai>**

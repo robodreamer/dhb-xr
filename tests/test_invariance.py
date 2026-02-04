@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 from dhb_xr.encoder.dhb_dr import encode_dhb_dr
-from dhb_xr.core.types import DHBMethod
+from dhb_xr.core.types import DHBMethod, EncodingMethod
 from dhb_xr.core import geometry as geom
 
 
@@ -34,13 +34,13 @@ def test_se3_invariance():
     quats = np.tile(np.array([1.0, 0.0, 0.0, 0.0]), (n, 1))
     out1 = encode_dhb_dr(
         positions, quats,
-        method="pos", use_default_initial_frames=True, dhb_method=DHBMethod.DOUBLE_REFLECTION,
+        method=EncodingMethod.POSITION, use_default_initial_frames=True, dhb_method=DHBMethod.DOUBLE_REFLECTION,
     )
     R, t = random_se3()
     p2, q2 = apply_se3_to_trajectory(positions, quats, R, t)
     out2 = encode_dhb_dr(
         p2, q2,
-        method="pos", use_default_initial_frames=True, dhb_method=DHBMethod.DOUBLE_REFLECTION,
+        method=EncodingMethod.POSITION, use_default_initial_frames=True, dhb_method=DHBMethod.DOUBLE_REFLECTION,
     )
     # Magnitudes (first column of each component) are inner products and should match
     np.testing.assert_allclose(

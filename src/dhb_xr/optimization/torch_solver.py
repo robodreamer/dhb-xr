@@ -6,7 +6,7 @@ from scipy.optimize import minimize
 
 from dhb_xr.encoder.dhb_dr import encode_dhb_dr
 from dhb_xr.decoder.dhb_dr import decode_dhb_dr
-from dhb_xr.core.types import DHBMethod
+from dhb_xr.core.types import DHBMethod, EncodingMethod
 from dhb_xr.core import geometry as geom
 
 try:
@@ -42,7 +42,7 @@ class BatchedTrajectoryOptimizer:
         """
         out = encode_dhb_dr(
             demo_positions, demo_quaternions,
-            method="pos", use_default_initial_frames=True, dhb_method=self.dhb_method,
+            method=EncodingMethod.POSITION, use_default_initial_frames=True, dhb_method=self.dhb_method,
         )
         U_demo = np.concatenate([
             out["linear_motion_invariants"],
@@ -63,7 +63,7 @@ class BatchedTrajectoryOptimizer:
                 lin, ang = U[:, : self.k], U[:, self.k :]
                 decoded = decode_dhb_dr(
                     lin, ang, {"position": init_pos, "quaternion": init_quat},
-                    method="pos", dhb_method=self.dhb_method, drop_padded=True,
+                    method=EncodingMethod.POSITION, dhb_method=self.dhb_method, drop_padded=True,
                 )
                 pos = decoded["positions"]
                 quat = decoded["quaternions"]
@@ -78,7 +78,7 @@ class BatchedTrajectoryOptimizer:
             lin, ang = U_opt[:, : self.k], U_opt[:, self.k :]
             decoded = decode_dhb_dr(
                 lin, ang, {"position": init_pos, "quaternion": init_quat},
-                method="pos", dhb_method=self.dhb_method, drop_padded=True,
+                method=EncodingMethod.POSITION, dhb_method=self.dhb_method, drop_padded=True,
             )
             pos_list.append(decoded["positions"])
             quat_list.append(decoded["quaternions"])

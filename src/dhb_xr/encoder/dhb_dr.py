@@ -14,7 +14,7 @@ import warnings
 from typing import Dict, Optional, Any, List, Tuple
 from dataclasses import dataclass
 
-from dhb_xr.core.types import DHBMethod
+from dhb_xr.core.types import DHBMethod, EncodingMethod
 from dhb_xr.core import geometry as geom
 
 EPSILON = 1e-10
@@ -197,7 +197,7 @@ def _compute_initial_frames(
     position_diff: np.ndarray,
     rotation_diff: np.ndarray,
     initial_pose: Dict[str, np.ndarray],
-    method: str,
+    method: EncodingMethod,
     use_default_initial_frames: bool,
 ) -> Dict[str, Any]:
     x_axis = np.array([1.0, 0.0, 0.0])
@@ -221,8 +221,9 @@ def _compute_initial_frames(
         ly = _compute_frame_axis_y(lx, lx2, default_y)
         lz = _compute_frame_axis_z(lx, ly, z_axis)
         linear_frame_initial[:3, :3] = np.vstack((lx, ly, lz)).T
+        method_enum = _normalize_encoding_method(method)
         linear_frame_initial[:3, 3] = (
-            initial_pose["position"] if method == "pos" else position_diff[0]
+            initial_pose["position"] if method_enum == EncodingMethod.POSITION else position_diff[0]
         )
 
         ax = _compute_frame_axis_x(rotation_diff[0], x_axis)
@@ -263,7 +264,7 @@ def encode_dhb_dr(
         positions: (N, 3) position trajectory
         quaternions: (N, 4) wxyz quaternion trajectory
         init_pose: optional {'position': (3,), 'quaternion': (4,) wxyz}
-        method: 'pos' or 'vel' for position or velocity-based encoding
+        method: EncodingMethod for position or velocity-based encoding
         use_default_initial_frames: if True, pad and use identity-like frames
         dhb_method: DHBMethod.ORIGINAL (3 inv) or DHBMethod.DOUBLE_REFLECTION (4 inv)
         robust_mode: Enable robustness features (reversal detection, zero-motion handling)

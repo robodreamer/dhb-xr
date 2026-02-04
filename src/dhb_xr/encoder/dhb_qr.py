@@ -4,7 +4,7 @@ Per-step invariant: [m, qw, qx, qy, qz] = 5 values; sign continuity enforced.
 """
 
 import numpy as np
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, Union
 
 from dhb_xr.encoder.dhb_dr import (
     encode_dhb_dr,
@@ -14,7 +14,9 @@ from dhb_xr.encoder.dhb_dr import (
     _double_reflection_step,
     _compute_initial_frames,
     EPSILON,
+    _normalize_encoding_method,
 )
+from dhb_xr.core.types import EncodingMethod
 from dhb_xr.core import geometry as geom
 
 
@@ -22,7 +24,7 @@ def encode_dhb_qr(
     positions: np.ndarray,
     quaternions: np.ndarray,
     init_pose: Optional[Dict[str, np.ndarray]] = None,
-    method: str = "pos",
+    method: EncodingMethod = EncodingMethod.POSITION,
     use_default_initial_frames: bool = True,
     enforce_qw_nonnegative: bool = True,
 ) -> Dict[str, Any]:

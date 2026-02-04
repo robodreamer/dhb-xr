@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 from dhb_xr.encoder.dhb_dr import encode_dhb_dr
-from dhb_xr.core.types import DHBMethod
+from dhb_xr.core.types import DHBMethod, EncodingMethod
 
 
 def test_encode_dhb_dr_basic():
@@ -13,7 +13,7 @@ def test_encode_dhb_dr_basic():
     quaternions = np.tile(np.array([1.0, 0.0, 0.0, 0.0]), (n, 1))
     out = encode_dhb_dr(
         positions, quaternions,
-        method="pos", use_default_initial_frames=True, dhb_method=DHBMethod.DOUBLE_REFLECTION,
+        method=EncodingMethod.POSITION, use_default_initial_frames=True, dhb_method=DHBMethod.DOUBLE_REFLECTION,
     )
     assert "linear_motion_invariants" in out
     assert "angular_motion_invariants" in out
@@ -29,7 +29,7 @@ def test_encode_dhb_dr_original():
     quaternions = np.tile(np.array([1.0, 0.0, 0.0, 0.0]), (n, 1))
     out = encode_dhb_dr(
         positions, quaternions,
-        method="pos", use_default_initial_frames=True, dhb_method=DHBMethod.ORIGINAL,
+        method=EncodingMethod.POSITION, use_default_initial_frames=True, dhb_method=DHBMethod.ORIGINAL,
     )
     assert out["linear_motion_invariants"].shape[1] == 3
     assert out["angular_motion_invariants"].shape[1] == 3

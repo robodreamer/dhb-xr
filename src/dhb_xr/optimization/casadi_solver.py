@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional
 
 from dhb_xr.encoder.dhb_dr import encode_dhb_dr
 from dhb_xr.decoder.dhb_dr import decode_dhb_dr
-from dhb_xr.core.types import DHBMethod
+from dhb_xr.core.types import DHBMethod, EncodingMethod
 from dhb_xr.core import geometry as geom
 from dhb_xr.utils.resampling import resample_and_smooth
 
@@ -106,7 +106,7 @@ def generate_trajectory(
     invariants_out = encode_dhb_dr(
         pos_orig, quat_orig,
         init_pose=pose_target_init,
-        method="pos",
+        method=EncodingMethod.POSITION,
         use_default_initial_frames=False,
         dhb_method=dhb_method,
     )
@@ -295,7 +295,7 @@ def _fallback_interpolation(
     """Fallback: decode + smooth interpolation when CasADi is not available."""
     decoded = decode_dhb_dr(
         lin_inv, ang_inv, pose_target_init,
-        method="pos", dhb_method=dhb_method, drop_padded=False,
+        method=EncodingMethod.POSITION, dhb_method=dhb_method, drop_padded=False,
     )
     pos_dec = decoded["positions"]
     quat_dec = decoded["quaternions"]

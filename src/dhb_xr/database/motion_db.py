@@ -4,7 +4,7 @@ import numpy as np
 from typing import List, Dict, Any, Optional
 
 from dhb_xr.encoder.dhb_dr import encode_dhb_dr
-from dhb_xr.core.types import DHBMethod
+from dhb_xr.core.types import DHBMethod, EncodingMethod
 from dhb_xr.database.similarity import invariant_distance, soft_dtw_distance
 
 try:
@@ -38,7 +38,7 @@ class MotionDatabase:
     ) -> None:
         out = encode_dhb_dr(
             positions, quaternions,
-            method="pos", use_default_initial_frames=True, dhb_method=self.dhb_method,
+            method=EncodingMethod.POSITION, use_default_initial_frames=True, dhb_method=self.dhb_method,
         )
         U = np.concatenate([
             out["linear_motion_invariants"],
@@ -64,7 +64,7 @@ class MotionDatabase:
     ) -> List[tuple]:
         out = encode_dhb_dr(
             query_positions, query_quaternions,
-            method="pos", use_default_initial_frames=True, dhb_method=self.dhb_method,
+            method=EncodingMethod.POSITION, use_default_initial_frames=True, dhb_method=self.dhb_method,
         )
         U_q = np.concatenate([
             out["linear_motion_invariants"],

@@ -2,7 +2,7 @@
 
 import numpy as np
 from dhb_xr.encoder.dhb_dr import encode_dhb_dr
-from dhb_xr.core.types import DHBMethod
+from dhb_xr.core.types import DHBMethod, EncodingMethod
 from dhb_xr.losses.invariant_loss import invariant_matching_loss
 from dhb_xr.losses.geodesic_loss import se3_geodesic_loss_np
 from dhb_xr.losses.hybrid_loss import hybrid_invariant_pose_loss
@@ -17,11 +17,11 @@ def main():
 
     out_demo = encode_dhb_dr(
         demo_pos, demo_quat,
-        method="pos", use_default_initial_frames=True, dhb_method=DHBMethod.DOUBLE_REFLECTION,
+        method=EncodingMethod.POSITION, use_default_initial_frames=True, dhb_method=DHBMethod.DOUBLE_REFLECTION,
     )
     out_pred = encode_dhb_dr(
         pred_pos, pred_quat,
-        method="pos", use_default_initial_frames=True, dhb_method=DHBMethod.DOUBLE_REFLECTION,
+        method=EncodingMethod.POSITION, use_default_initial_frames=True, dhb_method=DHBMethod.DOUBLE_REFLECTION,
     )
     U_demo = np.concatenate([
         out_demo["linear_motion_invariants"],

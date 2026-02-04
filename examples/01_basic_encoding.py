@@ -2,7 +2,7 @@
 
 import numpy as np
 from dhb_xr import encode_dhb_dr, decode_dhb_dr
-from dhb_xr.core.types import DHBMethod
+from dhb_xr.core.types import DHBMethod, EncodingMethod
 
 def main():
     np.random.seed(42)
@@ -12,7 +12,7 @@ def main():
 
     out = encode_dhb_dr(
         positions, quaternions,
-        method="pos", use_default_initial_frames=True, dhb_method=DHBMethod.DOUBLE_REFLECTION,
+        method=EncodingMethod.POSITION, use_default_initial_frames=True, dhb_method=DHBMethod.DOUBLE_REFLECTION,
     )
     print("Encoded invariants shape:", out["linear_motion_invariants"].shape)
 
@@ -20,7 +20,7 @@ def main():
         out["linear_motion_invariants"],
         out["angular_motion_invariants"],
         out["initial_pose"],
-        method="pos",
+        method=EncodingMethod.POSITION,
         dhb_method=DHBMethod.DOUBLE_REFLECTION,
         drop_padded=True,
     )

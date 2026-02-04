@@ -84,7 +84,8 @@ class TestFatropTrajectoryGenerator:
 
         # Encode demo
         init_pose = {'position': positions[0], 'quaternion': quaternions[0]}
-        result = encode_dhb_dr(positions, quaternions, init_pose=init_pose, method='pos')
+        from dhb_xr.core.types import EncodingMethod
+        result = encode_dhb_dr(positions, quaternions, init_pose=init_pose, method=EncodingMethod.POSITION)
         demo_lin = result['linear_motion_invariants']
         demo_ang = result['angular_motion_invariants']
 

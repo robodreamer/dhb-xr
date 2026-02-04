@@ -17,6 +17,13 @@ class DHBMethod(Enum):
     QUATERNION = "quaternion"  # 5 invariants (magnitude + unit quaternion)
 
 
+class EncodingMethod(Enum):
+    """Encoding method for initial frame computation."""
+
+    POSITION = "pos"  # Position-based encoding: use initial position for frame origin
+    VELOCITY = "vel"  # Velocity-based encoding: use first position difference for frame origin
+
+
 @dataclass
 class SE3Pose:
     """Single SE(3) pose: position and quaternion (w, x, y, z)."""

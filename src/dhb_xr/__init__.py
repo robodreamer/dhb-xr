@@ -6,6 +6,7 @@ __version__ = "0.1.0"
 
 from dhb_xr.encoder.dhb_dr import encode_dhb_dr
 from dhb_xr.decoder.dhb_dr import decode_dhb_dr
+from dhb_xr.core.types import EncodingMethod, DHBMethod
 
 # Preprocessing
 from dhb_xr.preprocessing import (
@@ -43,6 +44,8 @@ __all__ = [
     "__version__",
     "encode_dhb_dr",
     "decode_dhb_dr",
+    "EncodingMethod",
+    "DHBMethod",
     "cpp_version",
     # Preprocessing
     "TrajectoryPreprocessor",
