@@ -171,14 +171,30 @@ See `examples/08_dhb_ti_time_invariant.py`.
 
 ## Documentation
 
-API documentation is built with Sphinx. From the repo root (use the pixi environment; dev feature includes sphinx):
+📚 **[Read the Docs](https://dhb-xr.readthedocs.io/)** - Complete API documentation with examples
+
+The documentation is built with MkDocs and automatically deployed to GitHub Pages on every push to main.
+
+### Build locally
 
 ```bash
+# Install development dependencies (includes MkDocs)
+pixi install
+
+# Build documentation
 pixi run docs          # or: pixi run build-docs
-# open docs/_build/index.html
+
+# Serve locally for development
+pixi run serve-docs    # opens http://127.0.0.1:8000/
 ```
 
-Without pixi: `pip install sphinx sphinx-autodoc-typehints` then `sphinx-build docs docs/_build -b html`.
+### Without pixi
+
+```bash
+pip install mkdocs mkdocs-material mkdocstrings mkdocstrings-python
+mkdocs build
+mkdocs serve  # opens http://127.0.0.1:8000/
+```
 
 ### CusADi GPU Acceleration (optional)
 

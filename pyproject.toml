@@ -51,7 +51,7 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/yourusername/dhb_xr"
-Documentation = "https://dhb-xr.readthedocs.io"
+Documentation = "https://yourusername.github.io/dhb_xr/"
 Repository = "https://github.com/yourusername/dhb_xr"
 
 [build-system]

@@ -4,6 +4,14 @@
 
 DHB-XR (DHB Extended Representations) provides SE(3) invariant trajectory encoding for robotics and VLA (Vision-Language-Action) applications. The library implements various DHB (Double-Helix Based) methods for encoding trajectories into invariant representations that are independent of global position and orientation changes.
 
+## Research Background
+
+This library implements the double-reflection (DHB-DR) and quaternion-relative (DHB-QR) invariant representations for rigid-body motion trajectories on SE(3), as described in the manuscript **"Double-Reflection DHB Invariant Representation on SE(3)"**.
+
+**Author:** Andy Park (andy.park@thehumanoid.ai)
+
+**Version:** 0.1.0
+
 ## Features
 
 - **DHB-DR** (Double-Reflection): Euler-based invariants (4 values per component)
