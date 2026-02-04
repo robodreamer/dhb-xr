@@ -52,6 +52,7 @@ htmlcov/
 # Documentation
 docs/_build/
 docs/.doctrees/
+site/
 
 # C++ build
 *.o

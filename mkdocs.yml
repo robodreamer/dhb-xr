@@ -1,0 +1,86 @@
+site_name: DHB-XR Documentation
+site_description: SE(3) invariant trajectory encoding for robotics and VLA applications
+site_url: https://dhb-xr.readthedocs.io/
+repo_url: https://github.com/yourusername/dhb_xr
+repo_name: yourusername/dhb_xr
+edit_uri: edit/main/docs/
+
+# Ensure proper URL handling - use directory URLs (transforms/ instead of transforms.html)
+use_directory_urls: true
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.annotate
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            show_source: true
+            show_root_heading: true
+            show_root_toc_entry: true
+            show_root_full_path: false
+            show_object_full_path: false
+            show_category_heading: true
+            show_if_no_docstring: false
+            separate_signature: true
+            line_length: 100
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - admonition
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+  - attr_list
+  - md_in_html
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Quickstart: quickstart.md
+  - API Reference:
+    - Overview: api/index.md
+    - Core Types: api/core.md
+    - Encoding: api/encoding.md
+    - Decoding: api/decoding.md
+    - Time-Invariant: api/time_invariant.md
+    - Optimization: api/optimization.md
+    - Database: api/database.md
+    - Tokenization: api/tokenization.md
+    - Losses: api/losses.md
+    - Visualization: api/visualization.md
+  - Examples:
+    - Overview: examples_walkthrough.md
+  - Development: development.md

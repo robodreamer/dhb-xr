@@ -132,9 +132,10 @@ positions = np.cumsum(np.random.randn(50, 3) * 0.01, axis=0)
 quaternions = np.tile(np.array([1.0, 0, 0, 0]), (50, 1))  # identity orientation
 
 # Encode to invariants (DHB-DR: double reflection + Euler)
+from dhb_xr.core.types import EncodingMethod
 result = encode_dhb_dr(
     positions, quaternions,
-    method="pos",
+    method=EncodingMethod.POSITION,
     use_default_initial_frames=True,
     dhb_method=DHBMethod.DOUBLE_REFLECTION,
 )
@@ -145,7 +146,7 @@ angular_inv = result["angular_motion_invariants"]
 decoded = decode_dhb_dr(
     linear_inv, angular_inv,
     result["initial_pose"],
-    method="pos",
+    method=EncodingMethod.POSITION,
     dhb_method=DHBMethod.DOUBLE_REFLECTION,
     drop_padded=True,
 )
