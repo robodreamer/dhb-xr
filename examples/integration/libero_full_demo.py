@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""LIBERO Full Simulation Demo with DHB-XR.
+"""LIBERO / LIBERO-PRO Full Simulation Demo with DHB-XR.
 
 This script demonstrates the complete DHB-XR + LIBERO integration:
 
@@ -8,6 +8,9 @@ This script demonstrates the complete DHB-XR + LIBERO integration:
 3. Trajectory adaptation (retargeting to new initial poses)
 4. Running adapted trajectories in the LIBERO simulation
 5. Motion retrieval using the DHB database
+
+Compatible with both LIBERO and LIBERO-PRO (drop-in replacement with perturbation support).
+For perturbation robustness testing, see libero_pro_dhb_demo.py.
 
 Requirements:
     # In a conda environment (libero):
@@ -18,8 +21,9 @@ Requirements:
     conda activate libero
     pip install robosuite==1.4.0 mujoco bddl==1.0.1 robomimic==0.2.0
     pip install future easydict hydra-core cloudpickle gym==0.25.2
-    git clone https://github.com/Lifelong-Robot-Learning/LIBERO.git
-    cd LIBERO && pip install -e . --config-settings editable_mode=compat
+    # LIBERO-PRO (recommended, includes perturbation benchmarks):
+    git clone https://github.com/Zxy-MLlab/LIBERO-PRO.git
+    cd LIBERO-PRO && pip install -e . --config-settings editable_mode=compat
     pip install dhb_xr
 
 Usage:
@@ -75,6 +79,19 @@ from dhb_xr.encoder.dhb_dr import encode_dhb_dr
 from dhb_xr.decoder.dhb_dr import decode_dhb_dr
 from dhb_xr.core.types import EncodingMethod, DHBMethod
 from dhb_xr.core.geometry import rot_to_quat, quat_to_rot
+
+# Solver availability
+try:
+    from dhb_xr.optimization.fatrop_solver import generate_trajectory_fatrop
+    HAS_FATROP = True
+except ImportError:
+    HAS_FATROP = False
+
+try:
+    from dhb_xr.optimization.casadi_solver import generate_trajectory
+    HAS_CASADI_SOLVER = True
+except ImportError:
+    HAS_CASADI_SOLVER = False
 
 
 # -----------------------------------------------------------------------------
@@ -166,29 +183,80 @@ def adapt_trajectory(
     new_start_pos: np.ndarray,
     new_start_quat: np.ndarray,
 ):
-    """Adapt trajectory to a new starting pose using DHB invariance.
+    """Adapt trajectory to a new starting pose using solver-based optimization.
 
-    This demonstrates the key property of DHB: the invariants are independent
-    of the global reference frame. By encoding to invariants and decoding
-    with a different initial pose, we effectively retarget the trajectory.
+    Uses Fatrop (preferred) or CasADi/IPOPT to find an adapted trajectory
+    whose DHB invariants stay close to the demo while satisfying boundary
+    constraints. Falls back to simple encode-decode if no solver is available.
+
+    Solver priority: Fatrop (~7ms) > CasADi/IPOPT (~50ms) > encode-decode
     """
-    # Encode to invariants
-    encoded = encode_trajectory(positions, quaternions)
+    # Goal: shift by same offset as start
+    offset = new_start_pos - positions[0]
+    new_goal_pos = positions[-1] + offset
+    new_goal_quat = quaternions[-1].copy()
+    traj_length = min(len(positions), 50)
 
-    # Create new initial pose (decoder expects position + quaternion)
+    pose_init = {"position": new_start_pos.copy(), "quaternion": new_start_quat.copy()}
+    pose_goal = {"position": new_goal_pos.copy(), "quaternion": new_goal_quat.copy()}
+
+    # Try Fatrop first (fastest)
+    if HAS_FATROP:
+        try:
+            result = generate_trajectory_fatrop(
+                positions, quaternions,
+                pose_target_init=pose_init,
+                pose_target_final=pose_goal,
+                traj_length=traj_length,
+                use_fatrop=True,
+                verbose=False,
+            )
+            if result.get("success", False):
+                return {
+                    "positions": result["positions"],
+                    "quaternions": result["quaternions"],
+                    "solver": "fatrop",
+                }
+        except Exception:
+            pass
+
+    # Try CasADi/IPOPT
+    if HAS_CASADI_SOLVER:
+        try:
+            result = generate_trajectory(
+                positions, quaternions,
+                pose_target_init=pose_init,
+                pose_target_final=pose_goal,
+                traj_length=traj_length,
+                dhb_method=DHBMethod.DOUBLE_REFLECTION,
+                use_casadi=True,
+                verbose=False,
+            )
+            if result.get("solver") == "casadi":
+                return {
+                    "positions": result["adapted_pos_data"],
+                    "quaternions": result["adapted_quat_data"],
+                    "solver": "casadi",
+                }
+        except Exception:
+            pass
+
+    # Fallback: pure encode-decode (no goal constraint)
+    encoded = encode_trajectory(positions, quaternions)
     new_initial_pose = {
         "position": new_start_pos.copy(),
         "quaternion": new_start_quat.copy(),
     }
-
-    # Decode with new initial pose
     adapted = decode_trajectory(
         encoded["linear_invariants"],
         encoded["angular_invariants"],
         new_initial_pose,
     )
-
-    return adapted
+    return {
+        "positions": adapted["positions"],
+        "quaternions": adapted["quaternions"],
+        "solver": "decode",
+    }
 
 
 # -----------------------------------------------------------------------------
@@ -251,7 +319,8 @@ def run_dhb_only_demo():
     print(f"  Max:  {pos_error.max() * 1000:.3f} mm")
 
     # Trajectory adaptation demo
-    print("\n--- Trajectory Adaptation ---")
+    print("\n--- Trajectory Adaptation (solver-based) ---")
+    print(f"Solver availability: Fatrop={'YES' if HAS_FATROP else 'NO'}, CasADi={'YES' if HAS_CASADI_SOLVER else 'NO'}")
     print("Adapting trajectory to a new starting pose...")
 
     # Create perturbed starting pose
@@ -263,6 +332,8 @@ def run_dhb_only_demo():
         new_start_pos, new_start_quat,
     )
 
+    solver_used = adapted.get("solver", "unknown")
+    print(f"Solver used: {solver_used}")
     print(f"Original start: {demo['positions'][0]}")
     print(f"Adapted start:  {adapted['positions'][0]}")
     print(f"Offset applied: {new_start_pos - demo['positions'][0]}")

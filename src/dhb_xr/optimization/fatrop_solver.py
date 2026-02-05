@@ -212,6 +212,7 @@ class FatropTrajectoryGenerator:
             # Use CasADi's native Fatrop solver (bundled with conda casadi)
             solver_opts = {
                 'expand': True,
+                'print_time': self.verbose,
                 'structure_detection': 'auto',
                 'fatrop': {
                     'print_level': 1 if self.verbose else 0,
