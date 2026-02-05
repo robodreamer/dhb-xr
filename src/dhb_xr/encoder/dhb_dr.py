@@ -20,6 +20,19 @@ from dhb_xr.core import geometry as geom
 EPSILON = 1e-10
 
 
+def _normalize_encoding_method(method) -> EncodingMethod:
+    """Convert string or EncodingMethod to EncodingMethod enum."""
+    if isinstance(method, EncodingMethod):
+        return method
+    if isinstance(method, str):
+        method_lower = method.lower()
+        if method_lower in ("pos", "position"):
+            return EncodingMethod.POSITION
+        elif method_lower in ("vel", "velocity"):
+            return EncodingMethod.VELOCITY
+    raise ValueError(f"Unknown encoding method: {method!r}. Use EncodingMethod.POSITION or EncodingMethod.VELOCITY.")
+
+
 @dataclass
 class EncodingDiagnostics:
     """Diagnostics from robust encoding."""

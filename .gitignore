@@ -73,4 +73,4 @@ Thumbs.db
 # Code-generation
 **/build_fatrop_rockit/
 **/dhb_gen_*/
-figures/
+figures/data/generated/
