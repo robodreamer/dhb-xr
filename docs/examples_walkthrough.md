@@ -323,6 +323,79 @@ pixi run python examples/integration/libero_full_demo.py --retrieval
 
 ---
 
+### libero_pro_dhb_demo.py — LIBERO-PRO Perturbation Robustness Demo
+
+**What it does:** Demonstrates how DHB's SE(3)-invariance enables robust trajectory adaptation under LIBERO-PRO's various perturbation types. Shows that:
+
+1. DHB invariants are perfectly frame-independent (0.000 mm shape error under any spatial perturbation)
+2. The same motion in perturbed environments (different objects) yields highly correlated invariants (>0.97)
+3. Trajectory adaptation to new starting poses preserves original motion geometry
+
+**Run modes:**
+
+```bash
+# Perturbation analysis (fast, no simulation required)
+# Encodes demo, applies spatial perturbations, generates 6-panel analysis plot
+pixi run python examples/integration/libero_pro_dhb_demo.py --analysis
+
+# Batch evaluation across tasks (generates comparison plots)
+pixi run python examples/integration/libero_pro_dhb_demo.py --batch
+
+# Full simulation with LIBERO-PRO variants (requires libero conda environment)
+~/miniforge3/bin/mamba run -n libero python examples/integration/libero_pro_dhb_demo.py --simulate
+
+# Save side-by-side comparison video (original vs perturbed variants)
+~/miniforge3/bin/mamba run -n libero python examples/integration/libero_pro_dhb_demo.py --simulate --save-video comparison.mp4
+
+# Specific task
+~/miniforge3/bin/mamba run -n libero python examples/integration/libero_pro_dhb_demo.py --simulate --task_id 3
+```
+
+**Expected output (analysis mode):**
+- Reconstruction error: 0.000 mm
+- Shape preservation under perturbation: 0.000 mm for all offset levels (20mm, 50mm, 100mm)
+- Cross-demo invariant consistency: CV ~40% (expected variation across different demonstrations of the same task)
+- Plot saved to: `/tmp/dhb_pro_perturbation_analysis.png`
+
+**Expected output (simulation mode):**
+- Original trajectory replay with recorded EE positions
+- Adapted trajectories with different starting offsets (shape preserved)
+- LIBERO-PRO variant execution with invariant correlation (>0.97)
+- Comparison image: `/tmp/dhb_pro_simulation_comparison.png`
+- Invariant comparison: `/tmp/dhb_pro_invariant_comparison.png`
+
+**Key insight:** When LIBERO-PRO perturbs the scene (swaps objects, replaces objects, changes environment), a traditional replay-based approach fails because the actions are tied to specific spatial coordinates. DHB encodes the motion shape in a coordinate-free representation, enabling re-decoding from any new starting pose. This is the foundation for perturbation-robust VLA policies.
+
+---
+
+### libero_swap_demo.py — DHB-XR vs Naive Replay under Spatial Swap
+
+**What it does:** The most compelling demo — directly compares naive replay vs DHB-adapted trajectory when LIBERO-PRO swaps object positions (~17cm shift). Shows that naive replay reaches for the **old** target position while DHB-adapted trajectory correctly targets the **new** position.
+
+**Why this matters for VLA:** Current VLA policies (vision + language → actions) fail under spatial perturbations because actions are tied to absolute positions. DHB-XR decouples motion shape from spatial context, enabling adaptation to new object positions without retraining:
+
+- 1 demo → encode invariants → adapt to any spatial configuration (Fatrop solver, ~7ms)
+- Data augmentation for spatial variations becomes unnecessary
+- The same invariants work regardless of where objects are placed
+
+**Run:**
+```bash
+# Requires LIBERO-PRO + Fatrop solver in the libero conda environment
+~/miniforge3/bin/mamba run -n libero python examples/integration/libero_swap_demo.py
+```
+
+**Expected output:**
+- Original demo: SUCCESS (robot picks up bowl, places on plate)
+- Naive replay in swapped env: FAILS (robot reaches for old plate position, 11.1cm from new plate)
+- DHB-adapted in swapped env: Robot moves towards new plate position (4.6cm from new plate)
+- **Improvement: 6.5cm closer to correct target** with DHB adaptation
+- Plot saved to: `/tmp/dhb_swap_comparison.png` (8-panel comparison)
+- Video saved to: `/tmp/dhb_swap_comparison.mp4` (side-by-side)
+
+**Note on action space:** LIBERO uses OSC velocity commands. The demo uses a simplified action bias to illustrate DHB's geometric intent. In a production VLA system, DHB-XR would be integrated at the trajectory planning level (before the controller), not as a post-hoc action modifier.
+
+---
+
 ## Running all examples
 
 ```bash

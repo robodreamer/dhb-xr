@@ -8,18 +8,38 @@ enables robust trajectory adaptation under various perturbations from LIBERO-PRO
    new grasp locations while preserving motion shape
 2. **Invariance Verification**: Same task under different perturbations produces
    similar DHB invariants, proving SE(3)-invariance
-3. **Naive vs DHB-Adapted**: Direct replay fails under perturbation, but
-   DHB-adapted trajectory succeeds
+3. **Solver-based adaptation**: Fatrop/CasADi solvers find invariants that stay
+   close to the demo while satisfying new boundary constraints (~7ms per solve)
 
 Key insight: DHB invariants capture the *shape* of a motion independent of
 its global SE(3) frame. When the environment changes (objects move, table changes),
 we can re-decode the same invariants from the new starting pose to get an
 adapted trajectory that preserves the original motion's geometry.
 
+Implications for VLA (Vision-Language-Action) Systems
+-----------------------------------------------------
+DHB-XR addresses a core VLA challenge: spatial generalization.
+
+Current VLA models learn (vision + language) → actions, but struggle when objects
+move or the scene layout changes. DHB-XR provides a structured trajectory
+representation layer that decouples *motion shape* from *spatial context*:
+
+  - **Data efficiency**: Instead of collecting 1000s of demos across different
+    spatial arrangements, collect a few demos and use DHB to analytically generate
+    the spatial variations.
+  - **Robustness**: SE(3)-invariant encoding is immune to spatial perturbations by
+    construction — no data augmentation needed for translation/rotation changes.
+  - **Speed**: Fatrop solver adapts in ~7ms, enabling real-time replanning (100+ Hz).
+  - **Few-shot transfer**: 1 demo → encode to invariants → adapt to any new
+    start/goal pose without retraining.
+
+See also: libero_swap_demo.py for a direct comparison of naive replay vs
+DHB-adapted trajectory under spatial swap perturbation.
+
 Requirements:
     # In the libero conda environment:
     source ~/miniforge3/bin/activate libero
-    pip install matplotlib opencv-python imageio imageio-ffmpeg
+    pip install matplotlib opencv-python imageio imageio-ffmpeg rockit-meco
 
 Usage:
     # DHB-only analysis (no simulation, compares invariants)

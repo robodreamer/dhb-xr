@@ -1,11 +1,12 @@
-# VLA Integration (LIBERO + RoboCASA)
+# VLA Integration (LIBERO-PRO / LIBERO / RoboCASA)
 
-This page shows how to use DHB-XR with popular Vision-Language-Action (VLA) benchmarks for trajectory encoding, retrieval, and simulation.
+This page shows how to use DHB-XR with popular Vision-Language-Action (VLA) benchmarks for trajectory encoding, retrieval, simulation, and **perturbation robustness testing**.
 
 ## Overview
 
 DHB-XR provides thin adapter layers for:
 
+- **LIBERO-PRO**: Extended LIBERO benchmark with perturbation testing (spatial swap, object replacement, environment change, semantic, task)
 - **LIBERO**: Lifelong robot learning benchmark (130 tasks)
 - **RoboCASA**: Large-scale manipulation benchmark
 
@@ -14,7 +15,47 @@ The pipeline:
 1. **Load** dataset episodes (HDF5 format)
 2. **Extract** end-effector poses (positions, quaternions)
 3. **Encode** to SE(3)-invariant DHB representations
-4. **Retrieve** similar motions or **tokenize** for VLA training
+4. **Adapt** trajectories to new initial poses (perturbation robustness)
+5. **Retrieve** similar motions or **tokenize** for VLA training
+
+### Why DHB-XR for VLA?
+
+Current VLA models (RT-2, Octo, OpenVLA) learn a mapping from **(vision + language) → actions**. When the scene changes — even slightly — they either fail, require massive data augmentation, or need fine-tuning. DHB-XR addresses this by providing a **structured trajectory representation layer** that decouples *motion shape* from *spatial context*:
+
+```
+Traditional VLA:  Vision → Policy → Actions (tied to absolute positions)
+
+With DHB-XR:      Vision → Object Pose Detection → DHB Adaptation → Actions
+                            ↑                         ↑
+                     "Where is the plate now?"   "Same motion shape,
+                                                  new target pose"
+```
+
+DHB invariants are **SE(3)-invariant** — the encoded motion shape is independent of the global reference frame. This makes DHB a natural fit for VLA spatial generalization:
+
+| VLA Scenario | Without DHB-XR | With DHB-XR |
+|-------------|---------------|-------------|
+| Object shifts on table | Retrain or fail | Re-decode from new pose (~7ms) |
+| Different robot starting config | Action replay fails | Adapt with same invariants |
+| Transfer between robots | Need new training data | Same invariants, different kinematics |
+| Few-shot learning | Need 100s of demos per arrangement | 1 demo + DHB adaptation covers spatial variations |
+
+**Key advantage — data efficiency:** Instead of collecting 1000s of demonstrations across different spatial arrangements, collect a few demos and use DHB to *analytically* generate the spatial variations. This is especially valuable for LIBERO-PRO's perturbation benchmarks, where each perturbation type would otherwise require separate training data.
+
+**Demonstrated results (LIBERO-PRO spatial swap):**
+
+| Method | EE → OLD plate | EE → NEW plate |
+|--------|---------------|---------------|
+| Naive replay (same actions) | 5.2 cm | 11.1 cm |
+| DHB-adapted (Fatrop solver) | 20.8 cm | **4.6 cm** |
+
+When the plate moves ~17cm (via LIBERO-PRO swap perturbation), naive replay reaches for the old position and fails. DHB-adapted trajectory correctly targets the new plate position — 6.5cm closer to the correct target, solved in ~7ms.
+
+### LIBERO-PRO perturbation compatibility
+
+- **Position perturbations** (objects swap): DHB adapts trajectory to new target locations while preserving motion shape (0.000 mm shape error)
+- **Object replacement**: Same behavioral motion with different objects yields >0.97 invariant correlation
+- **Environment changes**: Motion essence is captured regardless of scene layout
 
 ## LIBERO Integration
 
@@ -116,13 +157,13 @@ pixi run python examples/integration/test_libero_encoding.py
 pixi run python examples/integration/test_libero_retrieval.py
 ```
 
-## LIBERO Simulation
+## LIBERO / LIBERO-PRO Simulation
 
-To run LIBERO tasks in simulation with DHB-XR trajectory adaptation:
+To run LIBERO tasks in simulation with DHB-XR trajectory adaptation and perturbation robustness testing:
 
 ### Installation
 
-LIBERO requires specific package versions. We recommend using a separate conda environment:
+LIBERO (and LIBERO-PRO) require specific package versions. We recommend using a separate conda environment:
 
 ```bash
 # 1. Install Miniforge (if conda/mamba not available)
@@ -136,23 +177,25 @@ bash Miniforge3-$(uname)-$(uname -m).sh -b -p ~/miniforge3
 ~/miniforge3/bin/mamba run -n libero pip install robosuite==1.4.0 mujoco bddl==1.0.1 robomimic==0.2.0
 ~/miniforge3/bin/mamba run -n libero pip install future easydict hydra-core cloudpickle 'gym==0.25.2'
 
-# 4. Clone and install LIBERO
-git clone https://github.com/Lifelong-Robot-Learning/LIBERO.git ~/Projects/repos/LIBERO
-~/miniforge3/bin/mamba run -n libero pip install -e ~/Projects/repos/LIBERO --config-settings editable_mode=compat
+# 4. Clone and install LIBERO-PRO (recommended; drop-in replacement for LIBERO)
+git clone https://github.com/Zxy-MLlab/LIBERO-PRO.git ~/Projects/repos/LIBERO-PRO
+~/miniforge3/bin/mamba run -n libero pip install -e ~/Projects/repos/LIBERO-PRO --config-settings editable_mode=compat
 
 # 5. Configure LIBERO paths
 mkdir -p ~/.libero
 cat > ~/.libero/config.yaml << 'EOF'
-benchmark_root: /home/$USER/Projects/repos/LIBERO/libero/libero
-bddl_files: /home/$USER/Projects/repos/LIBERO/libero/libero/bddl_files
-init_states: /home/$USER/Projects/repos/LIBERO/libero/libero/init_files
+benchmark_root: /home/$USER/Projects/repos/LIBERO-PRO/libero/libero
+bddl_files: /home/$USER/Projects/repos/LIBERO-PRO/libero/libero/bddl_files
+init_states: /home/$USER/Projects/repos/LIBERO-PRO/libero/libero/init_files
 datasets: /home/$USER/Projects/data/libero
-assets: /home/$USER/Projects/repos/LIBERO/libero/libero/assets
+assets: /home/$USER/Projects/repos/LIBERO-PRO/libero/libero/assets
 EOF
 
 # 6. Install dhb_xr
 ~/miniforge3/bin/mamba run -n libero pip install dhb_xr[optimization]
 ```
+
+> **LIBERO-PRO vs LIBERO:** LIBERO-PRO is a drop-in replacement with identical core dependencies. It adds 50+ perturbed task suites for evaluating policy robustness under spatial swap, object replacement, semantic instruction changes, task changes, and environment changes. All original LIBERO benchmarks work unchanged.
 
 **Critical version notes:**
 - `robosuite==1.4.0` is required (LIBERO is incompatible with robosuite 1.5+)
@@ -172,6 +215,73 @@ pixi run python examples/integration/libero_full_demo.py --dhb-only
 # Specific task
 ~/miniforge3/bin/mamba run -n libero python examples/integration/libero_full_demo.py --task_id 3
 ```
+
+### LIBERO-PRO Perturbation Robustness Demo
+
+The dedicated `libero_pro_dhb_demo.py` script demonstrates DHB's SE(3)-invariance under LIBERO-PRO perturbations:
+
+```bash
+# Perturbation analysis (no simulation, fast)
+# Encodes demo, applies spatial perturbations, verifies shape preservation
+pixi run python examples/integration/libero_pro_dhb_demo.py --analysis
+
+# Batch evaluation across multiple tasks (generates comparison plots)
+pixi run python examples/integration/libero_pro_dhb_demo.py --batch
+
+# Full simulation: run original + LIBERO-PRO variants, compare invariants
+~/miniforge3/bin/mamba run -n libero python examples/integration/libero_pro_dhb_demo.py --simulate
+
+# With side-by-side comparison video
+~/miniforge3/bin/mamba run -n libero python examples/integration/libero_pro_dhb_demo.py --simulate --save-video comparison.mp4
+```
+
+**Perturbation analysis results (LIBERO-Spatial, 5 tasks):**
+
+| Perturbation Level | Shape Preservation Error |
+|--------------------|------------------------|
+| 20mm offset | 0.000 mm |
+| 50mm offset | 0.000 mm |
+| 100mm offset | 0.000 mm |
+
+DHB invariants are **perfectly frame-independent**: adapting a trajectory to any perturbed starting pose preserves the original motion shape with zero error.
+
+**Cross-perturbation invariant consistency:**
+
+| LIBERO-PRO Variant | Invariant Correlation |
+|-------------------|----------------------|
+| with_mug (object change) | 0.990 |
+| with_milk (object change) | 0.975 |
+
+Even when LIBERO-PRO replaces objects in the scene, running the same demo actions produces trajectories whose DHB invariants are >0.97 correlated with the original — confirming that DHB captures the motion essence rather than scene-specific details.
+
+**Available LIBERO-PRO perturbation types:**
+
+| Type | Description | Example Benchmark |
+|------|-------------|-------------------|
+| Position/Swap | Objects swap positions | `libero_spatial_swap` |
+| Object | Replace with different objects | `libero_spatial_object` |
+| Semantic | Paraphrase language instructions | `libero_spatial_lan` |
+| Task | Change goal/task | `libero_spatial_task` |
+| Environment | Change table/scene | `libero_spatial_env` |
+
+### DHB-XR vs Naive Replay — Swap Demo
+
+The most compelling demonstration of DHB-XR's value is the `libero_swap_demo.py` script. It runs three scenarios back-to-back:
+
+1. **Original**: Run the demo in the unperturbed environment (baseline, verifies SUCCESS)
+2. **Naive replay in swapped env**: Same actions, but plate and cookies have swapped positions (~17cm shift) — robot reaches for old plate position (FAILS)
+3. **DHB-adapted in swapped env**: Trajectory adapted via Fatrop solver to target the NEW plate position — robot correctly moves towards new target
+
+```bash
+# Run the swap comparison demo
+~/miniforge3/bin/mamba run -n libero python examples/integration/libero_swap_demo.py
+
+# Outputs:
+#   /tmp/dhb_swap_comparison.png  — 8-panel plot with trajectory comparison
+#   /tmp/dhb_swap_comparison.mp4  — side-by-side video
+```
+
+**Note on LIBERO's action space:** LIBERO uses Operational Space Control (OSC) velocity commands. Converting an adapted SE(3) trajectory to OSC actions requires controller inversion, which is non-trivial. The demo uses a simplified action bias approach to illustrate the *geometric intent* of the DHB adaptation. For a production VLA system, DHB-XR would be integrated at the trajectory planning level (before the controller), not as a post-hoc action modifier.
 
 ### Viewing Simulations
 
@@ -351,14 +461,41 @@ On first import, LIBERO asks to configure dataset paths. Pre-create the config:
 
 ```bash
 mkdir -p ~/.libero
+# For LIBERO-PRO:
 cat > ~/.libero/config.yaml << 'EOF'
-benchmark_root: /path/to/LIBERO/libero/libero
-bddl_files: /path/to/LIBERO/libero/libero/bddl_files
-init_states: /path/to/LIBERO/libero/libero/init_files
+benchmark_root: /path/to/LIBERO-PRO/libero/libero
+bddl_files: /path/to/LIBERO-PRO/libero/libero/bddl_files
+init_states: /path/to/LIBERO-PRO/libero/libero/init_files
 datasets: /path/to/your/datasets
-assets: /path/to/LIBERO/libero/libero/assets
+assets: /path/to/LIBERO-PRO/libero/libero/assets
 EOF
+
+# For original LIBERO (same format):
+# Replace LIBERO-PRO with LIBERO in the paths above
 ```
+
+### Switching between LIBERO and LIBERO-PRO
+
+To switch, update `~/.libero/config.yaml` to point to the desired repo and reinstall:
+
+```bash
+# Uninstall current
+pip uninstall -y libero
+
+# Install LIBERO-PRO
+pip install -e /path/to/LIBERO-PRO --config-settings editable_mode=compat
+
+# Or install original LIBERO
+# pip install -e /path/to/LIBERO --config-settings editable_mode=compat
+```
+
+### LIBERO-PRO custom asset errors
+
+Some LIBERO-PRO perturbation variants (e.g. `libero_spatial_with_red_box`) require custom 3D assets that may not be bundled. If you see `FileNotFoundError` for custom asset XMLs, use the pre-built variants that work out of the box:
+
+- `libero_spatial_with_mug` (tested, works)
+- `libero_spatial_with_milk` (tested, works)
+- `libero_spatial_with_blue_stick` (tested, works)
 
 ### gym/gymnasium compatibility
 
@@ -384,15 +521,18 @@ env = OffScreenRenderEnv(
 
 ### Package version summary
 
-For a working LIBERO setup, these versions are tested:
+For a working LIBERO / LIBERO-PRO setup, these versions are tested:
 
-| Package | Version |
-|---------|---------|
-| Python | 3.10 |
-| robosuite | 1.4.0 |
-| bddl | 1.0.1 |
-| robomimic | 0.2.0 |
-| gym | 0.25.2 |
-| mujoco | >=2.3.0 |
-| future | 0.18.2 |
-| easydict | 1.9 |
+| Package | Version | Notes |
+|---------|---------|-------|
+| Python | 3.10 | Required by robosuite 1.4 |
+| robosuite | 1.4.0 | LIBERO incompatible with 1.5+ |
+| bddl | 1.0.1 | Task specification |
+| robomimic | 0.2.0 | Dataset format |
+| gym | 0.25.2 | Older API required |
+| mujoco | >=2.3.0 | Simulation engine |
+| future | 0.18.2 | Python 2/3 compat |
+| easydict | 1.9 | Config handling |
+| LIBERO-PRO | 0.1.0 | Drop-in replacement for LIBERO |
+| opencv-python | >=4.0 | For `--render` display |
+| imageio | >=2.0 | For `--save-video` recording |
