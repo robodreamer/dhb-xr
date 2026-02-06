@@ -1,6 +1,6 @@
 [project]
 name = "dhb_xr"
-version = "0.1.0"
+version = "0.2.0"
 description = "DHB Extended Representations - SE(3) invariant trajectory encoding for robotics and VLA"
 readme = "README.md"
 requires-python = ">=3.10"
