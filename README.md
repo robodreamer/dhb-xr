@@ -54,6 +54,9 @@ pixi run build
 # Run notebooks (CPU-only PyTorch)
 pixi run notebook
 
+# Copy examples for local development
+pixi run dhb_xr-examples --copy ./local_examples
+
 # Run examples programmatically
 pixi run python -c "import dhb_xr_examples; dhb_xr_examples.run_basic_encoding()"
 ```
@@ -128,7 +131,9 @@ pixi run -e cuda python -c "import torch; print(torch.version.cuda)"
 
 ## Examples Package
 
-DHB-XR includes a comprehensive examples package that can be installed separately:
+DHB-XR includes a comprehensive examples package that can be installed separately **or cloned locally**.
+
+### Option 1: Install Examples Package
 
 ```bash
 pip install dhb_xr[examples]
@@ -146,6 +151,26 @@ examples.run_basic_encoding()
 from dhb_xr_examples.basic_encoding import run_example
 run_example()
 ```
+
+### Option 2: Copy Examples Locally
+
+For development and experimentation, copy examples to a local directory:
+
+```bash
+# Copy to default location (./dhb_xr_examples)
+dhb_xr-examples --copy
+
+# Copy to specific directory
+dhb_xr-examples --copy ~/my_dhb_examples
+
+# List available examples
+dhb_xr-examples --list
+
+# Show examples location
+dhb_xr-examples
+```
+
+This creates a local copy you can modify and experiment with.
 
 The examples package includes:
 - **Core examples**: Basic encoding/decoding, trajectory adaptation, DHB-DR vs QR
