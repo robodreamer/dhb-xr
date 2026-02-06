@@ -28,6 +28,9 @@ pip install dhb_xr[optimization]
 # With GPU (PyTorch)
 pip install dhb_xr[gpu]
 
+# With examples and notebooks
+pip install dhb_xr[examples]
+
 # Full installation
 pip install dhb_xr[all]
 ```
@@ -40,16 +43,19 @@ curl -fsSL https://pixi.sh/install.sh | bash
 
 # Clone and setup
 cd dhb_xr
-pixi install              # installs default env (dev tools, jupyter, casadi)
+pixi install              # installs default env (dev tools, jupyter, casadi, examples)
 
 # Run tests
 pixi run test
 
-# Editable install
+# Editable install (includes examples package)
 pixi run build
 
 # Run notebooks (CPU-only PyTorch)
 pixi run notebook
+
+# Run examples programmatically
+pixi run python -c "import dhb_xr_examples; dhb_xr_examples.run_basic_encoding()"
 ```
 
 ### CUDA Environment (GPU acceleration)
@@ -119,6 +125,33 @@ pixi run -e cuda python -c "import torch; print(torch.version.cuda)"
 - Forgetting `target.linux-64` causes solve failures on non-Linux platforms
 
 </details>
+
+## Examples Package
+
+DHB-XR includes a comprehensive examples package that can be installed separately:
+
+```bash
+pip install dhb_xr[examples]
+```
+
+Then run examples programmatically:
+
+```python
+import dhb_xr_examples as examples
+
+# Run basic encoding example
+examples.run_basic_encoding()
+
+# Or run individual examples
+from dhb_xr_examples.basic_encoding import run_example
+run_example()
+```
+
+The examples package includes:
+- **Core examples**: Basic encoding/decoding, trajectory adaptation, DHB-DR vs QR
+- **Advanced examples**: GPU batch optimization, VLA tokenization, motion databases
+- **VLA integration**: Full LIBERO simulation, perturbation robustness demos
+- **Research examples**: Imitation learning losses, time-invariant reparameterization
 
 ## Quick start
 
