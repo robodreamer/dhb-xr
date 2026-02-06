@@ -122,6 +122,8 @@ ipykernel = ">=6.0"
 pytorch = ">=2.0"
 casadi = ">=3.5"
 pip = ">=23.0"
+build = ">=1.0"
+twine = ">=4.0"
 
 [tool.pixi.feature.gpu.dependencies]
 # PyTorch CPU for basic GPU feature (use cuda feature for actual GPU)
@@ -155,7 +157,14 @@ format = "ruff format src/ tests/"
 typecheck = "mypy src/dhb_xr"
 install = "pip install -e ."
 build = "pip install -e ."
-build-wheel = "python -m build"
+build-wheel = { cmd = "python -m build --wheel" }
+build-sdist = { cmd = "python -m build --sdist" }
+build-dist = { cmd = "python -m build" }
+check-dist = "python -m twine check dist/*"
+setup-pypirc = "bash scripts/setup_pypirc.sh"
+upload-testpypi = "bash scripts/upload_testpypi.sh"
+upload-pypi = "bash scripts/upload_pypi.sh"
+version = "python scripts/version.py"
 benchmark = "python examples/benchmark_backends.py"
 docs = "mkdocs build"
 build-docs = "mkdocs build"

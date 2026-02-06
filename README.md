@@ -43,7 +43,7 @@ curl -fsSL https://pixi.sh/install.sh | bash
 
 # Clone and setup
 cd dhb_xr
-pixi install              # installs default env (dev tools, jupyter, casadi, examples)
+pixi install              # installs default env (dev tools, jupyter, casadi, examples, build tools)
 
 # Run tests
 pixi run test
@@ -59,7 +59,72 @@ pixi run dhb_xr-examples --copy ./local_examples
 
 # Run examples programmatically
 pixi run python -c "import dhb_xr_examples; dhb_xr_examples.run_basic_encoding()"
+
+# Build for PyPI
+pixi run build-dist
+
+# Setup PyPI credentials
+pixi run setup-pypirc
+
+# Publish to TestPyPI
+pixi run upload-testpypi
+
+# Publish to PyPI (production)
+pixi run upload-pypi
+
+# Version management
+pixi run version                    # Show current version
+pixi run version --bump patch       # Bump patch version
 ```
+
+### Publishing to PyPI
+
+#### Automated (GitHub Actions)
+
+1. Update version: `pixi run version --bump patch`
+2. Commit and push changes
+3. Create and push a git tag: `git tag v0.2.1 && git push origin v0.2.1`
+4. The `release.yml` workflow will automatically build and publish to PyPI
+
+#### Manual Publishing
+
+```bash
+# Set up PyPI credentials (run once)
+pixi run setup-pypirc
+# Edit ~/.pypirc with your API tokens
+
+# Build distributions
+pixi run build-dist
+
+# Test on TestPyPI first
+pixi run upload-testpypi
+
+# Test installation from TestPyPI
+pip install -i https://test.pypi.org/simple/ dhb_xr
+
+# Publish to production PyPI
+pixi run upload-pypi
+```
+
+#### Version Management
+
+```bash
+# Show current version
+pixi run version
+
+# Set specific version
+pixi run version 0.2.1
+
+# Bump version components
+pixi run version --bump patch  # 0.2.0 -> 0.2.1
+pixi run version --bump minor  # 0.2.0 -> 0.3.0
+pixi run version --bump major  # 0.2.0 -> 1.0.0
+```
+
+**API Token Setup:**
+- **TestPyPI**: https://test.pypi.org/manage/account/#api-tokens
+- **PyPI**: https://pypi.org/manage/account/#api-tokens
+- Credentials stored in `~/.pypirc` or environment variables
 
 ### CUDA Environment (GPU acceleration)
 
