@@ -122,8 +122,6 @@ ipykernel = ">=6.0"
 pytorch = ">=2.0"
 casadi = ">=3.5"
 pip = ">=23.0"
-build = ">=1.0"
-twine = ">=4.0"
 
 [tool.pixi.feature.gpu.dependencies]
 # PyTorch CPU for basic GPU feature (use cuda feature for actual GPU)
