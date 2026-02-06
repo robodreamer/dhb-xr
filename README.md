@@ -242,6 +242,7 @@ The examples package includes:
 - **Advanced examples**: GPU batch optimization, VLA tokenization, motion databases
 - **VLA integration**: Full LIBERO simulation, perturbation robustness demos
 - **Research examples**: Imitation learning losses, time-invariant reparameterization
+- **Tutorial notebooks**: Interactive Jupyter notebooks for learning DHB-XR concepts
 
 ## Quick start
 

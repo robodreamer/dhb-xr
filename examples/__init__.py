@@ -2,7 +2,7 @@
 DHB-XR Examples Package
 
 This package contains comprehensive examples demonstrating DHB-XR usage across
-various robotics and VLA applications.
+various robotics and VLA applications, including both Python scripts and Jupyter notebooks.
 
 Quick Start Examples:
 - basic_encoding: Core DHB-DR/DHB-QR encoding and decoding
@@ -20,10 +20,21 @@ VLA Integration Examples:
 - libero_swap_demo: Spatial swap demonstration with naive vs DHB comparison
 - robocasa_libero_dhb_pipeline: RoboCASA and LIBERO data processing pipeline
 
+Tutorial Notebooks:
+- tutorial_dhb_basics.ipynb: Basic encoding/decoding concepts
+- tutorial_invariance_demo.ipynb: SE(3) invariance demonstration
+- tutorial_umi_xdof_motion_analysis.ipynb: Real-world UMI dataset analysis
+- demo_dhb_features_and_use_cases.ipynb: Comprehensive feature overview
+- tutorial_vla_integration.ipynb: VLA integration with LIBERO/RoboCASA
+
 Usage:
     from dhb_xr_examples import *
     # or import specific examples:
     from dhb_xr_examples.basic_encoding import run_example
+
+    # Run notebooks with:
+    # jupyter notebook
+    # pixi run notebook
 """
 
 __version__ = "0.2.0"
