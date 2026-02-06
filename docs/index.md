@@ -10,8 +10,6 @@ This library implements the double-reflection (DHB-DR) and quaternion-relative (
 
 **Author:** Andy Park (andypark.purdue@gmail.com)
 
-**Version:** 0.1.0
-
 ## Features
 
 - **DHB-DR** (Double-Reflection): Euler-based invariants (4 values per component)
