@@ -52,6 +52,7 @@ htmlcov/
 # Documentation
 docs/_build/
 docs/.doctrees/
+docs/CHANGELOG.md
 site/
 
 # C++ build
@@ -73,4 +74,4 @@ Thumbs.db
 # Code-generation
 **/build_fatrop_rockit/
 **/dhb_gen_*/
-figures/data/generated/
+data/generated/
