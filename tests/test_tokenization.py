@@ -1,4 +1,4 @@
-"""Tests for tokenization (VQ-VAE, RVQ) and compression modules."""
+"""Tests for tokenization (VQ-VAE, RVQ, FAST, OAT) and compression modules."""
 
 import numpy as np
 import pytest
@@ -593,3 +593,58 @@ class TestTokenizationCompressionIntegration:
             compressed = compressor.compress(seq)
             recovered = compressor.decompress(compressed)
             assert recovered == seq
+
+
+# ============================================================================
+# FAST Tokenizer Integration Test
+# ============================================================================
+
+class TestFASTIntegration:
+    """Integration test: FAST tokenizer in the tokenization pipeline."""
+
+    def test_fast_invariant_tokenization(self):
+        """Test FAST tokenizer on invariant-like data."""
+        from dhb_xr.tokenization.fast_tokenizer import FASTTokenizer
+
+        rng = np.random.RandomState(42)
+        corpus = [rng.randn(30, 8).astype(np.float32) * 0.1 for _ in range(10)]
+
+        fast = FASTTokenizer(scale=10.0, vocab_size=512, num_merges=50)
+        fast.fit(corpus)
+
+        for chunk in corpus[:3]:
+            tokens = fast.encode(chunk)
+            recon = fast.decode(tokens, chunk.shape[0], chunk.shape[1])
+            assert recon.shape == chunk.shape
+            mse = float(np.mean((chunk - recon) ** 2))
+            assert mse < 1.0, f"FAST reconstruction MSE too high: {mse}"
+
+
+# ============================================================================
+# OAT Tokenizer Integration Test
+# ============================================================================
+
+class TestOATIntegration:
+    """Integration test: OAT tokenizer in the tokenization pipeline."""
+
+    def test_oat_encode_decode_roundtrip(self):
+        """Test OAT tokenizer encode-decode roundtrip."""
+        pytest.importorskip("torch")
+        import torch
+        from dhb_xr.tokenization.oat_tokenizer import OATTokenizer
+
+        model = OATTokenizer(
+            input_dim=8, input_horizon=20, emb_dim=32, latent_dim=4,
+            num_registers=4, fsq_levels=[8, 5, 5, 5],
+            encoder_depth=1, decoder_depth=1,
+        )
+        model.eval()
+
+        x = torch.randn(2, 20, 8) * 0.1
+        tokens = model.tokenize(x)
+        assert tokens.shape == (2, 4)
+        assert tokens.min() >= 0
+        assert tokens.max() < model.codebook_size
+
+        recon = model.detokenize(tokens)
+        assert recon.shape == x.shape

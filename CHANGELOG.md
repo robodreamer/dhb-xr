@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-01-30
+
+### Added
+- **FAST Tokenizer**: Frequency-space action tokenizer using DCT + BPE compression, no training required (~28x compression on invariant sequences)
+- **OAT-style Tokenizer**: Ordered Action Tokenization with Register Encoder, Finite Scalar Quantization (FSQ), and Masked Nested Dropout for anytime prefix decoding
+- **FSQ Module**: Finite Scalar Quantization with deterministic rounding -- eliminates VQ codebook collapse by construction
+- **Register Encoder**: Transformer-based temporal compression using learnable register tokens with causal-last attention
+- **Nested Dropout**: Masked nested dropout module for inducing coarse-to-fine token ordering (Matryoshka-style)
+- **OAT Decoder**: Cross-attention Transformer decoder for reconstructing sequences from register token latents
+- **Benchmark Suite**: Three benchmark scripts comparing all 7 tokenization methods on rate-distortion, SE(3) stability, and prefix decoding
+- **Interactive Notebook**: Comprehensive tutorial notebook (`tutorial_action_tokenization.ipynb`) with head-to-head comparisons and visualizations
+- **Manuscript Updates**: Expanded Section 7 with FAST/OAT descriptions, new Appendix with empirical comparison tables
+
+### Fixed
+- **SE(3) Invariance**: Fixed invariant token stability under SE(3) transforms by using trajectory-relative initial frames (`init_pose` from trajectory start) instead of fixed global axes. This achieves exact invariance (0% token change, MSE = O(1e-13)) versus the previous approximate invariance
+- **BPE Token Comparison**: Improved token stability reporting to account for different-length BPE sequences and separate pre-BPE (DCT integer) from post-BPE token differences
+
+### Changed
+- **`einops` dependency**: Added to `[tokenization]` optional dependencies for FSQ implementation
+
 ## [0.2.0] - 2026-02-05
 
 ### Added

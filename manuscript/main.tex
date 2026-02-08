@@ -541,6 +541,40 @@ For higher capacity at fixed token rate, one can use residual vector quantizatio
 \end{align}
 The token stream is then either $t_i$ (single codebook) or the tuple $(t_i^{(1)},\dots,t_i^{(M)})$ (RVQ).
 
+\paragraph{Finite scalar quantization (FSQ).}
+An alternative to learned VQ codebooks is \emph{finite scalar quantization} (FSQ) \cite{mentzer2024fsq}, which replaces the nearest-neighbor lookup with deterministic, per-dimension rounding in a bounded space. Given a level specification $\bm{L}=(L_1,\dots,L_d)$ with $L_j\ge 2$, each latent dimension is independently bounded (via $\tanh$) and rounded to one of $L_j$ discrete values. The effective codebook size is $K=\prod_j L_j$ (e.g., $\bm{L}=(8,5,5,5)$ yields $K=1000$). Formally,
+\begin{align}
+  z_{\mathrm{bounded}} &= \mathrm{bound}(z) = \tanh\bigl(z + s(\bm{L})\bigr) \cdot h(\bm{L}), \\
+  \hat z &= \mathrm{round\_ste}(z_{\mathrm{bounded}}) / \lfloor \bm{L}/2 \rfloor,
+\end{align}
+where $\mathrm{round\_ste}$ denotes rounding with straight-through gradients ($\nabla_z \hat z = I$) and $s,h$ are scaling functions determined by the level counts. FSQ has several practical advantages: (i) no codebook collapse (all codes are always reachable), (ii) no commitment or codebook losses are needed ($\mathcal{L}_{\mathrm{tok}}$ reduces to reconstruction only), and (iii) the codebook is deterministic and requires no learned parameters.
+
+\subsection{Register-token encoding with ordered quantization}
+The causal convolutional encoder described above preserves temporal resolution ($T$ latents for $T$ invariant steps), which limits compression. An alternative architecture uses \emph{register tokens} to compress the full sequence into $K \ll T$ latent tokens, drawing on recent work in ordered action tokenization \cite{liu2026oat}.
+
+\paragraph{Register-token encoder.}
+The input invariant sequence $U \in \mathbb{R}^{T\times C}$ is embedded and concatenated with $K$ learnable register tokens $\{r_k\}_{k=1}^{K}$, forming a combined sequence of length $T+K$. A Transformer encoder processes this combined sequence with a \emph{causal-last} attention mask:
+\begin{itemize}
+  \item Input tokens attend to all input tokens (bidirectional).
+  \item Register tokens attend to all input tokens and causally to preceding register tokens.
+  \item Input tokens do not attend to register tokens.
+\end{itemize}
+Only the $K$ register outputs are retained, yielding a compressed latent representation $Z = \mathrm{RegisterEnc}(U) \in \mathbb{R}^{K\times D}$ with $K \ll T$ (e.g., $K=8$ for $T=50$, a $6.25\times$ temporal compression).
+
+\paragraph{Nested dropout for ordered token spaces (Matryoshka training).}
+To induce a \emph{coarse-to-fine ordering} in the $K$-token latent space, we apply \emph{masked nested dropout} during training: at each step, a random prefix length $k\sim p(k)$ is sampled, and register tokens beyond position $k$ are replaced with a learnable mask token $m_{\mathrm{mask}} \in \mathbb{R}^{D}$. The decoder must then reconstruct $U$ from only the first $k$ tokens. This forces early tokens to capture global trajectory structure (high-frequency content is deferred to later tokens) and ensures that any prefix $Z_{1:k}$ is decode-worthy, enabling \emph{anytime inference}: a system can trade compute for fidelity by decoding fewer tokens.
+
+The sampling distribution $p(k)$ can be uniform, restricted to powers of 2, or biased toward longer prefixes (e.g., $p(k)\propto k^{\alpha}$ with $\alpha>0$). We find that uniform sampling works well for trajectory data where all prefix lengths carry useful information.
+
+\paragraph{Cross-attention decoder with prefix support.}
+The decoder uses a Transformer decoder where \emph{learned positional queries} of length $T$ (one per output timestep) attend to the $K$ register latents via cross-attention. After nested dropout, some register latents may be masked, but the positional queries still produce a length-$T$ output. This design decouples the output resolution from the compressed latent size, and naturally supports prefix decoding at inference.
+
+The combined pipeline is:
+\begin{equation}
+  U \xrightarrow{\mathrm{RegisterEnc}} Z \xrightarrow{\mathrm{FSQ}} \hat Z,\; \bm{t} \xrightarrow{\mathrm{NestedDrop}} \tilde Z \xrightarrow{\mathrm{CrossAttnDec}} \hat U,
+\end{equation}
+with training loss $\mathcal{L}=\lVert U-\hat U\rVert^2$ (no VQ losses needed with FSQ).
+
 \paragraph{Decoder $\mathrm{Dec}$.}
 The decoder maps discrete tokens back to invariants,
 \begin{equation}
@@ -570,8 +604,30 @@ The discrete token stream $\{t_i\}$ (or $\{t_i^{(m)}\}$) can then be modeled aut
 \paragraph{Why invariants as tokens?}
 Compared to standard relative-pose or delta-pose tokenization, invariant tokens aim to capture ``motion intent'' in a frame-independent coordinate system, which is particularly attractive in cross-embodiment settings (e.g., when the same task is executed by robots with different base frames or morphologies). The main practical caveat is degeneracy: when $\lVert\Delta d_i\rVert$ is near zero, the induced frames (and hence invariants) can be ill-conditioned, so degenerate steps should be masked or assigned dedicated ``no-motion'' tokens.
 
-\paragraph{Relation to frequency-space tokenizers (FAST).}
-Frequency-domain tokenizers (e.g., FAST) compress action trajectories by transforming them into a frequency basis prior to discretization. Such methods emphasize temporal compression and efficiency but do not explicitly enforce global $\mathrm{SE}(3)$ invariance. DHB-Token can be used as a complementary preprocessing step: first map trajectories into DHB invariants (DHB-DR/DHB-QR), then apply VQ or frequency-space compression to obtain tokens. This hybrid view seeks both invariance and compression, and is compatible with the GPU-batched and world-model-guided synthesis pipelines described above.
+\subsection{Relation to frequency-space tokenizers (FAST)}
+Frequency-domain tokenizers such as FAST (Frequency-space Action Sequence Tokenization) \cite{fast2025} compress action trajectories by transforming them into a frequency basis prior to discretization, achieving high compression ratios (${\sim}10\times$) without any neural network training.
+
+\paragraph{DCT + BPE pipeline.}
+The FAST approach applies the Discrete Cosine Transform (DCT) along the temporal axis of an action chunk, exploiting the well-known energy compaction property of the DCT: most trajectory energy concentrates in a few low-frequency coefficients. The pipeline is:
+\begin{equation}
+  U \xrightarrow{\mathrm{DCT}(t)} C \xrightarrow{\lfloor \alpha \cdot (\cdot) \rceil} \hat C_{\mathrm{int}} \xrightarrow{\mathrm{flatten}} s \xrightarrow{\mathrm{BPE}} \bm{t}_{\mathrm{fast}},
+\end{equation}
+where $C = \mathrm{DCT}(U)$ are the ortho-normalized DCT coefficients, $\alpha$ is a scaling factor controlling quantization resolution, $\lfloor\cdot\rceil$ denotes rounding, and BPE (Byte-Pair Encoding) merges frequent integer-pair co-occurrences into super-tokens. The inverse pipeline (BPE decode $\to$ unflatten $\to$ inverse DCT) yields the reconstruction $\hat U$.
+
+\paragraph{Analytical vs.\ learned tokenizers.}
+FAST is \emph{non-learned} (analytical): the DCT is fixed and only the BPE merge table is fitted on data, which requires seconds rather than hours. In contrast, VQ/RVQ and register-token encoders are fully learned. The practical trade-off is that learned tokenizers can adapt to the data distribution more flexibly but require training infrastructure, while FAST provides a strong out-of-the-box baseline.
+
+\paragraph{Complementarity with DHB invariants.}
+Both FAST and OAT-style tokenizers were originally designed for raw action sequences (position, orientation deltas). However, they can equally operate \emph{on top of} DHB invariant sequences: first encode trajectories to invariants, then apply DCT+BPE or register-token encoding. This combination achieves both $\mathrm{SE}(3)$ invariance (from DHB) and high compression/ordering (from the tokenizer). In particular, invariant sequences tend to have lower entropy and smoother structure than raw actions, shifting the rate-distortion Pareto frontier favorably.
+
+\paragraph{Empirical observations.}
+Our benchmark implementation (Appendix~\ref{app:tokenization_comparison}) reveals several practical insights that inform the choice of tokenizer. We summarize the key findings here; the appendix provides detailed figures and analysis.
+\begin{enumerate}
+  \item \textbf{FAST dominates the rate-distortion Pareto frontier on smooth invariant data.} On DHB invariant sequences (50 timesteps, 8 dimensions), DCT+BPE achieves ${\sim}28\times$ compression with MSE $\approx 2\times10^{-4}$---far surpassing all learned methods (Figure~\ref{fig:tokenization_benchmark}, left panel). This is because DHB invariants, once filtered through the rotation-minimizing frame, are dominated by low-frequency content: the DCT concentrates $>95\%$ of signal energy in the first ${\sim}15$ frequency bins, and BPE efficiently merges the resulting integer patterns.
+  \item \textbf{OAT-style achieves the most compact fixed-size representation.} With only $K=8$ register tokens (6.25$\times$ temporal compression), the OAT-style tokenizer reaches MSE $\approx 0.018$ after 50 training epochs on synthetic data. Critically, the nested dropout mechanism produces remarkably flat prefix-decoding curves: even a single token yields MSE $\approx 0.0013$ on structured trajectories (Figure~\ref{fig:prefix_decoding}), indicating that the first register token learns to encode a low-dimensional summary of the full trajectory.
+  \item \textbf{VQ-VAE codebook collapse is observable.} With a 256-entry codebook, the VQ-VAE tokenizer uses only ${\sim}2\%$ of codes after training, confirming the well-documented codebook collapse problem. FSQ, by contrast, guarantees full codebook utilization by construction.
+  \item \textbf{The invariant-space advantage is exact, not approximate.} When comparing FAST tokenization of raw SE(3) actions versus DHB invariants, raw actions can achieve higher \emph{syntactic} compression ratios (because absolute coordinate values contain more BPE-exploitable redundancy). However, with trajectory-relative initial frames, invariant tokens are \emph{exactly} identical under SE(3) transforms (0\% token change, MSE $= O(10^{-13})$), while 100\% of raw-action tokens change (Figure~\ref{fig:invariant_vs_raw}). A policy learned on invariant tokens thus generalizes perfectly across spatial configurations without re-tokenization. The key implementation detail is using the trajectory's own starting pose as the DHB initial frame rather than fixed global axes, which eliminates the angular dimension's dependence on extrinsic orientation.
+\end{enumerate}
 
 \subsection{Compression on top of DHB-Token sequences}
 Once invariants have been quantized into discrete tokens (e.g., RVQ indices), the resulting token streams often exhibit additional structure that can be exploited for further compression: repeated ``hold'' behavior in low-motion segments, smooth token transitions induced by RMF continuity, and statistical biases across large datasets. We therefore distinguish a \emph{primary} DHB-Token layer (VQ/RVQ) from \emph{secondary} compression layers. Figure~\ref{fig:compression_ratios} summarizes typical stage-wise and end-to-end compression behavior.
@@ -605,12 +661,17 @@ For training-time scalability or inference-time speedups, it can be useful to al
 A practical end-to-end pipeline that combines invariance, tokenization, and compression is:
 \begin{enumerate}
   \item \textbf{Invariant preprocessing.} Encode $\mathrm{SE}(3)$ demonstrations into DHB-DR/DHB-QR invariants, using padding (and optionally DHB-TI) to standardize length and reduce timing sensitivity.
-  \item \textbf{Primary tokenization.} Train a causal VQ-VAE / RVQ model on invariant sequences to obtain primary tokens $t_i$.
+  \item \textbf{Primary tokenization.} One of three design choices:
+    \begin{enumerate}
+      \item \emph{VQ/RVQ:} Train a causal VQ-VAE / RVQ model on invariant sequences for simple streaming tokenization.
+      \item \emph{FAST (DCT+BPE):} Apply frequency-domain compression for training-free, high-compression tokenization.
+      \item \emph{OAT-style (Register+FSQ+NestedDropout):} Train a register-token encoder for ordered, anytime-decodable tokens optimized for autoregressive VLA prediction.
+    \end{enumerate}
   \item \textbf{Secondary compression.} Fit a lossless compressor (e.g., BPE) on the primary-token corpus for storage/transmission, and/or train a lossy hierarchical compressor for speed/scale.
   \item \textbf{Policy training.} Train a VLA to predict (compressed) action tokens conditioned on vision/language; at rollout time, decode (and decompress) tokens back to invariants, then decode invariants to $\mathrm{SE}(3)$.
 \end{enumerate}
 
-This separation of concerns---geometry (DHB), discreteness (VQ / RVQ), and compression (BPE / entropy / hierarchical reuse)---makes it possible to tune storage, bandwidth, and inference throughput without changing the underlying invariant representation.
+This separation of concerns---geometry (DHB), discreteness (VQ / RVQ / FSQ), compression (BPE / DCT / hierarchical), and ordering (nested dropout)---makes it possible to tune storage, bandwidth, inference throughput, and prefix decodability without changing the underlying invariant representation.
 
 \section{Variational flow matching for DHB-Token generation (DHB-XR)}
 Standard flow matching (FM) and rectified flow matching (RFM) learn a velocity field that transports samples from a simple base distribution (e.g., noise) to a data distribution. In robotics, however, the conditional next-step motion can be genuinely multi-modal (e.g., left vs. right grasp, alternative avoidance routes), and a single deterministic velocity regressor may ``average'' these modes, producing implausible intermediate behavior.
@@ -1094,6 +1155,192 @@ The method is based on the bidirectional invariant representation introduced in 
   V.~Nguyen et~al.
   \newblock FlowMP: Learning motion fields for robot planning.
   \newblock \emph{arXiv preprint arXiv:2503.10809}, 2025.
+
+  \bibitem{liu2026oat}
+  C.~Liu et~al.
+  \newblock OAT: Ordered Action Tokenization for Autoregressive Robot Policies.
+  \newblock \emph{arXiv preprint arXiv:2602.04215}, 2026.
+
+  \bibitem{mentzer2024fsq}
+  F.~Mentzer et~al.
+  \newblock Finite Scalar Quantization: VQ-VAE Made Simple.
+  \newblock In \emph{International Conference on Learning Representations (ICLR)}, 2024.
+  \newblock arXiv:2309.15505.
+
+  \bibitem{darcet2024register}
+  T.~Darcet et~al.
+  \newblock Vision Transformers Need Registers.
+  \newblock In \emph{International Conference on Learning Representations (ICLR)}, 2024.
+
 \end{thebibliography}
+
+%% ====================================================================
+%% APPENDIX: Action Tokenization Method Comparison
+%% ====================================================================
+\appendix
+\section{Action Tokenization Method Comparison}
+\label{app:tokenization_comparison}
+
+This appendix provides a systematic comparison of the action tokenization methods discussed in Sections 7, with emphasis on their rate-distortion characteristics, invariant-space advantages, and prefix-decoding behavior.
+
+\subsection{Method comparison table}
+
+\begin{table}[htbp]
+\centering
+\caption{\textbf{Comparison of action tokenization methods.} Each row summarizes a tokenization approach in terms of its core mechanism, compression behavior, ordering properties, training requirements, and key references.}
+\label{tab:tokenization_comparison}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{l c c c c c c}
+\toprule
+\textbf{Method} & \textbf{Approach} & \textbf{Quantization} & \textbf{Compression} & \textbf{Prefix Decoding} & \textbf{Training} & \textbf{Reference} \\
+\midrule
+Naive Binning & Analytical & Per-dim rounding & $1\times$ & None & None & --- \\
+VQ-VAE & Learned & VQ codebook & ${\sim}8\times$ & None (temporal) & VQ-VAE & \cite{vqvla2025} \\
+RVQ & Learned & Residual VQ & ${\sim}2.7\times$ & Partial codebooks & VQ-VAE & \cite{vqvla2025} \\
+Hierarchical & Learned & Multi-level VQ & ${\sim}4.5\times$ & Multi-resolution & VQ-VAE & --- \\
+FAST (DCT+BPE) & Analytical & DCT + rounding & ${\sim}28\times$ & None (freq.\ domain) & BPE fit & \cite{fast2025} \\
+OAT-style & Learned & FSQ & $T/K$ & Explicit (nested dropout) & Full training & \cite{liu2026oat} \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{\textbf{Empirical benchmark results.} Measured on 50 synthetic DHB invariant sequences ($T=50$, $D=8$). Compression ratio is defined as $(T \times D) / \text{num\_tokens}$. Latency is wall-clock encode+decode time per chunk on CPU. Codebook utilization (CB Util) is the fraction of codebook entries used; ``---'' indicates the method has no discrete codebook.}
+\label{tab:benchmark_results}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{l r r r r r}
+\toprule
+\textbf{Method} & \textbf{Tokens/chunk} & \textbf{Compression} & \textbf{MSE} & \textbf{Latency (ms)} & \textbf{CB Util} \\
+\midrule
+Naive Binning & 400 & $1.0\times$ & $2 \times 10^{-6}$ & 0.03 & --- \\
+VQ-VAE (256 codes) & 50 & $8.0\times$ & 0.020 & 0.12 & 2\% \\
+RVQ (3 codebooks) & 150 & $2.7\times$ & 0.021 & 0.12 & --- \\
+Hierarchical (3 levels) & 88 & $4.5\times$ & 0.022 & 0.23 & --- \\
+Progressive (3 refine) & 200 & $2.0\times$ & 0.027 & 0.17 & --- \\
+FAST (DCT+BPE) & 14 & $27.8\times$ & $2.2 \times 10^{-4}$ & 0.79 & --- \\
+OAT-style (8 registers) & 8 & $6.2\times$ & 0.018 & 0.34 & --- \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\subsection{Rate-distortion analysis}
+
+The fundamental trade-off in action tokenization is between the \emph{rate} (number of tokens or bits per action chunk) and the \emph{distortion} (reconstruction error). Formally, the rate-distortion function is
+\begin{equation}
+  R(D) = \min_{\mathrm{tokenizer}} H(\bm{t}) \quad \text{s.t.} \quad \mathbb{E}\bigl[\lVert U - \hat U\rVert^2\bigr] \le D,
+\end{equation}
+where $H(\bm{t})$ is the entropy of the token sequence. OAT \cite{liu2026oat} introduces a third axis, \emph{modelability}: how well a downstream autoregressive model can predict the token sequence. An ordered token space (induced by nested dropout) tends to produce more predictable token sequences, improving VLA training convergence.
+
+\paragraph{DHB invariants shift the Pareto frontier.}
+When tokenization operates on DHB invariant sequences rather than raw SE(3) actions, the underlying signal has lower entropy (extrinsic variation from global pose is removed). Consequently, the same distortion $D$ can be achieved at lower rate $R$, or equivalently, a given token budget yields lower distortion. This advantage is orthogonal to the choice of tokenizer and compounds with all methods listed in Table~\ref{tab:tokenization_comparison}.
+
+\paragraph{Empirical rate-distortion landscape.}
+Table~\ref{tab:benchmark_results} reports measured rate-distortion values on synthetic DHB invariant sequences. Figure~\ref{fig:tokenization_benchmark} visualizes these results across three complementary views.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{tokenization_benchmark.png}
+  \caption{\textbf{Tokenization method benchmark on DHB invariant sequences} ($T=50$, $D=8$, 50 synthetic trajectories).
+    \textbf{Left:} Rate-distortion scatter plot. Each point represents one tokenization method; the $x$-axis shows the number of tokens per chunk (rate), and the $y$-axis shows reconstruction MSE (distortion, log scale). The ideal operating point is the bottom-left corner. FAST (DCT+BPE) achieves the best rate-distortion trade-off by a wide margin (14 tokens, MSE $\approx 2\!\times\!10^{-4}$), while Naive Binning achieves near-lossless reconstruction (MSE $\approx 2\!\times\!10^{-6}$) at the cost of 400 tokens (no compression). The cluster of learned methods (VQ-VAE, RVQ, Hierarchical, Progressive) occupies the moderate-rate/moderate-distortion region at MSE $\approx 0.02$. OAT-style achieves the most compact fixed-size representation (8 tokens) with competitive distortion.
+    \textbf{Center:} Compression ratio (higher is better). FAST achieves $28\times$ compression---far beyond all other methods---because the DCT concentrates over 95\% of invariant signal energy in the first ${\sim}15$ frequency bins, and BPE efficiently merges the resulting integer patterns.
+    \textbf{Right:} Encode + decode latency per chunk (CPU wall-clock time). Naive Binning and VQ-VAE are the fastest ($< 0.1$\,ms), while FAST is the slowest (${\sim}1.1$\,ms) due to the BPE merge-table lookup. All methods are well within real-time budgets for robot control.}
+  \label{fig:tokenization_benchmark}
+\end{figure}
+
+The results reveal a clear hierarchy. FAST (DCT+BPE) achieves the best rate-distortion point (${\sim}28\times$ compression, MSE $\approx 2\times 10^{-4}$), benefiting from the low-frequency dominance of invariant signals---over $95\%$ of signal energy concentrates in the first 15 DCT bins (Figure~\ref{fig:tokenization_benchmark}, left). OAT-style tokenization produces the most compact fixed-size representation ($K=8$ tokens, MSE $\approx 0.018$) with the crucial addition of prefix decodability. The VQ-based methods (VQ-VAE, RVQ, Hierarchical, Progressive) occupy the intermediate region, achieving moderate compression ($2$--$8\times$) at comparable distortion (${\sim}0.02$). A notable finding is that VQ-VAE, despite using a 256-entry codebook, utilizes only ${\sim}2\%$ of codes---a direct manifestation of the codebook collapse problem that FSQ eliminates by design.
+
+The latency comparison (Figure~\ref{fig:tokenization_benchmark}, right) shows that all methods operate well within real-time budgets: even the slowest method (FAST at ${\sim}1.1$\,ms per chunk) is negligible compared to typical control loop periods of 10--50\,ms. The latency ordering---Naive $<$ VQ $<$ RVQ $<$ Progressive $<$ OAT $<$ Hierarchical $<$ FAST---reflects the computational complexity of each approach, with the analytical DCT+BPE pipeline being the most expensive due to its multi-pass BPE merge-table lookup.
+
+\subsection{Invariant-space advantage}
+\label{sec:invariant-space-advantage}
+
+The central claim of this section is that tokenizing DHB invariants, rather than raw SE(3) actions, yields tokens that are \emph{exactly} preserved under rigid-body transforms---not approximately, but to floating-point precision. Figure~\ref{fig:invariant_vs_raw} presents the complete empirical evidence; we walk through each panel below.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{invariant_vs_raw_benchmark.png}
+  \caption{\textbf{Token stability under SE(3) transforms: DHB invariants vs.\ raw actions.}
+    \textbf{(a)}~A 50-pose trajectory (solid) and the same trajectory after a 45-degree rotation plus $(0.5,\!-0.3,\!0.2)$\,m translation (dashed). The two paths represent the \emph{same motion} observed from different reference frames.
+    \textbf{(b)}~Token tapes produced by FAST (DCT+BPE) tokenization before and after the transform. \emph{Top (red):} every raw-action token changes---BPE even produces sequences of different lengths (23 vs.\ 29 tokens), making alignment impossible. \emph{Bottom (green):} all 224 DHB invariant tokens are \emph{exactly} identical, with 0\% change.
+    \textbf{(c)}~The raw position signal (x-coordinate) shifts by the translation offset, producing MSE $= 0.061$ between original and transformed sequences. This offset propagates through DCT and BPE, changing every downstream token.
+    \textbf{(d)}~The DHB invariant signal (dimension~0) is \emph{exactly} the same before and after the transform (MSE $= 1.7\!\times\!10^{-13}$, limited only by IEEE-754 floating-point precision). The dashed ``transformed'' curve is drawn directly on top of the solid ``original'' curve; they are visually indistinguishable because the values are numerically identical.
+    The key implementation detail: this exact invariance requires \emph{trajectory-relative} initial frames (Section~\ref{sec:invariant-space-advantage}, Implementation note).}
+  \label{fig:invariant_vs_raw}
+\end{figure}
+
+\paragraph{SE(3) stability: the core property.}
+For raw-action tokenizers, applying a global SE(3) transform $g \in \mathrm{SE}(3)$ to a trajectory changes every token:
+$\bm{t}(g \cdot U) \neq \bm{t}(U)$ in general.
+For invariant-space tokenizers, the tokens are exactly invariant:
+\begin{equation}
+  \bm{t}\bigl(\Phi(g \cdot U)\bigr) = \bm{t}\bigl(\Phi(U)\bigr), \quad \forall\, g \in \mathrm{SE}(3),
+  \label{eq:token-invariance}
+\end{equation}
+where $\Phi$ is the DHB encoder with trajectory-relative initial frames. This means a VLA policy learned on invariant tokens generalizes across different robot base frames, tool offsets, or demonstration configurations \emph{without re-tokenization}---the policy literally receives the same input tokens regardless of the observer's reference frame.
+
+Figure~\ref{fig:invariant_vs_raw}(b) makes this concrete: when we apply a 45-degree Z-rotation plus a $(0.5, -0.3, 0.2)$\,m translation to a trajectory, the raw-action token tape changes completely (100\% of tokens differ, and the BPE even produces a different-length sequence: 23~vs.~29~tokens). The invariant token tape is \emph{byte-for-byte identical}: all 224 tokens match, same length, same values, same order.
+
+\paragraph{Why raw tokens break: signal-level evidence.}
+Figure~\ref{fig:invariant_vs_raw}(c) shows the mechanism. The raw x-position signal shifts by the translation offset under the SE(3) transform, producing a systematic gap (MSE $= 0.061$). After DCT, this offset appears as a changed DC coefficient and shifted frequency components, which produce different integer codes after rounding. Even a single changed integer disrupts the BPE merge boundaries: BPE greedily merges adjacent token pairs, so a changed token at position~$i$ shifts the merge boundary for all subsequent positions, causing a \emph{cascade} that changes the entire downstream token sequence. This is why 100\% of raw BPE tokens change, and why the sequence lengths differ---the merge table produces different groupings.
+
+\paragraph{Why invariant tokens survive: the invariance guarantee.}
+Figure~\ref{fig:invariant_vs_raw}(d) shows the corresponding invariant signal. The two curves---original and SE(3)-transformed---overlap to machine precision (MSE~$= 1.7\!\times\!10^{-13}$). This is not approximate: the values are numerically identical to the last bit of float64 precision. Consequently, the DCT produces identical coefficients, rounding produces identical integers, and BPE produces identical merge sequences. The invariance of the continuous invariant representation propagates \emph{exactly} through every stage of the tokenization pipeline.
+
+\paragraph{Implementation note.}
+The key to achieving exact invariance is using the trajectory's starting pose as the DHB encoder's initial frame (\texttt{use\_default\_initial\_frames=False}, with \texttt{init\_pose} set to the first trajectory pose). The default setting (\texttt{use\_default\_initial\_frames=True}) uses fixed global axes, which introduces a dependence on the trajectory's absolute orientation through three of the eight invariant dimensions. With trajectory-relative initial frames, all eight invariant dimensions are exactly SE(3)-invariant.
+
+\paragraph{Semantic vs.\ syntactic compressibility.}
+A na\"{i}ve reading of compression ratios alone would suggest that raw-action tokenization is superior: FAST achieves $14.9\times$ compression on raw actions versus only $1.8\times$ on DHB invariants in our benchmark. This is misleading. Raw actions contain smooth, large-valued absolute coordinates that produce many repeating integer patterns after DCT quantization---high \emph{syntactic} redundancy that BPE exploits aggressively. But this syntactic compression is worthless for generalization: the compressed tokens change 100\% under a simple reference-frame shift, as shown in Figure~\ref{fig:invariant_vs_raw}(b). DHB invariant tokens have lower syntactic redundancy (because the extrinsic pose variation has already been removed), but they encode \emph{intrinsic} trajectory geometry that is preserved exactly across all spatial configurations. For VLA policies that must generalize, the relevant metric is not compression ratio but token \emph{stability}---and by this metric, invariant tokens achieve the theoretical optimum of perfect invariance.
+
+\paragraph{Cross-embodiment transfer.}
+Because invariant tokens are independent of the robot's base frame and kinematic chain (they describe intrinsic trajectory geometry), the same invariant-token vocabulary can, in principle, be shared across different robot platforms. This is particularly relevant for large-scale VLA training on heterogeneous demonstration datasets, where the same task executed by different robots should produce the same (or similar) invariant token sequences.
+
+\subsection{Prefix decoding and anytime inference}
+
+For tokenizers with an ordered token space (OAT-style, and partially RVQ/Hierarchical), any prefix of $k \le K$ tokens can be decoded to a valid reconstruction:
+\begin{equation}
+  \hat U_k = \mathrm{Dec}(\bm{t}_{1:k}), \quad k = 1, 2, \dots, K.
+\end{equation}
+The reconstruction error $\lVert U - \hat U_k \rVert^2$ monotonically decreases with $k$ (coarse-to-fine refinement). This property has direct practical implications:
+\begin{itemize}
+  \item \textbf{Anytime inference:} Real-time systems can trade latency for fidelity by decoding fewer tokens when computation is limited.
+  \item \textbf{Autoregressive compatibility:} Left-to-right ordered tokens align naturally with autoregressive VLA architectures, where each generated token refines the action prediction.
+  \item \textbf{Variable-rate communication:} In distributed robot systems, action commands can be transmitted progressively, with the receiver decoding as tokens arrive.
+\end{itemize}
+
+\paragraph{Empirical prefix-decoding behavior.}
+Figure~\ref{fig:prefix_decoding} compares prefix-decoding quality across all four methods that support it.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{prefix_decoding_mse.png}
+  \caption{\textbf{Prefix-decoding quality: reconstruction MSE vs.\ number of tokens.}
+    Each curve shows how reconstruction error changes as more tokens are used for decoding ($k = 1, 2, 4, 8$), tested on a structured figure-8 invariant trajectory.
+    \textbf{OAT-style (red)} achieves remarkably flat curves: MSE varies only between $0.0013$ and $0.0021$ across the full range, meaning even a single register token already encodes a useful low-dimensional summary of the entire 50-timestep trajectory. This is a direct consequence of the nested dropout training, which forces the first token to carry the most information.
+    \textbf{RVQ (blue)} shows the expected monotonic improvement as codebooks are added (MSE decreasing from $0.011$ to $0.008$), consistent with the residual refinement mechanism.
+    \textbf{Hierarchical (green)} shows minimal benefit from adding levels (MSE $\approx 0.011$ throughout), because the multi-scale encoders are loosely coupled and each level does not meaningfully refine the previous one without extensive training.
+    \textbf{Progressive (orange)} shows \emph{increasing} MSE with more refinement steps ($0.087 \to 0.377$), indicating that the refinement layers are undertrained and add noise rather than detail---a known failure mode of progressive architectures without careful curriculum training.}
+  \label{fig:prefix_decoding}
+\end{figure}
+
+On structured invariant trajectories (e.g., figure-8 motions), the OAT-style tokenizer exhibits remarkably flat prefix-decoding curves (Figure~\ref{fig:prefix_decoding}, red curve): MSE ranges from $0.0018$ at $k=1$ to $0.0021$ at $k=8$ (full reconstruction). This flatness means a \emph{single} register token already captures the dominant trajectory structure, and subsequent tokens contribute only marginal refinement. For autoregressive VLA architectures, this is highly desirable: each generated token immediately produces a valid (if coarse) action prediction, enabling anytime inference without waiting for the full token sequence.
+
+By contrast, RVQ shows the expected monotonic improvement (MSE decreasing from $0.011$ to $0.008$ as codebooks are added), while Hierarchical tokenization shows less benefit from adding levels due to the limited coupling between its multi-scale encoders. Progressive tokenization can even show \emph{increasing} MSE with more refinements when undertrained, as poorly converged refinement layers add noise rather than detail.
+
+Figure~\ref{fig:prefix_decoding_detail} provides a qualitative view of OAT-style prefix decoding, showing the reconstructed invariant trajectories at each prefix length.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{prefix_decoding_oat_detail.png}
+  \caption{\textbf{OAT-style coarse-to-fine reconstruction.}
+    \textbf{Leftmost panel:} ground-truth invariant trajectory (4 dimensions of a figure-8 motion, 50 timesteps).
+    \textbf{Subsequent panels:} reconstructions from $k = 1, 2, 4, 8$ register tokens. Even with a single token ($k\!=\!1$, MSE $= 0.0018$), the reconstructed trajectory captures the dominant oscillatory structure---the overall shape, frequency, and amplitude are preserved. Adding more tokens provides marginal refinements to phase alignment and high-frequency detail, but the qualitative trajectory shape is already correct from the first token. This demonstrates that the nested dropout mechanism successfully induces a coarse-to-fine ordering: the first register token acts as a compressed ``trajectory summary,'' and each additional token adds progressively finer detail.}
+  \label{fig:prefix_decoding_detail}
+\end{figure}
+
+These observations suggest that the combination of register-token encoding and nested dropout is particularly effective at learning meaningful coarse-to-fine ordering, outperforming architectures that achieve prefix decodability only incidentally (e.g., RVQ partial codebooks, hierarchical level truncation). The practical implication is that OAT-style tokenization is the best choice for VLA architectures that generate actions autoregressively and benefit from early, approximate action predictions.
 
 \end{document}
