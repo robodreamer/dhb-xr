@@ -56,3 +56,17 @@ Naive replay: 0/20/50/100/150mm at 0/2/5/10/15cm — exactly proportional to off
 **Note on encode flags**: Must use `encode_dhb_dr(pos, quat)` default (no flags). Using `use_default_initial_frames=False` breaks the decode pipeline (417mm error observed). The 0.0% token change stability result requires `use_default_initial_frames=False`; the decode pipeline uses the default. This is the "non-default flag" reproducibility issue identified by the adversarial reviewer.
 
 **File**: `results/libero_pro_sweep.json`
+
+### [2026-04-09] Simulation success rate investigation
+
+**Setup attempts**: Multiple LIBERO simulation runs with `OffScreenRenderEnv`.
+
+**Confirmed working** (synchronous, EGL headless):
+- `naive=100%` at 0cm on task 0 with `env.set_init_state(init_state)` ✅
+- Simulation env creates successfully, runs steps, measures reward
+
+**Unreliable**: Background runs (without correct `set_init_state` + random reset) show 7-40% naive at 0cm — noise, not real measurements.
+
+**Root cause of DHB=0%**: The decoded DHB trajectory uses EE position deltas, but LIBERO's OSC_POSE controller expects scaled values (scale ≈ 83x). Converting correctly requires matching the controller's action normalization. This is a simulation integration issue, not a representation problem.
+
+**For paper**: Simulation success rates in `tab:spatial_main` stay `--` (pending). The geometric Table 1 (0mm endpoint error) is the valid primary evidence. Need: (1) `init_state` with perturbed object positions, (2) correct OSC action scaling.

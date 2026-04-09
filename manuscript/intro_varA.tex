@@ -44,7 +44,8 @@ $0.0\%$ token change under SE(3) transforms vs $99.1\%$ for raw actions;
 $N{=}1$ invariant-encoded demo covers any pose neighborhood;
 equal spatial generalization to $N{=}20$ raw demos.
 
-\item \textbf{End-to-end simulation validation.}
-Full pipeline: encode $\to$ adapt $\to$ embodik IK $\to$ MuJoCo,
-on LIBERO-PRO and RoboCasa with StarVLA ablations (FAST vs MLP vs \dhb{} head).
+\item \textbf{Modular VLA integration.}
+\texttt{DHBActionHeader} for StarVLA as a drop-in action head,
+enabling controlled ablation of invariant vs non-invariant tokenization
+on the same Qwen2.5-VL backbone.
 \end{enumerate}
