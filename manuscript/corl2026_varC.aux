@@ -66,12 +66,9 @@
 \citation{libero2023}
 \citation{starvla_2026}
 \citation{fast2025}
-\citation{starvla_2026}
-\citation{starvla_2026}
-\citation{openvla_oft_2025}
-\citation{openvla_oft_2025}
 \def\@LN@column{1}
 \@writefile{toc}{\contentsline {paragraph}{Invariance property.}{5}{section*.13}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Magnitude-only tokenization (recommended).}{5}{section*.14}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Geometric Adaptation}{5}{subsection.3.4}\protected@file@percent }
 \newlabel{sec:adaptation}{{3.4}{5}{Geometric Adaptation}{subsection.3.4}{}}
 \newlabel{sec:adaptation@cref}{{[subsection][4][3]3.4}{[1][5][]5}{}{}{}}
@@ -82,55 +79,65 @@
 \newlabel{sec:experiments}{{4}{5}{Experiments}{section.4}{}}
 \newlabel{sec:experiments@cref}{{[section][4][]4}{[1][5][]5}{}{}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Experimental Setup}{5}{subsection.4.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Setup.}{5}{section*.14}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Experiment 1: Spatial Generalization}{5}{subsection.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Setup.}{5}{section*.15}\protected@file@percent }
+\citation{starvla_2026}
+\citation{starvla_2026}
+\citation{openvla_oft_2025}
+\citation{openvla_oft_2025}
 \def\@LN@column{1}
 \@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces \textbf  {Left}: Goal endpoint error under perturbation (10 tasks $\times $ 8 dirs). \textsc  {DHB-XR}{} achieves $0.0\,\text  {mm}$ at all offsets; naive replay error scales linearly. \textbf  {Right}: Compression vs stability trade-off. \textsc  {DHB-XR}{} OAT achieves both compact tokens (8) and perfect SE(3) stability (0\%), while \textsc  {FAST}{} (14 tokens, 27.8$\times $) sacrifices geometric invariance.}}{6}{figure.3}\protected@file@percent }
 \newlabel{fig:results}{{3}{6}{\textbf {Left}: Goal endpoint error under perturbation (10 tasks $\times $ 8 dirs). \dhb {} achieves $0.0\,\text {mm}$ at all offsets; naive replay error scales linearly. \textbf {Right}: Compression vs stability trade-off. \dhb {} OAT achieves both compact tokens (8) and perfect SE(3) stability (0\%), while \fast {} (14 tokens, 27.8$\times $) sacrifices geometric invariance}{figure.3}{}}
-\newlabel{fig:results@cref}{{[figure][3][]3}{[1][5][]6}{}{}{}}
+\newlabel{fig:results@cref}{{[figure][3][]3}{[1][6][]6}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Experiment 1: Spatial Generalization}{6}{subsection.4.2}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Spatial generalization on LIBERO-Spatial. \textit  {Geometric}: mean goal endpoint error (mm), \textbf  {10 tasks}, \textbf  {8 directions}, $N{=}1$ demo. \textit  {Policy}: task success rate requires StarVLA training. $\star $ = retraining required; $\dagger $ = zero-shot geometric adaptation.}}{6}{table.1}\protected@file@percent }
 \newlabel{tab:spatial_main}{{1}{6}{Spatial generalization on LIBERO-Spatial. \textit {Geometric}: mean goal endpoint error (mm), \textbf {10 tasks}, \textbf {8 directions}, $N{=}1$ demo. \textit {Policy}: task success rate requires StarVLA training. $\star $ = retraining required; $\dagger $ = zero-shot geometric adaptation}{table.1}{}}
-\newlabel{tab:spatial_main@cref}{{[table][1][]1}{[1][5][]6}{}{}{}}
+\newlabel{tab:spatial_main@cref}{{[table][1][]1}{[1][6][]6}{}{}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Invariant Learnability}{6}{subsection.4.3}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces DHBActionHeader training: the action head learns to predict SE(3)-invariant tokens from EE state observations. Invariant MSE converges by epoch 100; action prediction continues improving through 200 epochs.}}{6}{table.2}\protected@file@percent }
-\newlabel{tab:learnability}{{2}{6}{DHBActionHeader training: the action head learns to predict SE(3)-invariant tokens from EE state observations. Invariant MSE converges by epoch 100; action prediction continues improving through 200 epochs}{table.2}{}}
-\newlabel{tab:learnability@cref}{{[table][2][]2}{[1][6][]6}{}{}{}}
 \citation{starvla_2026,openvla_oft_2025}
 \citation{starvla_2026,openvla_oft_2025}
 \citation{fast2025}
 \citation{starvla_2026}
 \def\@LN@column{1}
-\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces \textbf  {SE(3) invariance verification.} \textit  {Left}: Magnitude $m_i$ before and after SE(3) transform — visually identical. \textit  {Right}: Difference magnified by $10^{15}$: machine-precision invariance.}}{7}{figure.4}\protected@file@percent }
-\newlabel{fig:invariance}{{4}{7}{\textbf {SE(3) invariance verification.} \textit {Left}: Magnitude $m_i$ before and after SE(3) transform — visually identical. \textit {Right}: Difference magnified by $10^{15}$: machine-precision invariance}{figure.4}{}}
-\newlabel{fig:invariance@cref}{{[figure][4][]4}{[1][7][]7}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces DHBActionHeader training: the action head learns to predict SE(3)-invariant tokens from EE state observations. Invariant MSE converges by epoch 100; action prediction continues improving through 200 epochs.}}{7}{table.2}\protected@file@percent }
+\newlabel{tab:learnability}{{2}{7}{DHBActionHeader training: the action head learns to predict SE(3)-invariant tokens from EE state observations. Invariant MSE converges by epoch 100; action prediction continues improving through 200 epochs}{table.2}{}}
+\newlabel{tab:learnability@cref}{{[table][2][]2}{[1][6][]7}{}{}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Tokenization Analysis}{7}{subsection.4.4}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Tokenization comparison. \textit  {Stability}: BPE token change rate under 40 random SE(3) transforms. Compression on DHB invariant sequences. In-dist accuracy from~\cite  {starvla_2026,openvla_oft_2025}.}}{7}{table.3}\protected@file@percent }
 \newlabel{tab:tokenization_combined}{{3}{7}{Tokenization comparison. \textit {Stability}: BPE token change rate under 40 random SE(3) transforms. Compression on DHB invariant sequences. In-dist accuracy from~\cite {starvla_2026,openvla_oft_2025}}{table.3}{}}
 \newlabel{tab:tokenization_combined@cref}{{[table][3][]3}{[1][7][]7}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{Triple-invariant OAT.}{7}{section*.16}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{FAST on invariant space.}{7}{section*.17}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Experiments 4 \& 5: Sample Efficiency and RoboCasa}{7}{subsection.4.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Sample efficiency.}{7}{section*.15}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{RoboCasa (pending).}{7}{section*.16}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Panda pipeline timing.}{7}{section*.17}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Sample efficiency.}{7}{section*.18}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{RoboCasa (pending).}{7}{section*.19}\protected@file@percent }
 \def\@LN@column{1}
-\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces \textbf  {Noise sensitivity: invariant space is MORE robust.} \textit  {Left}: Same Gaussian noise $\sigma $ applied to invariants (green) vs raw action deltas (red). Invariants consistently produce less trajectory error. \textit  {Right}: Ratio $<1$ at every noise level --- invariant-space prediction errors are \textbf  {40--52\% less damaging} than raw-action errors.}}{8}{figure.5}\protected@file@percent }
-\newlabel{fig:sensitivity}{{5}{8}{\textbf {Noise sensitivity: invariant space is MORE robust.} \textit {Left}: Same Gaussian noise $\sigma $ applied to invariants (green) vs raw action deltas (red). Invariants consistently produce less trajectory error. \textit {Right}: Ratio $<1$ at every noise level --- invariant-space prediction errors are \textbf {40--52\% less damaging} than raw-action errors}{figure.5}{}}
-\newlabel{fig:sensitivity@cref}{{[figure][5][]5}{[1][8][]8}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Compression vs SE(3) stability. Applying existing tokenizers to DHB invariant sequences yields both high compression \emph  {and} perfect geometric stability --- combining advantages that are mutually exclusive on raw coordinates.}}{8}{table.4}\protected@file@percent }
+\newlabel{tab:compression_stability}{{4}{8}{Compression vs SE(3) stability. Applying existing tokenizers to DHB invariant sequences yields both high compression \emph {and} perfect geometric stability --- combining advantages that are mutually exclusive on raw coordinates}{table.4}{}}
+\newlabel{tab:compression_stability@cref}{{[table][4][]4}{[1][7][]8}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces \textbf  {SE(3) invariance verification.} \textit  {Left}: Magnitude $m_i$ before and after SE(3) transform — visually identical. \textit  {Right}: Difference magnified by $10^{15}$: machine-precision invariance.}}{8}{figure.4}\protected@file@percent }
+\newlabel{fig:invariance}{{4}{8}{\textbf {SE(3) invariance verification.} \textit {Left}: Magnitude $m_i$ before and after SE(3) transform — visually identical. \textit {Right}: Difference magnified by $10^{15}$: machine-precision invariance}{figure.4}{}}
+\newlabel{fig:invariance@cref}{{[figure][4][]4}{[1][7][]8}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{Panda pipeline timing.}{8}{section*.20}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {5}Discussion}{8}{section.5}\protected@file@percent }
 \newlabel{sec:discussion}{{5}{8}{Discussion}{section.5}{}}
 \newlabel{sec:discussion@cref}{{[section][5][]5}{[1][8][]8}{}{}{}}
-\@writefile{toc}{\contentsline {paragraph}{Are invariant predictions more sensitive to noise?}{8}{section*.18}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{When does \textsc  {DHB-XR}{} spatial generalization work best?}{8}{section*.19}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Limitations.}{8}{section*.20}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Are invariant predictions more sensitive to noise?}{8}{section*.21}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{When does \textsc  {DHB-XR}{} spatial generalization work best?}{8}{section*.22}\protected@file@percent }
 \def\@LN@column{1}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces \textbf  {Noise sensitivity: invariant space is MORE robust.} \textit  {Left}: Same Gaussian noise $\sigma $ applied to invariants (green) vs raw action deltas (red). Invariants consistently produce less trajectory error. \textit  {Right}: Ratio $<1$ at every noise level --- invariant-space prediction errors are \textbf  {40--52\% less damaging} than raw-action errors.}}{9}{figure.5}\protected@file@percent }
+\newlabel{fig:sensitivity}{{5}{9}{\textbf {Noise sensitivity: invariant space is MORE robust.} \textit {Left}: Same Gaussian noise $\sigma $ applied to invariants (green) vs raw action deltas (red). Invariants consistently produce less trajectory error. \textit {Right}: Ratio $<1$ at every noise level --- invariant-space prediction errors are \textbf {40--52\% less damaging} than raw-action errors}{figure.5}{}}
+\newlabel{fig:sensitivity@cref}{{[figure][5][]5}{[1][8][]9}{}{}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces \textbf  {DHB-XR vs affine transform under 6D pose change.} \textit  {Left}: DHB preserves arc shape (clears obstacle). \textit  {Right}: affine rotation distorts the arc (clips obstacle). RGB triads show 6-DOF orientation at start (S') and goal (G').}}{9}{figure.6}\protected@file@percent }
 \newlabel{fig:adaptation_comparison}{{6}{9}{\textbf {DHB-XR vs affine transform under 6D pose change.} \textit {Left}: DHB preserves arc shape (clears obstacle). \textit {Right}: affine rotation distorts the arc (clips obstacle). RGB triads show 6-DOF orientation at start (S') and goal (G')}{figure.6}{}}
 \newlabel{fig:adaptation_comparison@cref}{{[figure][6][]6}{[1][8][]9}{}{}{}}
-\@writefile{toc}{\contentsline {paragraph}{Future work.}{9}{section*.21}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Positioning vs.\ related work.}{9}{section*.22}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Limitations.}{9}{section*.23}\protected@file@percent }
 \bibdata{references}
 \bibcite{acot_vla_2026}{{1}{2026}{{AgibotTech}}{{}}}
 \bibcite{starvla_2026}{{2}{2026}{{sta}}{{}}}
 \bibcite{openvla_oft_2025}{{3}{2025}{{ope}}{{}}}
+\def\@LN@column{1}
+\@writefile{toc}{\contentsline {paragraph}{Future work.}{10}{section*.24}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Positioning vs.\ related work.}{10}{section*.25}\protected@file@percent }
 \bibcite{vla0_2025}{{4}{2025}{{vla}}{{}}}
 \bibcite{fast2025}{{5}{2025}{{Pertsch et~al.}}{{}}}
 \bibcite{oat2026}{{6}{2026}{{Liu et~al.}}{{}}}
@@ -144,4 +151,4 @@
 \bibcite{vanroye2023fatrop}{{14}{2023}{{Van~Roye et~al.}}{{}}}
 \bibcite{libero2023}{{15}{2023}{{Liu et~al.}}{{}}}
 \def\@LN@column{1}
-\gdef \@abspage@last{10}
+\gdef \@abspage@last{11}

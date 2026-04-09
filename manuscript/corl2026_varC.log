@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.4.9)  9 APR 2026 15:27
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.4.9)  9 APR 2026 17:03
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -664,10 +664,10 @@ l.110 \item \textbf
 Package xcolor Warning: Incompatible color definition on input line 110.
 
 
-Package xcolor Warning: Incompatible color definition on input line 139.
+Package xcolor Warning: Incompatible color definition on input line 149.
 
 
-Package xcolor Warning: Incompatible color definition on input line 148.
+Package xcolor Warning: Incompatible color definition on input line 158.
 
 ) (./experiments.tex
 
@@ -685,13 +685,14 @@ Underfull \hbox (badness 10000) in paragraph at lines 9--16
 BERO-Spatial \OT1/ptm/m/n/10 [[]] (10 tasks) with rigid trans-la-tions
  []
 
+[5]
 
 Package xcolor Warning: Incompatible color definition on input line 20.
 
 
 Package xcolor Warning: Incompatible color definition on input line 21.
 
-<figures/results_combined.pdf, id=307, 250.77753pt x 120.87094pt>
+<figures/results_combined.pdf, id=323, 250.77753pt x 120.87094pt>
 File: figures/results_combined.pdf Graphic file (type pdf)
 <use figures/results_combined.pdf>
 Package pdftex.def Info: figures/results_combined.pdf  used on input line 27.
@@ -708,117 +709,141 @@ Package xcolor Warning: Incompatible color definition on input line 57.
 
 Package xcolor Warning: Incompatible color definition on input line 57.
 
-[5]
-Underfull \vbox (badness 3919) has occurred while \output is active []
 
+LaTeX Warning: `h' float specifier changed to `ht'.
 
-Underfull \vbox (badness 3919) has occurred while \output is active []
-
- [6
+[6
 pdfTeX warning (ext4): destination with the same identifier (name{figure.3}) ha
 s been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.95 
+l.99 
      
 pdfTeX warning (ext4): destination with the same identifier (name{table.1}) has
  been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.95 
-     
-pdfTeX warning (ext4): destination with the same identifier (name{table.2}) has
- been already used, duplicate ignored
-<argument> ...shipout:D \box_use:N \l_shipout_box 
-                                                  \__shipout_drop_firstpage_...
-l.95 
+l.99 
       <./figures/results_combined.pdf>]
 
-Package xcolor Warning: Incompatible color definition on input line 99.
+Package xcolor Warning: Incompatible color definition on input line 103.
 
 
-Package xcolor Warning: Incompatible color definition on input line 108.
+Package xcolor Warning: Incompatible color definition on input line 112.
 
 
-Package xcolor Warning: Incompatible color definition on input line 108.
+Package xcolor Warning: Incompatible color definition on input line 112.
 
 
-Package xcolor Warning: Incompatible color definition on input line 108.
+Package xcolor Warning: Incompatible color definition on input line 112.
 
 
-Package xcolor Warning: Incompatible color definition on input line 108.
+Package xcolor Warning: Incompatible color definition on input line 112.
 
 
-Package xcolor Warning: Incompatible color definition on input line 116.
+Package xcolor Warning: Incompatible color definition on input line 120.
 
 
-Package xcolor Warning: Incompatible color definition on input line 125.
+Package xcolor Warning: Incompatible color definition on input line 129.
 
 
-Package xcolor Warning: Incompatible color definition on input line 126.
+Package xcolor Warning: Incompatible color definition on input line 130.
+
+
+LaTeX Warning: Reference `tab:compression_stability' on page 7 undefined on inp
+ut line 143.
 
 <figures/invariance_verification.pdf, id=424, 249.53145pt x 99.18994pt>
 File: figures/invariance_verification.pdf Graphic file (type pdf)
 <use figures/invariance_verification.pdf>
 Package pdftex.def Info: figures/invariance_verification.pdf  used on input lin
-e 132.
+e 173.
 (pdftex.def)             Requested size: 397.48499pt x 158.0215pt.
 
-Package xcolor Warning: Incompatible color definition on input line 150.
+Package xcolor Warning: Incompatible color definition on input line 191.
 
 ) (./discussion.tex [7
-pdfTeX warning (ext4): destination with the same identifier (name{figure.4}) ha
-s been already used, duplicate ignored
+pdfTeX warning (ext4): destination with the same identifier (name{table.2}) has
+ been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.2 \section{Discussion}
-                        
+l.2 \section
+            {Discussion}
 pdfTeX warning (ext4): destination with the same identifier (name{table.3}) has
  been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.2 \section{Discussion}
-                         <./figures/invariance_verification.pdf>]
-<figures/sensitivity_analysis.pdf, id=509, 250.24365pt x 120.19292pt>
+l.2 \section
+            {Discussion}]
+<figures/sensitivity_analysis.pdf, id=438, 250.24365pt x 120.19292pt>
 File: figures/sensitivity_analysis.pdf Graphic file (type pdf)
 <use figures/sensitivity_analysis.pdf>
 Package pdftex.def Info: figures/sensitivity_analysis.pdf  used on input line 2
 6.
 (pdftex.def)             Requested size: 397.48499pt x 190.93158pt.
-<figures/adaptation_comparison.pdf, id=510, 388.57913pt x 195.83615pt>
+<figures/adaptation_comparison.pdf, id=439, 252.29265pt x 114.36351pt>
 File: figures/adaptation_comparison.pdf Graphic file (type pdf)
 <use figures/adaptation_comparison.pdf>
 Package pdftex.def Info: figures/adaptation_comparison.pdf  used on input line 
 37.
-(pdftex.def)             Requested size: 397.48499pt x 200.32993pt.
-
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
-
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
+(pdftex.def)             Requested size: 397.48499pt x 180.18626pt.
  [8
+pdfTeX warning (ext4): destination with the same identifier (name{table.4}) has
+ been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.61 
+     
+pdfTeX warning (ext4): destination with the same identifier (name{figure.4}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.61 
+      <./figures/invariance_verification.pdf>]
+Underfull \vbox (badness 3895) has occurred while \output is active []
+
+
+Underfull \vbox (badness 3895) has occurred while \output is active []
+
+ [9
 pdfTeX warning (ext4): destination with the same identifier (name{figure.5}) ha
 s been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.73 
-      <./figures/sensitivity_analysis.pdf>]
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
-
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
- [9
+l.79 
+     
 pdfTeX warning (ext4): destination with the same identifier (name{figure.6}) ha
 s been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.122 
-       <./figures/adaptation_comparison.pdf>]) (./corl2026_varC.bbl
+l.79 
+      <./figures/sensitivity_analysis.pdf> <./figures/adaptation_comparison.pdf
+>]
+
+LaTeX Warning: Command \textdegree invalid in math mode on input line 98.
+
+LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 9
+8.
+(/home/andypark/texlive/2023/texmf-dist/tex/latex/psnfss/ts1ptm.fd
+File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
+)
+
+LaTeX Warning: Command \textdegree invalid in math mode on input line 98.
+
+Missing character: There is no ° in font cmr10!
+
+LaTeX Warning: Reference `tab:compression_stability' on page 10 undefined on in
+put line 104.
+
+
+LaTeX Warning: Reference `tab:compression_stability' on page 10 undefined on in
+put line 122.
+
+) (./corl2026_varC.bbl
 
 Package xcolor Warning: Incompatible color definition on input line 22.
 
+[10]
 
 Package xcolor Warning: Incompatible color definition on input line 28.
 
@@ -831,22 +856,29 @@ Package xcolor Warning: Incompatible color definition on input line 41.
 
 Package xcolor Warning: Incompatible color definition on input line 48.
 
-) [10] (./corl2026_varC.aux)
+) [11] (./corl2026_varC.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-03-20>
  ***********
+
+
+LaTeX Warning: There were undefined references.
+
+
+LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+
 Package rerunfilecheck Info: File `corl2026_varC.out' has not changed.
 (rerunfilecheck)             Checksum: 7A76FE5ED949EC68F97767FEE1112FD6;2548.
  ) 
 Here is how much of TeX's memory you used:
- 13754 strings out of 468830
- 223530 string characters out of 5451683
- 669239 words of memory out of 5000000
- 42324 multiletter control sequences out of 15000+600000
- 662979 words of font info for 100 fonts, out of 8000000 for 9000
+ 13787 strings out of 468830
+ 224044 string characters out of 5451683
+ 667239 words of memory out of 5000000
+ 42348 multiletter control sequences out of 15000+600000
+ 663293 words of font info for 101 fonts, out of 8000000 for 9000
  319 hyphenation exceptions out of 8191
- 89i,11n,96p,577b,556s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 89i,11n,96p,577b,575s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </home/andypark/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10
 .pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmm
 i10.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/
@@ -854,21 +886,22 @@ cmmi7.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/c
 m/cmmi9.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/public/amsfonts
 /cm/cmr10.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/public/amsfon
 ts/cm/cmr7.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/public/amsfo
-nts/cm/cmsy10.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/public/am
-sfonts/cm/cmsy6.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/public/
-amsfonts/cm/cmsy7.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/publi
-c/amsfonts/cm/cmsy9.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/pub
-lic/amsfonts/symbols/msbm10.pfb></home/andypark/texlive/2023/texmf-dist/fonts/t
-ype1/urw/courier/ucrr8a.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1
-/urw/helvetic/uhvr8a.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/ur
-w/times/utmb8a.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/urw/time
-s/utmbi8a.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/urw/times/utm
-r8a.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/urw/times/utmri8a.p
-fb>
-Output written on corl2026_varC.pdf (10 pages, 392781 bytes).
+nts/cm/cmr9.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/public/amsf
+onts/cm/cmsy10.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/public/a
+msfonts/cm/cmsy6.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/public
+/amsfonts/cm/cmsy7.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/publ
+ic/amsfonts/cm/cmsy9.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/pu
+blic/amsfonts/symbols/msbm10.pfb></home/andypark/texlive/2023/texmf-dist/fonts/
+type1/urw/courier/ucrr8a.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type
+1/urw/helvetic/uhvr8a.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/u
+rw/times/utmb8a.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/urw/tim
+es/utmbi8a.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/urw/times/ut
+mr8a.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/urw/times/utmri8a.
+pfb>
+Output written on corl2026_varC.pdf (11 pages, 400746 bytes).
 PDF statistics:
- 803 PDF objects out of 1000 (max. 8388607)
- 343 compressed objects within 4 object streams
- 91 named destinations out of 1000 (max. 500000)
+ 754 PDF objects out of 1000 (max. 8388607)
+ 365 compressed objects within 4 object streams
+ 96 named destinations out of 1000 (max. 500000)
  151 words of extra memory for PDF output out of 10000 (max. 10000000)
 

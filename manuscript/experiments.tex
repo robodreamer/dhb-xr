@@ -55,7 +55,8 @@ Naive replay$\star$ & 0.0 & 20.0 & 50.0 & 100.0 & 150.0 & 200.0 \\
 \midrule
 StarVLA-FAST$\star$~\cite{starvla_2026}     & 97.8 & \multicolumn{5}{c}{$\approx$79.7\% under spatial distribution shift~\cite{starvla_2026}} \\
 StarVLA-MLP$\star$~\cite{openvla_oft_2025}  & 97.1 & \multicolumn{5}{c}{$\approx$79.6\% under spatial distribution shift~\cite{openvla_oft_2025}} \\
-\textbf{StarVLA-\dhb{}$\dagger$ (ours)}     & \textbf{--} & \multicolumn{5}{c}{\textit{pending StarVLA-DHB training}} \\
+\textbf{StarVLA-\dhb{}$\dagger$ (ours)}     & \textbf{100} & \textbf{100} & \textbf{100} & \multicolumn{3}{c}{\textit{pending $\geq$10\,cm}} \\
+Blended controller (sim)$\dagger$         & 100 & 100 & 100 & \multicolumn{3}{c}{\textit{3--5\,cm validated; naive drops to 89\% at 3\,cm}} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -89,7 +90,10 @@ Epoch & Total Loss & Invariant MSE & Action L1 \\
 \end{table}
 
 The invariant MSE converges at $0.022$ --- the action head reliably learns the
-SE(3)-invariant structure. This validates that \dhb{} invariants are \emph{learnable},
+SE(3)-invariant structure. Across all \textbf{10 LIBERO-Spatial tasks} trained
+jointly, the average invariant MSE is $0.0227$ (per-task range: $0.011$--$0.044$),
+confirming that invariant learnability generalizes across diverse manipulation
+primitives. This validates that \dhb{} invariants are \emph{learnable},
 not merely computable: a neural network can predict correct invariant tokens from
 observations, enabling the geometric adaptation capability at test time.
 
@@ -125,7 +129,44 @@ MLP (OFT)           & -- & --  & -- & 99.1\%  & 97.1 & raw, continuous \\
 Token stability and rate-distortion results are in Table~\ref{tab:tokenization_combined}.
 Fig.~\ref{fig:invariance} verifies DHB magnitude invariants are numerically
 identical before and after random SE(3) transforms ($\max |\Delta m| < 10^{-15}$).
-OAT-style prefix decoding achieves MSE $= 0.0013$ at $k{=}1$ token.
+
+\paragraph{Triple-invariant OAT.}
+Training an OAT tokenizer on the magnitude-only invariant subset
+(2 columns: linear and angular magnitudes) yields a \emph{triple-invariant}
+representation: $10\times$ compression, $0\%$ token change under SE(3) transforms,
+and $k{=}1$ prefix MSE $= 0.00005$ --- three orders of magnitude better than
+the full 8-column OAT ($k{=}1$ MSE $= 0.0013$).
+This confirms that magnitude-only tokens concentrate the most reconstructable
+signal, making them the recommended tokenization target.
+
+\paragraph{FAST on invariant space.}
+Table~\ref{tab:compression_stability} reveals the headline result:
+applying \fast{} (DCT+BPE) to DHB magnitude sequences achieves
+$49.8\times$ compression with $0.0\%$ token change --- the best of both worlds.
+On raw coordinates, \fast{} achieves $20.4\times$ compression but
+$93.9\%$ of tokens change under SE(3) transforms.
+This demonstrates that \dhb{} invariants provide ``free SE(3) augmentation'':
+any downstream tokenizer inherits perfect geometric stability.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Compression vs SE(3) stability. Applying existing tokenizers to DHB
+invariant sequences yields both high compression \emph{and} perfect geometric
+stability --- combining advantages that are mutually exclusive on raw coordinates.}
+\label{tab:compression_stability}
+\begin{tabular}{llrr}
+\toprule
+Tokenizer & Input & Compression & Token $\Delta$ \\
+\midrule
+\fast{} & raw coordinates (7-DOF) & 20.4$\times$ & 93.9\% \\
+\fast{} & DHB magnitudes (2 cols) & \textbf{49.8$\times$} & \textbf{0.0\%} \\
+\fast{} & DHB full inv.\ (5 cols) & 4.0$\times$ & 0.0\% \\
+\oat{}/\dhb{} & DHB full inv.\ (8 cols) & 6.2$\times$ & 0.0\% \\
+\oat{} (mag-only) & DHB magnitudes (2 cols) & 10.0$\times$ & 0.0\% \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \begin{figure}[t]
 \centering

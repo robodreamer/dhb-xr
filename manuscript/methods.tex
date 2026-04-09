@@ -127,6 +127,16 @@ This is an implementation verification of the SE(3)-invariance property,
 not a novel empirical claim — the invariance is guaranteed by the mathematical construction
 of the DHB encoding.
 
+\paragraph{Magnitude-only tokenization (recommended).}
+The full invariant tuple has 8 columns (4 linear + 4 angular), but
+the \emph{magnitude} subset (2 columns: $m_i^\text{lin}$, $m_i^\text{ang}$)
+concentrates most of the reconstructable signal.
+Tokenizing magnitudes only yields $49.8\times$ compression under \fast{} (vs
+$20.4\times$ on raw coordinates) while maintaining $0.0\%$ token change ---
+an effect we call \emph{free SE(3) augmentation}: any downstream tokenizer
+inherits perfect geometric stability simply by operating on DHB invariants.
+We recommend magnitude-only tokenization as the default for VLA integration.
+
 \subsection{Geometric Adaptation}
 \label{sec:adaptation}
 
