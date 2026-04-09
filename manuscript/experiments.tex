@@ -47,27 +47,27 @@ naive replay executes original joint actions unmodified.
 \begin{table}[ht]
 \centering
 \small
-\caption{Spatial generalization on LIBERO-Spatial (5 tasks, 3 perturbation directions).
-\textit{Geometric}: goal endpoint error (mm), $N{=}1$ demo, encode$\to$decode only.
-\textit{Policy}: task success rate requires StarVLA training (Sec.~\ref{sec:experiments} Exp.~2).
-$\star$ = retraining required per new configuration; $\dagger$ = zero-shot geometric adaptation.}
+\caption{Spatial generalization on LIBERO-Spatial.
+\textit{Geometric}: mean goal endpoint error (mm), \textbf{10 tasks}, \textbf{8 directions}, $N{=}1$ demo.
+\textit{Policy}: task success rate requires StarVLA training.
+$\star$ = retraining required; $\dagger$ = zero-shot geometric adaptation.}
 \label{tab:spatial_main}
-\begin{tabular}{lrrrr}
+\begin{tabular}{lrrrrrr}
 \toprule
-& 0\,cm & 5\,cm & 10\,cm & 15\,cm \\
+& 0\,cm & 2\,cm & 5\,cm & 10\,cm & 15\,cm & 20\,cm \\
 \midrule
-\multicolumn{5}{l}{\textit{Goal endpoint error (mm) — encode$\to$decode pipeline:}} \\
+\multicolumn{7}{l}{\textit{Goal endpoint error (mm) — 10 tasks $\times$ 8 directions; mean $\pm$ std:}} \\
 \midrule
-\textbf{\dhb{} adapt (ours)} & \textbf{0.0} & \textbf{0.0} & \textbf{0.0} & \textbf{0.0} \\
-Naive replay                  & 0.0          & 50.0         & 100.0        & 150.0        \\
+\textbf{\dhb{}-DR$\dagger$ (ours)}  & \textbf{0.0{\tiny$\pm$0}} & \textbf{0.0{\tiny$\pm$0}} & \textbf{0.0{\tiny$\pm$0}} & \textbf{0.0{\tiny$\pm$0}} & \textbf{0.0{\tiny$\pm$0}} & \textbf{0.0{\tiny$\pm$0}} \\
+\textbf{\dhb{}-TI$\dagger$ (ours)}  & \textbf{0.0{\tiny$\pm$0}} & \textbf{0.0{\tiny$\pm$0}} & \textbf{0.0{\tiny$\pm$0}} & \textbf{0.0{\tiny$\pm$0}} & \textbf{0.0{\tiny$\pm$0}} & \textbf{0.0{\tiny$\pm$0}} \\
+Naive replay$\star$ & 0.0 & 20.0 & 50.0 & 100.0 & 150.0 & 200.0 \\
 \midrule
-\multicolumn{5}{l}{\textit{In-distribution task success (\%) — from reported results:}} \\
+\multicolumn{7}{l}{\textit{In-distribution task success (\%) — from reported results:}} \\
 \midrule
-StarVLA-FAST$\star$~\cite{starvla_2026} & 97.8 & \multicolumn{3}{c}{degraded under spatial shift~\cite{starvla_2026}} \\
-StarVLA-MLP$\star$~\cite{openvla_oft_2025} & 97.1 & \multicolumn{3}{c}{degraded under spatial shift~\cite{openvla_oft_2025}} \\
-\textbf{StarVLA-\dhb{}$\dagger$ (ours)} & \textbf{--} & \textbf{--} & \textbf{--} & \textbf{--} \\
+StarVLA-FAST$\star$~\cite{starvla_2026}     & 97.8 & \multicolumn{5}{c}{$\approx$79.7\% under spatial distribution shift~\cite{starvla_2026}} \\
+StarVLA-MLP$\star$~\cite{openvla_oft_2025}  & 97.1 & \multicolumn{5}{c}{$\approx$79.6\% under spatial distribution shift~\cite{openvla_oft_2025}} \\
+\textbf{StarVLA-\dhb{}$\dagger$ (ours)}     & \textbf{--} & \multicolumn{5}{c}{\textit{pending StarVLA-DHB training}} \\
 \bottomrule
-\multicolumn{5}{l}{\small StarVLA-\dhb{} pending policy training. Geometric results validate the representation.}\\
 \end{tabular}
 \end{table}
 

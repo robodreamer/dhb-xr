@@ -1,0 +1,710 @@
+#!/usr/bin/env python3
+"""Convert LIBERO HDF5 datasets to LeRobot v2.0 format for StarVLA training.
+
+This converter reads LIBERO HDF5 trajectories and converts them to LeRobot's
+parquet-based format, which is expected by StarVLA's dataloader.
+
+Features:
+- Converts LIBERO HDF5 demos to LeRobot parquet chunks
+- Generates required LeRobot metadata files (modality, info, episodes, tasks)
+- Supports precomputed DHB invariants as additional features
+- Handles multiple tasks in a single dataset
+- Computes dataset statistics for normalization
+
+LeRobot v2.0 Directory Structure:
+  dataset_root/
+    meta/
+      modality.json          - State/action/video modality definitions
+      info.json              - Dataset-level metadata
+      episodes.jsonl         - Episode metadata (one per line)
+      tasks.jsonl            - Task descriptions
+      stats_gr00t.json       - Dataset statistics for normalization
+    data/
+      chunk_0/
+        episode_000.parquet
+        episode_001.parquet
+        ...
+      chunk_1/
+        episode_016.parquet
+        ...
+    videos/
+      chunk_0/
+        episode_000_primary_image.mp4
+        episode_000_wrist_image.mp4
+        ...
+
+LIBERO HDF5 Structure:
+  demo_X/
+    actions: [T, 7] - joint target velocities
+    robot_states: [T, 9] - [gripper_state(2), ee_pos(3), ee_quat_wxyz(4)]
+    agentview_rgb: [T, H, W, 3]
+    wrist_rgb: [T, H, W, 3]  (optional)
+
+Usage:
+    python libero_to_lerobot.py \
+        --libero-root /path/to/libero/spatial \
+        --output-root /path/to/output/libero_lerobot \
+        --task-name "pick_up_the_black_bowl_from_table_center_and_place_it_on_the_plate" \
+        --dhb-invariants /path/to/precomputed_dhb.pkl
+
+    # Convert all tasks
+    python libero_to_lerobot.py \
+        --libero-root /path/to/libero/spatial \
+        --output-root /path/to/output/libero_lerobot \
+        --all-tasks
+
+Author: Generated for DHB-XR + StarVLA integration
+Date: 2026-04-09
+"""
+
+import argparse
+import json
+import logging
+import math
+import pickle
+import sys
+from collections import defaultdict
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+
+import h5py
+import numpy as np
+import pandas as pd
+from scipy.spatial.transform import Rotation
+
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# Constants and Configuration
+# ============================================================================
+
+# LeRobot v2.0 file structure
+LEROBOT_CHUNK_SIZE = 16  # Episodes per chunk file
+LEROBOT_VIDEO_CODEC = "libx264"
+LEROBOT_VIDEO_FPS = 30.0
+
+# LIBERO HDF5 structure
+LIBERO_DEMO_PREFIX = "demo_"
+LIBERO_ACTIONS_KEY = "actions"
+LIBERO_ROBOT_STATES_KEY = "robot_states"
+LIBERO_AGENTVIEW_KEY = "agentview_rgb"
+LIBERO_WRIST_KEY = "wrist_rgb"
+
+# Default video resolution
+DEFAULT_VIDEO_RES = (512, 384)  # (width, height)
+
+# Action mode configuration
+ACTION_MODE = "abs"  # "abs" for absolute, "delta" for delta, "rel" for relative
+
+
+# ============================================================================
+# Data Loading Functions
+# ============================================================================
+
+def load_libero_demo(h5_path: Path, demo_id: int) -> Dict:
+    """Load a single demo from LIBERO HDF5 file.
+    
+    Args:
+        h5_path: Path to HDF5 file
+        demo_id: Demo index (0-based)
+        
+    Returns:
+        Dictionary with keys: actions, ee_pos, ee_quat, agentview_rgb, wrist_rgb
+    """
+    with h5py.File(h5_path, "r") as f:
+        demo_key = f"{LIBERO_DEMO_PREFIX}{demo_id}"
+        
+        if f"data/{demo_key}" not in f:
+            # Try alternative structure
+            if demo_key in f.get("data", {}):
+                demo = f["data"][demo_key]
+            else:
+                available = [k for k in f.get("data", {}).keys() if k.startswith(LIBERO_DEMO_PREFIX)]
+                raise ValueError(f"Demo {demo_id} not found in {h5_path}. Available: {available[:5]}")
+        else:
+            demo = f[f"data/{demo_key}"]
+
+        # Extract actions
+        actions = np.array(demo[LIBERO_ACTIONS_KEY], dtype=np.float32)
+        
+        # Extract robot states
+        robot_states = np.array(demo[LIBERO_ROBOT_STATES_KEY], dtype=np.float64)
+        
+        # Parse robot states: [gripper_state(2), ee_pos(3), ee_quat_wxyz(4)]
+        gripper_state = robot_states[:, 0:2].astype(np.float32)  # [T, 2]
+        ee_pos = robot_states[:, 2:5].astype(np.float32)  # [T, 3]
+        ee_quat_wxyz = robot_states[:, 5:9].astype(np.float64)  # [T, 4] in (w, x, y, z)
+        
+        # Convert quaternion from (w, x, y, z) to (x, y, z, w)
+        ee_quat = ee_quat_wxyz[:, [1, 2, 3, 0]].astype(np.float32)
+        
+        # Normalize quaternions
+        ee_quat = ee_quat / np.linalg.norm(ee_quat, axis=1, keepdims=True)
+        
+        # Convert quaternion to Euler angles (roll, pitch, yaw) in radians
+        rotations = Rotation.from_quat(ee_quat)
+        euler_angles = rotations.as_euler("xyz", degrees=False).astype(np.float32)  # [T, 3]
+        
+        # Extract images
+        agentview_rgb = None
+        wrist_rgb = None
+        
+        if LIBERO_AGENTVIEW_KEY in demo:
+            agentview_rgb = np.array(demo[LIBERO_AGENTVIEW_KEY], dtype=np.uint8)  # [T, H, W, 3]
+        
+        if LIBERO_WRIST_KEY in demo:
+            wrist_rgb = np.array(demo[LIBERO_WRIST_KEY], dtype=np.uint8)  # [T, H, W, 3]
+        
+        return {
+            "actions": actions,  # [T, 7] - joint velocities
+            "gripper_state": gripper_state,  # [T, 2]
+            "ee_pos": ee_pos,  # [T, 3]
+            "ee_quat": ee_quat,  # [T, 4] in (x, y, z, w)
+            "euler_angles": euler_angles,  # [T, 3] roll, pitch, yaw
+            "agentview_rgb": agentview_rgb,  # [T, H, W, 3]
+            "wrist_rgb": wrist_rgb,  # [T, H, W, 3]
+            "length": len(actions),
+        }
+
+
+def list_demos_in_file(h5_path: Path) -> List[int]:
+    """List all demo IDs in an HDF5 file."""
+    with h5py.File(h5_path, "r") as f:
+        demo_group = f.get("data", f)
+        demos = sorted([
+            int(k.replace(LIBERO_DEMO_PREFIX, ""))
+            for k in demo_group.keys()
+            if k.startswith(LIBERO_DEMO_PREFIX)
+        ])
+    return demos
+
+
+# ============================================================================
+# Metadata Generation Functions
+# ============================================================================
+
+def create_modality_metadata() -> Dict:
+    """Create LeRobot modality metadata for LIBERO data.
+    
+    This defines the state/action/video structure for StarVLA's dataloader.
+    """
+    modality_metadata = {
+        "state": {
+            "x": {"start": 0, "end": 1},
+            "y": {"start": 1, "end": 2},
+            "z": {"start": 2, "end": 3},
+            "roll": {"start": 3, "end": 4},
+            "pitch": {"start": 4, "end": 5},
+            "yaw": {"start": 5, "end": 6},
+            "gripper": {"start": 6, "end": 7},
+        },
+        "action": {
+            "x": {"start": 0, "end": 1},
+            "y": {"start": 1, "end": 2},
+            "z": {"start": 2, "end": 3},
+            "roll": {"start": 3, "end": 4},
+            "pitch": {"start": 4, "end": 5},
+            "yaw": {"start": 5, "end": 6},
+            "gripper": {"start": 6, "end": 7},
+        },
+        "video": {
+            "primary_image": {"original_key": "observation.images.image"},
+            "wrist_image": {"original_key": "observation.images.wrist_image"},
+        },
+        "annotation": {
+            "human.action.task_description": {"original_key": "task_index"}
+        }
+    }
+    return modality_metadata
+
+
+def create_info_metadata(num_tasks: int = 1) -> Dict:
+    """Create LeRobot info metadata.
+    
+    Provides dataset-level information and feature schemas.
+    """
+    info_metadata = {
+        "name": "libero_lerobot",
+        "version": "2.0",
+        "data_path": "data/{episode_chunk:06d}/episode_{episode_index:06d}.parquet",
+        "video_path": "videos/{episode_chunk:06d}/episode_{episode_index:06d}_{video_key}.mp4",
+        "chunks_size": LEROBOT_CHUNK_SIZE,
+        "num_episodes": 0,  # Will be updated
+        "num_tasks": num_tasks,
+        "num_frames": 0,  # Will be updated
+        "features": {
+            "observation.images.image": {
+                "shape": [DEFAULT_VIDEO_RES[1], DEFAULT_VIDEO_RES[0], 3],
+                "names": ["height", "width", "channel"],
+                "info": {
+                    "video.fps": LEROBOT_VIDEO_FPS,
+                    "video.channels": 3,
+                },
+            },
+            "observation.images.wrist_image": {
+                "shape": [DEFAULT_VIDEO_RES[1], DEFAULT_VIDEO_RES[0], 3],
+                "names": ["height", "width", "channel"],
+                "info": {
+                    "video.fps": LEROBOT_VIDEO_FPS,
+                    "video.channels": 3,
+                },
+            },
+            "observation.state": {
+                "shape": [7],  # x, y, z, roll, pitch, yaw, gripper
+                "dtype": "float32",
+            },
+            "action": {
+                "shape": [7],  # x, y, z, roll, pitch, yaw, gripper
+                "dtype": "float32",
+            },
+            "timestamp": {
+                "shape": [],
+                "dtype": "float32",
+            },
+            "task_index": {
+                "shape": [],
+                "dtype": "int32",
+            },
+        }
+    }
+    return info_metadata
+
+
+def create_episode_metadata(episode_index: int, length: int, task_index: int = 0) -> Dict:
+    """Create metadata for a single episode."""
+    return {
+        "episode_index": episode_index,
+        "length": length,
+        "task_index": task_index,
+    }
+
+
+def create_task_metadata(task_index: int, task_name: str) -> Dict:
+    """Create metadata for a task."""
+    return {
+        "task_index": task_index,
+        "task": task_name,
+    }
+
+
+# ============================================================================
+# Parquet Data Generation Functions
+# ============================================================================
+
+def create_episode_dataframe(
+    demo_data: Dict,
+    episode_index: int,
+    task_index: int = 0,
+    dhb_invariants: Optional[Dict] = None,
+) -> pd.DataFrame:
+    """Create a pandas DataFrame for an episode in LeRobot format.
+    
+    Args:
+        demo_data: Loaded demo data from LIBERO
+        episode_index: Global episode index
+        task_index: Task index for this episode
+        dhb_invariants: Optional precomputed DHB features
+        
+    Returns:
+        DataFrame with columns for observation.state, action, etc.
+    """
+    length = demo_data["length"]
+    
+    # Create timestamp (assuming 30 FPS)
+    timestamps = np.arange(length, dtype=np.float32) / LEROBOT_VIDEO_FPS
+    
+    # Prepare state vector: [x, y, z, roll, pitch, yaw, gripper]
+    state_vector = np.column_stack([
+        demo_data["ee_pos"],  # x, y, z
+        demo_data["euler_angles"],  # roll, pitch, yaw
+        demo_data["gripper_state"][:, 0:1],  # gripper (take first component)
+    ]).astype(np.float32)
+    
+    # Prepare action vector (absolute positions): [x, y, z, roll, pitch, yaw, gripper]
+    # For actions, we use the same as state (absolute control)
+    action_vector = np.column_stack([
+        demo_data["ee_pos"],  # x, y, z
+        demo_data["euler_angles"],  # roll, pitch, yaw
+        demo_data["gripper_state"][:, 0:1],  # gripper
+    ]).astype(np.float32)
+    
+    # Convert video frames to list of PIL Images (stored as bytes)
+    def frames_to_bytes(frames: np.ndarray) -> List[bytes]:
+        """Convert frames to PIL Image bytes for storage."""
+        if frames is None:
+            frames = np.zeros((*DEFAULT_VIDEO_RES[::-1], 3), dtype=np.uint8)
+        
+        from io import BytesIO
+        from PIL import Image
+        
+        frame_bytes = []
+        for frame in frames:
+            # Resize if needed
+            if frame.shape != DEFAULT_VIDEO_RES[::-1] + (3,):
+                img = Image.fromarray(frame.astype(np.uint8))
+                img = img.resize((DEFAULT_VIDEO_RES[0], DEFAULT_VIDEO_RES[1]))
+                frame = np.array(img)
+            
+            # Convert to bytes
+            img = Image.fromarray(frame.astype(np.uint8), mode="RGB")
+            buffer = BytesIO()
+            img.save(buffer, format="PNG")
+            frame_bytes.append(buffer.getvalue())
+        
+        return frame_bytes
+    
+    agentview_bytes = frames_to_bytes(demo_data["agentview_rgb"])
+    wrist_bytes = frames_to_bytes(demo_data["wrist_rgb"])
+    
+    # Build dataframe
+    data_dict = {
+        "observation.state": [state_vector],  # Store as list of arrays
+        "action": [action_vector],
+        "observation.images.image": [agentview_bytes],
+        "observation.images.wrist_image": [wrist_bytes],
+        "timestamp": [timestamps],
+        "task_index": [np.full(length, task_index, dtype=np.int32)],
+    }
+    
+    # Add DHB invariants if available
+    if dhb_invariants and episode_index in dhb_invariants:
+        dhb_feats = dhb_invariants[episode_index]
+        for key, values in dhb_feats.items():
+            data_dict[f"dhb.{key}"] = [np.array(values, dtype=np.float32)]
+    
+    df = pd.DataFrame(data_dict)
+    return df
+
+
+# ============================================================================
+# Main Conversion Function
+# ============================================================================
+
+def convert_libero_to_lerobot(
+    libero_h5_path: Path,
+    output_root: Path,
+    task_name: str,
+    task_index: int = 0,
+    dhb_invariants: Optional[Dict] = None,
+    demo_ids: Optional[List[int]] = None,
+) -> Tuple[int, int]:
+    """Convert a single LIBERO HDF5 file to LeRobot format.
+    
+    Args:
+        libero_h5_path: Path to LIBERO HDF5 file
+        output_root: Root output directory
+        task_name: Name of the task
+        task_index: Index of this task
+        dhb_invariants: Optional precomputed DHB features
+        demo_ids: List of demo IDs to convert (None = all)
+        
+    Returns:
+        Tuple of (num_episodes_converted, total_frames)
+    """
+    output_root = Path(output_root)
+    output_root.mkdir(parents=True, exist_ok=True)
+    
+    meta_dir = output_root / "meta"
+    data_dir = output_root / "data"
+    meta_dir.mkdir(exist_ok=True)
+    data_dir.mkdir(exist_ok=True)
+    
+    # Load demo IDs if not provided
+    if demo_ids is None:
+        demo_ids = list_demos_in_file(libero_h5_path)
+    
+    logger.info(f"Converting {len(demo_ids)} demos from {libero_h5_path.name}")
+    
+    # Collect episodes and tasks
+    all_episodes = []
+    all_tasks = {task_index: task_name}
+    total_frames = 0
+    
+    # Convert each demo
+    for global_idx, demo_id in enumerate(demo_ids):
+        try:
+            logger.info(f"  Loading demo {demo_id}...")
+            demo_data = load_libero_demo(libero_h5_path, demo_id)
+            
+            # Create episode metadata
+            episode_meta = create_episode_metadata(global_idx, demo_data["length"], task_index)
+            all_episodes.append(episode_meta)
+            
+            # Create dataframe
+            df = create_episode_dataframe(demo_data, global_idx, task_index, dhb_invariants)
+            
+            # Determine chunk index
+            chunk_index = global_idx // LEROBOT_CHUNK_SIZE
+            chunk_dir = data_dir / f"chunk_{chunk_index:06d}"
+            chunk_dir.mkdir(exist_ok=True)
+            
+            # Save parquet
+            parquet_path = chunk_dir / f"episode_{global_idx:06d}.parquet"
+            logger.info(f"  Saving to {parquet_path.relative_to(output_root)}")
+            df.to_parquet(parquet_path, index=False)
+            
+            total_frames += demo_data["length"]
+            
+        except Exception as e:
+            logger.error(f"  Error converting demo {demo_id}: {e}")
+            continue
+    
+    # Save metadata files
+    logger.info("Writing metadata files...")
+    
+    # modality.json
+    modality_metadata = create_modality_metadata()
+    with open(meta_dir / "modality.json", "w") as f:
+        json.dump(modality_metadata, f, indent=2)
+    
+    # info.json
+    info_metadata = create_info_metadata(num_tasks=len(all_tasks))
+    info_metadata["num_episodes"] = len(all_episodes)
+    info_metadata["num_frames"] = total_frames
+    with open(meta_dir / "info.json", "w") as f:
+        json.dump(info_metadata, f, indent=2)
+    
+    # episodes.jsonl
+    with open(meta_dir / "episodes.jsonl", "w") as f:
+        for ep_meta in all_episodes:
+            f.write(json.dumps(ep_meta) + "\n")
+    
+    # tasks.jsonl
+    with open(meta_dir / "tasks.jsonl", "w") as f:
+        for task_idx, task_name_str in all_tasks.items():
+            task_meta = create_task_metadata(task_idx, task_name_str)
+            f.write(json.dumps(task_meta) + "\n")
+    
+    logger.info(f"Successfully converted {len(all_episodes)} episodes ({total_frames} frames)")
+    
+    return len(all_episodes), total_frames
+
+
+def compute_dataset_statistics(data_dir: Path) -> Dict:
+    """Compute statistics for all parquet files in the dataset.
+    
+    This creates the stats_gr00t.json file needed by StarVLA's dataloader.
+    """
+    logger.info("Computing dataset statistics...")
+    
+    stats = defaultdict(lambda: {
+        "min": None,
+        "max": None,
+        "mean": None,
+        "std": None,
+        "q01": None,
+        "q99": None,
+    })
+    
+    all_data = defaultdict(list)
+    
+    # Collect all parquet files
+    parquet_files = sorted(data_dir.glob("chunk_*/episode_*.parquet"))
+    
+    for pq_path in parquet_files:
+        df = pd.read_parquet(pq_path)
+        
+        # Collect data for each modality
+        for col in df.columns:
+            if col in ["task_index"]:
+                continue
+            
+            try:
+                # Stack all arrays in this column
+                col_data = np.vstack([np.asarray(x) for x in df[col]])
+                all_data[col].append(col_data)
+            except Exception as e:
+                logger.warning(f"Could not process column {col}: {e}")
+                continue
+    
+    # Compute statistics
+    for col, data_list in all_data.items():
+        if not data_list:
+            continue
+        
+        combined = np.concatenate(data_list, axis=0).astype(np.float32)
+        
+        stats[col]["min"] = np.min(combined, axis=0).tolist()
+        stats[col]["max"] = np.max(combined, axis=0).tolist()
+        stats[col]["mean"] = np.mean(combined, axis=0).tolist()
+        stats[col]["std"] = np.std(combined, axis=0).tolist()
+        stats[col]["q01"] = np.quantile(combined, 0.01, axis=0).tolist()
+        stats[col]["q99"] = np.quantile(combined, 0.99, axis=0).tolist()
+    
+    return dict(stats)
+
+
+# ============================================================================
+# Command-line Interface
+# ============================================================================
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Convert LIBERO HDF5 datasets to LeRobot v2.0 format for StarVLA training",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Convert single task
+  python libero_to_lerobot.py \\
+      --libero-root /data/libero/spatial \\
+      --output-root /data/libero_lerobot \\
+      --task-name "pick_up_the_black_bowl_from_table_center_and_place_it_on_the_plate"
+
+  # Convert all tasks in directory
+  python libero_to_lerobot.py \\
+      --libero-root /data/libero/spatial \\
+      --output-root /data/libero_lerobot \\
+      --all-tasks
+
+  # With precomputed DHB invariants
+  python libero_to_lerobot.py \\
+      --libero-root /data/libero/spatial \\
+      --output-root /data/libero_lerobot \\
+      --all-tasks \\
+      --dhb-invariants /path/to/dhb_features.pkl
+        """
+    )
+    
+    parser.add_argument(
+        "--libero-root",
+        type=Path,
+        required=True,
+        help="Root directory containing LIBERO HDF5 files",
+    )
+    parser.add_argument(
+        "--output-root",
+        type=Path,
+        required=True,
+        help="Output directory for LeRobot dataset",
+    )
+    parser.add_argument(
+        "--task-name",
+        type=str,
+        default=None,
+        help="Specific task name to convert (HDF5 filename without .hdf5)",
+    )
+    parser.add_argument(
+        "--all-tasks",
+        action="store_true",
+        help="Convert all tasks in libero-root",
+    )
+    parser.add_argument(
+        "--dhb-invariants",
+        type=Path,
+        default=None,
+        help="Path to pickle file with precomputed DHB invariants",
+    )
+    parser.add_argument(
+        "--max-demos",
+        type=int,
+        default=None,
+        help="Maximum demos to convert per task (for testing)",
+    )
+    parser.add_argument(
+        "--compute-stats",
+        action="store_true",
+        default=True,
+        help="Compute dataset statistics after conversion",
+    )
+    
+    args = parser.parse_args()
+    
+    # Load DHB invariants if provided
+    dhb_invariants = None
+    if args.dhb_invariants:
+        logger.info(f"Loading DHB invariants from {args.dhb_invariants}")
+        with open(args.dhb_invariants, "rb") as f:
+            dhb_invariants = pickle.load(f)
+    
+    # Determine which tasks to convert
+    libero_root = Path(args.libero_root)
+    hdf5_files = list(libero_root.glob("*.hdf5"))
+    
+    if not hdf5_files:
+        logger.error(f"No HDF5 files found in {libero_root}")
+        sys.exit(1)
+    
+    if args.task_name:
+        # Convert specific task
+        matching = [f for f in hdf5_files if args.task_name in f.stem]
+        if not matching:
+            logger.error(f"No HDF5 file matching task name: {args.task_name}")
+            sys.exit(1)
+        hdf5_files = matching[:1]
+    elif not args.all_tasks:
+        logger.error("Specify either --task-name or --all-tasks")
+        sys.exit(1)
+    
+    # Convert each task
+    total_episodes = 0
+    total_frames = 0
+    
+    output_root = Path(args.output_root)
+    
+    for task_idx, h5_path in enumerate(sorted(hdf5_files)):
+        logger.info(f"\n{'='*60}")
+        logger.info(f"Converting task {task_idx}: {h5_path.stem}")
+        logger.info(f"{'='*60}")
+        
+        # Get demo IDs
+        demo_ids = list_demos_in_file(h5_path)
+        if args.max_demos:
+            demo_ids = demo_ids[:args.max_demos]
+        
+        # Convert
+        num_eps, num_frames = convert_libero_to_lerobot(
+            h5_path,
+            output_root,
+            task_name=h5_path.stem,
+            task_index=task_idx,
+            dhb_invariants=dhb_invariants,
+            demo_ids=demo_ids,
+        )
+        
+        total_episodes += num_eps
+        total_frames += num_frames
+    
+    # Compute statistics
+    if args.compute_stats:
+        logger.info("\n" + "="*60)
+        logger.info("Computing dataset statistics...")
+        logger.info("="*60)
+        
+        stats = compute_dataset_statistics(output_root / "data")
+        
+        stats_output = {
+            "__format_version": 2,
+            "__cache_config": {"mode": "abs"},
+            "statistics": stats,
+        }
+        
+        stats_path = output_root / "meta" / "stats_gr00t.json"
+        with open(stats_path, "w") as f:
+            json.dump(stats_output, f, indent=2)
+        
+        logger.info(f"Saved statistics to {stats_path}")
+    
+    # Summary
+    logger.info("\n" + "="*60)
+    logger.info("Conversion complete!")
+    logger.info(f"Total episodes: {total_episodes}")
+    logger.info(f"Total frames: {total_frames}")
+    logger.info(f"Output directory: {output_root}")
+    logger.info("="*60)
+    
+    logger.info("\nNext steps:")
+    logger.info("1. Verify the dataset can be loaded by StarVLA:")
+    logger.info("   python -c \"from starVLA.dataloader.gr00t_lerobot.datasets import LeRobotSingleDataset\"")
+    logger.info("2. Update your StarVLA data_config.py to reference this dataset")
+    logger.info("3. Train StarVLA with the new dataset")
+
+
+if __name__ == "__main__":
+    main()
