@@ -1,0 +1,9 @@
+{
+  "raw_compression": 20.416666666666668,
+  "inv5_compression": 3.977635782747604,
+  "inv2_compression": 49.8,
+  "raw_stability_pct": 93.92278530404234,
+  "inv5_stability_pct": 0.0,
+  "inv2_stability_pct": 0.0,
+  "note": "inv5 = lin_magnitude + all 4 angular invariants; inv2 = lin_mag + ang_mag"
+}
