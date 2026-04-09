@@ -1,0 +1,2636 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="SE(3) invariant trajectory encoding for robotics and VLA applications (v0.2.1)">
+      
+      
+        <meta name="author" content="Andy Park">
+      
+      
+        <link rel="canonical" href="https://robodreamer.github.io/dhb_xr/integration/vla_integration/">
+      
+      
+        <link rel="prev" href="../../examples_walkthrough/">
+      
+      
+        <link rel="next" href="../../development/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>VLA Integration - DHB-XR Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="blue">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#vla-integration-libero-pro-libero-robocasa" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="DHB-XR Documentation" class="md-header__button md-logo" aria-label="DHB-XR Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            DHB-XR Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              VLA Integration
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="blue"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="blue"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/robodreamer/dhb-xr" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    robodreamer/dhb_xr
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../paper/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Paper
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../changelog/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Changelog
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../installation/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Installation
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../quickstart/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Quickstart
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../api/" class="md-tabs__link">
+          
+  
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../examples_walkthrough/" class="md-tabs__link">
+          
+  
+  
+  Examples
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
+          
+  
+  
+  Integration
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../development/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Development
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="DHB-XR Documentation" class="md-nav__button md-logo" aria-label="DHB-XR Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    DHB-XR Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/robodreamer/dhb-xr" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    robodreamer/dhb_xr
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Paper
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Types
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/encoding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Encoding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/decoding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decoding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/time_invariant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Time-Invariant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/optimization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Optimization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/database/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Database
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/tokenization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tokenization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/losses/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Losses
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/visualization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Visualization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples_walkthrough/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Integration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Integration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    VLA Integration
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    VLA Integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Overview">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-dhb-xr-for-vla" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why DHB-XR for VLA?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#libero-pro-perturbation-compatibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LIBERO-PRO perturbation compatibility
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#libero-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LIBERO Integration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="LIBERO Integration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dataset-download" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dataset Download
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-the-liberoadapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using the LiberoAdapter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dhb-encoding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DHB Encoding
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#motion-retrieval" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Motion Retrieval
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#run-integration-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run Integration Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#libero-libero-pro-simulation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LIBERO / LIBERO-PRO Simulation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="LIBERO / LIBERO-PRO Simulation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#running-the-demo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running the Demo
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#libero-pro-perturbation-robustness-demo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LIBERO-PRO Perturbation Robustness Demo
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dhb-xr-vs-naive-replay-swap-demo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DHB-XR vs Naive Replay — Swap Demo
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#viewing-simulations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Viewing Simulations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#basic-simulation-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic Simulation Example
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#robocasa-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RoboCASA Integration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#vq-vae-tokenization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VQ-VAE Tokenization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-format-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Format Reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Data Format Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#libero-hdf5-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LIBERO HDF5 Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adapter-key-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adapter Key Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#missing-h5py" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Missing h5py
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#quaternion-format-mismatch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quaternion format mismatch
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#variable-length-trajectories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Variable-length trajectories
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#modulenotfounderror-no-module-named-robosuiteenvironmentsmanipulationsingle_arm_env" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ModuleNotFoundError: No module named 'robosuite.environments.manipulation.single_arm_env'
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#libero-import-prompts-for-input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LIBERO import prompts for input
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#switching-between-libero-and-libero-pro" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Switching between LIBERO and LIBERO-PRO
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#libero-pro-custom-asset-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LIBERO-PRO custom asset errors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gymgymnasium-compatibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gym/gymnasium compatibility
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mujoco-rendering-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MuJoCo rendering issues
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#package-version-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Package version summary
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Overview">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-dhb-xr-for-vla" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why DHB-XR for VLA?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#libero-pro-perturbation-compatibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LIBERO-PRO perturbation compatibility
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#libero-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LIBERO Integration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="LIBERO Integration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dataset-download" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dataset Download
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-the-liberoadapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using the LiberoAdapter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dhb-encoding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DHB Encoding
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#motion-retrieval" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Motion Retrieval
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#run-integration-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run Integration Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#libero-libero-pro-simulation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LIBERO / LIBERO-PRO Simulation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="LIBERO / LIBERO-PRO Simulation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#running-the-demo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running the Demo
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#libero-pro-perturbation-robustness-demo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LIBERO-PRO Perturbation Robustness Demo
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dhb-xr-vs-naive-replay-swap-demo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DHB-XR vs Naive Replay — Swap Demo
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#viewing-simulations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Viewing Simulations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#basic-simulation-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic Simulation Example
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#robocasa-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RoboCASA Integration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#vq-vae-tokenization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VQ-VAE Tokenization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-format-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Format Reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Data Format Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#libero-hdf5-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LIBERO HDF5 Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adapter-key-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adapter Key Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#missing-h5py" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Missing h5py
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#quaternion-format-mismatch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quaternion format mismatch
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#variable-length-trajectories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Variable-length trajectories
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#modulenotfounderror-no-module-named-robosuiteenvironmentsmanipulationsingle_arm_env" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ModuleNotFoundError: No module named 'robosuite.environments.manipulation.single_arm_env'
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#libero-import-prompts-for-input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LIBERO import prompts for input
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#switching-between-libero-and-libero-pro" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Switching between LIBERO and LIBERO-PRO
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#libero-pro-custom-asset-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LIBERO-PRO custom asset errors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gymgymnasium-compatibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gym/gymnasium compatibility
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mujoco-rendering-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MuJoCo rendering issues
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#package-version-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Package version summary
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="vla-integration-libero-pro-libero-robocasa">VLA Integration (LIBERO-PRO / LIBERO / RoboCASA)</h1>
+<p>This page shows how to use DHB-XR with popular Vision-Language-Action (VLA) benchmarks for trajectory encoding, retrieval, simulation, and <strong>perturbation robustness testing</strong>.</p>
+<h2 id="overview">Overview</h2>
+<p>DHB-XR provides thin adapter layers for:</p>
+<ul>
+<li><strong>LIBERO-PRO</strong>: Extended LIBERO benchmark with perturbation testing (spatial swap, object replacement, environment change, semantic, task)</li>
+<li><strong>LIBERO</strong>: Lifelong robot learning benchmark (130 tasks)</li>
+<li><strong>RoboCASA</strong>: Large-scale manipulation benchmark</li>
+</ul>
+<p>The pipeline:</p>
+<ol>
+<li><strong>Load</strong> dataset episodes (HDF5 format)</li>
+<li><strong>Extract</strong> end-effector poses (positions, quaternions)</li>
+<li><strong>Encode</strong> to SE(3)-invariant DHB representations</li>
+<li><strong>Adapt</strong> trajectories to new initial poses (perturbation robustness)</li>
+<li><strong>Retrieve</strong> similar motions or <strong>tokenize</strong> for VLA training</li>
+</ol>
+<h3 id="why-dhb-xr-for-vla">Why DHB-XR for VLA?</h3>
+<p>Current VLA models (RT-2, Octo, OpenVLA) learn a mapping from <strong>(vision + language) → actions</strong>. When the scene changes — even slightly — they either fail, require massive data augmentation, or need fine-tuning. DHB-XR addresses this by providing a <strong>structured trajectory representation layer</strong> that decouples <em>motion shape</em> from <em>spatial context</em>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Traditional VLA:  Vision → Policy → Actions (tied to absolute positions)
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>With DHB-XR:      Vision → Object Pose Detection → DHB Adaptation → Actions
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>                            ↑                         ↑
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>                     &quot;Where is the plate now?&quot;   &quot;Same motion shape,
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>                                                  new target pose&quot;
+</code></pre></div>
+<p>DHB invariants are <strong>SE(3)-invariant</strong> — the encoded motion shape is independent of the global reference frame. This makes DHB a natural fit for VLA spatial generalization:</p>
+<table>
+<thead>
+<tr>
+<th>VLA Scenario</th>
+<th>Without DHB-XR</th>
+<th>With DHB-XR</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Object shifts on table</td>
+<td>Retrain or fail</td>
+<td>Re-decode from new pose (~7ms)</td>
+</tr>
+<tr>
+<td>Different robot starting config</td>
+<td>Action replay fails</td>
+<td>Adapt with same invariants</td>
+</tr>
+<tr>
+<td>Transfer between robots</td>
+<td>Need new training data</td>
+<td>Same invariants, different kinematics</td>
+</tr>
+<tr>
+<td>Few-shot learning</td>
+<td>Need 100s of demos per arrangement</td>
+<td>1 demo + DHB adaptation covers spatial variations</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key advantage — data efficiency:</strong> Instead of collecting 1000s of demonstrations across different spatial arrangements, collect a few demos and use DHB to <em>analytically</em> generate the spatial variations. This is especially valuable for LIBERO-PRO's perturbation benchmarks, where each perturbation type would otherwise require separate training data.</p>
+<p><strong>Demonstrated results (LIBERO-PRO spatial swap):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>EE → OLD plate</th>
+<th>EE → NEW plate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Naive replay (same actions)</td>
+<td>5.2 cm</td>
+<td>11.1 cm</td>
+</tr>
+<tr>
+<td>DHB-adapted (Fatrop solver)</td>
+<td>20.8 cm</td>
+<td><strong>4.6 cm</strong></td>
+</tr>
+</tbody>
+</table>
+<p>When the plate moves ~17cm (via LIBERO-PRO swap perturbation), naive replay reaches for the old position and fails. DHB-adapted trajectory correctly targets the new plate position — 6.5cm closer to the correct target, solved in ~7ms.</p>
+<h3 id="libero-pro-perturbation-compatibility">LIBERO-PRO perturbation compatibility</h3>
+<ul>
+<li><strong>Position perturbations</strong> (objects swap): DHB adapts trajectory to new target locations while preserving motion shape (0.000 mm shape error)</li>
+<li><strong>Object replacement</strong>: Same behavioral motion with different objects yields &gt;0.97 invariant correlation</li>
+<li><strong>Environment changes</strong>: Motion essence is captured regardless of scene layout</li>
+</ul>
+<h2 id="libero-integration">LIBERO Integration</h2>
+<h3 id="dataset-download">Dataset Download</h3>
+<p>LIBERO provides four task suites. Start with LIBERO-Spatial (smallest):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Create data directory</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/Projects/data/libero<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>~/Projects/data/libero
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Download LIBERO-Spatial (10 tasks, ~6GB)</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>wget<span class="w"> </span>-O<span class="w"> </span>libero_spatial.zip<span class="w"> </span><span class="s2">&quot;https://utexas.box.com/shared/static/04k94hyizn4huhbv5sz4ev9p2h1p6s7f.zip&quot;</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>unzip<span class="w"> </span>libero_spatial.zip
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="c1"># Other available datasets:</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="c1"># LIBERO-Object: https://utexas.box.com/shared/static/avkklgeq0e1dgzxz52x488whpu8mgspk.zip</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="c1"># LIBERO-Goal: https://utexas.box.com/shared/static/iv5e4dos8yy2b212pkzkpxu9wbdgjfeg.zip</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="c1"># LIBERO-100: https://utexas.box.com/shared/static/cv73j8zschq8auh9npzt876fdc1akvmk.zip</span>
+</code></pre></div>
+<h3 id="using-the-liberoadapter">Using the LiberoAdapter</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">dhb_xr.integration.vla.libero</span><span class="w"> </span><span class="kn">import</span> <span class="n">LiberoAdapter</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1"># Create adapter</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">adapter</span> <span class="o">=</span> <span class="n">LiberoAdapter</span><span class="p">()</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="c1"># Load episodes from HDF5 file</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="k">for</span> <span class="n">episode</span> <span class="ow">in</span> <span class="n">adapter</span><span class="o">.</span><span class="n">load_dataset</span><span class="p">(</span><span class="s2">&quot;/path/to/libero_task.hdf5&quot;</span><span class="p">):</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="n">positions</span> <span class="o">=</span> <span class="n">episode</span><span class="p">[</span><span class="s2">&quot;positions&quot;</span><span class="p">]</span>      <span class="c1"># (N, 3) end-effector positions</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="n">quaternions</span> <span class="o">=</span> <span class="n">episode</span><span class="p">[</span><span class="s2">&quot;quaternions&quot;</span><span class="p">]</span>  <span class="c1"># (N, 4) quaternions (x, y, z, w)</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>    <span class="n">metadata</span> <span class="o">=</span> <span class="n">episode</span><span class="p">[</span><span class="s2">&quot;metadata&quot;</span><span class="p">]</span>        <span class="c1"># demo_id, task info, etc.</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Episode </span><span class="si">{</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;demo_id&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">positions</span><span class="p">)</span><span class="si">}</span><span class="s2"> frames&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Note:</strong> LIBERO stores quaternions in <code>robot_states[:, 5:9]</code> as (w,x,y,z). The adapter automatically extracts and converts to (x,y,z,w) format.</p>
+<h3 id="dhb-encoding">DHB Encoding</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">dhb_xr.encoder.dhb_dr</span><span class="w"> </span><span class="kn">import</span> <span class="n">encode_dhb_dr</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">dhb_xr.core.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">EncodingMethod</span><span class="p">,</span> <span class="n">DHBMethod</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="c1"># Encode trajectory to invariants</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="n">result</span> <span class="o">=</span> <span class="n">encode_dhb_dr</span><span class="p">(</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="n">positions</span><span class="p">,</span> <span class="n">quaternions</span><span class="p">,</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="n">method</span><span class="o">=</span><span class="n">EncodingMethod</span><span class="o">.</span><span class="n">POSITION</span><span class="p">,</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    <span class="n">dhb_method</span><span class="o">=</span><span class="n">DHBMethod</span><span class="o">.</span><span class="n">DOUBLE_REFLECTION</span><span class="p">,</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="p">)</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="n">linear_inv</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="s2">&quot;linear_motion_invariants&quot;</span><span class="p">]</span>   <span class="c1"># (N+2, 4)</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="n">angular_inv</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="s2">&quot;angular_motion_invariants&quot;</span><span class="p">]</span> <span class="c1"># (N+2, 4)</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="n">invariants</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">linear_inv</span><span class="p">,</span> <span class="n">angular_inv</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># (N+2, 8)</span>
+</code></pre></div>
+<h3 id="motion-retrieval">Motion Retrieval</h3>
+<p>Build a database of trajectories and query for similar motions:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">dhb_xr.database.motion_db</span><span class="w"> </span><span class="kn">import</span> <span class="n">MotionDatabase</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="c1"># Build database (encoding happens automatically)</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">db</span> <span class="o">=</span> <span class="n">MotionDatabase</span><span class="p">(</span><span class="n">dhb_method</span><span class="o">=</span><span class="s2">&quot;double_reflection&quot;</span><span class="p">)</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="k">for</span> <span class="n">episode</span> <span class="ow">in</span> <span class="n">adapter</span><span class="o">.</span><span class="n">load_dataset</span><span class="p">(</span><span class="n">dataset_path</span><span class="p">):</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="n">db</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>        <span class="n">positions</span><span class="o">=</span><span class="n">episode</span><span class="p">[</span><span class="s2">&quot;positions&quot;</span><span class="p">],</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>        <span class="n">quaternions</span><span class="o">=</span><span class="n">episode</span><span class="p">[</span><span class="s2">&quot;quaternions&quot;</span><span class="p">],</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>        <span class="n">metadata</span><span class="o">=</span><span class="n">episode</span><span class="p">[</span><span class="s2">&quot;metadata&quot;</span><span class="p">],</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>    <span class="p">)</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="c1"># Query similar motions (DTW for variable-length trajectories)</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="n">results</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">retrieve</span><span class="p">(</span>
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>    <span class="n">query_positions</span><span class="o">=</span><span class="n">query_pos</span><span class="p">,</span>
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>    <span class="n">query_quaternions</span><span class="o">=</span><span class="n">query_quat</span><span class="p">,</span>
+<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>    <span class="n">k</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>    <span class="n">use_dtw</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="p">)</span>
+<a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>
+<a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a><span class="k">for</span> <span class="n">invariants</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">distance</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+<a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Match: </span><span class="si">{</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;demo_id&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">, distance=</span><span class="si">{</span><span class="n">distance</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="run-integration-tests">Run Integration Tests</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Test adapter loading</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>pixi<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>examples/integration/test_libero_adapter.py
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Test DHB encoding</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>pixi<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>examples/integration/test_libero_encoding.py
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1"># Full retrieval demo</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>pixi<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>examples/integration/test_libero_retrieval.py
+</code></pre></div>
+<h2 id="libero-libero-pro-simulation">LIBERO / LIBERO-PRO Simulation</h2>
+<p>To run LIBERO tasks in simulation with DHB-XR trajectory adaptation and perturbation robustness testing:</p>
+<h3 id="installation">Installation</h3>
+<p>LIBERO (and LIBERO-PRO) require specific package versions. We recommend using a separate conda environment:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># 1. Install Miniforge (if conda/mamba not available)</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>curl<span class="w"> </span>-L<span class="w"> </span>-O<span class="w"> </span><span class="s2">&quot;https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-</span><span class="k">$(</span>uname<span class="k">)</span><span class="s2">-</span><span class="k">$(</span>uname<span class="w"> </span>-m<span class="k">)</span><span class="s2">.sh&quot;</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>bash<span class="w"> </span>Miniforge3-<span class="k">$(</span>uname<span class="k">)</span>-<span class="k">$(</span>uname<span class="w"> </span>-m<span class="k">)</span>.sh<span class="w"> </span>-b<span class="w"> </span>-p<span class="w"> </span>~/miniforge3
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="c1"># 2. Create libero environment</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>~/miniforge3/bin/mamba<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>libero<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.10<span class="w"> </span>-y
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="c1"># 3. Install LIBERO dependencies (specific versions required!)</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>~/miniforge3/bin/mamba<span class="w"> </span>run<span class="w"> </span>-n<span class="w"> </span>libero<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="nv">robosuite</span><span class="o">==</span><span class="m">1</span>.4.0<span class="w"> </span>mujoco<span class="w"> </span><span class="nv">bddl</span><span class="o">==</span><span class="m">1</span>.0.1<span class="w"> </span><span class="nv">robomimic</span><span class="o">==</span><span class="m">0</span>.2.0
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>~/miniforge3/bin/mamba<span class="w"> </span>run<span class="w"> </span>-n<span class="w"> </span>libero<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>future<span class="w"> </span>easydict<span class="w"> </span>hydra-core<span class="w"> </span>cloudpickle<span class="w"> </span><span class="s1">&#39;gym==0.25.2&#39;</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="c1"># 4. Clone and install LIBERO-PRO (recommended; drop-in replacement for LIBERO)</span>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Zxy-MLlab/LIBERO-PRO.git<span class="w"> </span>~/Projects/repos/LIBERO-PRO
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>~/miniforge3/bin/mamba<span class="w"> </span>run<span class="w"> </span>-n<span class="w"> </span>libero<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>~/Projects/repos/LIBERO-PRO<span class="w"> </span>--config-settings<span class="w"> </span><span class="nv">editable_mode</span><span class="o">=</span>compat
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>
+<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="c1"># 5. Configure LIBERO paths</span>
+<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/.libero
+<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a>cat<span class="w"> </span>&gt;<span class="w"> </span>~/.libero/config.yaml<span class="w"> </span><span class="s">&lt;&lt; &#39;EOF&#39;</span>
+<a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a><span class="s">benchmark_root: /home/$USER/Projects/repos/LIBERO-PRO/libero/libero</span>
+<a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a><span class="s">bddl_files: /home/$USER/Projects/repos/LIBERO-PRO/libero/libero/bddl_files</span>
+<a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a><span class="s">init_states: /home/$USER/Projects/repos/LIBERO-PRO/libero/libero/init_files</span>
+<a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a><span class="s">datasets: /home/$USER/Projects/data/libero</span>
+<a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a><span class="s">assets: /home/$USER/Projects/repos/LIBERO-PRO/libero/libero/assets</span>
+<a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a><span class="s">EOF</span>
+<a id="__codelineno-6-25" name="__codelineno-6-25" href="#__codelineno-6-25"></a>
+<a id="__codelineno-6-26" name="__codelineno-6-26" href="#__codelineno-6-26"></a><span class="c1"># 6. Install dhb_xr</span>
+<a id="__codelineno-6-27" name="__codelineno-6-27" href="#__codelineno-6-27"></a>~/miniforge3/bin/mamba<span class="w"> </span>run<span class="w"> </span>-n<span class="w"> </span>libero<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>dhb_xr<span class="o">[</span>optimization<span class="o">]</span>
+</code></pre></div>
+<blockquote>
+<p><strong>LIBERO-PRO vs LIBERO:</strong> LIBERO-PRO is a drop-in replacement with identical core dependencies. It adds 50+ perturbed task suites for evaluating policy robustness under spatial swap, object replacement, semantic instruction changes, task changes, and environment changes. All original LIBERO benchmarks work unchanged.</p>
+</blockquote>
+<p><strong>Critical version notes:</strong>
+- <code>robosuite==1.4.0</code> is required (LIBERO is incompatible with robosuite 1.5+)
+- <code>gym==0.25.2</code> (older gym API required by LIBERO)
+- <code>bddl==1.0.1</code> and <code>robomimic==0.2.0</code> for dataset compatibility</p>
+<h3 id="running-the-demo">Running the Demo</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Full simulation demo (no visualization)</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>~/miniforge3/bin/mamba<span class="w"> </span>run<span class="w"> </span>-n<span class="w"> </span>libero<span class="w"> </span>python<span class="w"> </span>examples/integration/libero_full_demo.py
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># DHB-only mode (no simulation required, generates plot)</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>pixi<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>examples/integration/libero_full_demo.py<span class="w"> </span>--dhb-only
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="c1"># View the generated plot: xdg-open /tmp/dhb_demo_plot.png</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="c1"># Specific task</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>~/miniforge3/bin/mamba<span class="w"> </span>run<span class="w"> </span>-n<span class="w"> </span>libero<span class="w"> </span>python<span class="w"> </span>examples/integration/libero_full_demo.py<span class="w"> </span>--task_id<span class="w"> </span><span class="m">3</span>
+</code></pre></div>
+<h3 id="libero-pro-perturbation-robustness-demo">LIBERO-PRO Perturbation Robustness Demo</h3>
+<p>The dedicated <code>libero_pro_dhb_demo.py</code> script demonstrates DHB's SE(3)-invariance under LIBERO-PRO perturbations:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Perturbation analysis (no simulation, fast)</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="c1"># Encodes demo, applies spatial perturbations, verifies shape preservation</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>pixi<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>examples/integration/libero_pro_dhb_demo.py<span class="w"> </span>--analysis
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="c1"># Batch evaluation across multiple tasks (generates comparison plots)</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>pixi<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>examples/integration/libero_pro_dhb_demo.py<span class="w"> </span>--batch
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="c1"># Full simulation: run original + LIBERO-PRO variants, compare invariants</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>~/miniforge3/bin/mamba<span class="w"> </span>run<span class="w"> </span>-n<span class="w"> </span>libero<span class="w"> </span>python<span class="w"> </span>examples/integration/libero_pro_dhb_demo.py<span class="w"> </span>--simulate
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="c1"># With side-by-side comparison video</span>
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>~/miniforge3/bin/mamba<span class="w"> </span>run<span class="w"> </span>-n<span class="w"> </span>libero<span class="w"> </span>python<span class="w"> </span>examples/integration/libero_pro_dhb_demo.py<span class="w"> </span>--simulate<span class="w"> </span>--save-video<span class="w"> </span>comparison.mp4
+</code></pre></div>
+<p><strong>Perturbation analysis results (LIBERO-Spatial, 5 tasks):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Perturbation Level</th>
+<th>Shape Preservation Error</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>20mm offset</td>
+<td>0.000 mm</td>
+</tr>
+<tr>
+<td>50mm offset</td>
+<td>0.000 mm</td>
+</tr>
+<tr>
+<td>100mm offset</td>
+<td>0.000 mm</td>
+</tr>
+</tbody>
+</table>
+<p>DHB invariants are <strong>perfectly frame-independent</strong>: adapting a trajectory to any perturbed starting pose preserves the original motion shape with zero error.</p>
+<p><strong>Cross-perturbation invariant consistency:</strong></p>
+<table>
+<thead>
+<tr>
+<th>LIBERO-PRO Variant</th>
+<th>Invariant Correlation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>with_mug (object change)</td>
+<td>0.990</td>
+</tr>
+<tr>
+<td>with_milk (object change)</td>
+<td>0.975</td>
+</tr>
+</tbody>
+</table>
+<p>Even when LIBERO-PRO replaces objects in the scene, running the same demo actions produces trajectories whose DHB invariants are &gt;0.97 correlated with the original — confirming that DHB captures the motion essence rather than scene-specific details.</p>
+<p><strong>Available LIBERO-PRO perturbation types:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Description</th>
+<th>Example Benchmark</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Position/Swap</td>
+<td>Objects swap positions</td>
+<td><code>libero_spatial_swap</code></td>
+</tr>
+<tr>
+<td>Object</td>
+<td>Replace with different objects</td>
+<td><code>libero_spatial_object</code></td>
+</tr>
+<tr>
+<td>Semantic</td>
+<td>Paraphrase language instructions</td>
+<td><code>libero_spatial_lan</code></td>
+</tr>
+<tr>
+<td>Task</td>
+<td>Change goal/task</td>
+<td><code>libero_spatial_task</code></td>
+</tr>
+<tr>
+<td>Environment</td>
+<td>Change table/scene</td>
+<td><code>libero_spatial_env</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="dhb-xr-vs-naive-replay-swap-demo">DHB-XR vs Naive Replay — Swap Demo</h3>
+<p>The most compelling demonstration of DHB-XR's value is the <code>libero_swap_demo.py</code> script. It runs three scenarios back-to-back:</p>
+<ol>
+<li><strong>Original</strong>: Run the demo in the unperturbed environment (baseline, verifies SUCCESS)</li>
+<li><strong>Naive replay in swapped env</strong>: Same actions, but plate and cookies have swapped positions (~17cm shift) — robot reaches for old plate position (FAILS)</li>
+<li><strong>DHB-adapted in swapped env</strong>: Trajectory adapted via Fatrop solver to target the NEW plate position — robot correctly moves towards new target</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Run the swap comparison demo</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>~/miniforge3/bin/mamba<span class="w"> </span>run<span class="w"> </span>-n<span class="w"> </span>libero<span class="w"> </span>python<span class="w"> </span>examples/integration/libero_swap_demo.py
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Outputs:</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="c1">#   /tmp/dhb_swap_comparison.png  — 8-panel plot with trajectory comparison</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="c1">#   /tmp/dhb_swap_comparison.mp4  — side-by-side video</span>
+</code></pre></div>
+<p><strong>Note on LIBERO's action space:</strong> LIBERO uses Operational Space Control (OSC) velocity commands. Converting an adapted SE(3) trajectory to OSC actions requires controller inversion, which is non-trivial. The demo uses a simplified action bias approach to illustrate the <em>geometric intent</em> of the DHB adaptation. For a production VLA system, DHB-XR would be integrated at the trajectory planning level (before the controller), not as a post-hoc action modifier.</p>
+<h3 id="viewing-simulations">Viewing Simulations</h3>
+<p>LIBERO's <code>OffScreenRenderEnv</code> captures camera frames that can be displayed or saved:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Option 1: Real-time display with OpenCV (requires X11 display)</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="c1"># Press &#39;q&#39; to quit the display window</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>~/miniforge3/bin/mamba<span class="w"> </span>run<span class="w"> </span>-n<span class="w"> </span>libero<span class="w"> </span>python<span class="w"> </span>examples/integration/libero_full_demo.py<span class="w"> </span>--render
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="c1"># Option 2: Save video for later viewing (works headless)</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>~/miniforge3/bin/mamba<span class="w"> </span>run<span class="w"> </span>-n<span class="w"> </span>libero<span class="w"> </span>python<span class="w"> </span>examples/integration/libero_full_demo.py<span class="w"> </span>--save-video<span class="w"> </span>demo.mp4
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="c1"># Option 3: Both display and save</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>~/miniforge3/bin/mamba<span class="w"> </span>run<span class="w"> </span>-n<span class="w"> </span>libero<span class="w"> </span>python<span class="w"> </span>examples/integration/libero_full_demo.py<span class="w"> </span>--render<span class="w"> </span>--save-video<span class="w"> </span>demo.mp4
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="c1"># Play saved video</span>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>vlc<span class="w"> </span>demo.mp4<span class="w">  </span><span class="c1"># or: ffplay demo.mp4</span>
+</code></pre></div>
+<p><strong>Visualization dependencies:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>~/miniforge3/bin/mamba<span class="w"> </span>run<span class="w"> </span>-n<span class="w"> </span>libero<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>opencv-python<span class="w"> </span>imageio<span class="w"> </span>imageio-ffmpeg
+</code></pre></div></p>
+<p><strong>Remote server tips:</strong>
+- Use <code>--save-video</code> to record, then download and play locally
+- For SSH with X11 forwarding (<code>ssh -X</code>), <code>--render</code> should work
+- The displayed view is the <code>agentview</code> camera (same as policy input)</p>
+<h3 id="basic-simulation-example">Basic Simulation Example</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">libero.libero.benchmark</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_benchmark</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">libero.libero.envs</span><span class="w"> </span><span class="kn">import</span> <span class="n">OffScreenRenderEnv</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">dhb_xr.encoder.dhb_dr</span><span class="w"> </span><span class="kn">import</span> <span class="n">encode_dhb_dr</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">dhb_xr.decoder.dhb_dr</span><span class="w"> </span><span class="kn">import</span> <span class="n">decode_dhb_dr</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">dhb_xr.core.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">EncodingMethod</span><span class="p">,</span> <span class="n">DHBMethod</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="c1"># Load benchmark and create environment</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="n">benchmark</span> <span class="o">=</span> <span class="n">get_benchmark</span><span class="p">(</span><span class="s2">&quot;libero_spatial&quot;</span><span class="p">)()</span>
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="n">task_bddl_file</span> <span class="o">=</span> <span class="n">benchmark</span><span class="o">.</span><span class="n">get_task_bddl_file_path</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="n">env</span> <span class="o">=</span> <span class="n">OffScreenRenderEnv</span><span class="p">(</span><span class="n">bddl_file_name</span><span class="o">=</span><span class="n">task_bddl_file</span><span class="p">,</span> <span class="n">camera_heights</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span> <span class="n">camera_widths</span><span class="o">=</span><span class="mi">128</span><span class="p">)</span>
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="n">obs</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="c1"># Get initial EE pose from simulation</span>
+<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a><span class="n">initial_ee_pos</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;robot0_eef_pos&quot;</span><span class="p">]</span>
+<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a><span class="n">initial_ee_quat</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;robot0_eef_quat&quot;</span><span class="p">]</span>
+<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>
+<a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a><span class="c1"># Load and encode demo trajectory</span>
+<a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a><span class="kn">from</span><span class="w"> </span><span class="nn">dhb_xr.integration.vla.libero</span><span class="w"> </span><span class="kn">import</span> <span class="n">LiberoAdapter</span>
+<a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a><span class="n">adapter</span> <span class="o">=</span> <span class="n">LiberoAdapter</span><span class="p">()</span>
+<a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a><span class="n">demo</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">adapter</span><span class="o">.</span><span class="n">load_dataset</span><span class="p">(</span><span class="s2">&quot;/path/to/libero_task.hdf5&quot;</span><span class="p">))</span>
+<a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a>
+<a id="__codelineno-12-22" name="__codelineno-12-22" href="#__codelineno-12-22"></a><span class="n">enc</span> <span class="o">=</span> <span class="n">encode_dhb_dr</span><span class="p">(</span>
+<a id="__codelineno-12-23" name="__codelineno-12-23" href="#__codelineno-12-23"></a>    <span class="n">demo</span><span class="p">[</span><span class="s2">&quot;positions&quot;</span><span class="p">],</span> <span class="n">demo</span><span class="p">[</span><span class="s2">&quot;quaternions&quot;</span><span class="p">],</span>
+<a id="__codelineno-12-24" name="__codelineno-12-24" href="#__codelineno-12-24"></a>    <span class="n">method</span><span class="o">=</span><span class="n">EncodingMethod</span><span class="o">.</span><span class="n">POSITION</span><span class="p">,</span>
+<a id="__codelineno-12-25" name="__codelineno-12-25" href="#__codelineno-12-25"></a>    <span class="n">dhb_method</span><span class="o">=</span><span class="n">DHBMethod</span><span class="o">.</span><span class="n">DOUBLE_REFLECTION</span><span class="p">,</span>
+<a id="__codelineno-12-26" name="__codelineno-12-26" href="#__codelineno-12-26"></a><span class="p">)</span>
+<a id="__codelineno-12-27" name="__codelineno-12-27" href="#__codelineno-12-27"></a>
+<a id="__codelineno-12-28" name="__codelineno-12-28" href="#__codelineno-12-28"></a><span class="c1"># Decode with new initial pose (trajectory adaptation)</span>
+<a id="__codelineno-12-29" name="__codelineno-12-29" href="#__codelineno-12-29"></a><span class="n">new_initial_pose</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-12-30" name="__codelineno-12-30" href="#__codelineno-12-30"></a>    <span class="s2">&quot;position&quot;</span><span class="p">:</span> <span class="n">initial_ee_pos</span><span class="p">,</span>
+<a id="__codelineno-12-31" name="__codelineno-12-31" href="#__codelineno-12-31"></a>    <span class="s2">&quot;quaternion&quot;</span><span class="p">:</span> <span class="n">initial_ee_quat</span><span class="p">,</span>
+<a id="__codelineno-12-32" name="__codelineno-12-32" href="#__codelineno-12-32"></a><span class="p">}</span>
+<a id="__codelineno-12-33" name="__codelineno-12-33" href="#__codelineno-12-33"></a><span class="n">decoded</span> <span class="o">=</span> <span class="n">decode_dhb_dr</span><span class="p">(</span>
+<a id="__codelineno-12-34" name="__codelineno-12-34" href="#__codelineno-12-34"></a>    <span class="n">enc</span><span class="p">[</span><span class="s2">&quot;linear_motion_invariants&quot;</span><span class="p">],</span>
+<a id="__codelineno-12-35" name="__codelineno-12-35" href="#__codelineno-12-35"></a>    <span class="n">enc</span><span class="p">[</span><span class="s2">&quot;angular_motion_invariants&quot;</span><span class="p">],</span>
+<a id="__codelineno-12-36" name="__codelineno-12-36" href="#__codelineno-12-36"></a>    <span class="n">new_initial_pose</span><span class="p">,</span>
+<a id="__codelineno-12-37" name="__codelineno-12-37" href="#__codelineno-12-37"></a>    <span class="n">method</span><span class="o">=</span><span class="n">EncodingMethod</span><span class="o">.</span><span class="n">POSITION</span><span class="p">,</span>
+<a id="__codelineno-12-38" name="__codelineno-12-38" href="#__codelineno-12-38"></a>    <span class="n">dhb_method</span><span class="o">=</span><span class="n">DHBMethod</span><span class="o">.</span><span class="n">DOUBLE_REFLECTION</span><span class="p">,</span>
+<a id="__codelineno-12-39" name="__codelineno-12-39" href="#__codelineno-12-39"></a><span class="p">)</span>
+<a id="__codelineno-12-40" name="__codelineno-12-40" href="#__codelineno-12-40"></a>
+<a id="__codelineno-12-41" name="__codelineno-12-41" href="#__codelineno-12-41"></a><span class="c1"># Use adapted trajectory</span>
+<a id="__codelineno-12-42" name="__codelineno-12-42" href="#__codelineno-12-42"></a><span class="n">adapted_positions</span> <span class="o">=</span> <span class="n">decoded</span><span class="p">[</span><span class="s2">&quot;positions&quot;</span><span class="p">]</span>
+<a id="__codelineno-12-43" name="__codelineno-12-43" href="#__codelineno-12-43"></a><span class="n">adapted_quaternions</span> <span class="o">=</span> <span class="n">decoded</span><span class="p">[</span><span class="s2">&quot;quaternions&quot;</span><span class="p">]</span>
+<a id="__codelineno-12-44" name="__codelineno-12-44" href="#__codelineno-12-44"></a>
+<a id="__codelineno-12-45" name="__codelineno-12-45" href="#__codelineno-12-45"></a><span class="n">env</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</code></pre></div>
+<h2 id="robocasa-integration">RoboCASA Integration</h2>
+<p>RoboCASA uses the same HDF5 format with robomimic conventions:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">dhb_xr.integration.vla.robocasa</span><span class="w"> </span><span class="kn">import</span> <span class="n">RoboCASAAdapter</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="n">adapter</span> <span class="o">=</span> <span class="n">RoboCASAAdapter</span><span class="p">()</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="k">for</span> <span class="n">episode</span> <span class="ow">in</span> <span class="n">adapter</span><span class="o">.</span><span class="n">load_dataset</span><span class="p">(</span><span class="s2">&quot;/path/to/robocasa.hdf5&quot;</span><span class="p">):</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>    <span class="c1"># Same interface as LiberoAdapter</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>    <span class="n">positions</span> <span class="o">=</span> <span class="n">episode</span><span class="p">[</span><span class="s2">&quot;positions&quot;</span><span class="p">]</span>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>    <span class="n">quaternions</span> <span class="o">=</span> <span class="n">episode</span><span class="p">[</span><span class="s2">&quot;quaternions&quot;</span><span class="p">]</span>
+</code></pre></div>
+<h2 id="vq-vae-tokenization">VQ-VAE Tokenization</h2>
+<p>For VLA training, tokenize invariants to discrete action tokens:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">dhb_xr.integration.vla.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">DHBVLAPipeline</span><span class="p">,</span> <span class="n">DHBVLAPipelineConfig</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="n">config</span> <span class="o">=</span> <span class="n">DHBVLAPipelineConfig</span><span class="p">(</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>    <span class="n">codebook_size</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>    <span class="n">latent_dim</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="p">)</span>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="n">pipeline</span> <span class="o">=</span> <span class="n">DHBVLAPipeline</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>
+<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="c1"># Process dataset</span>
+<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="n">outputs</span> <span class="o">=</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">process_dataset</span><span class="p">(</span><span class="n">episodes</span><span class="p">)</span>
+<a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a><span class="k">for</span> <span class="n">out</span> <span class="ow">in</span> <span class="n">outputs</span><span class="p">:</span>
+<a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a>    <span class="n">tokens</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="s2">&quot;tokens&quot;</span><span class="p">]</span>        <span class="c1"># Discrete action tokens</span>
+<a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a>    <span class="n">invariants</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="s2">&quot;invariants&quot;</span><span class="p">]</span> <span class="c1"># Raw invariants</span>
+</code></pre></div>
+<p><strong>Note:</strong> Tokenization requires PyTorch: <code>pip install dhb_xr[gpu]</code></p>
+<h2 id="data-format-reference">Data Format Reference</h2>
+<h3 id="libero-hdf5-structure">LIBERO HDF5 Structure</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>/data/
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>  demo_0/
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>    obs/
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>      ee_pos: (N, 3)           # End-effector position
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>      ee_ori: (N, 3)           # Euler angles (not used)
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>      agentview_rgb: (N, 128, 128, 3)
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a>      eye_in_hand_rgb: (N, 128, 128, 3)
+<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a>    robot_states: (N, 9)       # [gripper(2), pos(3), quat(4)]
+<a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a>    actions: (N, 7)            # Delta actions
+<a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a>  demo_1/
+<a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a>    ...
+</code></pre></div>
+<h3 id="adapter-key-configuration">Adapter Key Configuration</h3>
+<p>If your dataset uses different keys, customize the adapter:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="n">adapter</span> <span class="o">=</span> <span class="n">LiberoAdapter</span><span class="p">(</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>    <span class="n">pos_keys</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;custom_pos&quot;</span><span class="p">,</span> <span class="s2">&quot;ee_pos&quot;</span><span class="p">),</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>    <span class="n">quat_keys</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;custom_quat&quot;</span><span class="p">,</span> <span class="s2">&quot;ee_quat&quot;</span><span class="p">),</span>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>    <span class="n">robot_states_key</span><span class="o">=</span><span class="s2">&quot;robot_states&quot;</span><span class="p">,</span>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>    <span class="n">robot_states_quat_slice</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">9</span><span class="p">),</span>
+<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="p">)</span>
+</code></pre></div>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="missing-h5py">Missing h5py</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>pixi<span class="w"> </span>add<span class="w"> </span>h5py
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="c1"># or: pip install h5py</span>
+</code></pre></div>
+<h3 id="quaternion-format-mismatch">Quaternion format mismatch</h3>
+<p>LIBERO uses (w,x,y,z) format internally. The adapter converts to (x,y,z,w) for compatibility with scipy and transforms3d.</p>
+<h3 id="variable-length-trajectories">Variable-length trajectories</h3>
+<p>Use <code>use_dtw=True</code> in <code>db.retrieve()</code> for comparing trajectories of different lengths.</p>
+<h3 id="modulenotfounderror-no-module-named-robosuiteenvironmentsmanipulationsingle_arm_env">ModuleNotFoundError: No module named 'robosuite.environments.manipulation.single_arm_env'</h3>
+<p>This means you have robosuite &gt;= 1.5 installed, but LIBERO requires 1.4.0:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>pip<span class="w"> </span>uninstall<span class="w"> </span>robosuite
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="nv">robosuite</span><span class="o">==</span><span class="m">1</span>.4.0
+</code></pre></div>
+<h3 id="libero-import-prompts-for-input">LIBERO import prompts for input</h3>
+<p>On first import, LIBERO asks to configure dataset paths. Pre-create the config:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/.libero
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="c1"># For LIBERO-PRO:</span>
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>cat<span class="w"> </span>&gt;<span class="w"> </span>~/.libero/config.yaml<span class="w"> </span><span class="s">&lt;&lt; &#39;EOF&#39;</span>
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="s">benchmark_root: /path/to/LIBERO-PRO/libero/libero</span>
+<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="s">bddl_files: /path/to/LIBERO-PRO/libero/libero/bddl_files</span>
+<a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="s">init_states: /path/to/LIBERO-PRO/libero/libero/init_files</span>
+<a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="s">datasets: /path/to/your/datasets</span>
+<a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="s">assets: /path/to/LIBERO-PRO/libero/libero/assets</span>
+<a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a><span class="s">EOF</span>
+<a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a>
+<a id="__codelineno-19-11" name="__codelineno-19-11" href="#__codelineno-19-11"></a><span class="c1"># For original LIBERO (same format):</span>
+<a id="__codelineno-19-12" name="__codelineno-19-12" href="#__codelineno-19-12"></a><span class="c1"># Replace LIBERO-PRO with LIBERO in the paths above</span>
+</code></pre></div>
+<h3 id="switching-between-libero-and-libero-pro">Switching between LIBERO and LIBERO-PRO</h3>
+<p>To switch, update <code>~/.libero/config.yaml</code> to point to the desired repo and reinstall:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># Uninstall current</span>
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>pip<span class="w"> </span>uninstall<span class="w"> </span>-y<span class="w"> </span>libero
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>
+<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="c1"># Install LIBERO-PRO</span>
+<a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>/path/to/LIBERO-PRO<span class="w"> </span>--config-settings<span class="w"> </span><span class="nv">editable_mode</span><span class="o">=</span>compat
+<a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>
+<a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a><span class="c1"># Or install original LIBERO</span>
+<a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a><span class="c1"># pip install -e /path/to/LIBERO --config-settings editable_mode=compat</span>
+</code></pre></div>
+<h3 id="libero-pro-custom-asset-errors">LIBERO-PRO custom asset errors</h3>
+<p>Some LIBERO-PRO perturbation variants (e.g. <code>libero_spatial_with_red_box</code>) require custom 3D assets that may not be bundled. If you see <code>FileNotFoundError</code> for custom asset XMLs, use the pre-built variants that work out of the box:</p>
+<ul>
+<li><code>libero_spatial_with_mug</code> (tested, works)</li>
+<li><code>libero_spatial_with_milk</code> (tested, works)</li>
+<li><code>libero_spatial_with_blue_stick</code> (tested, works)</li>
+</ul>
+<h3 id="gymgymnasium-compatibility">gym/gymnasium compatibility</h3>
+<p>LIBERO uses the older <code>gym</code> API. If you see gymnasium-related errors:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>pip<span class="w"> </span>uninstall<span class="w"> </span>gymnasium
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;gym==0.25.2&#39;</span>
+</code></pre></div>
+<h3 id="mujoco-rendering-issues">MuJoCo rendering issues</h3>
+<p>For headless servers without a display:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="c1"># Use offscreen rendering only</span>
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="n">env</span> <span class="o">=</span> <span class="n">OffScreenRenderEnv</span><span class="p">(</span>
+<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>    <span class="n">bddl_file_name</span><span class="o">=</span><span class="n">task_bddl_file</span><span class="p">,</span>
+<a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a>    <span class="n">has_renderer</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>       <span class="c1"># No on-screen rendering</span>
+<a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a>    <span class="n">has_offscreen_renderer</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a><span class="p">)</span>
+</code></pre></div>
+<h3 id="package-version-summary">Package version summary</h3>
+<p>For a working LIBERO / LIBERO-PRO setup, these versions are tested:</p>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Version</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Python</td>
+<td>3.10</td>
+<td>Required by robosuite 1.4</td>
+</tr>
+<tr>
+<td>robosuite</td>
+<td>1.4.0</td>
+<td>LIBERO incompatible with 1.5+</td>
+</tr>
+<tr>
+<td>bddl</td>
+<td>1.0.1</td>
+<td>Task specification</td>
+</tr>
+<tr>
+<td>robomimic</td>
+<td>0.2.0</td>
+<td>Dataset format</td>
+</tr>
+<tr>
+<td>gym</td>
+<td>0.25.2</td>
+<td>Older API required</td>
+</tr>
+<tr>
+<td>mujoco</td>
+<td>&gt;=2.3.0</td>
+<td>Simulation engine</td>
+</tr>
+<tr>
+<td>future</td>
+<td>0.18.2</td>
+<td>Python 2/3 compat</td>
+</tr>
+<tr>
+<td>easydict</td>
+<td>1.9</td>
+<td>Config handling</td>
+</tr>
+<tr>
+<td>LIBERO-PRO</td>
+<td>0.1.0</td>
+<td>Drop-in replacement for LIBERO</td>
+</tr>
+<tr>
+<td>opencv-python</td>
+<td>&gt;=4.0</td>
+<td>For <code>--render</code> display</td>
+</tr>
+<tr>
+<td>imageio</td>
+<td>&gt;=2.0</td>
+<td>For <code>--save-video</code> recording</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 Andy Park
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": "0.2.1"}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
