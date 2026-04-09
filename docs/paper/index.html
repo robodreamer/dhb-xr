@@ -573,63 +573,64 @@
   <div class="container">
     <div class="columns is-centered">
       <div class="column is-10">
-        <h2 class="section-title">Video Demonstrations</h2>
+        <h2 class="section-title">Demonstrations</h2>
         <p class="section-subtitle">
-          LIBERO-Spatial task: <em>pick up the black bowl and place it on the plate</em>.
-          All videos show the same task with and without a 5 cm workspace offset.
+          DHB-XR adapts a recorded trajectory to a new workspace offset.
+          Naive Replay blindly repeats the original motion &mdash; missing the shifted target.
         </p>
 
-        <!-- Side-by-side comparison -->
-        <h4 class="subtitle is-5 mb-2">DHB-XR vs. Naive Replay at 5 cm Offset</h4>
-        <div class="video-card mb-5">
+        <!-- Primary: side-by-side at 5 cm -->
+        <h4 class="subtitle is-5 mb-2">Trajectory adaptation at 5 cm offset</h4>
+        <div class="video-card mb-4">
           <video autoplay muted loop playsinline>
-            <source src="assets/comparison_5cm_sbs.mp4" type="video/mp4" />
+            <source src="assets/demo_side_by_side.mp4" type="video/mp4" />
           </video>
           <div class="video-label comparison">
-            Left: DHB-XR (adapted) &nbsp;|&nbsp; Right: Naive Replay &mdash; 5 cm workspace offset
+            Left: DHB-XR &mdash; shape preserved, 0.0 mm error &nbsp;|&nbsp;
+            Right: Naive Replay &mdash; 50 mm miss (replays original, no adaptation)
           </div>
         </div>
 
-        <!-- 2x2 grid -->
-        <h4 class="subtitle is-5 mb-3">Individual Comparisons</h4>
-        <div class="columns">
-          <div class="column is-3">
-            <div class="video-card">
-              <video autoplay muted loop playsinline>
-                <source src="assets/dhb_0cm_720.mp4" type="video/mp4" />
-              </video>
-              <div class="video-label dhb">DHB-XR &mdash; 0 cm</div>
-            </div>
+        <!-- At 10 cm -->
+        <h4 class="subtitle is-5 mb-2">Trajectory adaptation at 10 cm offset</h4>
+        <div class="video-card mb-4">
+          <video autoplay muted loop playsinline>
+            <source src="assets/demo_side_by_side_10cm.mp4" type="video/mp4" />
+          </video>
+          <div class="video-label comparison">
+            Left: DHB-XR &mdash; 0.0 mm error &nbsp;|&nbsp;
+            Right: Naive Replay &mdash; 100 mm miss
           </div>
-          <div class="column is-3">
-            <div class="video-card">
-              <video autoplay muted loop playsinline>
-                <source src="assets/dhb_5cm_720.mp4" type="video/mp4" />
-              </video>
-              <div class="video-label dhb">DHB-XR &mdash; 5 cm offset</div>
-            </div>
+        </div>
+
+        <!-- Error sweep -->
+        <h4 class="subtitle is-5 mb-2">Error grows with offset &mdash; DHB stays at zero</h4>
+        <div class="video-card mb-4">
+          <video autoplay muted loop playsinline>
+            <source src="assets/demo_offset_sweep.mp4" type="video/mp4" />
+          </video>
+          <div class="video-label comparison">
+            Naive Replay error scales linearly with offset (50&ndash;200 mm).
+            DHB-XR: 0.0 mm at all offsets. Averaged over 10 LIBERO-Spatial tasks &times; 8 directions.
           </div>
-          <div class="column is-3">
-            <div class="video-card">
-              <video autoplay muted loop playsinline>
-                <source src="assets/naive_0cm_720.mp4" type="video/mp4" />
-              </video>
-              <div class="video-label naive">Naive Replay &mdash; 0 cm</div>
-            </div>
-          </div>
-          <div class="column is-3">
-            <div class="video-card">
-              <video autoplay muted loop playsinline>
-                <source src="assets/naive_5cm_720.mp4" type="video/mp4" />
-              </video>
-              <div class="video-label naive">Naive Replay &mdash; 5 cm offset</div>
-            </div>
+        </div>
+
+        <!-- SE(3) stability -->
+        <h4 class="subtitle is-5 mb-2">SE(3) invariance: same trajectory, 12 random transforms</h4>
+        <div class="video-card mb-2">
+          <video autoplay muted loop playsinline>
+            <source src="assets/demo_se3_stability.mp4" type="video/mp4" />
+          </video>
+          <div class="video-label comparison">
+            Left: trajectories look completely different under each rigid-body transform.
+            Right: magnitude invariants are <strong>identical</strong> &mdash; 0.0% token change.
           </div>
         </div>
 
         <p class="has-text-grey is-size-7 mt-2">
-          Videos rendered at 720&times;720 @ 30 fps. Blended controller used for simulation execution
-          (original demo actions + DHB position correction, &alpha;=0.3). 100% task success at 0&ndash;5 cm offsets.
+          Animations rendered at 1680&times;720 @ 30 fps from the DHB-XR geometric encoder.
+          Naive Replay = original trajectory replayed without adaptation (no start shift).
+          DHB-XR = encode invariants from demo, decode from new start point.
         </p>
 
       </div>
