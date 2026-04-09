@@ -37,8 +37,9 @@
 \citation{wang2008rmf}
 \def\@LN@column{1}
 \@writefile{toc}{\contentsline {paragraph}{Flow-matching policies.}{3}{section*.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{SE(3)-equivariant manipulation policies.}{3}{section*.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Spatial structure and invariant representations.}{3}{section*.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{3D-aware VLA and data augmentation.}{3}{section*.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{SE(3)-equivariant manipulation policies.}{3}{section*.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Spatial structure and invariant representations.}{3}{section*.7}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {3}Method}{3}{section.3}\protected@file@percent }
 \newlabel{sec:method}{{3}{3}{Method}{section.3}{}}
 \newlabel{sec:method@cref}{{[section][3][]3}{[1][3][]3}{}{}{}}
@@ -48,35 +49,28 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.2}SE(3)-Invariant Encoding: DHB-DR}{3}{subsection.3.2}\protected@file@percent }
 \newlabel{sec:dhb_dr}{{3.2}{3}{SE(3)-Invariant Encoding: DHB-DR}{subsection.3.2}{}}
 \newlabel{sec:dhb_dr@cref}{{[subsection][2][3]3.2}{[1][3][]3}{}{}{}}
-\@writefile{toc}{\contentsline {paragraph}{Motion differentials.}{3}{section*.7}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Moving frame via double reflection (DHB-DR).}{3}{section*.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Motion differentials.}{3}{section*.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Moving frame via double reflection (DHB-DR).}{3}{section*.9}\protected@file@percent }
 \citation{soloperto2015}
-\citation{oat2026}
-\citation{mentzer2024fsq}
 \def\@LN@column{1}
 \@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces \textbf  {DHB-DR invariant signals} from a LIBERO pick-and-place demo. \textit  {Left}: magnitude $m_i$ and angular magnitude (motion speed invariants). \textit  {Right}: frame rotation invariants $(\varphi _x, \varphi _y, \varphi _z)$. These signals are SE(3)-invariant: identical under any rigid-body transform.}}{4}{figure.2}\protected@file@percent }
 \newlabel{fig:invariants}{{2}{4}{\textbf {DHB-DR invariant signals} from a LIBERO pick-and-place demo. \textit {Left}: magnitude $m_i$ and angular magnitude (motion speed invariants). \textit {Right}: frame rotation invariants $(\varphi _x, \varphi _y, \varphi _z)$. These signals are SE(3)-invariant: identical under any rigid-body transform}{figure.2}{}}
 \newlabel{fig:invariants@cref}{{[figure][2][]2}{[1][3][]4}{}{}{}}
-\@writefile{toc}{\contentsline {paragraph}{Invariant encoding.}{4}{section*.9}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{DHB-QR variant.}{4}{section*.10}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Time-invariant reparameterization (DHB-TI).}{4}{section*.11}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Invariant-Space Tokenization (OAT-Style)}{4}{subsection.3.3}\protected@file@percent }
-\newlabel{sec:tokenization}{{3.3}{4}{Invariant-Space Tokenization (OAT-Style)}{subsection.3.3}{}}
-\newlabel{sec:tokenization@cref}{{[subsection][3][3]3.3}{[1][4][]4}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{Invariant encoding.}{4}{section*.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{DHB-QR variant.}{4}{section*.11}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Time-invariant reparameterization (DHB-TI).}{4}{section*.12}\protected@file@percent }
+\citation{oat2026}
+\citation{mentzer2024fsq}
 \citation{vanroye2023fatrop}
 \citation{starvla_2026}
 \citation{libero2023}
 \citation{starvla_2026}
 \citation{fast2025}
-\citation{starvla_2026}
-\citation{starvla_2026}
-\citation{openvla_oft_2025}
-\citation{openvla_oft_2025}
-\citation{starvla_2026,openvla_oft_2025}
-\citation{starvla_2026,openvla_oft_2025}
-\citation{fast2025}
 \def\@LN@column{1}
-\@writefile{toc}{\contentsline {paragraph}{Invariance property.}{5}{section*.12}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Invariant-Space Tokenization (OAT-Style)}{5}{subsection.3.3}\protected@file@percent }
+\newlabel{sec:tokenization}{{3.3}{5}{Invariant-Space Tokenization (OAT-Style)}{subsection.3.3}{}}
+\newlabel{sec:tokenization@cref}{{[subsection][3][3]3.3}{[1][5][]5}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{Invariance property.}{5}{section*.13}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Geometric Adaptation}{5}{subsection.3.4}\protected@file@percent }
 \newlabel{sec:adaptation}{{3.4}{5}{Geometric Adaptation}{subsection.3.4}{}}
 \newlabel{sec:adaptation@cref}{{[subsection][4][3]3.4}{[1][5][]5}{}{}{}}
@@ -87,38 +81,47 @@
 \newlabel{sec:experiments}{{4}{5}{Experiments}{section.4}{}}
 \newlabel{sec:experiments@cref}{{[section][4][]4}{[1][5][]5}{}{}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Experimental Setup}{5}{subsection.4.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Setup.}{5}{section*.13}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Experiment 1: Spatial Generalization}{5}{subsection.4.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Experiments 2 \& 3: Tokenization Analysis}{5}{subsection.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Setup.}{5}{section*.14}\protected@file@percent }
 \citation{starvla_2026}
+\citation{starvla_2026}
+\citation{openvla_oft_2025}
+\citation{openvla_oft_2025}
+\citation{starvla_2026,openvla_oft_2025}
+\citation{starvla_2026,openvla_oft_2025}
+\citation{fast2025}
 \def\@LN@column{1}
 \@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces \textbf  {Left}: Goal endpoint error under perturbation (10 tasks $\times $ 8 dirs). \textsc  {DHB-XR}{} achieves $0.0\,\text  {mm}$ at all offsets; naive replay error scales linearly. \textbf  {Right}: Compression vs stability trade-off. \textsc  {DHB-XR}{} OAT achieves both compact tokens (8) and perfect SE(3) stability (0\%), while \textsc  {FAST}{} (14 tokens, 27.8$\times $) sacrifices geometric invariance.}}{6}{figure.3}\protected@file@percent }
 \newlabel{fig:results}{{3}{6}{\textbf {Left}: Goal endpoint error under perturbation (10 tasks $\times $ 8 dirs). \dhb {} achieves $0.0\,\text {mm}$ at all offsets; naive replay error scales linearly. \textbf {Right}: Compression vs stability trade-off. \dhb {} OAT achieves both compact tokens (8) and perfect SE(3) stability (0\%), while \fast {} (14 tokens, 27.8$\times $) sacrifices geometric invariance}{figure.3}{}}
-\newlabel{fig:results@cref}{{[figure][3][]3}{[1][5][]6}{}{}{}}
+\newlabel{fig:results@cref}{{[figure][3][]3}{[1][6][]6}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Experiment 1: Spatial Generalization}{6}{subsection.4.2}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Spatial generalization on LIBERO-Spatial. \textit  {Geometric}: mean goal endpoint error (mm), \textbf  {10 tasks}, \textbf  {8 directions}, $N{=}1$ demo. \textit  {Policy}: task success rate requires StarVLA training. $\star $ = retraining required; $\dagger $ = zero-shot geometric adaptation.}}{6}{table.1}\protected@file@percent }
 \newlabel{tab:spatial_main}{{1}{6}{Spatial generalization on LIBERO-Spatial. \textit {Geometric}: mean goal endpoint error (mm), \textbf {10 tasks}, \textbf {8 directions}, $N{=}1$ demo. \textit {Policy}: task success rate requires StarVLA training. $\star $ = retraining required; $\dagger $ = zero-shot geometric adaptation}{table.1}{}}
-\newlabel{tab:spatial_main@cref}{{[table][1][]1}{[1][5][]6}{}{}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Experiments 4 \& 5: Sample Efficiency and RoboCasa}{6}{subsection.4.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Sample efficiency.}{6}{section*.14}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{RoboCasa (pending).}{6}{section*.15}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Panda pipeline timing.}{6}{section*.16}\protected@file@percent }
+\newlabel{tab:spatial_main@cref}{{[table][1][]1}{[1][6][]6}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Experiments 2 \& 3: Tokenization Analysis}{6}{subsection.4.3}\protected@file@percent }
+\citation{starvla_2026}
 \def\@LN@column{1}
 \@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Tokenization comparison. \textit  {Stability}: BPE token change rate under 40 random SE(3) transforms. Compression on DHB invariant sequences. In-dist accuracy from~\cite  {starvla_2026,openvla_oft_2025}.}}{7}{table.2}\protected@file@percent }
 \newlabel{tab:tokenization_combined}{{2}{7}{Tokenization comparison. \textit {Stability}: BPE token change rate under 40 random SE(3) transforms. Compression on DHB invariant sequences. In-dist accuracy from~\cite {starvla_2026,openvla_oft_2025}}{table.2}{}}
-\newlabel{tab:tokenization_combined@cref}{{[table][2][]2}{[1][5][]7}{}{}{}}
+\newlabel{tab:tokenization_combined@cref}{{[table][2][]2}{[1][6][]7}{}{}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces \textbf  {SE(3) invariance verification.} \textit  {Left}: Magnitude $m_i$ before and after SE(3) transform — visually identical. \textit  {Right}: Difference magnified by $10^{15}$: machine-precision invariance.}}{7}{figure.4}\protected@file@percent }
 \newlabel{fig:invariance}{{4}{7}{\textbf {SE(3) invariance verification.} \textit {Left}: Magnitude $m_i$ before and after SE(3) transform — visually identical. \textit {Right}: Difference magnified by $10^{15}$: machine-precision invariance}{figure.4}{}}
 \newlabel{fig:invariance@cref}{{[figure][4][]4}{[1][6][]7}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Experiments 4 \& 5: Sample Efficiency and RoboCasa}{7}{subsection.4.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Sample efficiency.}{7}{section*.15}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{RoboCasa (pending).}{7}{section*.16}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Panda pipeline timing.}{7}{section*.17}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {5}Discussion}{7}{section.5}\protected@file@percent }
 \newlabel{sec:discussion}{{5}{7}{Discussion}{section.5}{}}
 \newlabel{sec:discussion@cref}{{[section][5][]5}{[1][7][]7}{}{}{}}
-\@writefile{toc}{\contentsline {paragraph}{When does \textsc  {DHB-XR}{} spatial generalization work best?}{7}{section*.17}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Limitations.}{7}{section*.18}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Future work.}{7}{section*.19}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{When does \textsc  {DHB-XR}{} spatial generalization work best?}{7}{section*.18}\protected@file@percent }
 \bibdata{references}
 \bibcite{fast2025}{{1}{2025}{{Pertsch et~al.}}{{}}}
 \bibcite{oat2026}{{2}{2026}{{Liu et~al.}}{{}}}
 \bibcite{libero2023}{{3}{2023}{{Liu et~al.}}{{}}}
+\def\@LN@column{1}
+\@writefile{toc}{\contentsline {paragraph}{Limitations.}{8}{section*.19}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Future work.}{8}{section*.20}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Positioning vs.\ related work.}{8}{section*.21}\protected@file@percent }
 \bibcite{acot_vla_2026}{{4}{2026}{{AgibotTech}}{{}}}
 \bibcite{starvla_2026}{{5}{2026}{{sta}}{{}}}
 \bibcite{openvla_oft_2025}{{6}{2025}{{ope}}{{}}}
@@ -126,8 +129,6 @@
 \bibcite{pi0_2024}{{8}{2024}{{Physical Intelligence}}{{}}}
 \bibcite{equivact2024}{{9}{2024}{{Yang et~al.}}{{}}}
 \bibcite{rise2024}{{10}{2024}{{Wang et~al.}}{{}}}
-\def\@LN@column{1}
-\@writefile{toc}{\contentsline {paragraph}{Positioning vs.\ related work.}{8}{section*.20}\protected@file@percent }
 \bibcite{soloperto2015}{{11}{2015}{{Soloperto et~al.}}{{}}}
 \bibcite{lee2018}{{12}{2018}{{Lee and Soloperto}}{{}}}
 \bibcite{wang2008rmf}{{13}{2008}{{Wang et~al.}}{{Wang, J{\"u}ttler, Zheng, and Liu}}}

@@ -74,15 +74,18 @@ all others tokenize in raw coordinate space.
 transforms. Compression on DHB invariant sequences.
 In-dist accuracy from~\cite{starvla_2026,openvla_oft_2025}.}
 \label{tab:tokenization_combined}
-\begin{tabular}{lrrrcrc}
+\begin{tabular}{lrrrcrl}
 \toprule
-Method & Tokens & Compr. & MSE & Stability & In-dist & SE(3)-inv \\
+Method & Tok. & Comp. & MSE & Stability & In-dist & Note \\
 \midrule
-\textbf{\oat{}/\dhb{} (ours)} & \textbf{8} & 6.2$\times$ & 0.018 & \textbf{0.0\%} & -- & \checkmark \\
-\fast{}~\cite{fast2025}       & 14 & 27.8$\times$ & 0.0002 & 99.1\%  & 97.8 & $\times$ \\
-MLP (OFT)                     & -- & --  & -- & 99.1\%  & 97.1 & $\times$ \\
-VQ-VAE                        & 50 & 8.0$\times$ & 0.020 & 0.0\%  & -- & \checkmark \\
+\textbf{\oat{}/\dhb{} (ours)} & \textbf{8} & 6.2$\times$ & 0.018 & \textbf{0.0\%} & -- & invariant + adapt \\
+VQ-VAE (on inv.) & 50 & 8.0$\times$ & 0.020 & 0.0\% & -- & invariant, no adapt \\
+\fast{}~\cite{fast2025} & 14 & 27.8$\times$ & 0.0002 & 99.1\% & 97.8 & raw coords \\
+\fast{} + SE(3) aug.$^\ddag$ & 14 & 27.8$\times$ & 0.0002 & 99.1\% & -- & raw + aug. \\
+MLP (OFT)           & -- & --  & -- & 99.1\%  & 97.1 & raw, continuous \\
 \bottomrule
+\multicolumn{7}{l}{\small $\ddag$ SE(3)-augmented training data does not make tokens invariant ---}\\
+\multicolumn{7}{l}{\small \quad tokens still change 99.1\% because BPE operates on raw coordinates.}\\
 \end{tabular}
 \end{table}
 

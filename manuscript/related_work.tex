@@ -38,6 +38,17 @@ continuous flow matching at 50\,Hz, avoiding discretization.
 The probabilistic nature of diffusion provides some robustness, but does
 not produce SE(3)-invariant action representations.
 
+\paragraph{3D-aware VLA and data augmentation.}
+3D-VLA and SpatialVLA encode 3D structure in visual representations, yet
+still regress actions in world-frame coordinates --- geometrically-aware
+perception does not imply invariant actions.
+A common practical solution is SE(3) data augmentation: apply random rigid
+transforms to training demonstrations. While this improves in-distribution
+diversity, the \emph{token stream itself} remains frame-dependent (BPE tokens
+change 99.1\% under SE(3), even with augmented training data), and
+out-of-distribution spatial configurations still require re-collection.
+\dhb{} provides invariance \emph{by construction}, not by augmentation.
+
 \paragraph{SE(3)-equivariant manipulation policies.}
 EquivAct~\cite{equivact2024} and RISE~\cite{rise2024} achieve SE(3)-equivariant
 policies via equivariant network architectures, demonstrating strong
