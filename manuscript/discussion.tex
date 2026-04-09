@@ -35,10 +35,15 @@ errors are \textbf{40--52\% less damaging} than raw-action errors.}
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{adaptation_comparison}
-\caption{\textbf{DHB-XR vs affine transform under 6D pose change.}
-\textit{Left}: DHB preserves arc shape (clears obstacle).
-\textit{Right}: affine rotation distorts the arc (clips obstacle).
-RGB triads show 6-DOF orientation at start (S') and goal (G').}
+\caption{\textbf{Obstacle-aware adaptation: DHB-XR vs affine (same start/goal).}
+\textit{Left}: \dhb{} decodes the invariant shape, then iteratively projects
+waypoints above the obstacle (simulating Fatrop inequality constraints) ---
+0 collisions, goal reached exactly. Dotted green: DHB before constraint (also clips).
+\textit{Right}: Affine rotation ($-15^\circ$ Y-tilt) has no mechanism for obstacle
+avoidance --- 9 trajectory points collide with the wall.
+RGB triads show 6-DOF orientation.
+The obstacle (wall top $z{=}0.52\,\text{m}$, only $3\,\text{cm}$ clearance from
+original arc peak) is included in \dhb{}'s optimization but invisible to affine.}
 \label{fig:adaptation_comparison}
 \end{figure}
 

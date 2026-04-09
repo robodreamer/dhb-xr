@@ -127,17 +127,17 @@
 \@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces \textbf  {Noise sensitivity: invariant space is MORE robust.} \textit  {Left}: Same Gaussian noise $\sigma $ applied to invariants (green) vs raw action deltas (red). Invariants consistently produce less trajectory error. \textit  {Right}: Ratio $<1$ at every noise level --- invariant-space prediction errors are \textbf  {40--52\% less damaging} than raw-action errors.}}{9}{figure.5}\protected@file@percent }
 \newlabel{fig:sensitivity}{{5}{9}{\textbf {Noise sensitivity: invariant space is MORE robust.} \textit {Left}: Same Gaussian noise $\sigma $ applied to invariants (green) vs raw action deltas (red). Invariants consistently produce less trajectory error. \textit {Right}: Ratio $<1$ at every noise level --- invariant-space prediction errors are \textbf {40--52\% less damaging} than raw-action errors}{figure.5}{}}
 \newlabel{fig:sensitivity@cref}{{[figure][5][]5}{[1][8][]9}{}{}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces \textbf  {DHB-XR vs affine transform under 6D pose change.} \textit  {Left}: DHB preserves arc shape (clears obstacle). \textit  {Right}: affine rotation distorts the arc (clips obstacle). RGB triads show 6-DOF orientation at start (S') and goal (G').}}{9}{figure.6}\protected@file@percent }
-\newlabel{fig:adaptation_comparison}{{6}{9}{\textbf {DHB-XR vs affine transform under 6D pose change.} \textit {Left}: DHB preserves arc shape (clears obstacle). \textit {Right}: affine rotation distorts the arc (clips obstacle). RGB triads show 6-DOF orientation at start (S') and goal (G')}{figure.6}{}}
-\newlabel{fig:adaptation_comparison@cref}{{[figure][6][]6}{[1][8][]9}{}{}{}}
 \@writefile{toc}{\contentsline {paragraph}{Limitations.}{9}{section*.23}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Future work.}{9}{section*.24}\protected@file@percent }
 \bibdata{references}
+\def\@LN@column{1}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces \textbf  {Obstacle-aware adaptation: DHB-XR vs affine (same start/goal).} \textit  {Left}: \textsc  {DHB-XR}{} decodes the invariant shape, then iteratively projects waypoints above the obstacle (simulating Fatrop inequality constraints) --- 0 collisions, goal reached exactly. Dotted green: DHB before constraint (also clips). \textit  {Right}: Affine rotation ($-15^\circ $ Y-tilt) has no mechanism for obstacle avoidance --- 9 trajectory points collide with the wall. RGB triads show 6-DOF orientation. The obstacle (wall top $z{=}0.52\,\text  {m}$, only $3\,\text  {cm}$ clearance from original arc peak) is included in \textsc  {DHB-XR}{}'s optimization but invisible to affine.}}{10}{figure.6}\protected@file@percent }
+\newlabel{fig:adaptation_comparison}{{6}{10}{\textbf {Obstacle-aware adaptation: DHB-XR vs affine (same start/goal).} \textit {Left}: \dhb {} decodes the invariant shape, then iteratively projects waypoints above the obstacle (simulating Fatrop inequality constraints) --- 0 collisions, goal reached exactly. Dotted green: DHB before constraint (also clips). \textit {Right}: Affine rotation ($-15^\circ $ Y-tilt) has no mechanism for obstacle avoidance --- 9 trajectory points collide with the wall. RGB triads show 6-DOF orientation. The obstacle (wall top $z{=}0.52\,\text {m}$, only $3\,\text {cm}$ clearance from original arc peak) is included in \dhb {}'s optimization but invisible to affine}{figure.6}{}}
+\newlabel{fig:adaptation_comparison@cref}{{[figure][6][]6}{[1][8][]10}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{Positioning vs.\ related work.}{10}{section*.25}\protected@file@percent }
 \bibcite{acot_vla_2026}{{1}{2026}{{AgibotTech}}{{}}}
 \bibcite{starvla_2026}{{2}{2026}{{sta}}{{}}}
 \bibcite{openvla_oft_2025}{{3}{2025}{{ope}}{{}}}
-\def\@LN@column{1}
-\@writefile{toc}{\contentsline {paragraph}{Future work.}{10}{section*.24}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Positioning vs.\ related work.}{10}{section*.25}\protected@file@percent }
 \bibcite{vla0_2025}{{4}{2025}{{vla}}{{}}}
 \bibcite{fast2025}{{5}{2025}{{Pertsch et~al.}}{{}}}
 \bibcite{oat2026}{{6}{2026}{{Liu et~al.}}{{}}}
