@@ -32,6 +32,16 @@ errors are \textbf{40--52\% less damaging} than raw-action errors.}
 \label{fig:sensitivity}
 \end{figure}
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{adaptation_comparison}
+\caption{\textbf{DHB-XR vs affine transform under 6D pose change.}
+\textit{Left}: DHB preserves arc shape (clears obstacle).
+\textit{Right}: affine rotation distorts the arc (clips obstacle).
+RGB triads show 6-DOF orientation at start (S') and goal (G').}
+\label{fig:adaptation_comparison}
+\end{figure}
+
 \paragraph{When does \dhb{} spatial generalization work best?}
 DHB-XR is most effective when:
 (a) the perturbation is primarily a rigid translation or rotation of the workspace
