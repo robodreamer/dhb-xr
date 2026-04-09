@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.4.9)  9 APR 2026 14:29
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.4.9)  9 APR 2026 14:32
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -554,20 +554,22 @@ LaTeX Font Info:    Trying to load font information for OT1+phv on input line 3
 File: ot1phv.fd 2020/03/25 scalable font definitions for OT1/phv.
 )
 (./intro_varC.tex
-<figures/teaser.pdf, id=60, 421.35663pt x 200.94473pt>
+<figures/teaser.pdf, id=60, 406.69087pt x 142.32736pt>
 File: figures/teaser.pdf Graphic file (type pdf)
 <use figures/teaser.pdf>
 Package pdftex.def Info: figures/teaser.pdf  used on input line 7.
-(pdftex.def)             Requested size: 397.48499pt x 189.56262pt.
+(pdftex.def)             Requested size: 397.48499pt x 139.10631pt.
+ [1{/home/andypark/texlive/2023/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{/
+home/andypark/texlive/2023/texmf-dist/fonts/enc/dvips/base/8r.enc}
+pdfTeX warning (ext4): destination with the same identifier (name{figure.1}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.20 
+     
 
-Underfull \vbox (badness 2073) has occurred while \output is active []
 
- [1
-
-
-{/home/andypark/texlive/2023/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{/hom
-e/andypark/texlive/2023/texmf-dist/fonts/enc/dvips/base/8r.enc}]) (./related_wo
-rk.tex
+ <./figures/teaser.pdf>]) (./related_work.tex
 
 Package xcolor Warning: Incompatible color definition on input line 9.
 
@@ -595,16 +597,10 @@ Package xcolor Warning: Incompatible color definition on input line 26.
 
 Package xcolor Warning: Incompatible color definition on input line 28.
 
-[2
-pdfTeX warning (ext4): destination with the same identifier (name{figure.1}) ha
-s been already used, duplicate ignored
-<argument> ...shipout:D \box_use:N \l_shipout_box 
-                                                  \__shipout_drop_firstpage_...
-l.34 
-      <./figures/teaser.pdf>]
 
 Package xcolor Warning: Incompatible color definition on input line 36.
 
+[2]
 
 Package xcolor Warning: Incompatible color definition on input line 53.
 
@@ -627,22 +623,21 @@ Package xcolor Warning: Incompatible color definition on input line 70.
 
 LaTeX Warning: Reference `fig:pipeline' on page 3 undefined on input line 8.
 
-<figures/invariant_signals.pdf, id=217, 270.67686pt x 205.1946pt>
+<figures/invariant_signals.pdf, id=211, 249.78102pt x 169.34642pt>
 File: figures/invariant_signals.pdf Graphic file (type pdf)
 <use figures/invariant_signals.pdf>
 Package pdftex.def Info: figures/invariant_signals.pdf  used on input line 29.
-(pdftex.def)             Requested size: 397.48499pt x 301.34438pt.
+(pdftex.def)             Requested size: 397.48499pt x 269.5179pt.
 
 Package xcolor Warning: Incompatible color definition on input line 40.
 
 
 Package xcolor Warning: Incompatible color definition on input line 40.
 
-[3]
 
 Package xcolor Warning: Incompatible color definition on input line 57.
 
-
+[3]
 Underfull \hbox (badness 5147) in paragraph at lines 78--81
  []\OT1/ptm/b/n/10 DHB-QR vari-ant.[] \OT1/ptm/m/n/10 Re-plac-ing Eu-ler an-gle
 s with unit quater-nions avoids gim-bal lock:
@@ -651,16 +646,16 @@ s with unit quater-nions avoids gim-bal lock:
 
 Package xcolor Warning: Incompatible color definition on input line 84.
 
+
+Package xcolor Warning: Incompatible color definition on input line 92.
+
 [4
 pdfTeX warning (ext4): destination with the same identifier (name{figure.2}) ha
 s been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.86 
+l.93 
       <./figures/invariant_signals.pdf>]
-
-Package xcolor Warning: Incompatible color definition on input line 92.
-
 
 Package xcolor Warning: Incompatible color definition on input line 97.
 
@@ -686,18 +681,19 @@ Underfull \hbox (badness 10000) in paragraph at lines 9--16
 BERO-Spatial \OT1/ptm/m/n/10 [[]] (10 tasks) with rigid trans-la-tions
  []
 
-[5]
 
 Package xcolor Warning: Incompatible color definition on input line 20.
 
 
 Package xcolor Warning: Incompatible color definition on input line 21.
 
-<figures/results_combined.pdf, id=356, 268.86758pt x 141.53752pt>
+[5]
+<figures/results_combined.pdf, id=324, 254.05884pt x 124.67955pt>
 File: figures/results_combined.pdf Graphic file (type pdf)
 <use figures/results_combined.pdf>
 Package pdftex.def Info: figures/results_combined.pdf  used on input line 27.
-(pdftex.def)             Requested size: 397.48499pt x 209.26059pt.
+(pdftex.def)             Requested size: 397.48499pt x 195.08524pt.
+
 
 Package xcolor Warning: Incompatible color definition on input line 56.
 
@@ -734,17 +730,17 @@ Package xcolor Warning: Incompatible color definition on input line 92.
 
 Package xcolor Warning: Incompatible color definition on input line 93.
 
-<figures/invariance_verification.pdf, id=369, 271.36679pt x 113.81395pt>
+<figures/invariance_verification.pdf, id=337, 255.05542pt x 104.30342pt>
 File: figures/invariance_verification.pdf Graphic file (type pdf)
 <use figures/invariance_verification.pdf>
 Package pdftex.def Info: figures/invariance_verification.pdf  used on input lin
 e 99.
-(pdftex.def)             Requested size: 397.48499pt x 166.72269pt.
+(pdftex.def)             Requested size: 397.48499pt x 162.56303pt.
 
-Underfull \vbox (badness 2486) has occurred while \output is active []
+Underfull \vbox (badness 8113) has occurred while \output is active []
 
 
-Underfull \vbox (badness 2486) has occurred while \output is active []
+Underfull \vbox (badness 8113) has occurred while \output is active []
 
  [6
 pdfTeX warning (ext4): destination with the same identifier (name{figure.3}) ha
@@ -763,10 +759,10 @@ l.113
 Package xcolor Warning: Incompatible color definition on input line 117.
 
 ) (./discussion.tex
-Underfull \vbox (badness 2351) has occurred while \output is active []
+Underfull \vbox (badness 3229) has occurred while \output is active []
 
 
-Underfull \vbox (badness 2351) has occurred while \output is active []
+Underfull \vbox (badness 3229) has occurred while \output is active []
 
  [7
 pdfTeX warning (ext4): destination with the same identifier (name{table.2}) has
@@ -835,10 +831,10 @@ w/times/utmb8a.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/urw/time
 s/utmbi8a.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/urw/times/utm
 r8a.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/urw/times/utmri8a.p
 fb>
-Output written on corl2026_varC.pdf (9 pages, 342238 bytes).
+Output written on corl2026_varC.pdf (9 pages, 328050 bytes).
 PDF statistics:
- 679 PDF objects out of 1000 (max. 8388607)
- 320 compressed objects within 4 object streams
+ 623 PDF objects out of 1000 (max. 8388607)
+ 316 compressed objects within 4 object streams
  85 named destinations out of 1000 (max. 500000)
  133 words of extra memory for PDF output out of 10000 (max. 10000000)
 
