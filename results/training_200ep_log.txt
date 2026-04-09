@@ -1,0 +1,27 @@
+============================================================
+  DHBActionHeader Training — LIBERO-Spatial
+============================================================
+Device: cuda
+  GPU: NVIDIA RTX A2000 8GB Laptop GPU
+  Memory: 8.2 GB
+Loaded 1439 training chunks from 10 files
+Parameters: 1,721,127 (1.7M)
+Training: 1439 samples, 200 epochs, batch=16
+
+  Epoch   0/200: loss=0.2648  inv_mse=0.0866  act_l1=0.3398  lr=1.0e-03 *best*
+  Epoch  20/200: loss=0.1430  inv_mse=0.0256  act_l1=0.2312  lr=9.7e-04 *best*
+  Epoch  40/200: loss=0.1461  inv_mse=0.0254  act_l1=0.2363  lr=9.0e-04
+  Epoch  60/200: loss=0.1322  inv_mse=0.0235  act_l1=0.2137  lr=7.9e-04 *best*
+  Epoch  80/200: loss=0.1318  inv_mse=0.0230  act_l1=0.2153  lr=6.5e-04
+  Epoch 100/200: loss=0.1240  inv_mse=0.0225  act_l1=0.2015  lr=4.9e-04 *best*
+  Epoch 120/200: loss=0.1134  inv_mse=0.0224  act_l1=0.1800  lr=3.4e-04 *best*
+  Epoch 140/200: loss=0.1049  inv_mse=0.0222  act_l1=0.1653  lr=2.0e-04
+  Epoch 160/200: loss=0.0978  inv_mse=0.0220  act_l1=0.1512  lr=9.1e-05 *best*
+  Epoch 180/200: loss=0.0941  inv_mse=0.0219  act_l1=0.1439  lr=2.2e-05
+  Epoch 199/200: loss=0.0936  inv_mse=0.0219  act_l1=0.1425  lr=0.0e+00
+
+Training complete. Best loss: 0.0929
+  Results: results/exp2_dhb_head_training.json
+  Checkpoint: checkpoints/dhb_head_latest.pt
+
+  Eval (1 sample): invariant MSE = 0.270592
