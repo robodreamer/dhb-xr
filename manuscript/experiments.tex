@@ -60,8 +60,41 @@ StarVLA-MLP$\star$~\cite{openvla_oft_2025}  & 97.1 & \multicolumn{5}{c}{$\approx
 \end{tabular}
 \end{table}
 
-% ── Experiment 2 ─────────────────────────────────────────────────────────────
-\subsection{Experiments 2 \& 3: Tokenization Analysis}
+% ── Learnability ─────────────────────────────────────────────────────────────
+\subsection{Invariant Learnability}
+
+A critical question is whether a neural network can learn to predict DHB invariants
+from observations. We train a \texttt{DHBActionHeader} (1.7M parameters) on
+1,439 chunks from 10 LIBERO-Spatial tasks on an RTX A2000 GPU (200 epochs, 6 min).
+
+\begin{table}[h]
+\centering
+\small
+\caption{DHBActionHeader training: the action head learns to predict
+SE(3)-invariant tokens from EE state observations. Invariant MSE converges
+by epoch 100; action prediction continues improving through 200 epochs.}
+\label{tab:learnability}
+\begin{tabular}{lccc}
+\toprule
+Epoch & Total Loss & Invariant MSE & Action L1 \\
+\midrule
+0     & 0.265 & 0.087 & 0.340 \\
+50    & 0.127 & 0.022 & 0.209 \\
+100   & 0.124 & 0.023 & 0.202 \\
+\textbf{200}   & \textbf{0.094} & \textbf{0.022} & \textbf{0.143} \\
+\midrule
+\multicolumn{2}{l}{Reduction} & \textbf{75\%} & \textbf{58\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The invariant MSE converges at $0.022$ --- the action head reliably learns the
+SE(3)-invariant structure. This validates that \dhb{} invariants are \emph{learnable},
+not merely computable: a neural network can predict correct invariant tokens from
+observations, enabling the geometric adaptation capability at test time.
+
+% ── Tokenization ─────────────────────────────────────────────────────────────
+\subsection{Tokenization Analysis}
 
 Table~\ref{tab:tokenization_combined} compares rate-distortion and geometric stability
 of action tokenizers. \dhb{} is the only tokenizer with SE(3)-invariance;
