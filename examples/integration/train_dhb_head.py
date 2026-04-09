@@ -53,8 +53,10 @@ class LiberoInvariantDataset(Dataset):
     since we don't have the full VLM backbone.
     """
 
-    def __init__(self, dataset_dir: str, chunk_len: int = 8, max_demos: int = 50):
+    def __init__(self, dataset_dir: str, chunk_len: int = 8, max_demos: int = 50,
+                 augment_se3: bool = False):
         self.chunk_len = chunk_len
+        self.augment_se3 = augment_se3
         self.samples = []
 
         import h5py
@@ -114,8 +116,34 @@ class LiberoInvariantDataset(Dataset):
 
     def __getitem__(self, idx):
         s = self.samples[idx]
+        ee = s["ee_state"].copy()  # (chunk, 7): pos(3) + quat_wxyz(4)
+
+        if self.augment_se3:
+            # Apply random SE(3) to EE state; invariant targets stay UNCHANGED
+            # This is the "free augmentation" — unique to invariant representations
+            from scipy.spatial.transform import Rotation as R_cls
+            R = R_cls.random().as_matrix().astype(np.float32)
+            t = np.random.randn(3).astype(np.float32) * 0.1
+
+            pos = ee[:, :3]                          # (chunk, 3)
+            quat_wxyz = ee[:, 3:7]                   # (chunk, 4) wxyz
+
+            # Transform positions: p' = R @ p + t
+            pos_aug = (R @ pos.T).T + t              # (chunk, 3)
+
+            # Transform quaternions: q' = R_se3 ⊗ q
+            R_scipy = R_cls.from_matrix(R)
+            quat_xyzw = np.column_stack([quat_wxyz[:, 1], quat_wxyz[:, 2],
+                                          quat_wxyz[:, 3], quat_wxyz[:, 0]])
+            q_aug = (R_scipy * R_cls.from_quat(quat_xyzw)).as_quat()  # xyzw
+            quat_wxyz_aug = np.column_stack([q_aug[:, 3], q_aug[:, 0],
+                                              q_aug[:, 1], q_aug[:, 2]])
+
+            ee = np.hstack([pos_aug, quat_wxyz_aug]).astype(np.float32)
+            # invariants are UNCHANGED — this is the whole point!
+
         return {
-            "ee_state": torch.tensor(s["ee_state"]),
+            "ee_state": torch.tensor(ee),
             "invariants": torch.tensor(s["invariants"]),
             "actions": torch.tensor(s["actions"]),
         }
@@ -163,11 +191,15 @@ def train(args):
         print(f"  Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
 
     # Dataset
+    augment = getattr(args, 'augment_se3', False)
     dataset = LiberoInvariantDataset(
         args.dataset_dir,
         chunk_len=args.chunk_len,
         max_demos=args.max_demos,
+        augment_se3=augment,
     )
+    if augment:
+        print(f"SE(3) augmentation: ON (invariant targets unchanged — free aug)")
     loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=0)
 
     # Models
@@ -298,6 +330,8 @@ def main():
     parser.add_argument("--max-demos", type=int, default=50)
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--quick", action="store_true", help="1 epoch validation only")
+    parser.add_argument("--augment-se3", action="store_true",
+                        help="Apply random SE(3) to inputs; invariant targets unchanged (free aug)")
     args = parser.parse_args()
 
     if args.quick:

@@ -1,0 +1,7 @@
+{
+  "baseline_eval_mse": 0.273818,
+  "augmented_eval_mse": 0.269614,
+  "baseline_best_loss": 0.1072,
+  "augmented_best_loss": 0.1607,
+  "improvement_pct": 1.535326384678869
+}
