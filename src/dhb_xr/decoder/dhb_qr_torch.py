@@ -43,17 +43,52 @@ def axis_angle_to_rot_torch(rvec: torch.Tensor) -> torch.Tensor:
 
 def rot_to_quat_torch(R: torch.Tensor) -> torch.Tensor:
     """Convert rotation matrix to wxyz quaternion. Batched.
-    Uses Shepperd's method for numerical stability.
+    Shepperd's 4-branch method — numerically stable for all rotations.
     Args: R: (..., 3, 3)
     Returns: (..., 4) wxyz
     """
-    trace = R[..., 0, 0] + R[..., 1, 1] + R[..., 2, 2]
-    s = torch.sqrt(torch.clamp(trace + 1, min=1e-10)) * 2  # s = 4*w
-    w = 0.25 * s
-    x = (R[..., 2, 1] - R[..., 1, 2]) / s
-    y = (R[..., 0, 2] - R[..., 2, 0]) / s
-    z = (R[..., 1, 0] - R[..., 0, 1]) / s
-    q = torch.stack([w, x, y, z], dim=-1)
+    # Four candidate denominators — pick the largest for stability
+    d0 = R[..., 0, 0] + R[..., 1, 1] + R[..., 2, 2]         # 4w²-1
+    d1 = R[..., 0, 0] - R[..., 1, 1] - R[..., 2, 2]         # 4x²-1
+    d2 = -R[..., 0, 0] + R[..., 1, 1] - R[..., 2, 2]        # 4y²-1
+    d3 = -R[..., 0, 0] - R[..., 1, 1] + R[..., 2, 2]        # 4z²-1
+
+    # Branch 0: w is largest
+    s0 = torch.sqrt(torch.clamp(d0 + 1, min=1e-8)) * 2
+    q0 = torch.stack([0.25 * s0,
+                       (R[..., 2, 1] - R[..., 1, 2]) / s0,
+                       (R[..., 0, 2] - R[..., 2, 0]) / s0,
+                       (R[..., 1, 0] - R[..., 0, 1]) / s0], dim=-1)
+
+    # Branch 1: x is largest
+    s1 = torch.sqrt(torch.clamp(d1 + 1, min=1e-8)) * 2
+    q1 = torch.stack([(R[..., 2, 1] - R[..., 1, 2]) / s1,
+                       0.25 * s1,
+                       (R[..., 0, 1] + R[..., 1, 0]) / s1,
+                       (R[..., 0, 2] + R[..., 2, 0]) / s1], dim=-1)
+
+    # Branch 2: y is largest
+    s2 = torch.sqrt(torch.clamp(d2 + 1, min=1e-8)) * 2
+    q2 = torch.stack([(R[..., 0, 2] - R[..., 2, 0]) / s2,
+                       (R[..., 0, 1] + R[..., 1, 0]) / s2,
+                       0.25 * s2,
+                       (R[..., 1, 2] + R[..., 2, 1]) / s2], dim=-1)
+
+    # Branch 3: z is largest
+    s3 = torch.sqrt(torch.clamp(d3 + 1, min=1e-8)) * 2
+    q3 = torch.stack([(R[..., 1, 0] - R[..., 0, 1]) / s3,
+                       (R[..., 0, 2] + R[..., 2, 0]) / s3,
+                       (R[..., 1, 2] + R[..., 2, 1]) / s3,
+                       0.25 * s3], dim=-1)
+
+    # Select branch with largest diagonal element (differentiable via torch.where)
+    dmax = torch.stack([d0, d1, d2, d3], dim=-1)
+    idx = dmax.argmax(dim=-1)
+
+    q = torch.where((idx == 0).unsqueeze(-1), q0,
+        torch.where((idx == 1).unsqueeze(-1), q1,
+        torch.where((idx == 2).unsqueeze(-1), q2, q3)))
+
     q = q / torch.norm(q, dim=-1, keepdim=True).clamp(min=1e-10)
     return q
 
