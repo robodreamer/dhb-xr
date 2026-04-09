@@ -1,0 +1,9 @@
+{
+  "fast_raw_compression": 21.7,
+  "fast_dr_compression": 3.047506639126586,
+  "fast_qr_compression": 5.884229717411121,
+  "fast_raw_stability_pct": 96.46795516737619,
+  "fast_dr_stability_pct": 91.34878449276249,
+  "n_transforms": 40,
+  "n_tasks": 10
+}
