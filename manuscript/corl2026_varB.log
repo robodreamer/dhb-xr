@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.4.9)  9 APR 2026 14:54
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.4.9)  9 APR 2026 14:58
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -554,32 +554,24 @@ LaTeX Font Info:    Trying to load font information for OT1+phv on input line 3
 File: ot1phv.fd 2020/03/25 scalable font definitions for OT1/phv.
 )
 (./intro_varB.tex
-<figures/teaser.pdf, id=60, 407.24438pt x 134.66385pt>
-File: figures/teaser.pdf Graphic file (type pdf)
-<use figures/teaser.pdf>
-Package pdftex.def Info: figures/teaser.pdf  used on input line 9.
-(pdftex.def)             Requested size: 377.60951pt x 124.87032pt.
+
+Package xcolor Warning: Incompatible color definition on input line 6.
 
 
-Package xcolor Warning: Incompatible color definition on input line 17.
+Package xcolor Warning: Incompatible color definition on input line 8.
 
 
-Package xcolor Warning: Incompatible color definition on input line 19.
+Package xcolor Warning: Incompatible color definition on input line 10.
 
 
-Package xcolor Warning: Incompatible color definition on input line 21.
+Underfull \vbox (badness 1248) has occurred while \output is active []
 
-[1
+ [1
 
 
 {/home/andypark/texlive/2023/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{/hom
-e/andypark/texlive/2023/texmf-dist/fonts/enc/dvips/base/8r.enc}
-pdfTeX warning (ext4): destination with the same identifier (name{figure.1}) ha
-s been already used, duplicate ignored
-<argument> ...shipout:D \box_use:N \l_shipout_box 
-                                                  \__shipout_drop_firstpage_...
-l.31 
-      <./figures/teaser.pdf>]) (./related_work.tex
+e/andypark/texlive/2023/texmf-dist/fonts/enc/dvips/base/8r.enc}]) (./related_wo
+rk.tex
 
 Package xcolor Warning: Incompatible color definition on input line 9.
 
@@ -610,7 +602,6 @@ Package xcolor Warning: Incompatible color definition on input line 28.
 
 Package xcolor Warning: Incompatible color definition on input line 36.
 
-[2]
 
 Package xcolor Warning: Incompatible color definition on input line 53.
 
@@ -629,51 +620,63 @@ Package xcolor Warning: Incompatible color definition on input line 65.
 
 Package xcolor Warning: Incompatible color definition on input line 70.
 
-) (./methods.tex
+) (./methods.tex [2]
+<figures/teaser.pdf, id=122, 407.24438pt x 134.66385pt>
+File: figures/teaser.pdf Graphic file (type pdf)
+<use figures/teaser.pdf>
+Package pdftex.def Info: figures/teaser.pdf  used on input line 10.
+(pdftex.def)             Requested size: 377.60951pt x 124.87032pt.
 
-LaTeX Warning: Reference `fig:pipeline' on page 3 undefined on input line 8.
 
-<figures/invariant_signals.pdf, id=251, 250.17276pt x 157.00595pt>
+Package xcolor Warning: Incompatible color definition on input line 23.
+
+<figures/invariant_signals.pdf, id=124, 250.17276pt x 157.00595pt>
 File: figures/invariant_signals.pdf Graphic file (type pdf)
 <use figures/invariant_signals.pdf>
-Package pdftex.def Info: figures/invariant_signals.pdf  used on input line 29.
+Package pdftex.def Info: figures/invariant_signals.pdf  used on input line 42.
 (pdftex.def)             Requested size: 397.48499pt x 249.47295pt.
 
-Package xcolor Warning: Incompatible color definition on input line 40.
+Package xcolor Warning: Incompatible color definition on input line 53.
 
 
-Package xcolor Warning: Incompatible color definition on input line 40.
+Package xcolor Warning: Incompatible color definition on input line 53.
 
 
-Package xcolor Warning: Incompatible color definition on input line 57.
+Package xcolor Warning: Incompatible color definition on input line 70.
 
-[3]
-Underfull \hbox (badness 5147) in paragraph at lines 78--81
+[3
+pdfTeX warning (ext4): destination with the same identifier (name{figure.1}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.84 \end{equation}
+                    <./figures/teaser.pdf>]
+Underfull \hbox (badness 5147) in paragraph at lines 91--94
  []\OT1/ptm/b/n/10 DHB-QR vari-ant.[] \OT1/ptm/m/n/10 Re-plac-ing Eu-ler an-gle
 s with unit quater-nions avoids gim-bal lock:
  []
 
 
-Package xcolor Warning: Incompatible color definition on input line 84.
-
-
-Package xcolor Warning: Incompatible color definition on input line 92.
-
-
 Package xcolor Warning: Incompatible color definition on input line 97.
+
+
+Package xcolor Warning: Incompatible color definition on input line 105.
+
+
+Package xcolor Warning: Incompatible color definition on input line 110.
 
 [4
 pdfTeX warning (ext4): destination with the same identifier (name{figure.2}) ha
 s been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.116 
+l.129 
        <./figures/invariant_signals.pdf>]
 
-Package xcolor Warning: Incompatible color definition on input line 126.
+Package xcolor Warning: Incompatible color definition on input line 139.
 
 
-Package xcolor Warning: Incompatible color definition on input line 135.
+Package xcolor Warning: Incompatible color definition on input line 148.
 
 ) (./experiments.tex
 
@@ -697,7 +700,7 @@ Package xcolor Warning: Incompatible color definition on input line 20.
 
 Package xcolor Warning: Incompatible color definition on input line 21.
 
-<figures/results_combined.pdf, id=341, 250.77753pt x 120.87094pt>
+<figures/results_combined.pdf, id=342, 250.77753pt x 120.87094pt>
 File: figures/results_combined.pdf Graphic file (type pdf)
 <use figures/results_combined.pdf>
 Package pdftex.def Info: figures/results_combined.pdf  used on input line 27.
@@ -738,7 +741,7 @@ Package xcolor Warning: Incompatible color definition on input line 92.
 
 Package xcolor Warning: Incompatible color definition on input line 93.
 
-<figures/invariance_verification.pdf, id=354, 249.53145pt x 99.18994pt>
+<figures/invariance_verification.pdf, id=355, 249.53145pt x 99.18994pt>
 File: figures/invariance_verification.pdf Graphic file (type pdf)
 <use figures/invariance_verification.pdf>
 Package pdftex.def Info: figures/invariance_verification.pdf  used on input lin
@@ -793,21 +796,17 @@ Package xcolor Warning: Incompatible color definition on input line 54.
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-03-20>
  ***********
-
-
-LaTeX Warning: There were undefined references.
-
 Package rerunfilecheck Info: File `corl2026_varB.out' has not changed.
 (rerunfilecheck)             Checksum: 6E6654B85D6D8246EFF3A879063FC680;2487.
  ) 
 Here is how much of TeX's memory you used:
- 13716 strings out of 468830
- 222493 string characters out of 5451683
+ 13715 strings out of 468830
+ 222479 string characters out of 5451683
  672239 words of memory out of 5000000
- 42295 multiletter control sequences out of 15000+600000
+ 42294 multiletter control sequences out of 15000+600000
  660058 words of font info for 96 fonts, out of 8000000 for 9000
  319 hyphenation exceptions out of 8191
- 89i,11n,96p,566b,589s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 89i,11n,96p,577b,589s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </home/andypark/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10
 .pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmm
 i10.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/
@@ -825,10 +824,10 @@ ype1/urw/courier/ucrr8a.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1
 w/times/utmb8a.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/urw/time
 s/utmr8a.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/urw/times/utmr
 i8a.pfb>
-Output written on corl2026_varB.pdf (9 pages, 329914 bytes).
+Output written on corl2026_varB.pdf (9 pages, 329811 bytes).
 PDF statistics:
- 646 PDF objects out of 1000 (max. 8388607)
- 314 compressed objects within 4 object streams
+ 647 PDF objects out of 1000 (max. 8388607)
+ 315 compressed objects within 4 object streams
  84 named destinations out of 1000 (max. 500000)
  133 words of extra memory for PDF output out of 10000 (max. 10000000)
 

@@ -5,9 +5,22 @@
 \section{Method}
 \label{sec:method}
 
-Fig.~\ref{fig:pipeline} shows the \dhb{} pipeline. A single demonstration
-is encoded into SE(3)-invariant tokens; at test time, a $\leq\!7\,\text{ms}$
-solver re-grounds the encoded motion to any new spatial configuration.
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.95\textwidth]{teaser}
+\vspace{-3mm}
+\caption{\textbf{\dhb{} overview.}
+\textbf{(a)} Current VLAs degrade 14--18\% under spatial shift; \dhb{} adapts in 7\,ms.
+\textbf{(b)} 6D pose adaptation from a single demo: different start orientations and
+positions --- motion shape preserved in all cases.
+\textbf{(c)} Per-trial invariance measurement: DHB magnitude MSE $\sim 10^{-33}$
+(40 random SE(3) transforms) vs raw position MSE $\sim 0.5$.}
+\label{fig:teaser}
+\end{figure*}
+
+A single demonstration is encoded into SE(3)-invariant tokens; at test time,
+a $\leq\!7\,\text{ms}$ solver re-grounds the encoded motion to any new spatial
+configuration (Fig.~\ref{fig:teaser}).
 
 \subsection{Problem Formulation}
 \label{sec:problem}
