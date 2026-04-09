@@ -11,10 +11,15 @@ For \textbf{position}, invariant-space noise causes 38--52\% \emph{less} traject
 (DHB-DR ratio $0.48$--$0.62\times$), because the magnitude inner product contracts noise.
 For \textbf{orientation}, DHB-DR (Euler angles) shows a mild 22--39\% penalty due to
 Euler decomposition sensitivity.
-\textbf{Switching to DHB-QR} (quaternion variant) nearly eliminates this:
-the orientation ratio drops from $1.31\times$ to $1.08\times$ (8\% residual),
-while position improves further to $0.08\times$ (92\% less error than raw).
-DHB-QR is therefore the recommended variant for noise-sensitive applications.
+\textbf{Switching to DHB-QR} (quaternion variant) resolves this:
+QR achieves orientation ratio $0.92$--$1.16\times$ (mean ${\approx}1.0\times$, near parity),
+while cutting position error to $0.08\times$ (92\% less than raw).
+At two of four noise levels tested, QR orientation is actually \emph{better} than raw
+($0.92\times$ and $0.93\times$).
+The residual coupling is intrinsic to frame propagation (magnitude noise cascades
+through frame updates to orientation) and cannot be removed without
+constraint-aware prediction --- a promising direction for future work.
+DHB-QR is therefore recommended: near-parity orientation, 12$\times$ better position.
 
 \begin{figure}[t]
 \centering
