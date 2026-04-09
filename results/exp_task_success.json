@@ -1,0 +1,22 @@
+{
+  "0cm": {
+    "naive_pct": 100,
+    "dhb_pct": 0,
+    "n_trials": 15
+  },
+  "5cm": {
+    "naive_pct": 20,
+    "dhb_pct": 0,
+    "n_trials": 15
+  },
+  "10cm": {
+    "naive_pct": 0,
+    "dhb_pct": 0,
+    "n_trials": 15
+  },
+  "15cm": {
+    "naive_pct": 0,
+    "dhb_pct": 0,
+    "n_trials": 15
+  }
+}
