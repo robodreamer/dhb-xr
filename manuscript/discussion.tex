@@ -4,16 +4,17 @@
 
 \paragraph{Are invariant predictions more sensitive to noise?}
 A natural concern is that prediction errors in invariant space might be \emph{amplified}
-by the nonlinear decode step, making them more damaging than the same error in raw
-action space.
-Fig.~\ref{fig:sensitivity} tests this directly: we add identical Gaussian noise
-($\sigma = 0.001$--$0.1$) to (a) DHB invariants before decoding and (b) raw action
-deltas before integration, and compare the resulting EE trajectory errors.
-\textbf{Result: invariant-space noise causes 40--52\% \emph{less} trajectory error}
-(ratio $0.48$--$0.64\times$ across all noise levels).
-The invariant magnitude $m_i$ is a \emph{projection} (inner product), which
-contracts noise via the Cauchy--Schwarz inequality; raw deltas accumulate
-errors via integration without any contraction.
+by the nonlinear decode step.
+We test this directly: identical Gaussian noise ($\sigma = 0.005$--$0.05$) is added
+to (a) DHB invariants before decoding and (b) raw action deltas before integration.
+For \textbf{position}, invariant-space noise causes 38--52\% \emph{less} trajectory error
+(DHB-DR ratio $0.48$--$0.62\times$), because the magnitude inner product contracts noise.
+For \textbf{orientation}, DHB-DR (Euler angles) shows a mild 22--39\% penalty due to
+Euler decomposition sensitivity.
+\textbf{Switching to DHB-QR} (quaternion variant) nearly eliminates this:
+the orientation ratio drops from $1.31\times$ to $1.08\times$ (8\% residual),
+while position improves further to $0.08\times$ (92\% less error than raw).
+DHB-QR is therefore the recommended variant for noise-sensitive applications.
 
 \begin{figure}[t]
 \centering
