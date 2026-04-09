@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DHB-XR: SE(3)-Invariant Action Tokenization</title>
+
+  <!-- Bulma CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&family=Source+Serif+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --accent: #7c3aed;
+      --success: #059669;
+      --dark: #111827;
+      --gray: #6b7280;
+    }
+
+    body {
+      font-family: 'Source Sans Pro', sans-serif;
+      color: var(--dark);
+      background: #fff;
+    }
+
+    /* ── Hero ───────────────────────────────────────────────── */
+    .hero-section {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e1b4b 100%);
+      padding: 4rem 0 3rem;
+      color: white;
+    }
+
+    .hero-section .title {
+      color: white;
+      font-family: 'Source Serif Pro', serif;
+      font-weight: 600;
+      line-height: 1.25;
+      font-size: 2.25rem;
+    }
+
+    .venue-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 4px;
+      padding: 0.2rem 0.75rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      margin-bottom: 1rem;
+    }
+
+    .stat-hero {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      padding: 1rem 1.5rem;
+      text-align: center;
+      transition: background 0.2s;
+    }
+    .stat-hero:hover { background: rgba(255,255,255,0.14); }
+    .stat-hero .stat-number {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #60a5fa;
+      line-height: 1;
+    }
+    .stat-hero .stat-label {
+      font-size: 0.82rem;
+      color: rgba(255,255,255,0.75);
+      margin-top: 0.25rem;
+    }
+
+    /* ── Resource buttons ───────────────────────────────────── */
+    .resource-buttons .button {
+      margin: 0.25rem;
+      font-weight: 600;
+      border-radius: 6px;
+    }
+
+    /* ── Sections ───────────────────────────────────────────── */
+    .section-title {
+      font-family: 'Source Serif Pro', serif;
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: var(--dark);
+      margin-bottom: 0.5rem;
+      border-bottom: 3px solid var(--primary);
+      padding-bottom: 0.5rem;
+      display: inline-block;
+    }
+
+    .section-subtitle {
+      color: var(--gray);
+      font-size: 1.05rem;
+      margin-bottom: 2rem;
+    }
+
+    /* ── Method diagram ─────────────────────────────────────── */
+    .method-img {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      width: 100%;
+    }
+
+    /* ── Key insight box ────────────────────────────────────── */
+    .insight-box {
+      background: linear-gradient(135deg, #eff6ff, #f5f3ff);
+      border-left: 4px solid var(--primary);
+      border-radius: 0 8px 8px 0;
+      padding: 1rem 1.5rem;
+      margin: 1.5rem 0;
+      font-size: 1.05rem;
+    }
+
+    /* ── Result figures ─────────────────────────────────────── */
+    .result-figure {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+    .result-figure img {
+      width: 100%;
+      display: block;
+    }
+    .result-figure .fig-caption {
+      padding: 0.6rem 0.9rem;
+      background: #f9fafb;
+      font-size: 0.82rem;
+      color: var(--gray);
+      border-top: 1px solid #e5e7eb;
+    }
+
+    /* ── Video grid ─────────────────────────────────────────── */
+    .video-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      background: #000;
+    }
+    .video-card video {
+      width: 100%;
+      display: block;
+    }
+    .video-card .video-label {
+      padding: 0.5rem 0.75rem;
+      background: #111827;
+      color: white;
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-align: center;
+      letter-spacing: 0.03em;
+    }
+    .video-card .video-label.dhb { background: #1d4ed8; }
+    .video-card .video-label.naive { background: #7f1d1d; }
+    .video-card .video-label.comparison { background: #374151; }
+
+    /* ── Results table ──────────────────────────────────────── */
+    .results-table {
+      font-size: 0.9rem;
+    }
+    .results-table thead th {
+      background: var(--dark);
+      color: white;
+      font-weight: 600;
+      border: none;
+    }
+    .results-table tbody tr:hover { background: #f0f9ff; }
+    .results-table .highlight-row {
+      background: #eff6ff;
+      font-weight: 600;
+    }
+    .best { color: var(--success); font-weight: 700; }
+    .bad  { color: #dc2626; }
+
+    /* ── BibTeX ─────────────────────────────────────────────── */
+    .bibtex-block {
+      background: #1e293b;
+      color: #e2e8f0;
+      border-radius: 8px;
+      padding: 1.5rem;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      line-height: 1.6;
+      overflow-x: auto;
+      position: relative;
+    }
+    .copy-btn {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      background: rgba(255,255,255,0.1);
+      color: #e2e8f0;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 4px;
+      padding: 0.25rem 0.6rem;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+    .copy-btn:hover { background: rgba(255,255,255,0.2); }
+
+    /* ── Footer ─────────────────────────────────────────────── */
+    .footer-section {
+      background: #0f172a;
+      color: rgba(255,255,255,0.6);
+      font-size: 0.85rem;
+    }
+    .footer-section a { color: #60a5fa; }
+
+    /* ── Tab styling ────────────────────────────────────────── */
+    .tabs.is-boxed a { font-weight: 600; }
+    .tab-content { display: none; }
+    .tab-content.is-active { display: block; }
+
+    /* ── Obstacle comparison ────────────────────────────────── */
+    .obstacle-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    @media (max-width: 768px) {
+      .obstacle-grid { grid-template-columns: 1fr; }
+      .hero-section .title { font-size: 1.6rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════ HERO -->
+<section class="hero-section">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-10">
+        <p class="venue-badge">CoRL 2026 (Under Review)</p>
+        <h1 class="title mb-4">
+          Beyond FAST: 49&times; Compression with Zero Token Change<br/>
+          via SE(3)-Invariant Action Tokenization
+        </h1>
+
+        <!-- Authors -->
+        <p class="mb-4" style="font-size:1.05rem; color:rgba(255,255,255,0.85);">
+          <strong style="color:white;">Andy Park</strong>
+          &nbsp;&middot;&nbsp;
+          <em style="color:rgba(255,255,255,0.6);">Co-authors TBD</em>
+        </p>
+
+        <!-- Resource Links -->
+        <div class="resource-buttons mb-5">
+          <a class="button is-white is-outlined" href="assets/dhb_xr_corl2026.pdf" target="_blank">
+            <span class="icon"><i class="fas fa-file-pdf"></i></span>
+            <span>Paper PDF</span>
+          </a>
+          <a class="button is-white is-outlined" href="https://github.com/robodreamer/dhb_xr" target="_blank">
+            <span class="icon"><i class="fab fa-github"></i></span>
+            <span>Code</span>
+          </a>
+          <a class="button is-white is-outlined" href="#bibtex">
+            <span class="icon"><i class="fas fa-quote-right"></i></span>
+            <span>BibTeX</span>
+          </a>
+        </div>
+
+        <!-- Key Stats -->
+        <div class="columns is-mobile">
+          <div class="column">
+            <div class="stat-hero">
+              <div class="stat-number">49.8&times;</div>
+              <div class="stat-label">Compression<br/>(2.4&times; better than FAST)</div>
+            </div>
+          </div>
+          <div class="column">
+            <div class="stat-hero">
+              <div class="stat-number">0.0%</div>
+              <div class="stat-label">Token change<br/>under SE(3) transforms</div>
+            </div>
+          </div>
+          <div class="column">
+            <div class="stat-hero">
+              <div class="stat-number">0.0 mm</div>
+              <div class="stat-label">Goal error<br/>at 0&ndash;20 cm offsets</div>
+            </div>
+          </div>
+          <div class="column">
+            <div class="stat-hero">
+              <div class="stat-number">100%</div>
+              <div class="stat-label">Task success<br/>at 0&ndash;5 cm offsets</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════ TL;DR -->
+<section class="section" style="background:#f8fafc; padding:2.5rem 0;">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-10">
+        <h2 class="section-title">TL;DR</h2>
+        <div class="columns mt-3">
+          <div class="column">
+            <div class="box" style="border-top:3px solid #2563eb; height:100%">
+              <span class="icon" style="color:#2563eb;"><i class="fas fa-compress-arrows-alt fa-lg"></i></span>
+              <strong>&nbsp;Composable compression.</strong>
+              Applying FAST to DHB magnitude invariants yields <strong>49.8&times;</strong> compression &mdash;
+              2.4&times; better than FAST alone &mdash; because invariants are smoother than raw coordinates.
+            </div>
+          </div>
+          <div class="column">
+            <div class="box" style="border-top:3px solid #7c3aed; height:100%">
+              <span class="icon" style="color:#7c3aed;"><i class="fas fa-cube fa-lg"></i></span>
+              <strong>&nbsp;Geometric stability.</strong>
+              Raw action tokenizers change <strong>93.9%</strong> of tokens under rigid-body transforms.
+              DHB magnitude tokens change <strong>0.0%</strong> &mdash; a mathematical guarantee, not a learned property.
+            </div>
+          </div>
+          <div class="column">
+            <div class="box" style="border-top:3px solid #059669; height:100%">
+              <span class="icon" style="color:#059669;"><i class="fas fa-map-marker-alt fa-lg"></i></span>
+              <strong>&nbsp;Spatial generalization.</strong>
+              Exact <strong>0.0 mm</strong> goal error on 10 LIBERO-Spatial tasks
+              at perturbations up to 20 cm across 8 directions. Zero solver required for translations.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════ METHOD -->
+<section class="section" id="method">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-10">
+        <h2 class="section-title">Method</h2>
+        <p class="section-subtitle">SE(3)-invariant encoding as a drop-in representation layer</p>
+
+        <figure class="image mb-5">
+          <img class="method-img" src="assets/teaser.png" alt="DHB-XR method overview: problem, solution, and stability comparison" />
+        </figure>
+
+        <div class="columns">
+          <div class="column">
+            <p>
+              <strong>DHB-XR</strong> encodes robot trajectories into SE(3)-invariant sequences using
+              <em>Double-Reflection Householder (DHB)</em> frames. At each timestep, two successive
+              Householder reflections produce a body-fixed frame whose orientation is invariant to
+              the global pose of the workspace. The resulting <em>magnitude invariants</em> &mdash;
+              one linear speed and one angular speed per step &mdash; are provably unchanged by any
+              rigid-body transform of the scene.
+            </p>
+          </div>
+          <div class="column">
+            <p>
+              Because invariants are geometrically smoother than raw coordinates, they compress
+              dramatically better. Applied to DHB magnitude sequences, FAST (DCT+BPE) achieves
+              <strong>49.8&times;</strong> compression in just 8 tokens with <strong>0.0%</strong>
+              token instability under 40 SE(3) transforms &mdash; versus 20.4&times; and 93.9%
+              instability on raw coordinates. An OAT register encoder achieves a
+              <em>triple-invariant</em> tokenization: invariant to SE(3) transforms, prefix length,
+              and token order simultaneously.
+            </p>
+          </div>
+        </div>
+
+        <div class="insight-box">
+          <strong>Key insight:</strong> DHB-XR is not an alternative to FAST or OAT &mdash; it is a
+          <em>composable representation layer</em>. Any existing tokenizer inherits perfect geometric
+          stability simply by operating on DHB invariant input rather than raw coordinates.
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════ RESULTS -->
+<section class="section" id="results" style="background:#f8fafc;">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-10">
+        <h2 class="section-title">Results</h2>
+        <p class="section-subtitle">Compression, stability, and spatial generalization</p>
+
+        <!-- Tabs -->
+        <div class="tabs is-boxed mb-0" id="result-tabs">
+          <ul>
+            <li class="is-active" data-tab="compression"><a>Compression &amp; Stability</a></li>
+            <li data-tab="generalization"><a>Spatial Generalization</a></li>
+            <li data-tab="sensitivity"><a>Noise Sensitivity</a></li>
+            <li data-tab="obstacle"><a>Obstacle Adaptation</a></li>
+          </ul>
+        </div>
+
+        <!-- Tab: Compression -->
+        <div class="tab-content is-active box" id="tab-compression" style="border-radius:0 8px 8px 8px; margin-top:0;">
+          <div class="columns is-vcentered">
+            <div class="column is-6">
+              <div class="result-figure">
+                <img src="assets/honest_stability.png"
+                     alt="Per-trial token MSE scatter: DHB magnitudes vs raw coordinates under 40 SE3 transforms" />
+                <p class="fig-caption">
+                  Per-trial reconstruction MSE under 40 SE(3) transforms (log scale).
+                  DHB magnitude tokens: ~10<sup>&minus;33</sup> (machine zero).
+                  Raw coordinates: ~10<sup>&minus;1</sup> (93.9% change rate).
+                </p>
+              </div>
+            </div>
+            <div class="column is-6">
+              <table class="table results-table is-fullwidth is-striped">
+                <thead>
+                  <tr>
+                    <th>Tokenizer</th>
+                    <th>Tokens</th>
+                    <th>Compression</th>
+                    <th>SE(3) Stability</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Raw coords</td><td>98</td><td>1.0&times;</td><td class="bad">93.9% change</td>
+                  </tr>
+                  <tr>
+                    <td>FAST (raw)</td><td>14</td><td>20.4&times;</td><td class="bad">93.9% change</td>
+                  </tr>
+                  <tr>
+                    <td>OAT (full)</td><td>10</td><td>10&times;</td><td class="bad">99.1% change</td>
+                  </tr>
+                  <tr class="highlight-row">
+                    <td><strong>FAST + DHB mag.</strong></td><td>8</td>
+                    <td class="best">49.8&times;</td>
+                    <td class="best">0.0% change</td>
+                  </tr>
+                  <tr class="highlight-row">
+                    <td><strong>OAT + DHB mag.</strong></td><td>10</td>
+                    <td>10&times;</td>
+                    <td class="best">0.0% change</td>
+                  </tr>
+                </tbody>
+              </table>
+              <p class="has-text-grey is-size-7 mt-2">
+                Compression = original tokens / tokenized tokens. SE(3) stability measured over 40
+                random rigid-body transforms on 10 LIBERO-Spatial demos.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Generalization -->
+        <div class="tab-content box" id="tab-generalization" style="border-radius:0 8px 8px 8px; margin-top:0;">
+          <div class="columns is-vcentered">
+            <div class="column is-6">
+              <div class="result-figure">
+                <img src="assets/fig2_perturbation_sweep.png"
+                     alt="DHB goal error vs naive replay across 0-20cm perturbation magnitudes" />
+                <p class="fig-caption">
+                  Goal error vs perturbation magnitude. DHB-XR: <strong>0.0 mm</strong> at all offsets.
+                  Naive replay: 50/100/150/200 mm at 5/10/15/20 cm. Averaged over 10 tasks &times; 8 directions.
+                </p>
+              </div>
+            </div>
+            <div class="column is-6">
+              <table class="table results-table is-fullwidth is-striped">
+                <thead>
+                  <tr><th>Perturbation</th><th>Naive Replay (mm)</th><th>DHB-XR (mm)</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>0 cm (baseline)</td><td>0</td><td class="best">0.0</td></tr>
+                  <tr><td>5 cm</td><td class="bad">50</td><td class="best">0.0</td></tr>
+                  <tr><td>10 cm</td><td class="bad">100</td><td class="best">0.0</td></tr>
+                  <tr><td>15 cm</td><td class="bad">150</td><td class="best">0.0</td></tr>
+                  <tr><td>20 cm</td><td class="bad">200</td><td class="best">0.0</td></tr>
+                </tbody>
+              </table>
+              <p class="has-text-grey is-size-7 mt-2">
+                10 LIBERO-Spatial tasks, 8 translation directions (±X, ±Y, ±Z + diagonals),
+                6 perturbation magnitudes. Decode-only (no solver) for translational offsets.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Sensitivity -->
+        <div class="tab-content box" id="tab-sensitivity" style="border-radius:0 8px 8px 8px; margin-top:0;">
+          <div class="columns is-vcentered">
+            <div class="column is-6">
+              <div class="result-figure">
+                <img src="assets/sensitivity_analysis.png"
+                     alt="Noise sensitivity analysis: invariant space vs raw actions" />
+                <p class="fig-caption">
+                  Same Gaussian noise applied to invariants (green) vs raw action deltas (red).
+                  Invariant-space errors are 40&ndash;52% less damaging for position.
+                </p>
+              </div>
+            </div>
+            <div class="column is-6">
+              <h4 class="subtitle is-5">DHB-QR recommendation</h4>
+              <p class="mb-3">
+                DHB-DR (Euler angles) shows a mild 22&ndash;39% orientation penalty due to
+                Euler decomposition sensitivity. <strong>DHB-QR</strong> (quaternion variant)
+                resolves this:
+              </p>
+              <table class="table results-table is-fullwidth">
+                <thead>
+                  <tr><th>Variant</th><th>Position ratio</th><th>Orientation ratio</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>DHB-DR</td><td class="best">0.48&ndash;0.62&times;</td><td class="bad">1.22&ndash;1.39&times;</td></tr>
+                  <tr class="highlight-row"><td><strong>DHB-QR</strong></td>
+                    <td class="best"><strong>0.08&times;</strong></td>
+                    <td class="best"><strong>~1.0&times;</strong></td>
+                  </tr>
+                </tbody>
+              </table>
+              <p class="has-text-grey is-size-7 mt-2">
+                Ratio &lt; 1 means invariant-space noise is <em>less</em> damaging than raw-action noise.
+                DHB-QR achieves 12&times; better position robustness with orientation at parity.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Obstacle -->
+        <div class="tab-content box" id="tab-obstacle" style="border-radius:0 8px 8px 8px; margin-top:0;">
+          <div class="columns">
+            <div class="column is-7">
+              <div class="result-figure">
+                <img src="assets/adaptation_comparison.png"
+                     alt="Obstacle-aware adaptation: DHB-XR avoids obstacle, affine rotation collides" />
+                <p class="fig-caption">
+                  Left: DHB-XR decodes the invariant shape then projects waypoints above the obstacle
+                  &mdash; <strong>0 collisions</strong>, goal reached exactly.
+                  Right: Affine rotation has no obstacle mechanism &mdash; <strong>9 trajectory points collide</strong>.
+                </p>
+              </div>
+            </div>
+            <div class="column is-5">
+              <h4 class="subtitle is-5">3D Trajectory Adaptation</h4>
+              <video autoplay muted loop playsinline style="border-radius:8px; width:100%;">
+                <source src="assets/arc_3d_hq.mp4" type="video/mp4" />
+              </video>
+              <p class="has-text-grey is-size-7 mt-2">
+                DHB-XR encodes the arc shape (invariants), adapts to the new start/goal,
+                then smoothly avoids the obstacle (wall at z=0.52 m, 3 cm clearance from original arc peak).
+                Fatrop NLP enforces inequality constraints during trajectory retargeting.
+              </p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════ VIDEO DEMOS -->
+<section class="section" id="demos">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-10">
+        <h2 class="section-title">Video Demonstrations</h2>
+        <p class="section-subtitle">
+          LIBERO-Spatial task: <em>pick up the black bowl and place it on the plate</em>.
+          All videos show the same task with and without a 5 cm workspace offset.
+        </p>
+
+        <!-- Side-by-side comparison -->
+        <h4 class="subtitle is-5 mb-2">DHB-XR vs. Naive Replay at 5 cm Offset</h4>
+        <div class="video-card mb-5">
+          <video autoplay muted loop playsinline>
+            <source src="assets/comparison_5cm_sbs.mp4" type="video/mp4" />
+          </video>
+          <div class="video-label comparison">
+            Left: DHB-XR (adapted) &nbsp;|&nbsp; Right: Naive Replay &mdash; 5 cm workspace offset
+          </div>
+        </div>
+
+        <!-- 2x2 grid -->
+        <h4 class="subtitle is-5 mb-3">Individual Comparisons</h4>
+        <div class="columns">
+          <div class="column is-3">
+            <div class="video-card">
+              <video autoplay muted loop playsinline>
+                <source src="assets/dhb_0cm_720.mp4" type="video/mp4" />
+              </video>
+              <div class="video-label dhb">DHB-XR &mdash; 0 cm</div>
+            </div>
+          </div>
+          <div class="column is-3">
+            <div class="video-card">
+              <video autoplay muted loop playsinline>
+                <source src="assets/dhb_5cm_720.mp4" type="video/mp4" />
+              </video>
+              <div class="video-label dhb">DHB-XR &mdash; 5 cm offset</div>
+            </div>
+          </div>
+          <div class="column is-3">
+            <div class="video-card">
+              <video autoplay muted loop playsinline>
+                <source src="assets/naive_0cm_720.mp4" type="video/mp4" />
+              </video>
+              <div class="video-label naive">Naive Replay &mdash; 0 cm</div>
+            </div>
+          </div>
+          <div class="column is-3">
+            <div class="video-card">
+              <video autoplay muted loop playsinline>
+                <source src="assets/naive_5cm_720.mp4" type="video/mp4" />
+              </video>
+              <div class="video-label naive">Naive Replay &mdash; 5 cm offset</div>
+            </div>
+          </div>
+        </div>
+
+        <p class="has-text-grey is-size-7 mt-2">
+          Videos rendered at 720&times;720 @ 30 fps. Blended controller used for simulation execution
+          (original demo actions + DHB position correction, &alpha;=0.3). 100% task success at 0&ndash;5 cm offsets.
+        </p>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════ PIPELINE TIMING -->
+<section class="section" id="timing" style="background:#f8fafc;">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-10">
+        <h2 class="section-title">Runtime</h2>
+        <p class="section-subtitle">End-to-end pipeline timing on a single CPU core</p>
+        <div class="columns">
+          <div class="column is-8">
+            <figure class="image">
+              <img class="method-img" src="assets/fig4_pipeline.png" alt="DHB-XR pipeline timing breakdown" />
+            </figure>
+          </div>
+          <div class="column is-4">
+            <table class="table results-table is-fullwidth">
+              <thead><tr><th>Step</th><th>Time</th></tr></thead>
+              <tbody>
+                <tr><td>Encode (per demo)</td><td>~60 ms</td></tr>
+                <tr><td>Adapt (decode-only)</td><td>~86 ms</td></tr>
+                <tr><td>Adapt (Fatrop NLP)</td><td class="best">&le;7 ms</td></tr>
+                <tr><td>IK per step (embodik)</td><td>~60 &mu;s</td></tr>
+              </tbody>
+            </table>
+            <p class="has-text-grey is-size-7 mt-2">
+              Encode is one-time per demo. Adaptation at inference is &le;7 ms with Fatrop.
+              Per-step IK at batch size 1 on CPU.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════ BIBTEX -->
+<section class="section" id="bibtex">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-10">
+        <h2 class="section-title">BibTeX</h2>
+        <p class="mb-3">Please use the following citation if you find this work useful:</p>
+        <div class="bibtex-block" id="bibtex-text">
+          <button class="copy-btn" onclick="copyBibtex()">
+            <i class="fas fa-copy"></i> Copy
+          </button>
+<pre style="margin:0; background:transparent; color:inherit; padding:0;">@inproceedings{park2026dhbxr,
+  title     = {Beyond {FAST}: {49x} Compression with Zero Token Change
+               via {SE(3)}-Invariant Action Tokenization},
+  author    = {Park, Andy},
+  booktitle = {Conference on Robot Learning (CoRL)},
+  year      = {2026},
+  note      = {Under review}
+}</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════ FOOTER -->
+<footer class="footer footer-section">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-10 has-text-centered">
+        <p>
+          &copy; 2026 Andy Park.
+          Page template adapted from
+          <a href="https://nerfies.github.io/" target="_blank">Nerfies</a>
+          (CC BY-SA 4.0).
+          Code: <a href="https://github.com/robodreamer/dhb_xr" target="_blank">github.com/robodreamer/dhb_xr</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+
+<script>
+  // Tab switching
+  document.querySelectorAll('#result-tabs li[data-tab]').forEach(function(li) {
+    li.addEventListener('click', function() {
+      var tab = this.dataset.tab;
+      document.querySelectorAll('#result-tabs li').forEach(function(l) { l.classList.remove('is-active'); });
+      document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('is-active'); });
+      this.classList.add('is-active');
+      document.getElementById('tab-' + tab).classList.add('is-active');
+    });
+  });
+
+  // BibTeX copy
+  function copyBibtex() {
+    var text = document.querySelector('#bibtex-text pre').textContent;
+    navigator.clipboard.writeText(text).then(function() {
+      var btn = document.querySelector('.copy-btn');
+      btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+      setTimeout(function() {
+        btn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+      }, 2000);
+    });
+  }
+</script>
+
+</body>
+</html>
