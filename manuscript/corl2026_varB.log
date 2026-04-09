@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.4.9)  9 APR 2026 14:41
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.4.9)  9 APR 2026 14:54
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -569,20 +569,17 @@ Package xcolor Warning: Incompatible color definition on input line 19.
 
 Package xcolor Warning: Incompatible color definition on input line 21.
 
+[1
 
-Underfull \vbox (badness 1348) has occurred while \output is active []
 
- [1{/home/andypark/texlive/2023/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{/
-home/andypark/texlive/2023/texmf-dist/fonts/enc/dvips/base/8r.enc}
+{/home/andypark/texlive/2023/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{/hom
+e/andypark/texlive/2023/texmf-dist/fonts/enc/dvips/base/8r.enc}
 pdfTeX warning (ext4): destination with the same identifier (name{figure.1}) ha
 s been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
 l.31 
-     
-
-
- <./figures/teaser.pdf>]) (./related_work.tex
+      <./figures/teaser.pdf>]) (./related_work.tex
 
 Package xcolor Warning: Incompatible color definition on input line 9.
 
@@ -828,7 +825,7 @@ ype1/urw/courier/ucrr8a.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1
 w/times/utmb8a.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/urw/time
 s/utmr8a.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/urw/times/utmr
 i8a.pfb>
-Output written on corl2026_varB.pdf (9 pages, 329944 bytes).
+Output written on corl2026_varB.pdf (9 pages, 329914 bytes).
 PDF statistics:
  646 PDF objects out of 1000 (max. 8388607)
  314 compressed objects within 4 object streams
