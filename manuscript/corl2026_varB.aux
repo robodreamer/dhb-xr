@@ -7,8 +7,8 @@
 \citation{oat2026}
 \citation{libero2023}
 \def\@LN@column{1}
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces \textbf  {\textsc  {DHB-XR}{} overview.} \textbf  {(a)} Current VLAs degrade 14--18\% under spatial shift; \textsc  {DHB-XR}{} tokenizes in invariant space and adapts in 7\,ms. \textbf  {(b)} A single LIBERO demonstration decoded at 4 spatial offsets --- identical motion shape, 0.0\,mm goal error. \textbf  {(c)} \textsc  {DHB-XR}{} magnitude tokens: 0.0\% change under SE(3); \textsc  {FAST}{} and raw tokens: 99.1\%.}}{1}{figure.1}\protected@file@percent }
-\newlabel{fig:teaser}{{1}{1}{\textbf {\dhb {} overview.} \textbf {(a)} Current VLAs degrade 14--18\% under spatial shift; \dhb {} tokenizes in invariant space and adapts in 7\,ms. \textbf {(b)} A single LIBERO demonstration decoded at 4 spatial offsets --- identical motion shape, 0.0\,mm goal error. \textbf {(c)} \dhb {} magnitude tokens: 0.0\% change under SE(3); \fast {} and raw tokens: 99.1\%}{figure.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces \textbf  {\textsc  {DHB-XR}{} overview.} \textbf  {(a)} Current VLAs degrade 14--18\% under spatial shift; \textsc  {DHB-XR}{} adapts in 7\,ms. \textbf  {(b)} 6D pose adaptation: different start orientations and positions from a single demo --- shape preserved. \textbf  {(c)} Per-trial invariance: DHB magnitude MSE $\sim 10^{-33}$ (40 random SE(3) transforms) vs raw position MSE $\sim 0.5$.}}{1}{figure.1}\protected@file@percent }
+\newlabel{fig:teaser}{{1}{1}{\textbf {\dhb {} overview.} \textbf {(a)} Current VLAs degrade 14--18\% under spatial shift; \dhb {} adapts in 7\,ms. \textbf {(b)} 6D pose adaptation: different start orientations and positions from a single demo --- shape preserved. \textbf {(c)} Per-trial invariance: DHB magnitude MSE $\sim 10^{-33}$ (40 random SE(3) transforms) vs raw position MSE $\sim 0.5$}{figure.1}{}}
 \newlabel{fig:teaser@cref}{{[figure][1][]1}{[1][1][]1}{}{}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
 \newlabel{sec:intro}{{1}{1}{Introduction}{section.1}{}}
@@ -29,6 +29,7 @@
 \@writefile{toc}{\contentsline {paragraph}{Vision-Language-Action models.}{2}{section*.2}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Action tokenization.}{2}{section*.3}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Flow-matching policies.}{2}{section*.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{3D-aware VLA and data augmentation.}{2}{section*.5}\protected@file@percent }
 \citation{equivact2024}
 \citation{rise2024}
 \citation{soloperto2015,lee2018}
@@ -37,7 +38,6 @@
 \citation{soloperto2015,lee2018}
 \citation{wang2008rmf}
 \def\@LN@column{1}
-\@writefile{toc}{\contentsline {paragraph}{3D-aware VLA and data augmentation.}{3}{section*.5}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{SE(3)-equivariant manipulation policies.}{3}{section*.6}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Spatial structure and invariant representations.}{3}{section*.7}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {3}Method}{3}{section.3}\protected@file@percent }
@@ -113,7 +113,7 @@
 \newlabel{tab:tokenization_combined@cref}{{[table][2][]2}{[1][5][]7}{}{}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces \textbf  {SE(3) invariance verification.} \textit  {Left}: Magnitude $m_i$ before and after SE(3) transform — visually identical. \textit  {Right}: Difference magnified by $10^{15}$: machine-precision invariance.}}{7}{figure.4}\protected@file@percent }
 \newlabel{fig:invariance}{{4}{7}{\textbf {SE(3) invariance verification.} \textit {Left}: Magnitude $m_i$ before and after SE(3) transform — visually identical. \textit {Right}: Difference magnified by $10^{15}$: machine-precision invariance}{figure.4}{}}
-\newlabel{fig:invariance@cref}{{[figure][4][]4}{[1][6][]7}{}{}{}}
+\newlabel{fig:invariance@cref}{{[figure][4][]4}{[1][5][]7}{}{}{}}
 \@writefile{toc}{\contentsline {paragraph}{Limitations.}{7}{section*.19}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Future work.}{7}{section*.20}\protected@file@percent }
 \bibdata{references}

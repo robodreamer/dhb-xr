@@ -2,17 +2,18 @@
 \section{Introduction}
 \label{sec:intro}
 
+Vision-Language-Action (VLA) models have achieved remarkable in-distribution
+
 \begin{figure*}[t]
 \centering
-\includegraphics[width=\textwidth]{teaser}
-\caption{\textbf{\dhb{} in one figure.}
-\textbf{(a)} Current VLAs degrade 14--18\% under spatial shift; \dhb{} adapts in 7\,ms with 0\,mm error.
-\textbf{(b)} Same motion shape decoded at 4 different spatial offsets (0--15\,cm) from a single LIBERO demonstration --- all reach goal with 0.0\,mm endpoint error.
-\textbf{(c)} DHB magnitude tokens are perfectly stable under SE(3) transforms (0.0\%); raw action tokens change 99.1\%.}
+\includegraphics[width=0.95\textwidth]{teaser}
+\vspace{-3mm}
+\caption{\textbf{\dhb{} overview.}
+\textbf{(a)} VLAs degrade 14--18\% under spatial shift; \dhb{} adapts in 7\,ms with 0\,mm error.
+\textbf{(b)} 6D pose adaptation from a single demo --- different start orientations, shape preserved.
+\textbf{(c)} Per-trial invariance: DHB MSE $\sim 10^{-33}$ vs raw $\sim 0.5$ (40 SE(3) transforms).}
 \label{fig:teaser}
 \end{figure*}
-
-Vision-Language-Action (VLA) models have achieved remarkable in-distribution
 performance: StarVLA reaches 97.8\% on LIBERO~\cite{starvla_2026},
 OpenVLA-OFT reaches 97.1\%~\cite{openvla_oft_2025}, and
 ACoT-VLA reaches 98.5\%~\cite{acot_vla_2026}.
