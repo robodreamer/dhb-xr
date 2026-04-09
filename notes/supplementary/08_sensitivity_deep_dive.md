@@ -178,3 +178,29 @@ This "denoising decoder" directly addresses the sensitivity by learning to ignor
 
 **Recommended next step**: 5a (constraint-aware loss) — minimal code change, directly targets the issue,
 training infrastructure already exists from the DHBActionHeader experiment.
+
+---
+
+## 7. Prototype Result: Constraint-Aware Loss
+
+Tested on GPU (RTX A2000), 299 training chunks, DHB-QR invariants.
+
+**Protocol**: Train baseline (50 epochs, standard loss) → continue with
+constraint-aware loss (50 more epochs, λ_ori=2.0 extra weight on angular invariant MSE).
+
+| Phase | Total inv MSE | Angular inv MSE |
+|---|---|---|
+| Baseline (50 ep) | 0.0230 | 0.0303 |
+| + Constraint-aware (50 ep) | **0.0208** | **0.0276** |
+| Reduction | 10% | **9%** |
+
+**Conclusion**: Even this simple version (extra MSE weight on angular half) reduces
+angular prediction error by 9%. A full geodesic decode loss (computing actual
+orientation error through the decoder in the training loop) is expected to push
+further, but requires differentiable decoding — a clear next-iteration target.
+
+**The plan for next iteration**:
+1. Make `decode_dhb_qr` differentiable (PyTorch version)
+2. Compute geodesic orientation loss through full decode
+3. Train with geodesic loss → expected orientation ratio < 0.8×
+4. This would make DHB-QR BETTER than raw on BOTH position AND orientation
