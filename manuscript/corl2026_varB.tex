@@ -2,8 +2,8 @@
 \documentclass{article}
 \input{corl2026_main}
 
-\title{Beyond FAST: Geometry-Invariant Action Tokens\\
-       for Spatially Robust Manipulation Policies}
+\title{Beyond FAST: 49$\times$ Compression with Zero Token Change\\
+       via SE(3)-Invariant Action Tokenization}
 
 \author{Andy Park \and \textit{(co-authors TBD)}}
 
@@ -12,24 +12,29 @@
 
 %% ── ABSTRACT ────────────────────────────────────────────────────────────────
 \begin{abstract}
-Discrete action tokenization has become a cornerstone of modern
-Vision-Language-Action (VLA) models, enabling autoregressive action prediction
-with language-model backbones.
-Existing tokenizers---including the state-of-the-art \fast{} (DCT + BPE) and
-naive quantization---operate on raw absolute end-effector coordinates and are
-therefore \emph{geometry-unaware}: their token streams change completely under
-rigid-body transforms of the workspace.
-We show that tokenizing in $\se{3}$-\emph{invariant} space solves this problem.
-\dhb{} encodes trajectories via a Double-Reflection invariant frame, producing
-a token stream that is 41$\times$ more stable under spatial transforms than
-raw-action tokens, while achieving competitive compression (8 register tokens
-via an OAT-style encoder).
-Crucially, the invariant token stream enables a 7\,ms geometric adaptation step
-that re-targets demonstrations to new spatial configurations at test time---a
-capability \fast{} cannot provide.
-We evaluate on LIBERO-Spatial, LIBERO-PRO, and RoboCasa, demonstrating that
-\dhb{}'s geometric inductive bias improves both in-distribution performance
-and out-of-distribution spatial generalization.
+State-of-the-art action tokenizers for Vision-Language-Action (VLA) models ---
+\fast{} (DCT+BPE), OAT, ActionCodec --- operate on raw end-effector
+coordinates. Their tokens change $93.9\%$ under rigid-body transforms and
+offer no mechanism for spatial generalization.
+We show that tokenizing in $\se{3}$-\emph{invariant} space simultaneously
+improves compression and adds geometric stability.
+\dhb{} encodes trajectories via Double-Reflection invariant frames; applying
+\fast{} to the resulting magnitude invariants yields $\mathbf{49.8\times}$
+compression --- $\mathbf{2.4\times}$ better than \fast{} on raw coordinates ---
+with $\mathbf{0.0\%}$ token change under arbitrary SE(3) transforms.
+An OAT-style register encoder on the same invariants achieves
+$k{=}1$ prefix MSE $= 0.00005$, meaning a single token reconstructs the full
+motion shape.
+Because the invariant targets are SE(3)-invariant by construction, data
+augmentation with arbitrary rigid-body transforms is \emph{free} --- no label
+recomputation required.
+On LIBERO-Spatial (10 tasks), \dhb{} achieves $0.0\,\text{mm}$ goal error at
+perturbations up to $20\,\text{cm}$ and $100\%$ simulated task success at
+$0$--$5\,\text{cm}$ offsets where naive replay degrades.
+A jointly-trained invariant predictor across all 10 tasks reaches
+$0.023$ MSE, confirming that invariants are learnable.
+\dhb{} is a drop-in representation layer: any existing tokenizer inherits
+perfect geometric stability simply by operating on invariant input.
 \end{abstract}
 
 %% ── SHARED SECTIONS ─────────────────────────────────────────────────────────

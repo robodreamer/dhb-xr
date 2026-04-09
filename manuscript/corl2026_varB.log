@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.4.9)  9 APR 2026 17:31
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.4.9)  9 APR 2026 17:45
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -548,7 +548,7 @@ LaTeX Font Info:    Trying to load font information for OT1+pcr on input line 1
 File: ot1pcr.fd 2001/06/04 font definitions for OT1/pcr.
 )
 LaTeX Font Info:    Trying to load font information for OT1+phv on input line 3
-3.
+8.
 
 (/home/andypark/texlive/2023/texmf-dist/tex/latex/psnfss/ot1phv.fd
 File: ot1phv.fd 2020/03/25 scalable font definitions for OT1/phv.
@@ -564,7 +564,7 @@ Package xcolor Warning: Incompatible color definition on input line 8.
 Package xcolor Warning: Incompatible color definition on input line 10.
 
 
-Underfull \vbox (badness 1248) has occurred while \output is active []
+Underfull \vbox (badness 1648) has occurred while \output is active []
 
  [1
 
@@ -621,7 +621,7 @@ Package xcolor Warning: Incompatible color definition on input line 65.
 Package xcolor Warning: Incompatible color definition on input line 70.
 
 ) (./methods.tex [2]
-<figures/teaser.pdf, id=126, 400.73935pt x 175.59633pt>
+<figures/teaser.pdf, id=123, 400.73935pt x 175.59633pt>
 File: figures/teaser.pdf Graphic file (type pdf)
 <use figures/teaser.pdf>
 Package pdftex.def Info: figures/teaser.pdf  used on input line 10.
@@ -630,7 +630,7 @@ Package pdftex.def Info: figures/teaser.pdf  used on input line 10.
 
 Package xcolor Warning: Incompatible color definition on input line 23.
 
-<figures/invariant_signals.pdf, id=128, 250.17276pt x 157.00595pt>
+<figures/invariant_signals.pdf, id=125, 250.17276pt x 157.00595pt>
 File: figures/invariant_signals.pdf Graphic file (type pdf)
 <use figures/invariant_signals.pdf>
 Package pdftex.def Info: figures/invariant_signals.pdf  used on input line 42.
@@ -644,19 +644,13 @@ Package xcolor Warning: Incompatible color definition on input line 53.
 
 Package xcolor Warning: Incompatible color definition on input line 70.
 
-
-Underfull \vbox (badness 3838) has occurred while \output is active []
-
-
-Underfull \vbox (badness 3838) has occurred while \output is active []
-
- [3
+[3
 pdfTeX warning (ext4): destination with the same identifier (name{figure.1}) ha
 s been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.75 \end{align}
-                 <./figures/teaser.pdf>]
+l.71 \begin{align}
+                   <./figures/teaser.pdf>]
 Underfull \hbox (badness 5147) in paragraph at lines 91--94
  []\OT1/ptm/b/n/10 DHB-QR vari-ant.[] \OT1/ptm/m/n/10 Re-plac-ing Eu-ler an-gle
 s with unit quater-nions avoids gim-bal lock:
@@ -708,7 +702,7 @@ Package xcolor Warning: Incompatible color definition on input line 20.
 
 Package xcolor Warning: Incompatible color definition on input line 21.
 
-<figures/results_combined.pdf, id=324, 250.77753pt x 120.87094pt>
+<figures/results_combined.pdf, id=325, 250.77753pt x 120.87094pt>
 File: figures/results_combined.pdf Graphic file (type pdf)
 <use figures/results_combined.pdf>
 Package pdftex.def Info: figures/results_combined.pdf  used on input line 27.
@@ -768,7 +762,7 @@ Package xcolor Warning: Incompatible color definition on input line 130.
 
 Package xcolor Warning: Incompatible color definition on input line 143.
 
-<figures/invariance_verification.pdf, id=426, 249.53145pt x 99.18994pt>
+<figures/invariance_verification.pdf, id=427, 249.53145pt x 99.18994pt>
 File: figures/invariance_verification.pdf Graphic file (type pdf)
 <use figures/invariance_verification.pdf>
 Package pdftex.def Info: figures/invariance_verification.pdf  used on input lin
@@ -790,13 +784,13 @@ pdfTeX warning (ext4): destination with the same identifier (name{table.3}) has
                                                   \__shipout_drop_firstpage_...
 l.2 \section
             {Discussion}]
-<figures/sensitivity_analysis.pdf, id=441, 250.24365pt x 120.19292pt>
+<figures/sensitivity_analysis.pdf, id=442, 250.24365pt x 120.19292pt>
 File: figures/sensitivity_analysis.pdf Graphic file (type pdf)
 <use figures/sensitivity_analysis.pdf>
 Package pdftex.def Info: figures/sensitivity_analysis.pdf  used on input line 2
 6.
 (pdftex.def)             Requested size: 397.48499pt x 190.93158pt.
-<figures/adaptation_comparison.pdf, id=442, 244.8256pt x 260.32443pt>
+<figures/adaptation_comparison.pdf, id=443, 244.8256pt x 260.32443pt>
 File: figures/adaptation_comparison.pdf Graphic file (type pdf)
 <use figures/adaptation_comparison.pdf>
 Package pdftex.def Info: figures/adaptation_comparison.pdf  used on input line 
@@ -862,7 +856,7 @@ Package xcolor Warning: Incompatible color definition on input line 47.
 
 Package xcolor Warning: Incompatible color definition on input line 54.
 
-) [11] (./corl2026_varB.aux)
+[11]) [12] (./corl2026_varB.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-03-20>
@@ -871,35 +865,36 @@ Package rerunfilecheck Info: File `corl2026_varB.out' has not changed.
 (rerunfilecheck)             Checksum: 7A76FE5ED949EC68F97767FEE1112FD6;2548.
  ) 
 Here is how much of TeX's memory you used:
- 13781 strings out of 468830
- 223981 string characters out of 5451683
+ 13807 strings out of 468830
+ 224285 string characters out of 5451683
  667239 words of memory out of 5000000
- 42345 multiletter control sequences out of 15000+600000
- 660372 words of font info for 97 fonts, out of 8000000 for 9000
+ 42362 multiletter control sequences out of 15000+600000
+ 665010 words of font info for 114 fonts, out of 8000000 for 9000
  319 hyphenation exceptions out of 8191
- 89i,11n,96p,836b,556s stack positions out of 10000i,1000n,20000p,200000b,200000s
-</home/andypark/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10
-.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmm
-i10.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/
-cmmi7.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/c
-m/cmmi9.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/public/amsfonts
-/cm/cmr10.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/public/amsfon
-ts/cm/cmr7.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/public/amsfo
-nts/cm/cmr9.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/public/amsf
-onts/cm/cmsy10.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/public/a
-msfonts/cm/cmsy6.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/public
-/amsfonts/cm/cmsy7.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/publ
-ic/amsfonts/cm/cmsy9.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/pu
-blic/amsfonts/symbols/msbm10.pfb></home/andypark/texlive/2023/texmf-dist/fonts/
-type1/urw/courier/ucrr8a.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type
-1/urw/helvetic/uhvr8a.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/u
-rw/times/utmb8a.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/urw/tim
-es/utmr8a.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/urw/times/utm
-ri8a.pfb>
-Output written on corl2026_varB.pdf (11 pages, 395238 bytes).
+ 89i,11n,96p,836b,593s stack positions out of 10000i,1000n,20000p,200000b,200000s
+</home/andypark/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10
+.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cme
+x10.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/
+cmmi10.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/
+cm/cmmi7.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/public/amsfont
+s/cm/cmmi9.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/public/amsfo
+nts/cm/cmr10.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/public/ams
+fonts/cm/cmr7.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/public/am
+sfonts/cm/cmr9.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/public/a
+msfonts/cm/cmsy10.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/publi
+c/amsfonts/cm/cmsy6.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/pub
+lic/amsfonts/cm/cmsy7.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/p
+ublic/amsfonts/cm/cmsy9.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1
+/public/amsfonts/symbols/msbm10.pfb></home/andypark/texlive/2023/texmf-dist/fon
+ts/type1/urw/courier/ucrr8a.pfb></home/andypark/texlive/2023/texmf-dist/fonts/t
+ype1/urw/helvetic/uhvr8a.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type
+1/urw/times/utmb8a.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/urw/
+times/utmr8a.pfb></home/andypark/texlive/2023/texmf-dist/fonts/type1/urw/times/
+utmri8a.pfb>
+Output written on corl2026_varB.pdf (12 pages, 406118 bytes).
 PDF statistics:
- 798 PDF objects out of 1000 (max. 8388607)
- 355 compressed objects within 4 object streams
- 95 named destinations out of 1000 (max. 500000)
+ 807 PDF objects out of 1000 (max. 8388607)
+ 361 compressed objects within 4 object streams
+ 96 named destinations out of 1000 (max. 500000)
  151 words of extra memory for PDF output out of 10000 (max. 10000000)
 

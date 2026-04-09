@@ -130,16 +130,23 @@ geometric stability simply by operating on DHB invariants rather than raw coordi
 
 \section*{Conclusion}
 
-We presented \dhb{}, a framework for SE(3)-invariant trajectory encoding and
-geometric adaptation for VLA spatial generalization.
-DHB magnitude tokens are provably stable ($0.0\%$ change under SE(3) transforms
-vs $99.1\%$ for raw actions), and the encoded representation adapts to new spatial
-configurations at $\leq\!7\,\text{ms}$ without retraining.
-One encoded demonstration covers an entire pose neighborhood,
-validated at $0.00\,\text{mm}$ goal error under $10\,\text{cm}$ perturbations.
-\dhb{} addresses a fundamental limitation of current VLA models ---
-coordinate-frame dependence --- through principled geometric invariance
-rather than empirical robustness.
+We presented \dhb{}, an SE(3)-invariant action representation that turns
+any existing tokenizer into a spatially robust one.
+The central result: applying \fast{} to DHB magnitude invariants achieves
+$49.8\times$ compression --- $2.4\times$ better than \fast{} on raw coordinates ---
+with $\mathbf{0.0\%}$ token change under arbitrary rigid-body transforms
+(vs $93.9\%$ on raw).
+An OAT register encoder on the same invariants produces a \emph{triple-invariant}
+tokenization: invariant to SE(3) transforms, to prefix length ($k{=}1$ MSE $= 0.00005$),
+and to token order.
+On LIBERO-Spatial, \dhb{} achieves $0.0\,\text{mm}$ goal error at
+perturbations up to $20\,\text{cm}$ across 10 tasks and 8 directions,
+$100\%$ simulated task success at $0$--$5\,\text{cm}$ offsets,
+and $0.023$ invariant MSE with a single multi-task predictor.
+Data augmentation with SE(3) transforms is free because the invariant
+supervision signal does not change --- a property unique to this representation.
+\dhb{} is not an alternative to FAST or OAT; it is a \emph{composable layer}
+that makes them spatially robust by construction.
 
 \section*{Acknowledgments}
 % [TBD]
