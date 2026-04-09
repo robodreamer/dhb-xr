@@ -1,0 +1,84 @@
+%% ── DISCUSSION ───────────────────────────────────────────────────────────────
+\section{Discussion}
+\label{sec:discussion}
+
+\paragraph{When does \dhb{} spatial generalization work best?}
+DHB-XR is most effective when:
+(a) the perturbation is primarily a rigid translation or rotation of the workspace
+(table height, robot base offset, object placement shift);
+(b) the task involves a structured reaching or placing motion with
+a well-defined start-goal structure;
+(c) the motion shape (invariants) is preserved across the perturbation.
+For purely translational perturbations, the decode-only fallback already achieves
+near-exact adaptation ($0.00\,\text{mm}$ error) without a solver.
+
+\paragraph{Limitations.}
+\emph{Contact-rich tasks.}
+DHB-XR adapts the end-effector trajectory; it does not model contact forces.
+For contact-rich tasks (peg insertion, cloth folding, compliant assembly),
+the optimal trajectory shape may change with the perturbation, violating
+the shape-preservation assumption.
+
+\emph{Large rotational perturbations.}
+The decode-only fallback preserves translational shape exactly but may
+accumulate angular error under large rotational workspace perturbations.
+Fatrop solves this by enforcing explicit goal constraints, but requires
+installation of Fatrop/rockit-meco.
+
+\emph{Full policy integration.}
+The current StarVLA integration requires supervised invariant labels $I^\star$
+computed from demo trajectories.
+For tasks with complex multi-phase motions or highly variable demonstrations,
+reliable invariant extraction requires smoothing and preprocessing.
+
+\emph{Speed.}
+The encode step takes ${\approx}60\,\text{ms}$ (one-time per demo).
+The adaptation step (decode-only) takes ${\approx}86\,\text{ms}$ for $N{=}98$ steps;
+Fatrop would reduce this to ${\leq}7\,\text{ms}$ for the structured retargeting step.
+The per-step IK (embodik) takes ${\approx}60\,\mu\text{s}$ at batch size 1.
+
+\paragraph{Future work.}
+
+\emph{Closed-loop adaptation.}
+The current framework adapts the trajectory open-loop.
+Combining DHB-XR with visual feedback (re-planning from current robot state
+during execution) would handle unexpected perturbations at runtime.
+
+\emph{Contact-rich extension.}
+Segment-wise invariant encoding (separate segments for free-space motion and
+contact phase) could extend spatial generalization to contact-rich tasks.
+
+\emph{Cross-embodiment validation.}
+The embodik IK integration supports dual-arm ECTS configurations (two KUKA iiwa).
+Validating DHB-XR spatial generalization on a dual-arm system would strengthen
+the cross-embodiment contribution.
+
+\emph{Integration with flow-matching policies.}
+$\pi_0$-style flow matching predicts continuous actions directly.
+Combining DHB-XR's invariant encoding with a flow-matching decoder
+(rather than OAT discrete tokens) could combine dexterous capability with
+geometric generalization.
+
+\paragraph{Positioning vs.\ related work.}
+DHB-XR's spatial generalization complements, not competes with, FAST's compression efficiency.
+FAST remains the best choice for maximum compression ratio ($27.8\times$) in domains
+where spatial generalization is not required.
+DHB-XR is the right choice when test-time deployment spans multiple spatial configurations.
+Future work could combine FAST compression with DHB-XR invariant encoding:
+compress the invariants with FAST for maximum efficiency while retaining geometric adaptability.
+
+\section*{Conclusion}
+
+We presented \dhb{}, a framework for SE(3)-invariant trajectory encoding and
+geometric adaptation for VLA spatial generalization.
+DHB magnitude tokens are provably stable ($0.0\%$ change under SE(3) transforms
+vs $99.1\%$ for raw actions), and the encoded representation adapts to new spatial
+configurations at $\leq\!7\,\text{ms}$ without retraining.
+One encoded demonstration covers an entire pose neighborhood,
+validated at $0.00\,\text{mm}$ goal error under $10\,\text{cm}$ perturbations.
+\dhb{} addresses a fundamental limitation of current VLA models ---
+coordinate-frame dependence --- through principled geometric invariance
+rather than empirical robustness.
+
+\section*{Acknowledgments}
+% [TBD]

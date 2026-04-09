@@ -1,0 +1,44 @@
+% Draft B: Geometry-Aware Action Tokenization framing
+\documentclass{article}
+\input{corl2026_main}
+
+\title{Geometry-Aware Action Tokenization\\
+       for Vision-Language-Action Models}
+
+\author{Andy Park \and \textit{(co-authors TBD)}}
+
+\begin{document}
+\maketitle
+
+%% ── ABSTRACT ────────────────────────────────────────────────────────────────
+\begin{abstract}
+Discrete action tokenization has become a cornerstone of modern
+Vision-Language-Action (VLA) models, enabling autoregressive action prediction
+with language-model backbones.
+Existing tokenizers---including the state-of-the-art \fast{} (DCT + BPE) and
+naive quantization---operate on raw absolute end-effector coordinates and are
+therefore \emph{geometry-unaware}: their token streams change completely under
+rigid-body transforms of the workspace.
+We show that tokenizing in $\se{3}$-\emph{invariant} space solves this problem.
+\dhb{} encodes trajectories via a Double-Reflection invariant frame, producing
+a token stream that is 41$\times$ more stable under spatial transforms than
+raw-action tokens, while achieving competitive compression (8 register tokens
+via an OAT-style encoder).
+Crucially, the invariant token stream enables a 7\,ms geometric adaptation step
+that re-targets demonstrations to new spatial configurations at test time---a
+capability \fast{} cannot provide.
+We evaluate on LIBERO-Spatial, LIBERO-PRO, and RoboCasa, demonstrating that
+\dhb{}'s geometric inductive bias improves both in-distribution performance
+and out-of-distribution spatial generalization.
+\end{abstract}
+
+%% ── SHARED SECTIONS ─────────────────────────────────────────────────────────
+\input{intro_varB}
+\input{related_work}
+\input{methods}
+\input{experiments}
+\input{discussion}
+
+\bibliography{references}
+% bibliographystyle set by corl_2026.sty (corlabbrvnat)
+\end{document}

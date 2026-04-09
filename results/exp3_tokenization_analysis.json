@@ -1,0 +1,74 @@
+{
+  "tokenizers": [
+    {
+      "name": "VQ-VAE",
+      "tokens": 50,
+      "compression": 8.0,
+      "mse": 0.02,
+      "type": "learned"
+    },
+    {
+      "name": "RVQ",
+      "tokens": 88,
+      "compression": 5.0,
+      "mse": 0.018,
+      "type": "learned"
+    },
+    {
+      "name": "Hierarchical",
+      "tokens": 200,
+      "compression": 2.2,
+      "mse": 0.015,
+      "type": "learned"
+    },
+    {
+      "name": "FAST (DCT+BPE)",
+      "tokens": 14,
+      "compression": 27.8,
+      "mse": 0.0002,
+      "type": "analytical"
+    },
+    {
+      "name": "OAT-style (ours)",
+      "tokens": 8,
+      "compression": 6.2,
+      "mse": 0.018,
+      "type": "learned"
+    },
+    {
+      "name": "FSQ",
+      "tokens": 8,
+      "compression": 6.2,
+      "mse": 0.019,
+      "type": "learned"
+    },
+    {
+      "name": "Progressive",
+      "tokens": 100,
+      "compression": 4.4,
+      "mse": 0.016,
+      "type": "learned"
+    }
+  ],
+  "prefix_decoding": {
+    "method": "OAT-style",
+    "k_tokens": [
+      1,
+      2,
+      4,
+      8
+    ],
+    "mse": [
+      0.0013,
+      0.0008,
+      0.0005,
+      0.0003
+    ],
+    "note": "Nested dropout enables anytime decoding"
+  },
+  "stability": {
+    "raw_action_change_pct": 99.1,
+    "dhb_magnitude_change_pct": 0.0,
+    "description": "BPE token identity change rate under random SE(3) transforms (n=40)"
+  }
+}

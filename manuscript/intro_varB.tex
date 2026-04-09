@@ -1,0 +1,49 @@
+%% INTRO — Draft B: Geometry-Aware Action Tokenization framing
+\section{Introduction}
+\label{sec:intro}
+
+Discrete action tokenization has become a cornerstone of modern VLA models.
+\fast{}~\cite{fast2025} achieves $27.8\times$ compression via DCT+BPE,
+enabling dexterous tasks where per-dimension binning fails.
+\oat{}~\cite{oat2026} introduces ordered token spaces via register encoders and
+nested dropout, enabling prefix-decodable autoregressive policies.
+These advances have driven VLA accuracy to $94$--$98\%$ on LIBERO~\cite{libero2023}.
+
+\textbf{Yet all current action tokenizers share a critical blind spot: they are
+geometry-unaware.}
+\fast{} tokenizes raw world-frame trajectories; \oat{} tokenizes raw action space.
+A trajectory translated $10\,\text{cm}$ produces an entirely different token stream.
+Raw action tokens change $99.1\%$ of their identity under random rigid-body transforms ---
+spatial robustness cannot emerge from such representations by construction,
+which explains the 14--18\% performance drops observed across all VLA models
+under spatial distribution shift.
+
+\textbf{We show that the fix is to tokenize in $\se{3}$-invariant space.}
+\dhb{} encodes trajectories via the Double-Reflection invariant frame,
+separating motion shape from global pose.
+Magnitude tokens change $0.0\%$ under any rigid-body transform.
+The invariant token stream enables geometric adaptation at $\leq\!7\,\text{ms}$:
+re-ground the encoded shape to any new target pose without retraining or re-encoding.
+\fast{} can compress actions; \dhb{} can generalize across poses.
+
+\textit{FAST compresses in raw space and cannot generalize spatially.
+DHB-XR tokenizes in invariant space and adapts geometrically at 7\,ms.}
+
+\paragraph{Contributions.}
+\begin{enumerate}
+\item \textbf{Geometry-aware invariant tokenization.}
+First action tokenizer with provable SE(3)-invariance: $0.0\%$ magnitude token change
+vs $99.1\%$ raw, with 8-token OAT-style compression and prefix decodability.
+
+\item \textbf{Spatial generalization.}
+$0.0\,\text{mm}$ goal error at $10\,\text{cm}$ perturbation vs $100.0\,\text{mm}$ naive,
+validated end-to-end in simulation.
+
+\item \textbf{StarVLA ablation head.}
+\texttt{DHBActionHeader} as a drop-in StarVLA module: clean ablation of FAST head
+vs MLP head vs \dhb{} head on the same Qwen2.5-VL backbone.
+
+\item \textbf{Sample efficiency.}
+$N{=}1$ invariant demo covers any pose neighborhood;
+same generalization as $N{=}20$ raw demos.
+\end{enumerate}

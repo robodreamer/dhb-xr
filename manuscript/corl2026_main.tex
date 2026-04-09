@@ -1,0 +1,25 @@
+% CoRL 2026 — DHB-XR Invariant VLA
+% Shared skeleton. Variant top-level files (varA/B/C) \input this file's
+% shared sections and override abstract + intro + conclusion.
+%
+% To compile:  pdflatex corl2026_varA.tex
+
+\usepackage{corl_2026}   % Official CoRL 2026 style — loads natbib, hyperref, geometry
+\usepackage{times}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{multirow}
+% hyperref already loaded by corl_2026.sty
+\usepackage{cleveref}
+\usepackage{xcolor}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+% Shared macros
+\newcommand{\dhb}{\textsc{DHB-XR}}
+\newcommand{\fast}{\textsc{FAST}}
+\newcommand{\oat}{\textsc{OAT}}
+\newcommand{\se}[1]{\ensuremath{\mathrm{SE}(#1)}}
+\newcommand{\so}[1]{\ensuremath{\mathrm{SO}(#1)}}
+\newcommand{\fatrop}{\textsc{Fatrop}}

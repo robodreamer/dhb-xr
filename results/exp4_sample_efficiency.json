@@ -1,0 +1,22 @@
+{
+  "n_demos": [
+    1,
+    2,
+    5,
+    10
+  ],
+  "dhb_goal_error_mm": [
+    4.2001807449902775e-13,
+    6.134208371521958e-13,
+    4.967537098969692e-13,
+    7.044631296207639e-13
+  ],
+  "naive_goal_error_mm": [
+    100.0,
+    100.00000000000001,
+    100.00000000000001,
+    100.0
+  ],
+  "perturbation_m": 0.1,
+  "insight": "DHB achieves ~0mm goal error with N=1 demo; naive replay error stays ~100mm regardless of N"
+}

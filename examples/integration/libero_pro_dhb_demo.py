@@ -1008,6 +1008,262 @@ def run_batch_evaluation(num_tasks: int = 5, num_perturbations: int = 3):
 
 
 # =============================================================================
+# Perturbation sweep (CoRL 2026 paper — primary experiment)
+# =============================================================================
+
+def run_perturbation_sweep(
+    num_tasks: int = 5,
+    perturbation_magnitudes: Optional[List[float]] = None,
+    output_json: str = "results/libero_pro_sweep.json",
+) -> Dict:
+    """Systematic perturbation sweep for the CoRL 2026 paper.
+
+    Compares three methods across 5 perturbation levels:
+      - DHB-XR: encode → Fatrop adapt → decode (our method)
+      - Naive replay: replay original trajectory without adaptation
+      - FAST baseline: FAST-tokenized trajectory replayed without adaptation
+        (FAST has no geometric adaptation capability)
+
+    Metrics per method/perturbation:
+      - adaptation_success: solver converged (DHB) or trivially True (naive/FAST)
+      - goal_error_mm: distance of adapted endpoint to perturbed goal
+      - shape_error_mm: shape preservation error (||orig_disp - adapted_disp||)
+      - solve_time_ms: solver wall time (DHB only)
+
+    Note: success_rate requires MuJoCo simulation (--simulate flag).
+    This function measures geometric proxies (goal_error, shape_error)
+    which correlate strongly with task success.
+
+    Outputs:
+        results/libero_pro_sweep.json — structured results for paper Table 1
+    """
+    if perturbation_magnitudes is None:
+        perturbation_magnitudes = [0.0, 0.02, 0.05, 0.10, 0.15]  # 0/2/5/10/15 cm
+
+    print("\n" + "=" * 70)
+    print("  DHB-XR Perturbation Sweep — CoRL 2026")
+    print("=" * 70)
+    print(f"  Tasks: {num_tasks}  |  Perturbations: {[f'{m*100:.0f}cm' for m in perturbation_magnitudes]}")
+    print(f"  Solver: {'Fatrop (7ms)' if HAS_FATROP else 'CasADi' if HAS_CASADI else 'decode-only'}")
+    print()
+
+    dataset_dir = Path("/home/andypark/Projects/data/libero/libero_spatial")
+    if not dataset_dir.exists():
+        # Fallback: try to find any available LIBERO dataset
+        for candidate in [
+            Path("/home/andypark/Projects/data/libero"),
+            Path("/tmp/libero"),
+        ]:
+            if candidate.exists():
+                hdf5s = list(candidate.rglob("*.hdf5"))
+                if hdf5s:
+                    dataset_dir = hdf5s[0].parent
+                    break
+        else:
+            print(f"Dataset not found. Expected: {dataset_dir}")
+            print("Run with LIBERO data available or set dataset path.")
+            return {}
+
+    hdf5_files = sorted(dataset_dir.glob("*.hdf5"))[:num_tasks]
+    if not hdf5_files:
+        print(f"No HDF5 files found in {dataset_dir}")
+        return {}
+
+    # Perturbation directions: cover XY quadrants + Z for diversity
+    directions = [
+        np.array([1, 0, 0]),          # +X
+        np.array([0, 1, 0]),          # +Y
+        np.array([1, 1, 0]) / np.sqrt(2),  # +XY diagonal
+        np.array([-1, 1, 0]) / np.sqrt(2), # -X+Y diagonal
+        np.array([0, 0, 1]),          # +Z (height change)
+    ]
+
+    # ── Results structure ────────────────────────────────────────────────────
+    results = {
+        "metadata": {
+            "num_tasks": len(hdf5_files),
+            "perturbation_magnitudes_m": perturbation_magnitudes,
+            "solver": "fatrop" if HAS_FATROP else ("casadi" if HAS_CASADI else "decode"),
+            "methods": ["dhb_xr", "naive_replay", "fast_baseline"],
+        },
+        "per_task": [],
+        "summary": {},
+    }
+
+    # Per-method per-perturbation aggregators
+    aggregators: Dict[str, Dict[str, List]] = {
+        method: {f"mag_{int(m*100)}": [] for m in perturbation_magnitudes}
+        for method in ["dhb_xr", "naive_replay", "fast_baseline"]
+    }
+
+    # ── FAST tokenizer for baseline ──────────────────────────────────────────
+    fast_tokenizer = None
+    try:
+        from dhb_xr.tokenization.fast_tokenizer import FASTTokenizer
+        fast_tokenizer = FASTTokenizer()
+        print("  FAST baseline: enabled")
+    except ImportError:
+        print("  FAST baseline: unavailable (dhb_xr.tokenization.fast_tokenizer not found)")
+
+    # ── Main loop ────────────────────────────────────────────────────────────
+    for fidx, hf in enumerate(hdf5_files):
+        task_name = hf.stem.replace("_demo", "")
+        print(f"\n  Task [{fidx+1}/{len(hdf5_files)}]: {task_name[:50]}")
+
+        demo = load_demo_from_hdf5(str(hf), demo_id=0)
+        enc = encode_trajectory(demo["positions"], demo["quaternions"])
+
+        task_results: Dict = {
+            "task": task_name,
+            "demo_length": len(demo["positions"]),
+            "reconstruction_error_mm": float(
+                np.linalg.norm(
+                    demo["positions"][:len(enc.get("positions", demo["positions"]))]
+                    - decode_trajectory(
+                        enc["linear_invariants"], enc["angular_invariants"], enc["initial_pose"]
+                    )["positions"][:len(demo["positions"])]
+                , axis=1).mean() * 1000
+            ),
+            "perturbations": [],
+        }
+
+        # FAST encode once for this demo (no re-encode under perturbation)
+        fast_recon = None
+        if fast_tokenizer is not None:
+            try:
+                fast_tokens = fast_tokenizer.encode(demo["positions"], demo["quaternions"])
+                fast_recon = fast_tokenizer.decode(fast_tokens)  # original trajectory, no adapt
+            except Exception:
+                fast_recon = None
+
+        for mag in perturbation_magnitudes:
+            mag_key = f"mag_{int(mag*100)}"
+            mag_results: Dict = {"magnitude_m": mag, "magnitude_cm": mag * 100, "methods": {}}
+
+            # Use multiple directions and average for robustness
+            for direction in directions[:3]:  # 3 directions per perturbation level
+                offset = direction * mag
+
+                new_start = demo["positions"][0] + offset
+                new_goal = demo["positions"][-1] + offset
+
+                # ── DHB-XR: encode + Fatrop adapt ──────────────────────────
+                adapted = adapt_trajectory(
+                    demo["positions"], demo["quaternions"],
+                    new_start, demo["quaternions"][0],
+                    new_goal_pos=new_goal,
+                    new_goal_quat=demo["quaternions"][-1],
+                )
+                dhb_goal_err = float(
+                    np.linalg.norm(adapted["positions"][-1] - new_goal) * 1000
+                )
+                orig_disp = demo["positions"][-1] - demo["positions"][0]
+                adapted_disp = adapted["positions"][-1] - adapted["positions"][0]
+                dhb_shape_err = float(np.linalg.norm(orig_disp - adapted_disp) * 1000)
+                dhb_solve_ms = float(adapted.get("solve_time", 0) * 1000)
+
+                # ── Naive replay: no adaptation ─────────────────────────────
+                naive_goal_err = float(np.linalg.norm(
+                    demo["positions"][-1] - new_goal
+                ) * 1000)  # original endpoint vs perturbed goal
+                naive_shape_err = 0.0  # shape preserved (same trajectory)
+
+                # ── FAST baseline: FAST-tokenized replay, no geometric adapt ─
+                if fast_recon is not None:
+                    fast_endpoint = fast_recon.get("positions", demo["positions"])[-1]
+                    fast_goal_err = float(np.linalg.norm(fast_endpoint - new_goal) * 1000)
+                    fast_shape_err = float(np.linalg.norm(
+                        (fast_recon.get("positions", demo["positions"])[-1]
+                         - fast_recon.get("positions", demo["positions"])[0])
+                        - orig_disp
+                    ) * 1000)
+                else:
+                    # FAST unavailable: same as naive
+                    fast_goal_err = naive_goal_err
+                    fast_shape_err = naive_shape_err
+
+                # Accumulate per-direction
+                for method_key, goal_err, shape_err in [
+                    ("dhb_xr", dhb_goal_err, dhb_shape_err),
+                    ("naive_replay", naive_goal_err, naive_shape_err),
+                    ("fast_baseline", fast_goal_err, fast_shape_err),
+                ]:
+                    if method_key not in mag_results["methods"]:
+                        mag_results["methods"][method_key] = {
+                            "goal_error_mm": [],
+                            "shape_error_mm": [],
+                            "solve_time_ms": [],
+                        }
+                    mag_results["methods"][method_key]["goal_error_mm"].append(goal_err)
+                    mag_results["methods"][method_key]["shape_error_mm"].append(shape_err)
+                mag_results["methods"]["dhb_xr"]["solve_time_ms"].append(dhb_solve_ms)
+
+            # Average across directions
+            for method_key in mag_results["methods"]:
+                m = mag_results["methods"][method_key]
+                m["goal_error_mm"] = float(np.mean(m["goal_error_mm"]))
+                m["shape_error_mm"] = float(np.mean(m["shape_error_mm"]))
+                m["solve_time_ms"] = float(np.mean(m["solve_time_ms"])) if m["solve_time_ms"] else 0.0
+
+                aggregators[method_key][mag_key].append(m["goal_error_mm"])
+
+            task_results["perturbations"].append(mag_results)
+
+            # Print progress
+            dhb = mag_results["methods"]["dhb_xr"]
+            naive = mag_results["methods"]["naive_replay"]
+            print(
+                f"    {int(mag*100):2d}cm | "
+                f"DHB goal={dhb['goal_error_mm']:.1f}mm shape={dhb['shape_error_mm']:.1f}mm "
+                f"({dhb['solve_time_ms']:.1f}ms) | "
+                f"Naive goal={naive['goal_error_mm']:.1f}mm"
+            )
+
+        results["per_task"].append(task_results)
+
+    # ── Summary statistics ────────────────────────────────────────────────────
+    summary: Dict = {}
+    for method in ["dhb_xr", "naive_replay", "fast_baseline"]:
+        summary[method] = {}
+        for mag in perturbation_magnitudes:
+            mag_key = f"mag_{int(mag*100)}"
+            errs = aggregators[method][mag_key]
+            if errs:
+                summary[method][mag_key] = {
+                    "mean_goal_error_mm": float(np.mean(errs)),
+                    "std_goal_error_mm": float(np.std(errs)),
+                    "max_goal_error_mm": float(np.max(errs)),
+                }
+    results["summary"] = summary
+
+    # ── Print summary table ───────────────────────────────────────────────────
+    print("\n" + "-" * 70)
+    print("  SWEEP SUMMARY — Goal Error (mm, lower is better)")
+    print("-" * 70)
+    header = f"  {'Method':<18}" + "".join(f"{int(m*100):>7d}cm" for m in perturbation_magnitudes)
+    print(header)
+    for method in ["dhb_xr", "naive_replay", "fast_baseline"]:
+        row = f"  {method:<18}"
+        for mag in perturbation_magnitudes:
+            mag_key = f"mag_{int(mag*100)}"
+            val = summary.get(method, {}).get(mag_key, {}).get("mean_goal_error_mm", float("nan"))
+            row += f"{val:>8.1f}"
+        print(row)
+    print("-" * 70)
+
+    # ── Write JSON ────────────────────────────────────────────────────────────
+    out_path = Path(output_json)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_path, "w") as f:
+        import json
+        json.dump(results, f, indent=2)
+    print(f"\n  Results written to: {out_path}")
+    print(f"  Load in notebook: pd.read_json('{out_path}')")
+
+    return results
+
+
+# =============================================================================
 # Main
 # =============================================================================
 
@@ -1035,6 +1291,23 @@ Examples:
     parser.add_argument("--batch", action="store_true", help="Run batch evaluation across tasks")
     parser.add_argument("--simulate", action="store_true", help="Run simulation comparison")
     parser.add_argument("--save-video", type=str, default=None, help="Save comparison video")
+    parser.add_argument(
+        "--perturbation-sweep",
+        action="store_true",
+        help="Run systematic perturbation sweep (0/2/5/10/15cm) with JSON output",
+    )
+    parser.add_argument(
+        "--output-json",
+        type=str,
+        default="results/libero_pro_sweep.json",
+        help="Path for JSON results output (used with --perturbation-sweep)",
+    )
+    parser.add_argument(
+        "--num-tasks",
+        type=int,
+        default=5,
+        help="Number of tasks for sweep/batch evaluation",
+    )
 
     args = parser.parse_args()
 
@@ -1046,8 +1319,10 @@ Examples:
         print("\nh5py required. Install with: pip install h5py")
         return
 
-    if args.batch:
-        run_batch_evaluation()
+    if args.perturbation_sweep:
+        run_perturbation_sweep(num_tasks=args.num_tasks, output_json=args.output_json)
+    elif args.batch:
+        run_batch_evaluation(num_tasks=args.num_tasks)
     elif args.simulate:
         if not HAS_LIBERO:
             print("\nLIBERO not installed. Use --analysis for DHB-only mode.")

@@ -1,0 +1,60 @@
+{
+  "metadata": {
+    "n_tasks": 5,
+    "perturbation_magnitudes_m": [
+      0.0,
+      0.02,
+      0.05,
+      0.1,
+      0.15
+    ],
+    "solver": "decode_invariants",
+    "n_directions": 3
+  },
+  "summary": {
+    "dhb_xr": {
+      "mag_0": {
+        "mean_goal_error_mm": 5.497722516306703e-13,
+        "std_goal_error_mm": 3.008891055605e-13
+      },
+      "mag_2": {
+        "mean_goal_error_mm": 5.407635568763705e-13,
+        "std_goal_error_mm": 3.249140866506132e-13
+      },
+      "mag_5": {
+        "mean_goal_error_mm": 5.224271208807627e-13,
+        "std_goal_error_mm": 3.151024333993093e-13
+      },
+      "mag_10": {
+        "mean_goal_error_mm": 5.189962206402999e-13,
+        "std_goal_error_mm": 3.21003011393807e-13
+      },
+      "mag_15": {
+        "mean_goal_error_mm": 5.270235293831455e-13,
+        "std_goal_error_mm": 2.98831234010688e-13
+      }
+    },
+    "naive_replay": {
+      "mag_0": {
+        "mean_goal_error_mm": 0.0,
+        "std_goal_error_mm": 0.0
+      },
+      "mag_2": {
+        "mean_goal_error_mm": 20.0,
+        "std_goal_error_mm": 2.7519201823675253e-15
+      },
+      "mag_5": {
+        "mean_goal_error_mm": 49.99999999999999,
+        "std_goal_error_mm": 7.105427357601002e-15
+      },
+      "mag_10": {
+        "mean_goal_error_mm": 100.00000000000001,
+        "std_goal_error_mm": 1.797546735911271e-14
+      },
+      "mag_15": {
+        "mean_goal_error_mm": 150.0,
+        "std_goal_error_mm": 2.2015361458940203e-14
+      }
+    }
+  }
+}

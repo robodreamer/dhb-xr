@@ -1,0 +1,7 @@
+{
+  "raw_token_change_pct": 99.05766406556961,
+  "invariant_mag_token_change_pct": 0.0,
+  "stability_ratio": 9905766406.556961,
+  "n_trials": 40,
+  "note": "Tokenizing DHB magnitude invariants (first column only) vs raw actions under SE(3) transforms"
+}

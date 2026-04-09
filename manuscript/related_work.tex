@@ -1,0 +1,60 @@
+%% ── RELATED WORK ────────────────────────────────────────────────────────────
+% Target: ≤0.5 page CoRL format (~300 words)
+
+\section{Related Work}
+\label{sec:related}
+
+\paragraph{Vision-Language-Action models.}
+Recent VLA models have achieved remarkable in-distribution performance on
+tabletop manipulation benchmarks: \mbox{ACoT-VLA}~\cite{acot_vla_2026}
+reaches 98.5\% on LIBERO via action chain-of-thought reasoning;
+StarVLA~\cite{starvla_2026} provides a modular framework across four
+action heads (FAST, OFT, flow-matching, DIT) achieving 97.8\%;
+OpenVLA-OFT~\cite{openvla_oft_2025} improves to 97.1\% via parallel
+decoding and action chunking.
+Despite these gains, all models degrade \textbf{14–18\%} under spatial
+distribution shifts~\cite{openvla_oft_2025,starvla_2026,acot_vla_2026}:
+OpenVLA-OFT falls to 79.6\%, StarVLA to 79.7\%, ACoT-VLA to 84.1\%.
+This degradation is not a capacity limitation — it is \emph{frame dependence}:
+actions represented in absolute world or camera coordinates change completely
+under any rigid-body transform of the workspace.
+VLA-0~\cite{vla0_2025} confirms that even minimal text-based action
+discretization achieves 94.7\% in-distribution, yet inherits the same
+brittleness to spatial shifts.
+
+\paragraph{Action tokenization.}
+\fast{}~\cite{fast2025} achieves $\sim$10$\times$ compression via DCT + BPE
+and enables dexterous tasks where per-dimension binning fails.
+\oat{}~\cite{oat2026} introduces ordered token spaces via register encoders,
+finite scalar quantization, and nested dropout, enabling prefix-decodable
+autoregressive policies.
+Both operate on raw action trajectories in their original coordinate frames.
+A trajectory translated or rotated in space produces entirely different
+tokens — neither method addresses geometric invariance.
+
+\paragraph{Flow-matching policies.}
+$\pi_0$/$\pi_{0.5}$~\cite{pi0_2024} achieve impressive dexterity via
+continuous flow matching at 50\,Hz, avoiding discretization.
+The probabilistic nature of diffusion provides some robustness, but does
+not produce SE(3)-invariant action representations.
+
+\paragraph{SE(3)-equivariant manipulation policies.}
+EquivAct~\cite{equivact2024} and RISE~\cite{rise2024} achieve SE(3)-equivariant
+policies via equivariant network architectures, demonstrating strong
+real-robot spatial generalization.
+These works build equivariance into the \emph{policy architecture};
+\dhb{} builds invariance into the \emph{action representation}.
+The approaches are orthogonal: \dhb{}'s invariant tokens could serve as
+action space for equivariant policies.
+
+\paragraph{Spatial structure and invariant representations.}
+3D-VLA and SpatialVLA encode 3D structure in visual representations, yet
+still regress actions in world-frame coordinates.
+The DHB framework~\cite{soloperto2015,lee2018} established bidirectional
+invariant trajectory encoding on SE(3); Rotation-Minimizing Frames~\cite{wang2008rmf}
+via Householder reflections provide smooth frame propagation.
+\dhb{} extends these foundations — which are not themselves novel — to VLA
+tokenization: our contribution is the combination of invariant encoding
+with an OAT-style tokenizer (register encoder + FSQ + nested dropout,
+reimplemented from Liu et al.~\cite{oat2026}) applied to invariant rather
+than raw action sequences, enabling geometric adaptation at test time.
