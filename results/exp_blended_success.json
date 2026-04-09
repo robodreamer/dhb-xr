@@ -1,0 +1,17 @@
+{
+  "0cm": {
+    "naive_pct": 100,
+    "blended_pct": 100,
+    "n": 9
+  },
+  "3cm": {
+    "naive_pct": 89,
+    "blended_pct": 100,
+    "n": 9
+  },
+  "5cm": {
+    "naive_pct": 100,
+    "blended_pct": 100,
+    "n": 9
+  }
+}

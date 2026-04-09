@@ -1,0 +1,14 @@
+{
+  "hierarchical": {
+    "total_tokens": 16,
+    "full_inv_mse": 0.020647622644901276,
+    "layer1_tokens": 8,
+    "layer1_stable": true,
+    "layer2_tokens": 8,
+    "layer2_stable": false
+  },
+  "ori_conditioned": {
+    "angle_error_deg": 4.974835395812988,
+    "method": "pos_context \u2192 quat via MLP + geodesic loss"
+  }
+}
