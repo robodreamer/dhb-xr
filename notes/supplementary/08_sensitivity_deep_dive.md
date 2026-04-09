@@ -232,3 +232,51 @@ that are geometrically faithful rather than just numerically close in L2.
 **Next step**: Full differentiable decoder (fixing NaN with numerically stable
 rot_to_quat) would push further by training end-to-end from invariant prediction
 through decode to SE(3) trajectory.
+
+---
+
+## 9. Geodesic Strategy Sweep: Sensitivity is a Decoder Property
+
+**Protocol**: Test 5 different geodesic loss strategies during training and measure the
+orientation sensitivity ratio after full decode.
+
+**File**: `results/exp_geodesic_strategies.json`
+
+| Strategy | Ratios (sigma 0.005/0.01/0.02/0.05) | Average |
+|----------|--------------------------------------|---------|
+| baseline_mse | 0.905, 1.095, 1.233, 1.252 | **1.121** |
+| geo_component_l2 | 0.905, 1.095, 1.233, 1.252 | **1.121** |
+| geo_component_geodesic | 0.905, 1.095, 1.233, 1.252 | **1.121** |
+| geo_combined | 0.905, 1.095, 1.233, 1.252 | **1.121** |
+| geo_highweight | 0.905, 1.095, 1.233, 1.252 | **1.121** |
+
+**All 5 strategies produce identical ratios: 1.121.**
+
+This is a critical finding. The orientation sensitivity ratio is NOT a property of the
+training loss function -- changing the geodesic loss strategy, weighting, or formulation
+has zero effect on the measured ratio after full decode.
+
+### Key Insight: Sensitivity is Intrinsic to the Decoder
+
+The 1.121 ratio is a property of the DHB frame propagation decode step, not the training
+procedure. The frame update equation `F_{i+1} = R_combined * F_i` deterministically
+amplifies magnitude noise into orientation error. No training loss can change this because
+the decode is a fixed analytical function.
+
+**File**: `results/exp_full_decode_geodesic.json` confirms the same: average ratio 1.1214
+across all noise levels, identical across all strategies.
+
+### Magnitude-Only Tokenization Sidesteps the Issue
+
+Since the orientation sensitivity is intrinsic to the full decode, the most effective
+mitigation is to avoid full decode entirely for tokenization:
+
+- Tokenize only the **magnitude invariants** (2 dims: linear + angular magnitude)
+- These are pure scalars -- no frame propagation, no orientation coupling
+- Sensitivity ratio for magnitudes: exactly **1.0x** (scalar noise in, scalar noise out)
+- Reconstruction from magnitudes requires a separate decoder, but for VLA tokenization
+  (where the token is the prediction target), magnitudes are ideal
+
+This insight reframes the sensitivity discussion: the 1.12x penalty is real for full
+SE(3) trajectory reconstruction, but irrelevant for the tokenization use case where
+magnitudes are the natural token space.

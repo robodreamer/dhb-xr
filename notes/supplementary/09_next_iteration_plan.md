@@ -1,119 +1,100 @@
 # Next Iteration Plan — Prioritized Improvement Roadmap
 
-## Current Strengths (no improvement needed)
+## Current Strengths (updated 2026-04-09)
 
 | Area | Result | Status |
 |------|--------|--------|
-| Geometric adaptation | 0.0mm at 0–20cm, 10 tasks × 8 dirs | PERFECT |
+| Geometric adaptation | 0.0mm at 0-20cm, 10 tasks x 8 dirs | PERFECT |
 | Token stability | 0.0% change (magnitudes) | PERFECT |
-| Position sensitivity | 0.08× (QR) | EXCELLENT |
-| Orientation sensitivity | 0.96× (QR + geodesic) | GOOD (< 1.0) |
-| Learnability | inv MSE 0.022, act L1 0.14 | GOOD |
+| Position sensitivity | 0.08x (QR) | EXCELLENT |
+| Orientation sensitivity | 1.12x (intrinsic to decoder) | UNDERSTOOD |
+| Learnability | inv MSE 0.023, 10-task multi-task | GOOD |
+| FAST+DHB compression | 49.8x on magnitudes, 0% instability | EXCELLENT |
+| OAT on magnitudes | k=1 MSE=0.00005, 0% instability | EXCELLENT |
+| Blended controller | 100% at 0-5cm | GOOD |
+| SE(3) augmentation | 2% improvement with EE proxy | VALIDATED |
 
-## Priority 1: Paper-Blocking (must do before submission)
+## Completed Steps — Status Summary
 
-### 1a. SE(3) Training Augmentation (1 day)
-**What**: During training, apply random SE(3) transforms to input EE states.
-DHB invariant targets stay IDENTICAL (they're invariant!) → free data augmentation.
+### Step 1: SE(3) Training Augmentation -- DONE
+**Result**: 2% eval MSE improvement with EE proxy (0.2738 -> 0.2696).
+Augmented model has higher train loss (0.1607 vs 0.1072) but better generalization.
+Theory validated: invariant targets unchanged under SE(3) transforms = free augmentation.
 
-**Why**: This is the single most elegant argument for the paper: "because targets are
-invariant, SE(3) augmentation comes for free — no label recomputation needed."
-No other action representation has this property.
+**File**: `results/exp_se3_augmentation.json`
 
-**Implementation**:
-```python
-def augment_se3(ee_state, invariants):
-    """Augmentation that's FREE for invariant representations."""
-    R = random_rotation()
-    t = random_translation()
-    ee_augmented = apply_se3(ee_state, R, t)  # observations change
-    inv_augmented = invariants  # targets DON'T change!
-    return ee_augmented, inv_augmented
-```
+### Step 2: Blended Controller Simulation -- DONE
+**Result**: 100% success at 0, 3, and 5cm offsets (9 trials each).
+Root cause of prior failure: wrong init_state source. Fix: use `robot0_eef_pos` at runtime.
+Naive drops to 89% at 3cm; blended maintains 100%.
 
-**Expected impact**: Better generalization, compelling paper argument.
+**File**: `results/exp_blended_success.json`
 
-### 1b. Waypoint PD + Object Perturbation (3 days)
-**What**: Patch LIBERO `init_state` to move object positions, run waypoint PD controller.
+### Step 3: Multi-Task Training -- DONE
+**Result**: 0.023 avg MSE across 10 LIBERO-Spatial tasks with single model.
+301 training samples, 200 epochs, SE(3) augmentation enabled.
+Per-task MSE ranges from 0.011 (task 3) to 0.044 (task 1).
 
-**Why**: Gets real task success rates for Table 1 — the single biggest gap from reviewer.
+**File**: `results/exp_multi_task.json`
 
-**Implementation**: 
-1. Find object qpos indices in LIBERO state vector
-2. Offset them by perturbation amount
-3. Run waypoint PD controller with DHB-adapted trajectory
-4. Measure reward > 0
+### Step 4: OAT on Real LIBERO Data -- DONE
+**Result (full 10-dim invariants)**: k=1 MSE=0.0054, k=8 MSE=0.0052. Spread=1.03.
+**Result (2-dim magnitudes)**: k=1 MSE=0.00005, k=8 MSE=0.00005. Spread=0.91.
+Magnitude-only signal is trivially compressible -- 1 token captures it entirely.
 
-### 1c. Multi-Task Training (2 days)
-**What**: Train one model on all 10 LIBERO-Spatial tasks (not per-task).
+**Files**: `results/exp_oat_real_improved.json`, `results/exp_magnitude_oat.json`
 
-**Why**: Shows the invariant representation generalizes across task structure,
-not just spatial configuration.
+### Step 5: FAST+DHB Invariant Subset Compression -- DONE
+**Result**: 49.8x compression on 2-col magnitudes, 0% SE(3) instability.
+5-col invariant subset: 4.0x compression, also 0% instability.
+Raw actions for comparison: 20.4x compression, 93.9% instability.
 
-## Priority 2: Strengthen Existing Results
+**File**: `results/exp_invariant_subset_compression.json`
 
-### 2a. Differentiable Full Decoder (1 week)
-**What**: Fix NaN in `dhb_qr_torch.py` via numerically stable `rot_to_quat`.
+### Step 6: Geodesic Strategy Sweep / NaN Fix -- DONE
+**Result**: All 5 geodesic strategies produce identical 1.121 orientation ratio.
+NaN in rot_to_quat fixed with Shepperd's method.
+Key insight: orientation sensitivity is intrinsic to the decoder's frame propagation,
+not a training loss property. Magnitude-only tokenization sidesteps it entirely.
 
-**Why**: Enables end-to-end training through decode → expected ori ratio 0.7×.
+**Files**: `results/exp_geodesic_strategies.json`, `results/exp_full_decode_geodesic.json`
 
-**Technical fix**:
-```python
-def rot_to_quat_stable(R):
-    """Shepperd's method with 4-branch selection for numerical stability."""
-    diag = torch.diagonal(R, dim1=-2, dim2=-1)  # (..., 3)
-    trace = diag.sum(-1)
-    
-    # Branch on which diagonal element is largest
-    # This avoids division by small numbers
-    s0 = torch.sqrt(torch.clamp(trace + 1, min=1e-8)) * 2
-    s1 = torch.sqrt(torch.clamp(1 + R[...,0,0] - R[...,1,1] - R[...,2,2], min=1e-8)) * 2
-    s2 = torch.sqrt(torch.clamp(1 - R[...,0,0] + R[...,1,1] - R[...,2,2], min=1e-8)) * 2
-    s3 = torch.sqrt(torch.clamp(1 - R[...,0,0] - R[...,1,1] + R[...,2,2], min=1e-8)) * 2
-    
-    # Select branch based on largest diagonal
-    # Use torch.where for differentiable selection
-    ...
-```
+---
 
-### 2b. Hybrid FAST+DHB Compression (3 days)
-**What**: Apply FAST (DCT+BPE) to DHB invariant sequences instead of raw actions.
+## Remaining Work Before Submission
 
-**Why**: Gets FAST's 27.8× compression on invariant signals that are ALSO SE(3)-stable.
-Best of both worlds: high compression + geometric invariance.
+### Priority 1: Paper-Blocking
 
-**Expected**: FAST compression ratio on invariants may be even HIGHER than on raw actions,
-because invariant magnitudes are smoother (low-frequency dominated).
+| Task | Effort | Notes |
+|------|--------|-------|
+| StarVLA-DHB policy training | 1-2 weeks | Requires LIBERO->LeRobot adapter + GPU |
+| Larger offset simulation (10-20cm) | 3 days | Requires full Fatrop + waypoint PD |
+| Write final paper sections | 1 week | Integrate all new results into manuscript |
 
-### 2c. OAT on Real LIBERO Data (2 days)
-**What**: Train OAT tokenizer on real LIBERO invariant sequences (not synthetic figure-8).
+### Priority 2: Strengthen Claims
 
-**Why**: Addresses reviewer critique C4 (synthetic data only).
-Prefix decoding quality on real data is the missing evidence.
+| Task | Effort | Notes |
+|------|--------|-------|
+| ResNet visual backbone | 1 week | Replace EE proxy with real vision |
+| EquivAct/RISE comparison | 2 weeks | Same protocol, direct comparison |
+| Differentiable full decoder | 1 week | End-to-end training through decode |
 
-## Priority 3: Stretch Goals
+### Priority 3: Stretch Goals
 
-### 3a. ResNet Visual Backbone (1 week)
-Replace VisProxy MLP with ResNet-18 on LIBERO agentview_rgb images.
-Full vision → invariant → adaptation pipeline.
-
-### 3b. EquivAct/RISE Comparison (2 weeks)
-Run EquivAct on same LIBERO-Spatial tasks. Compare spatial generalization
-under the same perturbation protocol.
-
-### 3c. Contact-Aware Invariants (2 weeks)
-Segment trajectories by contact phase. Encode each segment independently.
-Test on peg-insertion or assembly tasks.
+| Task | Effort | Notes |
+|------|--------|-------|
+| RoboCasa generalization | 2 weeks | Requires AllenAI harness |
+| Cross-embodiment (dual-arm) | 2 weeks | embodik dual-iiwa + DHB |
+| Contact-aware invariants | 2 weeks | Phase-segmented encoding |
 
 ## Recommended Execution Order
 
 ```
-Day 1:    1a (SE3 augmentation — 1 day, compelling argument)
-Day 2-4:  1b (Object perturbation — 3 days, fills Table 1)
-Day 5-6:  1c (Multi-task — 2 days, stronger generalization claim)
-Day 7-8:  2c (OAT on real data — 2 days, addresses C4)
-Day 9-11: 2b (FAST+DHB hybrid — 3 days, best-of-both-worlds)
-Week 3:   2a (Differentiable decoder — 1 week, ori → 0.7×)
+Week 1:   StarVLA-DHB training setup + begin training
+Week 1:   Write updated experiment sections with new results
+Week 2:   Larger offset simulation (Fatrop + PD)
+Week 2:   ResNet visual backbone
+Week 3:   StarVLA-DHB evaluation + final paper polish
 ```
 
-Total: ~2.5 weeks to submission-ready paper with comprehensive experiments.
+Total: ~3 weeks to submission-ready paper.

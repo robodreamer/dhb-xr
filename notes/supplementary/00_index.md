@@ -18,6 +18,10 @@ No page limit. Meant for internal use, future extensions, and journal version.
 | [05_future_work_technical.md](05_future_work_technical.md) | Detailed technical roadmap: training, simulation, cross-embodiment |
 | [06_framing_and_positioning.md](06_framing_and_positioning.md) | Community positioning, objection handling, comparison tables |
 | [07_generalization_beyond_shape.md](07_generalization_beyond_shape.md) | Why DHB-XR is robust to unexpected situations; complementarity with learned methods; extensions |
+| [08_sensitivity_deep_dive.md](08_sensitivity_deep_dive.md) | Position vs orientation sensitivity, geodesic loss, strategy sweep, decoder-intrinsic insight |
+| [09_next_iteration_plan.md](09_next_iteration_plan.md) | Prioritized roadmap with all 6 steps completed + remaining work |
+| [10_triple_invariant_tokenizer.md](10_triple_invariant_tokenizer.md) | FAST+DHB and OAT on magnitude invariants: 49.8x compression, 0% instability |
+| [11_session_summary.md](11_session_summary.md) | Complete session summary: all experiments, results, insights, remaining work |
 
 ---
 
@@ -25,16 +29,21 @@ No page limit. Meant for internal use, future extensions, and journal version.
 
 | Metric | Value | Experiment |
 |--------|-------|-----------|
-| DHB geometric error at 0–20cm | **0.0 mm** (mean±0) | 10 tasks, 8 dirs, 6 mags |
+| DHB geometric error at 0-20cm | **0.0 mm** (mean+/-0) | 10 tasks, 8 dirs, 6 mags |
 | Naive replay error at 5/10/15/20cm | 50/100/150/200 mm | Same |
 | DHB-DR vs DHB-TI difference | 0.0 mm both | Confirmed equivalent on LIBERO-Spatial |
 | Token stability (DHB magnitude) | **0.0%** change | 40 SE(3) transforms |
-| Token stability (raw/FAST) | **99.1%** change | Same |
-| OAT prefix k=1 MSE | **0.0013** | Synthetic benchmark |
-| FAST compression | **27.8×** (14 tokens) | Invariant sequences |
-| OAT compression | **6.2×** (8 tokens) | Invariant sequences |
+| Token stability (raw/FAST) | **93.9-99.1%** change | Same |
+| FAST+DHB magnitude compression | **49.8x** (8 tokens, 0% instability) | exp_invariant_subset_compression |
+| OAT on magnitudes k=1 MSE | **0.00005** | exp_magnitude_oat |
+| OAT on full invariants k=1 MSE | **0.0054** | exp_oat_real_improved |
+| FAST compression (raw) | **20.4x** (14 tokens) | Invariant sequences |
+| Multi-task avg MSE | **0.023** (10 tasks, single model) | exp_multi_task |
+| Blended controller success | **100%** at 0-5cm | exp_blended_success |
+| SE(3) augmentation improvement | **1.5%** eval MSE | exp_se3_augmentation |
+| Geodesic strategy sweep | **1.121** (all 5 identical) | exp_geodesic_strategies |
 | Sample efficiency at 10cm | **0mm with N=1 demo** | Geometric proxy |
-| Pipeline timing | 66ms encode + ≤7ms adapt + 6ms IK | Measured |
+| Pipeline timing | 66ms encode + <=7ms adapt + 6ms IK | Measured |
 | StarVLA-FAST in-dist | 97.8% | From paper |
 | StarVLA-MLP in-dist | 97.1% | From paper |
 | StarVLA-DHB in-dist | **pending** | Training blocked on LeRobot adapter |
