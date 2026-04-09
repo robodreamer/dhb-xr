@@ -16,6 +16,8 @@ No page limit. Meant for internal use, future extensions, and journal version.
 | [03_simulation_analysis.md](03_simulation_analysis.md) | LIBERO simulation investigation, OSC action scaling issue, path to fix |
 | [04_media_guide.md](04_media_guide.md) | All videos, figures, frames — what they show and how to regenerate |
 | [05_future_work_technical.md](05_future_work_technical.md) | Detailed technical roadmap: training, simulation, cross-embodiment |
+| [06_framing_and_positioning.md](06_framing_and_positioning.md) | Community positioning, objection handling, comparison tables |
+| [07_generalization_beyond_shape.md](07_generalization_beyond_shape.md) | Why DHB-XR is robust to unexpected situations; complementarity with learned methods; extensions |
 
 ---
 

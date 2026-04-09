@@ -1,0 +1,54 @@
+This is BibTeX, Version 0.99e (TeX Live 2026)
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: corl2026_varC.aux
+The style file: corlabbrvnat.bst
+Database file #1: references.bib
+Warning--to sort, need author or key in starvla_2026
+Warning--to sort, need author or key in openvla_oft_2025
+Warning--to sort, need author or key in vla0_2025
+Warning--empty author in starvla_2026
+Warning--empty journal in starvla_2026
+Warning--empty author in openvla_oft_2025
+Warning--empty author in vla0_2025
+You've used 15 entries,
+            2773 wiz_defined-function locations,
+            661 strings with 6660 characters,
+and the built_in function-call counts, 5319 in all, are:
+= -- 464
+> -- 240
+< -- 11
++ -- 87
+- -- 72
+* -- 339
+:= -- 799
+add.period$ -- 47
+call.type$ -- 15
+change.case$ -- 61
+chr.to.int$ -- 15
+cite$ -- 40
+duplicate$ -- 311
+empty$ -- 528
+format.name$ -- 94
+if$ -- 1148
+int.to.chr$ -- 1
+int.to.str$ -- 1
+missing$ -- 15
+newline$ -- 85
+num.names$ -- 48
+pop$ -- 163
+preamble$ -- 1
+purify$ -- 46
+quote$ -- 0
+skip$ -- 218
+stack$ -- 0
+substring$ -- 49
+swap$ -- 20
+text.length$ -- 0
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 165
+warning$ -- 7
+while$ -- 38
+width$ -- 0
+write$ -- 191
+(There were 7 warnings)

@@ -5,44 +5,33 @@
 
 \subsection{Experimental Setup}
 
-\paragraph{Benchmarks.}
-We evaluate on \textbf{LIBERO-Spatial}~\cite{libero2023} (10 tasks, spatial layout variation)
-and \textbf{LIBERO-PRO} (configurable spatial perturbation).
-\textbf{RoboCasa}~\cite{robocasa2024} is planned as secondary evaluation via
-the AllenAI vla-evaluation-harness.
-
-\paragraph{Policy backbone.}
-We use \textbf{StarVLA}~\cite{starvla_2026} (Qwen2.5-VL-2B) as the shared backbone,
-swapping only the action head for all ablations.
-Three heads: (1) \fast{} (DCT+BPE, analytical), (2) OFT (parallel MLP, continuous),
-(3) \textbf{\dhb{}} (OAT-style invariant, 8 tokens --- ours).
-
-\paragraph{Baselines.}
-\begin{itemize}
-\item \textit{Naive trajectory replay}: original demo joint actions replayed without adaptation
-\item \textit{StarVLA-FAST}: StarVLA + \fast{} action head~\cite{fast2025}
-\item \textit{StarVLA-MLP}: StarVLA + OFT parallel MLP head
-\item \textit{\dhb{} adaptation (ours)}: encode$\to$decode at new pose (no policy training required)
-\item \textit{StarVLA-\dhb{} (ours)}: StarVLA + \texttt{DHBActionHeader} (trained policy)
-\end{itemize}
-
-\paragraph{Evaluation protocol.}
-Rigid translations $\{0, 5, 10, 15\}\,\text{cm}$ applied to object/target poses at test time.
-Primary metric: task success rate ($\text{reward} > 0$).
-Secondary: goal endpoint error (mm) for geometric pipeline validation.
-
-\paragraph{Training.}
-50 LIBERO-Spatial demonstrations per task (500 total).
-DHB ground-truth invariants precomputed offline via \texttt{encode\_dhb\_dr}
-and stored in HDF5 alongside demonstrations.
+\paragraph{Setup.}
+We evaluate on \textbf{LIBERO-Spatial}~\cite{libero2023} (10 tasks) with
+rigid translations $\{0, 2, 5, 10, 15, 20\}\,\text{cm}$ from 8 directions at test time.
+\textbf{StarVLA}~\cite{starvla_2026} (Qwen2.5-VL-2B) serves as the shared backbone,
+with swappable action heads: \fast{}~\cite{fast2025} (DCT+BPE), OFT (MLP),
+and \textbf{\dhb{}} (OAT-style invariant tokens --- ours).
+Baselines: naive trajectory replay (no adaptation), StarVLA-FAST, StarVLA-MLP.
+DHB invariants precomputed offline from 50 demos/task and stored alongside HDF5 data.
 
 % ── Experiment 1 ─────────────────────────────────────────────────────────────
 \subsection{Experiment 1: Spatial Generalization}
 
-Table~\ref{tab:spatial_main} summarizes both geometric fidelity (endpoint error)
-and task execution results (success rate) under spatial perturbation.
+Table~\ref{tab:spatial_main} summarizes geometric fidelity under spatial perturbation
+and Fig.~\ref{fig:results} visualizes the key results.
 \dhb{} re-grounds the motion shape to the perturbed pose via encode$\to$decode;
 naive replay executes original joint actions unmodified.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{results_combined}
+\caption{\textbf{Left}: Goal endpoint error under perturbation (10 tasks $\times$ 8 dirs).
+\dhb{} achieves $0.0\,\text{mm}$ at all offsets; naive replay error scales linearly.
+\textbf{Right}: Compression vs stability trade-off. \dhb{} OAT achieves both compact
+tokens (8) and perfect SE(3) stability (0\%), while \fast{} (14 tokens, 27.8$\times$)
+sacrifices geometric invariance.}
+\label{fig:results}
+\end{figure}
 
 \begin{table}[ht]
 \centering
@@ -97,11 +86,19 @@ VQ-VAE                        & 50 & 8.0$\times$ & 0.020 & 0.0\%  & -- & \checkm
 \end{tabular}
 \end{table}
 
-Token stability and rate-distortion results are in Table~\ref{tab:tokenization_combined}
-(above). Key findings: (1) \dhb{} magnitude tokens change $0.0\%$ under SE(3) transforms
-vs $99.1\%$ for \fast{} and raw actions (guaranteed by inner-product invariance;
-requires trajectory-relative initial frames); (2) OAT-style achieves 8 tokens with
-prefix decodability at $k{=}1$: MSE $= 0.0013$, enabling anytime decoding.
+Token stability and rate-distortion results are in Table~\ref{tab:tokenization_combined}.
+Fig.~\ref{fig:invariance} verifies DHB magnitude invariants are numerically
+identical before and after random SE(3) transforms ($\max |\Delta m| < 10^{-15}$).
+OAT-style prefix decoding achieves MSE $= 0.0013$ at $k{=}1$ token.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{invariance_verification}
+\caption{\textbf{SE(3) invariance verification.}
+\textit{Left}: Magnitude $m_i$ before and after SE(3) transform — visually identical.
+\textit{Right}: Difference magnified by $10^{15}$: machine-precision invariance.}
+\label{fig:invariance}
+\end{figure}
 
 % ── Experiment 4 ─────────────────────────────────────────────────────────────
 \subsection{Experiments 4 \& 5: Sample Efficiency and RoboCasa}

@@ -5,6 +5,10 @@
 \section{Method}
 \label{sec:method}
 
+Fig.~\ref{fig:pipeline} shows the \dhb{} pipeline. A single demonstration
+is encoded into SE(3)-invariant tokens; at test time, a $\leq\!7\,\text{ms}$
+solver re-grounds the encoded motion to any new spatial configuration.
+
 \subsection{Problem Formulation}
 \label{sec:problem}
 
@@ -19,6 +23,16 @@ we seek a representation that is:
 The key insight: current VLA representations encode \emph{where} the robot is
 (absolute coordinates). We encode \emph{how} the robot moves (motion shape),
 which is independent of coordinate frame.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{invariant_signals}
+\caption{\textbf{DHB-DR invariant signals} from a LIBERO pick-and-place demo.
+\textit{Left}: magnitude $m_i$ and angular magnitude (motion speed invariants).
+\textit{Right}: frame rotation invariants $(\varphi_x, \varphi_y, \varphi_z)$.
+These signals are SE(3)-invariant: identical under any rigid-body transform.}
+\label{fig:invariants}
+\end{figure}
 
 \subsection{SE(3)-Invariant Encoding: DHB-DR}
 \label{sec:dhb_dr}
