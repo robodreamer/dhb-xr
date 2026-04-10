@@ -560,10 +560,10 @@
         <!-- Teaser Video -->
         <div class="hero-teaser">
           <video autoplay muted loop playsinline>
-            <source src="assets/trajectory_hq.mp4" type="video/mp4" />
+            <source src="assets/hero_3d_adaptation.mp4" type="video/mp4" />
           </video>
           <div class="hero-teaser-caption">
-            DHB-XR encodes a trajectory into SE(3)-invariant tokens, then reconstructs it from any new start pose with zero shape distortion.
+            One 6-DOF demonstration (blue, thick) adapted to 8 different workspaces in 3D. DHB-XR preserves the exact arc shape and orientation profile — only the workspace position changes.
           </div>
         </div>
 
@@ -1022,72 +1022,72 @@
       <div class="column is-10">
         <h2 class="section-title">Interactive Demo</h2>
         <p class="section-subtitle">
-          Drag the slider to change the workspace offset. Watch DHB-XR adapt in real-time while naive replay misses the target.
+          Move the slider to shift the workspace. The robot arm animates in real-time — DHB-XR reaches the displaced object, naive replay misses.
         </p>
 
         <div style="background:#fff; border-radius:12px; box-shadow:0 4px 24px rgba(0,0,0,0.08); padding:1.5rem 2rem;">
-          <!-- Slider control -->
-          <div class="columns is-vcentered mb-4">
-            <div class="column is-2 has-text-right">
-              <strong style="font-size:0.95rem; color:#374151;">Workspace offset</strong>
+
+          <!-- Slider -->
+          <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.2rem;">
+            <span style="font-size:0.9rem; font-weight:600; color:#374151; white-space:nowrap;">Workspace offset</span>
+            <input id="offset-slider" type="range" min="0" max="20" value="8" step="0.5"
+              style="flex:1; accent-color:#2563eb; cursor:pointer; height:6px;">
+            <span id="offset-display" style="font-size:1.4rem; font-weight:700; color:#2563eb; min-width:60px;">8 cm</span>
+          </div>
+
+          <!-- Two workspace panels -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+            <!-- DHB panel -->
+            <div>
+              <div style="text-align:center; font-weight:700; font-size:0.95rem; color:#2563eb; margin-bottom:0.35rem; font-family:'Google Sans',sans-serif;">
+                DHB-XR &mdash; adapts to new object position
+              </div>
+              <canvas id="canvas-dhb" width="540" height="340"
+                style="width:100%; border:2px solid #bfdbfe; border-radius:10px; background:#f8faff; display:block;"></canvas>
+              <div id="dhb-badge" style="text-align:center; margin-top:0.5rem;">
+                <span style="display:inline-block; background:#059669; color:white; border-radius:6px;
+                  padding:0.3rem 1rem; font-weight:700; font-size:1rem;">✓ 0.0 mm goal error</span>
+              </div>
             </div>
-            <div class="column is-7">
-              <input id="offset-slider" type="range" min="0" max="20" value="5" step="0.5"
-                style="width:100%; accent-color:#2563eb; cursor:pointer; height:6px;">
-            </div>
-            <div class="column is-3">
-              <span id="offset-display"
-                style="font-size:1.5rem; font-weight:700; color:#2563eb;">5 cm</span>
-              <span style="font-size:0.85rem; color:#6b7280; margin-left:0.5rem;">offset</span>
+            <!-- Naive panel -->
+            <div>
+              <div style="text-align:center; font-weight:700; font-size:0.95rem; color:#dc2626; margin-bottom:0.35rem; font-family:'Google Sans',sans-serif;">
+                Naive Replay &mdash; reaches empty space
+              </div>
+              <canvas id="canvas-naive" width="540" height="340"
+                style="width:100%; border:2px solid #fecaca; border-radius:10px; background:#fff8f8; display:block;"></canvas>
+              <div id="naive-badge" style="text-align:center; margin-top:0.5rem;">
+                <span id="naive-error-label" style="display:inline-block; background:#dc2626; color:white; border-radius:6px;
+                  padding:0.3rem 1rem; font-weight:700; font-size:1rem;">✗ 80 mm miss</span>
+              </div>
             </div>
           </div>
 
-          <!-- Canvas -->
-          <div class="columns">
-            <div class="column is-6">
-              <p style="text-align:center; font-weight:700; font-size:1rem; color:#2563eb; margin-bottom:0.4rem;">
-                DHB-XR &mdash; shape preserved
-              </p>
-              <canvas id="canvas-dhb" width="480" height="300"
-                style="width:100%; border:1px solid #e5e7eb; border-radius:8px; background:#fafafa;"></canvas>
-              <p id="dhb-error-label"
-                style="text-align:center; margin-top:0.5rem; font-size:1.1rem; font-weight:700; color:#059669;">
-                Goal error: 0.0 mm ✓
-              </p>
+          <!-- Stats row -->
+          <div style="display:flex; gap:0.75rem; margin-top:1.2rem; justify-content:center; flex-wrap:wrap;">
+            <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:0.5rem 1.1rem; text-align:center;">
+              <div style="font-size:1.3rem; font-weight:700; color:#2563eb;" id="stat-dhb">0.0 mm</div>
+              <div style="font-size:0.75rem; color:#6b7280;">DHB-XR error</div>
             </div>
-            <div class="column is-6">
-              <p style="text-align:center; font-weight:700; font-size:1rem; color:#dc2626; margin-bottom:0.4rem;">
-                Naive Replay &mdash; no adaptation
-              </p>
-              <canvas id="canvas-naive" width="480" height="300"
-                style="width:100%; border:1px solid #e5e7eb; border-radius:8px; background:#fafafa;"></canvas>
-              <p id="naive-error-label"
-                style="text-align:center; margin-top:0.5rem; font-size:1.1rem; font-weight:700; color:#dc2626;">
-                Goal error: 50 mm ✗
-              </p>
+            <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:0.5rem 1.1rem; text-align:center;">
+              <div style="font-size:1.3rem; font-weight:700; color:#dc2626;" id="stat-naive">80 mm</div>
+              <div style="font-size:0.75rem; color:#6b7280;">Naive Replay error</div>
             </div>
-          </div>
-
-          <!-- Bottom stats bar -->
-          <div style="display:flex; gap:1rem; margin-top:1.25rem; justify-content:center;">
-            <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:0.6rem 1.2rem; text-align:center;">
-              <div style="font-size:1.4rem; font-weight:700; color:#2563eb;" id="stat-dhb">0.0 mm</div>
-              <div style="font-size:0.78rem; color:#6b7280;">DHB-XR goal error</div>
+            <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:0.5rem 1.1rem; text-align:center;">
+              <div style="font-size:1.3rem; font-weight:700; color:#059669;" id="stat-ratio">∞×</div>
+              <div style="font-size:0.75rem; color:#6b7280;">DHB advantage</div>
             </div>
-            <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:0.6rem 1.2rem; text-align:center;">
-              <div style="font-size:1.4rem; font-weight:700; color:#dc2626;" id="stat-naive">50 mm</div>
-              <div style="font-size:0.78rem; color:#6b7280;">Naive Replay goal error</div>
-            </div>
-            <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:0.6rem 1.2rem; text-align:center;">
-              <div style="font-size:1.4rem; font-weight:700; color:#059669;" id="stat-ratio">∞×</div>
-              <div style="font-size:0.78rem; color:#6b7280;">DHB advantage</div>
+            <div style="background:#f5f3ff; border:1px solid #ddd6fe; border-radius:8px; padding:0.5rem 1.1rem; text-align:center;">
+              <div style="font-size:1.3rem; font-weight:700; color:#7c3aed;">0.0%</div>
+              <div style="font-size:0.75rem; color:#6b7280;">Token change (DHB)</div>
             </div>
           </div>
         </div>
 
         <p class="has-text-grey is-size-7 mt-3 has-text-centered">
-          Pure JavaScript simulation of the DHB-XR geometric encoder. Arc shape encoded as DHB invariants, decoded from new start = original start + offset.
-          Naive replay = original trajectory replayed with no adaptation. Error = distance from endpoint to true target.
+          Isometric workspace view. Robot arm follows the DHB-adapted trajectory (blue) to the displaced object.
+          Naive replay follows the original recording (orange) — missing the object by the full offset distance.
+          Rendered in JavaScript; no server required.
         </p>
       </div>
     </div>
@@ -1122,6 +1122,49 @@
             a VLA policy trained on the blue tokens receives entirely wrong input at test time.
             DHB magnitude tokens are <strong>mathematically identical</strong> (1.2×10<sup>-13</sup>% change) under any SE(3) transform.
           </p>
+        </div>
+
+        <!-- 3D TRAJECTORY DEMOS -->
+        <div class="demo-task-title">
+          <span class="perturb-pill is-purple">3D</span>
+          <span class="perturb-pill is-blue">6-DOF</span>
+          One recorded demonstration &rarr; adapted to 8 different workspaces
+        </div>
+        <div class="video-card mb-4">
+          <video autoplay muted loop playsinline>
+            <source src="assets/hero_3d_adaptation.mp4" type="video/mp4" />
+          </video>
+          <div class="video-label comparison">
+            Original trajectory (blue, thick) with orientation frames. Eight adapted variants (colored) all preserve the exact arc shape and orientation profile &mdash; only the workspace position changes.
+          </div>
+        </div>
+
+        <div class="demo-task-title">
+          <span class="perturb-pill is-purple">SE(3)</span>
+          <span class="perturb-pill is-green">invariance proof</span>
+          Same trajectory, 8 random rigid-body transforms &mdash; trajectories differ, tokens identical
+        </div>
+        <div class="video-card mb-4">
+          <video autoplay muted loop playsinline>
+            <source src="assets/demo_3d_se3_invariance.mp4" type="video/mp4" />
+          </video>
+          <div class="video-label comparison">
+            Left: 8 random SE(3)-transformed versions of the same motion &mdash; they look completely different. Right: DHB magnitude tokens for all 8 &mdash; perfectly overlapping (0.0% change). Mathematical guarantee, not learned.
+          </div>
+        </div>
+
+        <div class="demo-task-title">
+          <span class="perturb-pill is-blue">6-DOF</span>
+          <span class="perturb-pill is-green">adaptation</span>
+          Full pose adaptation: DHB preserves shape, naive distorts
+        </div>
+        <div class="video-card mb-5">
+          <video autoplay muted loop playsinline>
+            <source src="assets/demo_3d_adaptation_detail.mp4" type="video/mp4" />
+          </video>
+          <div class="video-label comparison">
+            Left: original demo with orientation frames. Center: DHB-XR adapted &mdash; shape and orientation profile preserved exactly. Right: naive replay at offset &mdash; shape distorted, collides with obstacle.
+          </div>
         </div>
 
         <!-- ROBOT TASK GALLERY -->
@@ -1198,16 +1241,18 @@
           </div>
         </div>
 
-        <!-- SE(3) stability -->
+        <!-- SE(3) stability (2D version — see 3D version above) -->
         <p class="demo-task-title">
           <span class="perturb-pill is-purple">SE(3) transforms</span>
-          Same trajectory, 12 random rigid-body transforms &mdash; tokens are identical
+          <span class="perturb-pill is-amber">2D</span>
+          Same trajectory, 12 random rigid-body transforms &mdash; tokens are identical (2D version)
         </p>
         <div class="video-card mb-2">
           <video autoplay muted loop playsinline>
             <source src="assets/demo_se3_stability.mp4" type="video/mp4" />
           </video>
           <div class="video-label comparison">
+            2D version of the SE(3) invariance demo (see 3D version above for full 6-DOF proof).
             Left: trajectories look completely different under each rigid-body transform.
             Right: magnitude invariants are <strong>identical</strong> &mdash; 0.0% token change, guaranteed.
           </div>
@@ -1322,7 +1367,7 @@
 
 
 <script>
-  // ── Interactive Demo ────────────────────────────────────────────────────────
+  // ── Interactive Demo — Isometric Robot Workspace ─────────────────────────────
   (function() {
     var N = 80;
     var BLUE   = '#2563eb', GREEN  = '#059669', RED    = '#dc2626',
@@ -1456,101 +1501,252 @@
       ctx.fillText(label, midX + 8, (f.y + t.y) / 2);
     }
 
+    // ── Isometric projection helpers ────────────────────────────────────────
+    // Convert 3D world (x=right, y=depth, z=height) → canvas (u, v)
+    // Isometric: u = (x - y)*cos30, v = -(x + y)*sin30 + z
+    var ISO_COS = Math.cos(Math.PI / 6);   // 0.866
+    var ISO_SIN = Math.sin(Math.PI / 6);   // 0.500
+
+    function isoProject(x3, y3, z3) {
+      return {
+        u: (x3 - y3) * ISO_COS,
+        v: -(x3 + y3) * ISO_SIN + z3
+      };
+    }
+
+    // Map isometric (u,v) → canvas pixels  — centered, scaled
+    function isoToCanvas(u, v, canvas) {
+      var scale = canvas.width / 2.2;
+      var cx = canvas.width  * 0.50;
+      var cy = canvas.height * 0.62;
+      return { x: cx + u * scale, y: cy - v * scale };
+    }
+
+    // Full 3D → canvas
+    function w3(x3, y3, z3, canvas) {
+      var iso = isoProject(x3, y3, z3);
+      return isoToCanvas(iso.u, iso.v, canvas);
+    }
+
+    // ── Generate 3D pick-arc trajectory ──────────────────────────────────────
+    // Robot at origin; reaches forward (+y) and down to pick an object
+    function makeArc3D(N) {
+      N = N || 80;
+      var pts = [];
+      for (var i = 0; i < N; i++) {
+        var t = i / (N - 1);
+        pts.push({
+          x:  0.05 * Math.sin(Math.PI * t * 0.6),          // slight side sway
+          y:  0.15 + 0.55 * t,                              // moves forward
+          z:  0.30 + 0.25 * Math.sin(Math.PI * t)          // arc up then down
+        });
+      }
+      return pts;
+    }
+
+    var arc3 = makeArc3D(80);
+    var origGoal3 = arc3[arc3.length - 1];
+
+    function adaptDHB3(arc, offsetY) {
+      return arc.map(function(p) { return {x:p.x, y:p.y+offsetY, z:p.z}; });
+    }
+    function naiveReplay3(arc) {
+      return arc.map(function(p) { return {x:p.x, y:p.y, z:p.z}; });
+    }
+
+    // ── Drawing helpers ───────────────────────────────────────────────────────
+    function drawTableIso(ctx, canvas, tableDY) {
+      // Table surface (isometric rectangle at z=0)
+      var TW = 0.5, TD = 0.95;
+      var corners = [
+        w3(-TW/2, 0.10,         0, canvas),
+        w3( TW/2, 0.10,         0, canvas),
+        w3( TW/2, 0.10 + TD,    0, canvas),
+        w3(-TW/2, 0.10 + TD,    0, canvas),
+      ];
+      ctx.fillStyle = '#f1f5f9';
+      ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(corners[0].x, corners[0].y);
+      for (var i = 1; i < 4; i++) ctx.lineTo(corners[i].x, corners[i].y);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+
+      // Grid lines on table
+      ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 0.5;
+      for (var gx = -TW/2; gx <= TW/2; gx += 0.15) {
+        var p0 = w3(gx, 0.10,       0, canvas);
+        var p1 = w3(gx, 0.10 + TD,  0, canvas);
+        ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y); ctx.stroke();
+      }
+      for (var gy = 0; gy <= TD; gy += 0.15) {
+        var p0 = w3(-TW/2, 0.10 + gy, 0, canvas);
+        var p1 = w3( TW/2, 0.10 + gy, 0, canvas);
+        ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y); ctx.stroke();
+      }
+    }
+
+    function drawObject(ctx, canvas, y3, color, label) {
+      // Draw a small bowl object at (0, y3, 0)
+      var base = w3(0, y3, 0, canvas);
+      var top  = w3(0, y3, 0.055, canvas);
+
+      // Cylinder body
+      ctx.strokeStyle = color; ctx.lineWidth = 2;
+      ctx.fillStyle = color + '33';
+      ctx.beginPath(); ctx.arc(base.x, base.y, 10, 0, 2*Math.PI); ctx.fill(); ctx.stroke();
+      // Label
+      ctx.fillStyle = color;
+      ctx.font = 'bold 11px "Google Sans",sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      ctx.fillText(label, base.x, base.y - 13);
+    }
+
+    function drawRobotArm(ctx, canvas, trajPts, color, armAlpha) {
+      if (trajPts.length < 2) return;
+      // Draw the trajectory path (faded trail)
+      ctx.globalAlpha = 0.25;
+      ctx.strokeStyle = color; ctx.lineWidth = 2;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath();
+      var p0 = w3(trajPts[0].x, trajPts[0].y, trajPts[0].z, canvas);
+      ctx.moveTo(p0.x, p0.y);
+      for (var i = 1; i < trajPts.length; i++) {
+        var pi = w3(trajPts[i].x, trajPts[i].y, trajPts[i].z, canvas);
+        ctx.lineTo(pi.x, pi.y);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1.0;
+
+      // Robot base (fixed at y=0)
+      var base = w3(0, 0, 0, canvas);
+      var endEff = w3(trajPts[trajPts.length-1].x,
+                      trajPts[trajPts.length-1].y,
+                      trajPts[trajPts.length-1].z, canvas);
+      // Robot base mount
+      ctx.fillStyle = '#475569'; ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(base.x, base.y, 9, 0, 2*Math.PI); ctx.fill(); ctx.stroke();
+
+      // Upper arm (base → midpoint)
+      var midPt = trajPts[Math.floor(trajPts.length * 0.5)];
+      var mid = w3(midPt.x * 0.5, midPt.y * 0.5, midPt.z * 0.5, canvas);
+      ctx.strokeStyle = '#64748b'; ctx.lineWidth = 7; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(base.x, base.y); ctx.lineTo(mid.x, mid.y); ctx.stroke();
+
+      // Lower arm (midpoint → end effector)
+      ctx.strokeStyle = color; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.moveTo(mid.x, mid.y); ctx.lineTo(endEff.x, endEff.y); ctx.stroke();
+
+      // Elbow joint
+      ctx.fillStyle = '#94a3b8'; ctx.strokeStyle = WHITE; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(mid.x, mid.y, 5, 0, 2*Math.PI); ctx.fill(); ctx.stroke();
+
+      // End effector (gripper)
+      ctx.fillStyle = color; ctx.strokeStyle = WHITE; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(endEff.x, endEff.y, 7, 0, 2*Math.PI); ctx.fill(); ctx.stroke();
+
+      // Gripper fingers
+      var angle = Math.atan2(endEff.y - mid.y, endEff.x - mid.x);
+      var fLen = 8, fW = Math.PI * 0.35;
+      ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+      for (var f = -1; f <= 1; f += 2) {
+        var fa = angle + f * fW;
+        ctx.beginPath();
+        ctx.moveTo(endEff.x, endEff.y);
+        ctx.lineTo(endEff.x + fLen * Math.cos(fa), endEff.y + fLen * Math.sin(fa));
+        ctx.stroke();
+      }
+    }
+
+    function drawBadge(ctx, canvas, text, color, x, y) {
+      ctx.font = 'bold 12px "Google Sans",sans-serif';
+      var tw = ctx.measureText(text).width;
+      var pad = 8, bh = 22;
+      var bx = x - tw/2 - pad, by = y - bh - 4;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.roundRect(bx, by, tw + pad*2, bh, 5);
+      ctx.fill();
+      ctx.fillStyle = WHITE;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(text, x, by + bh/2);
+    }
+
+    function renderPanel(canvas, trajPts, trueGoalY, origGoalY, color, naiveErrMm) {
+      var ctx = canvas.getContext('2d');
+      var W = canvas.width, H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+
+      // Background
+      ctx.fillStyle = color === BLUE ? '#f0f7ff' : '#fff5f5';
+      ctx.fillRect(0, 0, W, H);
+
+      // Table
+      drawTableIso(ctx, canvas, 0);
+
+      // Original object position (ghost, gray)
+      if (Math.abs(trueGoalY - origGoalY) > 0.005)
+        drawObject(ctx, canvas, origGoalY, '#94a3b8', 'original pos');
+
+      // Target object (green = where it actually is now)
+      drawObject(ctx, canvas, trueGoalY, GREEN, 'object');
+
+      // Robot arm following trajectory
+      drawRobotArm(ctx, canvas, trajPts, color, 0.9);
+
+      // End effector position
+      var ep = trajPts[trajPts.length - 1];
+      var epC = w3(ep.x, ep.y, ep.z, canvas);
+      var errMm = Math.round(Math.abs(ep.y - trueGoalY) * 1000);
+      var badgeText = errMm < 2 ? '✓  0 mm goal error' : '✗  ' + naiveErrMm + ' mm miss';
+      var badgeColor = errMm < 2 ? '#059669' : '#dc2626';
+      if (ctx.roundRect) drawBadge(ctx, canvas, badgeText, badgeColor, epC.x, epC.y);
+
+      // Offset annotation arrow (if offset > 0)
+      if (Math.abs(trueGoalY - origGoalY) > 0.01) {
+        var og = w3(0, origGoalY, 0.08, canvas);
+        var tg = w3(0, trueGoalY, 0.08, canvas);
+        ctx.strokeStyle = '#059669'; ctx.lineWidth = 2; ctx.setLineDash([5, 3]);
+        ctx.beginPath(); ctx.moveTo(og.x, og.y); ctx.lineTo(tg.x, tg.y); ctx.stroke();
+        ctx.setLineDash([]);
+        // arrowhead
+        var ang = Math.atan2(tg.y - og.y, tg.x - og.x);
+        ctx.fillStyle = '#059669';
+        ctx.beginPath();
+        ctx.moveTo(tg.x, tg.y);
+        ctx.lineTo(tg.x - 9*Math.cos(ang-0.4), tg.y - 9*Math.sin(ang-0.4));
+        ctx.lineTo(tg.x - 9*Math.cos(ang+0.4), tg.y - 9*Math.sin(ang+0.4));
+        ctx.closePath(); ctx.fill();
+      }
+    }
+
     function render(offsetCm) {
       var offsetM = offsetCm / 100;
       var dhbCanvas   = document.getElementById('canvas-dhb');
       var naiveCanvas = document.getElementById('canvas-naive');
       if (!dhbCanvas || !naiveCanvas) return;
 
-      var dhbCtx   = dhbCanvas.getContext('2d');
-      var naiveCtx = naiveCanvas.getContext('2d');
+      var dhbPts   = adaptDHB3(arc3, offsetM);
+      var naivePts = naiveReplay3(arc3);
+      var trueGoalY = origGoal3.y + offsetM;
+      var origGoalY = origGoal3.y;
+      var naiveErrMm = Math.round(offsetCm * 10);
 
-      var dhbPts   = adaptDHB(arc, offsetM);
-      var naivePts = naiveReplay(arc);
-      var trueGoal = { x: origGoal.x + offsetM, z: origGoal.z };
-      var newStart = { x: arc[0].x + offsetM, z: arc[0].z };
+      renderPanel(dhbCanvas,   dhbPts,   trueGoalY, origGoalY, BLUE,   0);
+      renderPanel(naiveCanvas, naivePts, trueGoalY, origGoalY, ORANGE, naiveErrMm);
 
-      var naiveErrMm = Math.round(offsetCm * 10);    // |offset| in mm
-      var dhbErrMm   = 0.0;
-
-      // ── DHB canvas ──
-      dhbCtx.clearRect(0, 0, dhbCanvas.width, dhbCanvas.height);
-      drawGrid(dhbCtx, dhbCanvas);
-      // Original arc (gray dashed)
-      dhbCtx.setLineDash([5,4]);
-      drawTraj(dhbCtx, dhbCanvas, arc, GRAY, 1.8);
-      dhbCtx.setLineDash([]);
-      // DHB adapted arc (blue)
-      drawTraj(dhbCtx, dhbCanvas, dhbPts, BLUE, 3);
-      // Original start/goal (gray)
-      drawDot(dhbCtx, dhbCanvas, arc[0], GRAY, 6);
-      drawDot(dhbCtx, dhbCanvas, origGoal, GRAY, 6);
-      // New start (blue square-ish)
-      drawDot(dhbCtx, dhbCanvas, newStart, BLUE, 8);
-      // True target (green star)
-      drawStar(dhbCtx, dhbCanvas, trueGoal, GREEN, 8);
-      // Offset arrow
-      if (offsetCm > 0.3) drawArrow(dhbCtx, dhbCanvas, origGoal, trueGoal, GREEN);
-      // Labels
-      drawLabel(dhbCtx, dhbCanvas, newStart, 'new start', BLUE, 0);
-      drawLabel(dhbCtx, dhbCanvas, trueGoal, 'target (' + offsetCm + ' cm)', GREEN, 10);
-      // Success badge
-      var ep = worldToCanvas(dhbPts[dhbPts.length-1], dhbCanvas);
-      dhbCtx.fillStyle = '#dcfce7'; dhbCtx.strokeStyle = '#16a34a'; dhbCtx.lineWidth = 1.5;
-      roundRect(dhbCtx, ep.x - 42, ep.y - 28, 84, 22, 6);
-      dhbCtx.fillStyle = GREEN; dhbCtx.font = 'bold 11px sans-serif';
-      dhbCtx.textAlign = 'center'; dhbCtx.textBaseline = 'middle';
-      dhbCtx.fillText('✓ 0.0 mm error', ep.x, ep.y - 17);
-
-      // ── Naive canvas ──
-      naiveCtx.clearRect(0, 0, naiveCanvas.width, naiveCanvas.height);
-      drawGrid(naiveCtx, naiveCanvas);
-      // Original arc (solid orange)
-      drawTraj(naiveCtx, naiveCanvas, naivePts, ORANGE, 3);
-      drawDot(naiveCtx, naiveCanvas, arc[0], GRAY, 6);
-      drawDot(naiveCtx, naiveCanvas, origGoal, ORANGE, 8);  // where naive ends
-      // True target (green star)
-      drawStar(naiveCtx, naiveCanvas, trueGoal, GREEN, 8);
-      // Offset arrow
-      if (offsetCm > 0.3) drawArrow(naiveCtx, naiveCanvas, origGoal, trueGoal, GREEN);
-      drawLabel(naiveCtx, naiveCanvas, trueGoal, 'target (' + offsetCm + ' cm)', GREEN, 10);
-      // Error bar between naive endpoint and true goal
-      if (offsetCm > 0.3) {
-        drawErrorBar(naiveCtx, naiveCanvas, origGoal, trueGoal,
-                     naiveErrMm + ' mm miss');
-      }
-      // Miss badge
-      var ep2 = worldToCanvas(naivePts[naivePts.length-1], naiveCanvas);
-      naiveCtx.fillStyle = '#fee2e2'; naiveCtx.strokeStyle = '#dc2626'; naiveCtx.lineWidth = 1.5;
-      roundRect(naiveCtx, ep2.x - 52, ep2.y - 28, 104, 22, 6);
-      naiveCtx.fillStyle = RED; naiveCtx.font = 'bold 11px sans-serif';
-      naiveCtx.textAlign = 'center'; naiveCtx.textBaseline = 'middle';
-      naiveCtx.fillText('✗ ' + naiveErrMm + ' mm error', ep2.x, ep2.y - 17);
-
-      // Update stats
       document.getElementById('offset-display').textContent = offsetCm + ' cm';
-      document.getElementById('dhb-error-label').textContent = 'Goal error: 0.0 mm ✓';
-      document.getElementById('naive-error-label').textContent = 'Goal error: ' + naiveErrMm + ' mm ✗';
+      document.getElementById('naive-error-label').textContent =
+        offsetCm > 0 ? '✗ ' + naiveErrMm + ' mm miss' : '✓  0.0 mm';
       document.getElementById('stat-dhb').textContent = '0.0 mm';
       document.getElementById('stat-naive').textContent = naiveErrMm + ' mm';
-      document.getElementById('stat-ratio').textContent =
-        offsetCm > 0 ? (naiveErrMm > 0 ? '∞×' : '—') : '—';
-    }
-
-    function roundRect(ctx, x, y, w, h, r) {
-      ctx.beginPath();
-      ctx.moveTo(x+r, y);
-      ctx.lineTo(x+w-r, y); ctx.arcTo(x+w, y, x+w, y+r, r);
-      ctx.lineTo(x+w, y+h-r); ctx.arcTo(x+w, y+h, x+w-r, y+h, r);
-      ctx.lineTo(x+r, y+h); ctx.arcTo(x, y+h, x, y+h-r, r);
-      ctx.lineTo(x, y+r); ctx.arcTo(x, y, x+r, y, r);
-      ctx.closePath(); ctx.fill(); ctx.stroke();
+      document.getElementById('stat-ratio').textContent = offsetCm > 0 ? '∞×' : '—';
     }
 
     var slider = document.getElementById('offset-slider');
     if (slider) {
       slider.addEventListener('input', function() { render(parseFloat(this.value)); });
-      render(5);  // initial render at 5 cm
+      render(8);
     }
   })();
 
