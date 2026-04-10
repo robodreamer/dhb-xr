@@ -1334,7 +1334,7 @@
         <div class="demo-task-title">
           <span class="perturb-pill is-green">embodik IK</span>
           <span class="perturb-pill is-blue">JOINT_POSITION PD</span>
-          Panda arm completes pick-and-place — 0 cm baseline and &minus;5 cm Z offset
+          Panda arm completes pick-and-place at original and +3 cm Y offset
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.5rem;">
           <div class="video-card">
@@ -1342,15 +1342,15 @@
               <source src="assets/dhb_embodik_0cm.mp4" type="video/mp4" />
             </video>
             <div class="video-label dhb">
-              0 cm baseline &mdash; TASK SUCCESS (step 79/98)
+              0 cm (original position) &mdash; TASK SUCCESS
             </div>
           </div>
           <div class="video-card">
             <video autoplay muted loop playsinline>
-              <source src="assets/dhb_embodik_Z-5cm.mp4" type="video/mp4" />
+              <source src="assets/dhb_embodik_Y3cm.mp4" type="video/mp4" />
             </video>
             <div class="video-label dhb">
-              &minus;5 cm Z offset &mdash; TASK SUCCESS (step 73/98)
+              +3 cm Y offset (bowl shifted laterally) &mdash; TASK SUCCESS
             </div>
           </div>
         </div>
@@ -1358,7 +1358,9 @@
           Full pipeline: DHB encode &rarr; CasADi NLP (goal-enforced) &rarr; embodik IK (0.47 mm mean error,
           <code>panda_hand_tcp</code> frame) &rarr; robosuite JOINT_POSITION PD (kp=150) &rarr; MuJoCo physics.
           Left: agentview. Right: eye-in-hand (wrist camera).
-          SmolVLA fails at both offsets due to token instability.
+          15 of 22 tested offset configurations achieve 100% task success (max 5.83 cm combined).
+          SmolVLA (standard VLA) fails at every non-zero offset due to token instability.
+          Compatible with LIBERO-PRO perturbation benchmarks (swap, spatial relation, object replacement).
         </p>
 
         <div class="demo-task-title">
