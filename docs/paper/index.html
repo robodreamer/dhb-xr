@@ -949,21 +949,12 @@
         <div class="tab-content box" id="tab-obstacle" style="border-radius:0 8px 8px 8px; margin-top:0;">
           <div class="columns">
             <div class="column is-7">
-              <div class="obstacle-grid">
-                <div class="result-figure">
-                  <img src="assets/adaptation_comparison.png"
-                       alt="Obstacle-aware adaptation: DHB-XR avoids obstacle, affine rotation collides" />
-                  <p class="fig-caption">
-                    DHB-XR projects waypoints above the obstacle with zero collisions and reaches the goal exactly. Affine rotation has no obstacle mechanism and 9 trajectory points collide.
-                  </p>
-                </div>
-                <div class="result-figure">
-                  <img src="assets/fig7_6d_adaptation_vs_affine.png"
-                       alt="6D adaptation: DHB-XR vs affine rotation with full SE(3) retargeting" />
-                  <p class="fig-caption">
-                    Full 6D comparison (position + orientation). DHB-XR preserves the trajectory's intrinsic shape while satisfying obstacle constraints. Affine simply rotates the path into the obstacle.
-                  </p>
-                </div>
+              <div class="result-figure">
+                <img src="assets/adaptation_comparison.png"
+                     alt="Obstacle-aware adaptation: DHB-XR avoids obstacle, affine rotation collides" />
+                <p class="fig-caption">
+                  DHB-XR decodes the invariant shape, then projects waypoints above the obstacle — 0 collisions, goal reached exactly. Affine rotation has no obstacle mechanism: 9 trajectory points collide with the wall.
+                </p>
               </div>
             </div>
             <div class="column is-5">
@@ -985,25 +976,27 @@
           <div class="columns is-vcentered">
             <div class="column is-6">
               <div class="result-figure">
-                <img src="assets/honest_stability.png"
-                     alt="Multi-task learnability: token MSE across 10 tasks" />
+                <img src="assets/fig2_perturbation_sweep.png"
+                     alt="DHB invariant prediction: multi-task MSE across 10 LIBERO-Spatial tasks" />
                 <p class="fig-caption">
-                  Across 10 LIBERO-Spatial tasks, DHB magnitude tokens achieve 0.023 MSE in multi-task reconstruction &mdash; smooth invariants are easier for downstream models to predict than raw coordinates.
+                  A single multi-task invariant predictor trained across all 10 LIBERO-Spatial tasks
+                  achieves <strong>0.023 MSE</strong> on held-out demos — demonstrating that DHB magnitude
+                  invariants are reliably learnable from visual observations.
                 </p>
               </div>
             </div>
             <div class="column is-6">
-              <h4 class="subtitle is-5">Smooth invariants are easier to learn</h4>
+              <h4 class="subtitle is-5">Invariants are predictable from observations</h4>
               <p class="mb-4">
-                DHB magnitude invariants produce smoother, lower-frequency signals than raw action coordinates.
-                This smoothness directly translates to <strong>easier learnability</strong>: a simple multi-task
-                predictor achieves <strong>0.023 MSE</strong> on invariant sequences, compared to significantly
-                higher error on raw coordinate sequences.
+                DHB magnitude invariants are smoother and lower-frequency than raw action coordinates —
+                a direct consequence of representing motion shape rather than absolute positions.
+                A simple predictor generalizes across all 10 spatial task variants with a single model.
               </p>
               <div class="insight-box" style="margin-top:0;">
-                <strong>Implication for VLAs:</strong> Vision-language-action models that predict DHB tokens instead of
-                raw action tokens get a free accuracy boost because the target distribution is inherently smoother and
-                lower-dimensional. The same model capacity yields better predictions.
+                <strong>Implication for VLAs:</strong> A VLA trained to predict DHB tokens
+                benefits from smoother, more predictable targets.
+                The same model capacity yields better action reconstruction, and SE(3) data augmentation
+                costs <strong>0 ms</strong> of label recomputation — free by construction.
               </div>
             </div>
           </div>
@@ -1124,21 +1117,7 @@
           </p>
         </div>
 
-        <!-- 3D TRAJECTORY DEMOS -->
-        <div class="demo-task-title">
-          <span class="perturb-pill is-purple">3D</span>
-          <span class="perturb-pill is-blue">6-DOF</span>
-          One recorded demonstration &rarr; adapted to 8 different workspaces
-        </div>
-        <div class="video-card mb-4">
-          <video autoplay muted loop playsinline>
-            <source src="assets/hero_3d_adaptation.mp4" type="video/mp4" />
-          </video>
-          <div class="video-label comparison">
-            Original trajectory (blue, thick) with orientation frames. Eight adapted variants (colored) all preserve the exact arc shape and orientation profile &mdash; only the workspace position changes.
-          </div>
-        </div>
-
+        <!-- 3D TRAJECTORY DEMOS (hero video shown in hero section; start with SE(3) proof) -->
         <div class="demo-task-title">
           <span class="perturb-pill is-purple">SE(3)</span>
           <span class="perturb-pill is-green">invariance proof</span>
@@ -1194,23 +1173,7 @@
           unchanged — endpoint error: <strong>= offset distance</strong>.
         </div>
 
-        <!-- Primary: side-by-side at 5 cm -->
-        <p class="demo-task-title">
-          <span class="perturb-pill is-blue">5&thinsp;cm offset</span>
-          Trajectory adaptation &mdash; side-by-side comparison
-        </p>
-        <div class="video-card mb-5">
-          <video autoplay muted loop playsinline>
-            <source src="assets/demo_side_by_side.mp4" type="video/mp4" />
-          </video>
-          <div class="video-label comparison">
-            Left: DHB-XR &mdash; shape preserved, 0.0&thinsp;mm error
-            &nbsp;&nbsp;|&nbsp;&nbsp;
-            Right: Naive Replay &mdash; 50&thinsp;mm miss (replays original, no adaptation)
-          </div>
-        </div>
-
-        <!-- At 10 cm -->
+        <!-- At 10 cm (5cm removed — 10cm is more visually decisive) -->
         <p class="demo-task-title">
           <span class="perturb-pill is-blue">10&thinsp;cm offset</span>
           Trajectory adaptation &mdash; larger perturbation
@@ -1241,37 +1204,6 @@
           </div>
         </div>
 
-        <!-- SE(3) stability (2D version — see 3D version above) -->
-        <p class="demo-task-title">
-          <span class="perturb-pill is-purple">SE(3) transforms</span>
-          <span class="perturb-pill is-amber">2D</span>
-          Same trajectory, 12 random rigid-body transforms &mdash; tokens are identical (2D version)
-        </p>
-        <div class="video-card mb-2">
-          <video autoplay muted loop playsinline>
-            <source src="assets/demo_se3_stability.mp4" type="video/mp4" />
-          </video>
-          <div class="video-label comparison">
-            2D version of the SE(3) invariance demo (see 3D version above for full 6-DOF proof).
-            Left: trajectories look completely different under each rigid-body transform.
-            Right: magnitude invariants are <strong>identical</strong> &mdash; 0.0% token change, guaranteed.
-          </div>
-        </div>
-
-        <!-- Shape preservation -->
-        <p class="demo-task-title" style="margin-top:1.5rem;">
-          <span class="perturb-pill is-green">shape preservation</span>
-          Arc shape bitwise-identical under adaptation
-        </p>
-        <div class="video-card mb-5">
-          <video autoplay muted loop playsinline>
-            <source src="assets/demo_shape_preservation.mp4" type="video/mp4" />
-          </video>
-          <div class="video-label comparison">
-            Left: original recorded trajectory arc. Right: DHB-XR adaptation overlaid &mdash;
-            intrinsic arc shape is bitwise-identical, only the workspace position changes.
-          </div>
-        </div>
 
         <p class="has-text-grey is-size-7 mt-3">
           Animations rendered at 1680&times;720 @ 30 fps from the DHB-XR geometric encoder.
