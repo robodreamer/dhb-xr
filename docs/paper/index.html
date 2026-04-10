@@ -598,9 +598,9 @@
           <div class="column">
             <div class="box" style="border-top:3px solid #059669; height:100%">
               <span class="icon" style="color:#059669;"><i class="fas fa-map-marker-alt fa-lg"></i></span>
-              <strong>&nbsp;Spatial generalization.</strong>
-              Exact <strong>0.0 mm</strong> goal error on 10 LIBERO-Spatial tasks
-              at perturbations up to 20 cm across 8 directions. Zero solver required for translations.
+              <strong>&nbsp;Full 7-DOF action invariance.</strong>
+              Exact <strong>0.0 mm</strong> goal error across 10 tasks &times; 8 directions &times; 20 cm offsets.
+              Arc-length invariant gripper extends SE(3) guarantee to the complete action space.
             </div>
           </div>
         </div>
@@ -741,6 +741,9 @@
           <strong>Key insight:</strong> DHB-XR is not an alternative to FAST or OAT &mdash; it is a
           <em>composable representation layer</em>. Any existing tokenizer inherits perfect geometric
           stability simply by operating on DHB invariant input rather than raw coordinates.
+          The invariance extends to the full <strong>7-DOF action space</strong>: discrete gripper
+          events are mapped to normalized arc-length fractions along the trajectory,
+          making both continuous 6-DOF pose and discrete manipulation signals SE(3)-invariant.
         </div>
 
       </div>
