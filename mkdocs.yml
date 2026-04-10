@@ -74,7 +74,6 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - Paper: paper/index.html
   - Changelog: changelog.md
   - Installation: installation.md
   - Quickstart: quickstart.md
