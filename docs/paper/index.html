@@ -13,6 +13,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Noto+Sans:ital,wght@0,400;0,700;1,400&family=Source+Sans+Pro:wght@300;400;600;700&family=Source+Serif+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
   <!-- Academicons (for arXiv icon) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css" />
+  <!-- Three.js for interactive 3D demo -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 
   <style>
     :root {
@@ -1026,17 +1028,17 @@
           </div>
 
           <!-- Two workspace panels -->
+          <!-- Two Three.js 3D trajectory panels -->
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
             <!-- DHB panel -->
             <div>
               <div style="text-align:center; font-weight:700; font-size:0.95rem; color:#2563eb; margin-bottom:0.35rem; font-family:'Google Sans',sans-serif;">
                 DHB-XR &mdash; adapts to new object position
               </div>
-              <canvas id="canvas-dhb" width="540" height="340"
-                style="width:100%; border:2px solid #bfdbfe; border-radius:10px; background:#f8faff; display:block;"></canvas>
+              <div id="three-dhb" style="width:100%; height:320px; border:2px solid #bfdbfe; border-radius:10px; overflow:hidden; background:#f0f7ff;"></div>
               <div id="dhb-badge" style="text-align:center; margin-top:0.5rem;">
                 <span style="display:inline-block; background:#059669; color:white; border-radius:6px;
-                  padding:0.3rem 1rem; font-weight:700; font-size:1rem;">✓ 0.0 mm goal error</span>
+                  padding:0.3rem 1rem; font-weight:700; font-size:1rem;">&#10003; 0.0 mm goal error</span>
               </div>
             </div>
             <!-- Naive panel -->
@@ -1044,12 +1046,13 @@
               <div style="text-align:center; font-weight:700; font-size:0.95rem; color:#dc2626; margin-bottom:0.35rem; font-family:'Google Sans',sans-serif;">
                 Naive Replay &mdash; reaches empty space
               </div>
-              <canvas id="canvas-naive" width="540" height="340"
-                style="width:100%; border:2px solid #fecaca; border-radius:10px; background:#fff8f8; display:block;"></canvas>
+              <div id="three-naive" style="width:100%; height:320px; border:2px solid #fecaca; border-radius:10px; overflow:hidden; background:#fff8f8;"></div>
               <div id="naive-badge" style="text-align:center; margin-top:0.5rem;">
                 <span id="naive-error-label" style="display:inline-block; background:#dc2626; color:white; border-radius:6px;
-                  padding:0.3rem 1rem; font-weight:700; font-size:1rem;">✗ 80 mm miss</span>
+                  padding:0.3rem 1rem; font-weight:700; font-size:1rem;">&#10007; 80 mm miss</span>
               </div>
+            </div>
+          </div>
             </div>
           </div>
 
@@ -1297,387 +1300,419 @@
 
 
 <script>
-  // ── Interactive Demo — Isometric Robot Workspace ─────────────────────────────
+  // ── Three.js Interactive Demo — Realistic Panda Pick-and-Place ────────────
   (function() {
-    var N = 80;
-    var BLUE   = '#2563eb', GREEN  = '#059669', RED    = '#dc2626',
-        ORANGE = '#f97316', GRAY   = '#9ca3af', LGRAY  = '#e5e7eb',
-        WHITE  = '#ffffff', DARK   = '#1e293b';
+    if (typeof THREE === 'undefined') { return; }
 
-    // Generate canonical arc trajectory (positions as [{x,z}])
-    function makeArc() {
+    // ── Multi-segment pick-and-place trajectory ────────────────────────────
+    // Coordinate frame: X = robot lateral, Y = depth away from base, Z = up
+    // Robot rest pose above workspace: x=0, y=0.30, z=0.40
+    // Object on table: z = 0.28 (grasp height)
+    // Clearance height: z = 0.55
+
+    function makePickArc(targetX, targetY, startX, startY) {
+      targetX = (targetX === undefined) ? 0.0 : targetX;
+      targetY = (targetY === undefined) ? 0.70 : targetY;
+      startX  = (startX  === undefined) ? 0.0 : startX;
+      startY  = (startY  === undefined) ? 0.30 : startY;
+      var startZ = 0.40, clearZ = 0.55, graspZ = 0.28;
       var pts = [];
-      for (var i = 0; i < N; i++) {
-        var t = i / (N - 1);
+
+      // Phase 1 – DEPART: lift up from rest to clearance (10 pts)
+      for (var i = 0; i < 10; i++) {
+        var t = i / 9;
+        pts.push({ x: startX, y: startY, z: startZ + (clearZ - startZ) * t });
+      }
+      // Phase 2 – TRANSIT: move laterally to above target (30 pts, smooth ease-in-out)
+      for (var i = 0; i < 30; i++) {
+        var t = i / 29;
+        var s = t * t * (3 - 2 * t);  // cubic ease-in-out
         pts.push({
-          x: 0.25 + 0.45 * t,
-          z: 0.20 + 0.32 * Math.sin(Math.PI * t)
+          x: startX + (targetX - startX) * s,
+          y: startY + (targetY - startY) * s,
+          z: clearZ
         });
       }
-      return pts;
+      // Phase 3 – APPROACH: descend straight down to grasp height (20 pts)
+      for (var i = 0; i < 20; i++) {
+        var t = i / 19;
+        pts.push({ x: targetX, y: targetY, z: clearZ + (graspZ - clearZ) * t });
+      }
+      // Phase 4 – GRASP + LIFT: lift back to clearance (20 pts)
+      for (var i = 0; i < 20; i++) {
+        var t = i / 19;
+        pts.push({ x: targetX, y: targetY, z: graspZ + (clearZ - graspZ) * t });
+      }
+      return pts;  // 80 points total
     }
 
-    // DHB adapt: translate entire arc by offset (shape preserved)
-    function adaptDHB(arc, offsetX) {
-      return arc.map(function(p) {
-        return { x: p.x + offsetX, z: p.z };
+    // Convert trajectory coords (X right, Y depth, Z up) to Three.js (Y up)
+    function toV3(p) {
+      return new THREE.Vector3(p.x, p.z, -p.y);
+    }
+
+    // ── Scene builder ──────────────────────────────────────────────────────
+    function buildScene(containerId, lineColor, isNaive) {
+      var container = document.getElementById(containerId);
+      if (!container) return null;
+      var W = container.clientWidth  || 480;
+      var H = container.clientHeight || 320;
+
+      // ── Renderer ──────────────────────────────────────────────────────────
+      var renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(W, H);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
+      renderer.setClearColor(isNaive ? 0xfff8f5 : 0xf0f7ff, 1);
+      container.appendChild(renderer.domElement);
+
+      // ── Scene ─────────────────────────────────────────────────────────────
+      var scene  = new THREE.Scene();
+      scene.fog  = new THREE.Fog(isNaive ? 0xfff8f5 : 0xf0f7ff, 3, 8);
+
+      // ── Camera: elevation ~30deg, azimuth ~-45deg ──────────────────────
+      var camera = new THREE.PerspectiveCamera(38, W / H, 0.01, 20);
+      var radius = 1.9, elev = 32 * Math.PI / 180, azim = -42 * Math.PI / 180;
+      camera.position.set(
+        radius * Math.cos(elev) * Math.sin(azim),
+        radius * Math.sin(elev) + 0.30,
+        radius * Math.cos(elev) * Math.cos(azim)
+      );
+      // Look at center of workspace
+      camera.lookAt(0, 0.35, -0.50);
+
+      // ── Lights ────────────────────────────────────────────────────────────
+      scene.add(new THREE.AmbientLight(0xffffff, 0.50));
+
+      var sun = new THREE.DirectionalLight(0xffeedd, 0.95);
+      sun.position.set(1.2, 2.0, 1.5);
+      sun.castShadow = true;
+      sun.shadow.mapSize.set(1024, 1024);
+      sun.shadow.camera.left   = sun.shadow.camera.bottom = -1.2;
+      sun.shadow.camera.right  = sun.shadow.camera.top    =  1.2;
+      sun.shadow.camera.near   = 0.1;
+      sun.shadow.camera.far    = 6;
+      scene.add(sun);
+
+      scene.add(new THREE.PointLight(0xddeeff, 0.30, 6).position.set(-1, 1, -1));
+
+      // ── Floor ─────────────────────────────────────────────────────────────
+      var floorM = new THREE.Mesh(
+        new THREE.PlaneGeometry(3, 3),
+        new THREE.MeshLambertMaterial({ color: 0xe8ecf0 })
+      );
+      floorM.rotation.x = -Math.PI / 2;
+      floorM.position.y = -0.22;
+      floorM.receiveShadow = true;
+      scene.add(floorM);
+
+      // Shadow-only plane just below table
+      var shadowM = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.2, 1.2),
+        new THREE.ShadowMaterial({ opacity: 0.20 })
+      );
+      shadowM.rotation.x  = -Math.PI / 2;
+      shadowM.position.set(0, -0.215, -0.55);
+      shadowM.receiveShadow = true;
+      scene.add(shadowM);
+
+      // ── Table ─────────────────────────────────────────────────────────────
+      // Table top: centered at (0, tableTopY, tableZ_depth) in Three.js coords
+      // Our world: table at y_world=0.20..1.10, z_world=0..0.025
+      // Three.js: y = z_world + thickness/2, z = -(y_world_center)
+      var tableTopMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(0.70, 0.025, 0.90),
+        new THREE.MeshLambertMaterial({ color: 0xd4b483 })
+      );
+      tableTopMesh.position.set(0, 0.0125, -0.65);
+      tableTopMesh.castShadow = tableTopMesh.receiveShadow = true;
+      scene.add(tableTopMesh);
+
+      // Table legs
+      var legG = new THREE.CylinderGeometry(0.02, 0.02, 0.22, 8);
+      var legM2 = new THREE.MeshLambertMaterial({ color: 0xb8975c });
+      [[0.30, -0.20], [-0.30, -0.20], [0.30, -1.10], [-0.30, -1.10]].forEach(function(o) {
+        var leg = new THREE.Mesh(legG, legM2);
+        leg.position.set(o[0], -0.10, o[1]);
+        leg.castShadow = true;
+        scene.add(leg);
       });
-    }
 
-    // Naive: replay original arc unchanged
-    function naiveReplay(arc) {
-      return arc.map(function(p) { return { x: p.x, z: p.z }; });
-    }
+      // ── Robot base ────────────────────────────────────────────────────────
+      var baseMesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.065, 0.075, 0.085, 16),
+        new THREE.MeshLambertMaterial({ color: 0x3a4a5c })
+      );
+      // Base on table top: z_world=0.025 -> Three.js y=0.025; robot base at y_world=0
+      // base center in Three.js: y = 0.025 + 0.085/2, z = -0
+      baseMesh.position.set(0, 0.0675, 0);
+      baseMesh.castShadow = true;
+      scene.add(baseMesh);
 
-    var arc = makeArc();
-    var origGoal = arc[arc.length - 1];
+      // ── Target object (green sphere) ──────────────────────────────────────
+      var objMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(0.038, 16, 12),
+        new THREE.MeshLambertMaterial({ color: 0x22c55e, emissive: 0x064e1e, emissiveIntensity: 0.2 })
+      );
+      objMesh.castShadow = true;
+      scene.add(objMesh);
 
-    function worldToCanvas(p, cx, offsetX) {
-      // Map world coords to canvas pixels
-      // x: [0.1, 0.85] -> [20, cx.width-20]
-      // z: [0.05, 0.60] -> [cx.height-20, 20]
-      var xRange = [0.10, 0.85], zRange = [0.05, 0.60];
-      var px = 20 + (p.x - xRange[0]) / (xRange[1] - xRange[0]) * (cx.width - 40);
-      var py = cx.height - 20 - (p.z - zRange[0]) / (zRange[1] - zRange[0]) * (cx.height - 40);
-      return { x: px, y: py };
-    }
-
-    function drawGrid(ctx, canvas) {
-      ctx.strokeStyle = '#f3f4f6'; ctx.lineWidth = 1;
-      for (var gx = 0.1; gx <= 0.85; gx += 0.15) {
-        var p0 = worldToCanvas({x: gx, z: 0.05}, canvas);
-        var p1 = worldToCanvas({x: gx, z: 0.60}, canvas);
-        ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y); ctx.stroke();
-      }
-      for (var gz = 0.1; gz <= 0.60; gz += 0.1) {
-        var p0 = worldToCanvas({x: 0.10, z: gz}, canvas);
-        var p1 = worldToCanvas({x: 0.85, z: gz}, canvas);
-        ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y); ctx.stroke();
-      }
-    }
-
-    function drawTraj(ctx, canvas, pts, color, lw) {
-      if (pts.length < 2) return;
-      ctx.strokeStyle = color; ctx.lineWidth = lw;
-      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-      ctx.beginPath();
-      var p0 = worldToCanvas(pts[0], canvas);
-      ctx.moveTo(p0.x, p0.y);
-      for (var i = 1; i < pts.length; i++) {
-        var pi = worldToCanvas(pts[i], canvas);
-        ctx.lineTo(pi.x, pi.y);
-      }
-      ctx.stroke();
-    }
-
-    function drawDot(ctx, canvas, pt, color, r) {
-      var p = worldToCanvas(pt, canvas);
-      ctx.fillStyle = color;
-      ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 2 * Math.PI); ctx.fill();
-      // white ring
-      ctx.strokeStyle = WHITE; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 2 * Math.PI); ctx.stroke();
-    }
-
-    function drawStar(ctx, canvas, pt, color, r) {
-      var c = worldToCanvas(pt, canvas);
-      ctx.fillStyle = color;
-      ctx.font = (r * 2.5) + 'px serif';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('★', c.x, c.y);
-    }
-
-    function drawArrow(ctx, canvas, from, to, color) {
-      var f = worldToCanvas(from, canvas);
-      var t = worldToCanvas(to, canvas);
-      ctx.strokeStyle = color; ctx.lineWidth = 2.5;
-      ctx.setLineDash([5, 4]);
-      ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(t.x, t.y); ctx.stroke();
-      ctx.setLineDash([]);
-      // arrowhead
-      var angle = Math.atan2(t.y - f.y, t.x - f.x);
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.moveTo(t.x, t.y);
-      ctx.lineTo(t.x - 10*Math.cos(angle-0.4), t.y - 10*Math.sin(angle-0.4));
-      ctx.lineTo(t.x - 10*Math.cos(angle+0.4), t.y - 10*Math.sin(angle+0.4));
-      ctx.closePath(); ctx.fill();
-    }
-
-    function drawLabel(ctx, canvas, pt, text, color, offsetPx) {
-      var p = worldToCanvas(pt, canvas);
-      ctx.fillStyle = color;
-      ctx.font = 'bold 12px "Source Sans Pro", sans-serif';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-      ctx.fillText(text, p.x + (offsetPx||0), p.y - 8);
-    }
-
-    function drawErrorBar(ctx, canvas, from, to, label) {
-      var f = worldToCanvas(from, canvas);
-      var t = worldToCanvas(to, canvas);
-      // double-headed arrow
-      ctx.strokeStyle = RED; ctx.lineWidth = 2;
-      ctx.setLineDash([]);
-      // vertical line
-      var midX = (f.x + t.x) / 2 + 30;
-      ctx.beginPath(); ctx.moveTo(midX, f.y); ctx.lineTo(midX, t.y); ctx.stroke();
-      // tick tops
-      ctx.beginPath(); ctx.moveTo(midX-5, f.y); ctx.lineTo(midX+5, f.y); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(midX-5, t.y); ctx.lineTo(midX+5, t.y); ctx.stroke();
-      // label
-      ctx.fillStyle = RED;
-      ctx.font = 'bold 13px "Source Sans Pro", sans-serif';
-      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-      ctx.fillText(label, midX + 8, (f.y + t.y) / 2);
-    }
-
-    // ── Isometric projection helpers ────────────────────────────────────────
-    // Convert 3D world (x=right, y=depth, z=height) → canvas (u, v)
-    // Isometric: u = (x - y)*cos30, v = -(x + y)*sin30 + z
-    var ISO_COS = Math.cos(Math.PI / 6);   // 0.866
-    var ISO_SIN = Math.sin(Math.PI / 6);   // 0.500
-
-    function isoProject(x3, y3, z3) {
-      return {
-        u: (x3 - y3) * ISO_COS,
-        v: -(x3 + y3) * ISO_SIN + z3
-      };
-    }
-
-    // Map isometric (u,v) → canvas pixels  — centered, scaled
-    function isoToCanvas(u, v, canvas) {
-      var scale = canvas.width / 2.2;
-      var cx = canvas.width  * 0.50;
-      var cy = canvas.height * 0.62;
-      return { x: cx + u * scale, y: cy - v * scale };
-    }
-
-    // Full 3D → canvas
-    function w3(x3, y3, z3, canvas) {
-      var iso = isoProject(x3, y3, z3);
-      return isoToCanvas(iso.u, iso.v, canvas);
-    }
-
-    // ── Generate 3D pick-arc trajectory ──────────────────────────────────────
-    // Robot at origin; reaches forward (+y) and down to pick an object
-    function makeArc3D(N) {
-      N = N || 80;
-      var pts = [];
-      for (var i = 0; i < N; i++) {
-        var t = i / (N - 1);
-        pts.push({
-          x:  0.05 * Math.sin(Math.PI * t * 0.6),          // slight side sway
-          y:  0.15 + 0.55 * t,                              // moves forward
-          z:  0.30 + 0.25 * Math.sin(Math.PI * t)          // arc up then down
+      // ── Trajectory lines ──────────────────────────────────────────────────
+      var N_MAX = 80;
+      function makeLine(color, opacity) {
+        var geo  = new THREE.BufferGeometry();
+        var pos  = new Float32Array(N_MAX * 3);
+        geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        geo.setDrawRange(0, 0);
+        var mat  = new THREE.LineBasicMaterial({
+          color: color,
+          transparent: opacity < 1,
+          opacity: opacity,
+          linewidth: 1
         });
+        var line = new THREE.Line(geo, mat);
+        scene.add(line);
+        return line;
       }
-      return pts;
-    }
+      var origLine = makeLine(0x94a3b8, 0.32);  // faded gray original
+      var trajLine = makeLine(lineColor, 1.00);  // colored active trajectory
 
-    var arc3 = makeArc3D(80);
-    var origGoal3 = arc3[arc3.length - 1];
+      // ── Phase boundary markers ─────────────────────────────────────────────
+      var phaseCols  = [0xfbbf24, 0x60a5fa, 0xf472b6, 0xa78bfa];
+      var phaseMkrs  = phaseCols.map(function(c) {
+        var m = new THREE.Mesh(
+          new THREE.SphereGeometry(0.016, 8, 8),
+          new THREE.MeshLambertMaterial({ color: c })
+        );
+        scene.add(m);
+        return m;
+      });
 
-    function adaptDHB3(arc, offsetY) {
-      return arc.map(function(p) { return {x:p.x, y:p.y+offsetY, z:p.z}; });
-    }
-    function naiveReplay3(arc) {
-      return arc.map(function(p) { return {x:p.x, y:p.y, z:p.z}; });
-    }
+      // ── Robot arm: joints + links ─────────────────────────────────────────
+      var jMat = new THREE.MeshLambertMaterial({ color: 0x3a4a5c });
+      var lMat = new THREE.MeshLambertMaterial({ color: 0xf1f5f9 });
+      var gMat = new THREE.MeshLambertMaterial({ color: 0x64748b });
 
-    // ── Drawing helpers ───────────────────────────────────────────────────────
-    function drawTableIso(ctx, canvas, tableDY) {
-      // Table surface (isometric rectangle at z=0)
-      var TW = 0.5, TD = 0.95;
-      var corners = [
-        w3(-TW/2, 0.10,         0, canvas),
-        w3( TW/2, 0.10,         0, canvas),
-        w3( TW/2, 0.10 + TD,    0, canvas),
-        w3(-TW/2, 0.10 + TD,    0, canvas),
-      ];
-      ctx.fillStyle = '#f1f5f9';
-      ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(corners[0].x, corners[0].y);
-      for (var i = 1; i < 4; i++) ctx.lineTo(corners[i].x, corners[i].y);
-      ctx.closePath(); ctx.fill(); ctx.stroke();
-
-      // Grid lines on table
-      ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 0.5;
-      for (var gx = -TW/2; gx <= TW/2; gx += 0.15) {
-        var p0 = w3(gx, 0.10,       0, canvas);
-        var p1 = w3(gx, 0.10 + TD,  0, canvas);
-        ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y); ctx.stroke();
+      function makeSphere(r) {
+        var m = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 10), jMat.clone());
+        m.castShadow = true;
+        scene.add(m);
+        return m;
       }
-      for (var gy = 0; gy <= TD; gy += 0.15) {
-        var p0 = w3(-TW/2, 0.10 + gy, 0, canvas);
-        var p1 = w3( TW/2, 0.10 + gy, 0, canvas);
-        ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y); ctx.stroke();
+      var jBase = makeSphere(0.048);
+      var jSho  = makeSphere(0.042);
+      var jElb  = makeSphere(0.036);
+      var jWri  = makeSphere(0.030);
+      var jEE   = makeSphere(0.026);
+
+      function makeCyl(r) {
+        var m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.10, 10), lMat.clone());
+        m.castShadow = true;
+        scene.add(m);
+        return m;
       }
-    }
+      var lk1 = makeCyl(0.028);
+      var lk2 = makeCyl(0.024);
+      var lk3 = makeCyl(0.020);
 
-    function drawObject(ctx, canvas, y3, color, label) {
-      // Draw a small bowl object at (0, y3, 0)
-      var base = w3(0, y3, 0, canvas);
-      var top  = w3(0, y3, 0.055, canvas);
-
-      // Cylinder body
-      ctx.strokeStyle = color; ctx.lineWidth = 2;
-      ctx.fillStyle = color + '33';
-      ctx.beginPath(); ctx.arc(base.x, base.y, 10, 0, 2*Math.PI); ctx.fill(); ctx.stroke();
-      // Label
-      ctx.fillStyle = color;
-      ctx.font = 'bold 11px "Google Sans",sans-serif';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-      ctx.fillText(label, base.x, base.y - 13);
-    }
-
-    function drawRobotArm(ctx, canvas, trajPts, color, armAlpha) {
-      if (trajPts.length < 2) return;
-      // Draw the trajectory path (faded trail)
-      ctx.globalAlpha = 0.25;
-      ctx.strokeStyle = color; ctx.lineWidth = 2;
-      ctx.setLineDash([4, 3]);
-      ctx.beginPath();
-      var p0 = w3(trajPts[0].x, trajPts[0].y, trajPts[0].z, canvas);
-      ctx.moveTo(p0.x, p0.y);
-      for (var i = 1; i < trajPts.length; i++) {
-        var pi = w3(trajPts[i].x, trajPts[i].y, trajPts[i].z, canvas);
-        ctx.lineTo(pi.x, pi.y);
+      function makeGripFinger() {
+        var m = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.050, 0.015), gMat.clone());
+        m.castShadow = true;
+        scene.add(m);
+        return m;
       }
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.globalAlpha = 1.0;
+      var gfL = makeGripFinger();
+      var gfR = makeGripFinger();
 
-      // Robot base (fixed at y=0)
-      var base = w3(0, 0, 0, canvas);
-      var endEff = w3(trajPts[trajPts.length-1].x,
-                      trajPts[trajPts.length-1].y,
-                      trajPts[trajPts.length-1].z, canvas);
-      // Robot base mount
-      ctx.fillStyle = '#475569'; ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.arc(base.x, base.y, 9, 0, 2*Math.PI); ctx.fill(); ctx.stroke();
-
-      // Upper arm (base → midpoint)
-      var midPt = trajPts[Math.floor(trajPts.length * 0.5)];
-      var mid = w3(midPt.x * 0.5, midPt.y * 0.5, midPt.z * 0.5, canvas);
-      ctx.strokeStyle = '#64748b'; ctx.lineWidth = 7; ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.moveTo(base.x, base.y); ctx.lineTo(mid.x, mid.y); ctx.stroke();
-
-      // Lower arm (midpoint → end effector)
-      ctx.strokeStyle = color; ctx.lineWidth = 5;
-      ctx.beginPath(); ctx.moveTo(mid.x, mid.y); ctx.lineTo(endEff.x, endEff.y); ctx.stroke();
-
-      // Elbow joint
-      ctx.fillStyle = '#94a3b8'; ctx.strokeStyle = WHITE; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.arc(mid.x, mid.y, 5, 0, 2*Math.PI); ctx.fill(); ctx.stroke();
-
-      // End effector (gripper)
-      ctx.fillStyle = color; ctx.strokeStyle = WHITE; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(endEff.x, endEff.y, 7, 0, 2*Math.PI); ctx.fill(); ctx.stroke();
-
-      // Gripper fingers
-      var angle = Math.atan2(endEff.y - mid.y, endEff.x - mid.x);
-      var fLen = 8, fW = Math.PI * 0.35;
-      ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
-      for (var f = -1; f <= 1; f += 2) {
-        var fa = angle + f * fW;
-        ctx.beginPath();
-        ctx.moveTo(endEff.x, endEff.y);
-        ctx.lineTo(endEff.x + fLen * Math.cos(fa), endEff.y + fLen * Math.sin(fa));
-        ctx.stroke();
+      // ── Helper: position & orient cylinder between two points ──────────────
+      var _axis_y  = new THREE.Vector3(0, 1, 0);
+      var _quat    = new THREE.Quaternion();
+      function setCylBetween(cyl, A, B) {
+        var mid = new THREE.Vector3().addVectors(A, B).multiplyScalar(0.5);
+        cyl.position.copy(mid);
+        var dir = new THREE.Vector3().subVectors(B, A);
+        var len = dir.length();
+        cyl.scale.set(1, len / 0.10, 1);
+        _quat.setFromUnitVectors(_axis_y, dir.normalize());
+        cyl.quaternion.copy(_quat);
       }
-    }
 
-    function drawBadge(ctx, canvas, text, color, x, y) {
-      ctx.font = 'bold 12px "Google Sans",sans-serif';
-      var tw = ctx.measureText(text).width;
-      var pad = 8, bh = 22;
-      var bx = x - tw/2 - pad, by = y - bh - 4;
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.roundRect(bx, by, tw + pad*2, bh, 5);
-      ctx.fill();
-      ctx.fillStyle = WHITE;
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(text, x, by + bh/2);
-    }
+      // ── Simple 3-link forward kinematics / IK approximation ───────────────
+      // Given EE position in Three.js coords, compute shoulder/elbow/wrist
+      var BASE_POS = new THREE.Vector3(0, 0.0675 + 0.0425, 0);  // top of base cylinder
 
-    function renderPanel(canvas, trajPts, trueGoalY, origGoalY, color, naiveErrMm) {
-      var ctx = canvas.getContext('2d');
-      var W = canvas.width, H = canvas.height;
-      ctx.clearRect(0, 0, W, H);
+      function armIK(eeV3) {
+        var shoulder = new THREE.Vector3(0, BASE_POS.y + 0.18, 0);
 
-      // Background
-      ctx.fillStyle = color === BLUE ? '#f0f7ff' : '#fff5f5';
-      ctx.fillRect(0, 0, W, H);
+        // Direction from shoulder to EE
+        var toEE  = new THREE.Vector3().subVectors(eeV3, shoulder);
+        var reach = toEE.length();
 
-      // Table
-      drawTableIso(ctx, canvas, 0);
+        // Elbow: ~60% of the way to EE, biased outward (robot X-axis)
+        var bow   = Math.sin(Math.PI * Math.min(reach / 0.60, 1.0)) * 0.07;
+        var elbow = new THREE.Vector3()
+          .addVectors(shoulder, toEE.clone().multiplyScalar(0.55))
+          .add(new THREE.Vector3(bow, 0, 0));
 
-      // Original object position (ghost, gray)
-      if (Math.abs(trueGoalY - origGoalY) > 0.005)
-        drawObject(ctx, canvas, origGoalY, '#94a3b8', 'original pos');
+        var wrist = new THREE.Vector3().addVectors(elbow, eeV3).multiplyScalar(0.5);
 
-      // Target object (green = where it actually is now)
-      drawObject(ctx, canvas, trueGoalY, GREEN, 'object');
-
-      // Robot arm following trajectory
-      drawRobotArm(ctx, canvas, trajPts, color, 0.9);
-
-      // End effector position
-      var ep = trajPts[trajPts.length - 1];
-      var epC = w3(ep.x, ep.y, ep.z, canvas);
-      var errMm = Math.round(Math.abs(ep.y - trueGoalY) * 1000);
-      var badgeText = errMm < 2 ? '✓  0 mm goal error' : '✗  ' + naiveErrMm + ' mm miss';
-      var badgeColor = errMm < 2 ? '#059669' : '#dc2626';
-      if (ctx.roundRect) drawBadge(ctx, canvas, badgeText, badgeColor, epC.x, epC.y);
-
-      // Offset annotation arrow (if offset > 0)
-      if (Math.abs(trueGoalY - origGoalY) > 0.01) {
-        var og = w3(0, origGoalY, 0.08, canvas);
-        var tg = w3(0, trueGoalY, 0.08, canvas);
-        ctx.strokeStyle = '#059669'; ctx.lineWidth = 2; ctx.setLineDash([5, 3]);
-        ctx.beginPath(); ctx.moveTo(og.x, og.y); ctx.lineTo(tg.x, tg.y); ctx.stroke();
-        ctx.setLineDash([]);
-        // arrowhead
-        var ang = Math.atan2(tg.y - og.y, tg.x - og.x);
-        ctx.fillStyle = '#059669';
-        ctx.beginPath();
-        ctx.moveTo(tg.x, tg.y);
-        ctx.lineTo(tg.x - 9*Math.cos(ang-0.4), tg.y - 9*Math.sin(ang-0.4));
-        ctx.lineTo(tg.x - 9*Math.cos(ang+0.4), tg.y - 9*Math.sin(ang+0.4));
-        ctx.closePath(); ctx.fill();
+        return { shoulder: shoulder, elbow: elbow, wrist: wrist };
       }
+
+      // ── Interpolation helper ───────────────────────────────────────────────
+      function interpTraj(pts, t) {
+        var idx = t * (pts.length - 1);
+        var i0  = Math.max(0, Math.min(Math.floor(idx), pts.length - 2));
+        var f   = idx - i0;
+        var p0 = pts[i0], p1 = pts[i0 + 1];
+        return { x: p0.x + (p1.x - p0.x) * f, y: p0.y + (p1.y - p0.y) * f, z: p0.z + (p1.z - p0.z) * f };
+      }
+
+      // ── State object ───────────────────────────────────────────────────────
+      var animT    = 0;
+      var lastTS   = null;
+      var ANIM_SPD = 0.25;  // full cycle ~ 4 s
+
+      var state = {
+        renderer: renderer,
+        camera:   camera,
+        scene:    scene,
+        animT:    animT,
+
+        updateTrajectory: function(pts, origPts, targetX, targetY) {
+          this._pts    = pts;
+          this._orig   = origPts;
+
+          // Update line geometries
+          function fillLine(line, arr) {
+            var pos = line.geometry.attributes.position.array;
+            for (var i = 0; i < arr.length; i++) {
+              var v = toV3(arr[i]);
+              pos[i*3] = v.x; pos[i*3+1] = v.y; pos[i*3+2] = v.z;
+            }
+            line.geometry.setDrawRange(0, arr.length);
+            line.geometry.attributes.position.needsUpdate = true;
+          }
+          fillLine(origLine, origPts);
+          fillLine(trajLine, pts);
+
+          // Phase boundary markers: at indices 0, 9, 39, 59
+          [0, 9, 39, 59].forEach(function(idx, k) {
+            if (k < phaseMkrs.length && idx < pts.length) {
+              phaseMkrs[k].position.copy(toV3(pts[idx]));
+            }
+          });
+
+          // Object sphere: rests on table at (targetX, targetY, z=table_top+radius)
+          // Table top in Three.js: y = 0.025; sphere radius 0.038
+          // targetY is in world Y; Three.js Z = -targetY
+          objMesh.position.set(targetX, 0.025 + 0.038, -targetY);
+        },
+
+        animate: function(ts) {
+          if (!lastTS) lastTS = ts;
+          var dt = Math.min((ts - lastTS) / 1000, 0.05);
+          lastTS = ts;
+
+          animT = (animT + dt * ANIM_SPD) % 1.0;
+
+          if (this._pts) {
+            var ee3  = interpTraj(this._pts, animT);
+            var eeV  = toV3(ee3);
+            var ik   = armIK(eeV);
+
+            jBase.position.copy(BASE_POS);
+            jSho.position.copy(ik.shoulder);
+            jElb.position.copy(ik.elbow);
+            jWri.position.copy(ik.wrist);
+            jEE.position.copy(eeV);
+
+            setCylBetween(lk1, BASE_POS,    ik.shoulder);
+            setCylBetween(lk2, ik.shoulder, ik.elbow);
+            setCylBetween(lk3, ik.elbow,    eeV);
+
+            // Gripper fingers
+            var fingerSep = 0.024;
+            var fingerDir = new THREE.Vector3(1, 0, 0);
+            gfL.position.copy(eeV).addScaledVector(fingerDir,  fingerSep);
+            gfR.position.copy(eeV).addScaledVector(fingerDir, -fingerSep);
+            // Orient fingers downward
+            var downAxis = new THREE.Vector3(0, 1, 0);
+            var downDir  = new THREE.Vector3(0, -1, 0);
+            var gripQ    = new THREE.Quaternion().setFromUnitVectors(downAxis, downDir);
+            gfL.quaternion.copy(gripQ);
+            gfR.quaternion.copy(gripQ);
+          }
+
+          renderer.render(scene, camera);
+        },
+
+        resize: function(W, H) {
+          camera.aspect = W / H;
+          camera.updateProjectionMatrix();
+          renderer.setSize(W, H);
+        }
+      };
+
+      return state;
     }
 
-    function render(offsetCm) {
-      var offsetM = offsetCm / 100;
-      var dhbCanvas   = document.getElementById('canvas-dhb');
-      var naiveCanvas = document.getElementById('canvas-naive');
-      if (!dhbCanvas || !naiveCanvas) return;
+    // ── Trajectory parameters ─────────────────────────────────────────────
+    var BASE_TX = 0.0, BASE_TY = 0.70;
+    var START_X = 0.0, START_Y = 0.30;
 
-      var dhbPts   = adaptDHB3(arc3, offsetM);
-      var naivePts = naiveReplay3(arc3);
-      var trueGoalY = origGoal3.y + offsetM;
-      var origGoalY = origGoal3.y;
-      var naiveErrMm = Math.round(offsetCm * 10);
+    function origPts() { return makePickArc(BASE_TX, BASE_TY, START_X, START_Y); }
+    function dhbPts(offsetM)  { return makePickArc(BASE_TX, BASE_TY + offsetM, START_X, START_Y); }
+    function naivePts()       { return makePickArc(BASE_TX, BASE_TY, START_X, START_Y); }
 
-      renderPanel(dhbCanvas,   dhbPts,   trueGoalY, origGoalY, BLUE,   0);
-      renderPanel(naiveCanvas, naivePts, trueGoalY, origGoalY, ORANGE, naiveErrMm);
+    // ── Build scenes ──────────────────────────────────────────────────────
+    var dhbScene   = buildScene('three-dhb',   0x16a34a, false);
+    var naiveScene = buildScene('three-naive', 0xf97316, true);
+    var _origPts   = origPts();
+
+    function updateSlider(offsetCm) {
+      var offsetM    = offsetCm / 100;
+      var errMm      = Math.round(offsetCm * 10);
+
+      if (dhbScene)   dhbScene.updateTrajectory(dhbPts(offsetM), _origPts, BASE_TX, BASE_TY + offsetM);
+      if (naiveScene) naiveScene.updateTrajectory(naivePts(),    _origPts, BASE_TX, BASE_TY + offsetM);
 
       document.getElementById('offset-display').textContent = offsetCm + ' cm';
-      document.getElementById('naive-error-label').textContent =
-        offsetCm > 0 ? '✗ ' + naiveErrMm + ' mm miss' : '✓  0.0 mm';
-      document.getElementById('stat-dhb').textContent = '0.0 mm';
-      document.getElementById('stat-naive').textContent = naiveErrMm + ' mm';
-      document.getElementById('stat-ratio').textContent = offsetCm > 0 ? '∞×' : '—';
+      var lbl = document.getElementById('naive-error-label');
+      if (lbl) lbl.textContent = offsetCm > 0 ? ('\u2717 ' + errMm + ' mm miss') : '\u2713 0.0 mm';
+      var sd = document.getElementById('stat-dhb');
+      var sn = document.getElementById('stat-naive');
+      var sr = document.getElementById('stat-ratio');
+      if (sd) sd.textContent = '0.0 mm';
+      if (sn) sn.textContent = errMm + ' mm';
+      if (sr) sr.textContent = offsetCm > 0 ? '\u221E\u00D7' : '\u2014';
     }
 
+    // ── Render loop ───────────────────────────────────────────────────────
+    function loop(ts) {
+      requestAnimationFrame(loop);
+      if (dhbScene)   dhbScene.animate(ts);
+      if (naiveScene) naiveScene.animate(ts);
+    }
+    requestAnimationFrame(loop);
+
+    // ── Slider init ───────────────────────────────────────────────────────
     var slider = document.getElementById('offset-slider');
     if (slider) {
-      slider.addEventListener('input', function() { render(parseFloat(this.value)); });
-      render(8);
+      slider.addEventListener('input', function() { updateSlider(parseFloat(this.value)); });
+      updateSlider(8);
     }
+
+    // ── Resize handler ────────────────────────────────────────────────────
+    window.addEventListener('resize', function() {
+      [['three-dhb', dhbScene], ['three-naive', naiveScene]].forEach(function(pair) {
+        var el = document.getElementById(pair[0]);
+        if (!el || !pair[1]) return;
+        pair[1].resize(el.clientWidth, el.clientHeight);
+      });
+    });
+
   })();
 
   // Tab switching
@@ -1723,6 +1758,7 @@
       }
     }, { passive: true });
   })();
+</script>
 </script>
 
 </body>
