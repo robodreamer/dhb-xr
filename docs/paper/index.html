@@ -988,17 +988,39 @@
               </div>
             </div>
             <div class="column is-6">
-              <h4 class="subtitle is-5">Invariants are predictable from observations</h4>
-              <p class="mb-4">
-                DHB magnitude invariants are smoother and lower-frequency than raw action coordinates —
-                a direct consequence of representing motion shape rather than absolute positions.
-                A simple predictor generalizes across all 10 spatial task variants with a single model.
+              <h4 class="subtitle is-5">Learnable + extreme sample efficiency</h4>
+              <p class="mb-3">
+                DHB magnitude invariants are smoother and lower-frequency than raw action coordinates.
+                A single multi-task predictor generalizes across all 10 task variants.
               </p>
-              <div class="insight-box" style="margin-top:0;">
-                <strong>Implication for VLAs:</strong> A VLA trained to predict DHB tokens
-                benefits from smoother, more predictable targets.
-                The same model capacity yields better action reconstruction, and SE(3) data augmentation
-                costs <strong>0 ms</strong> of label recomputation — free by construction.
+              <table class="table results-table is-fullwidth is-striped" style="font-size:0.88rem;">
+                <thead>
+                  <tr style="background:#1e293b; color:white;">
+                    <th style="color:white; border:none;">N demos</th>
+                    <th style="color:white; border:none; text-align:center;">DHB goal error</th>
+                    <th style="color:white; border:none; text-align:center;">Naive error</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="highlight-row"><td><strong>1</strong></td>
+                    <td style="text-align:center;" class="best"><strong>0.0 mm</strong></td>
+                    <td style="text-align:center;" class="bad">100 mm</td></tr>
+                  <tr><td>2</td><td style="text-align:center;" class="best">0.0 mm</td>
+                    <td style="text-align:center;" class="bad">100 mm</td></tr>
+                  <tr><td>5</td><td style="text-align:center;" class="best">0.0 mm</td>
+                    <td style="text-align:center;" class="bad">100 mm</td></tr>
+                  <tr><td>10</td><td style="text-align:center;" class="best">0.0 mm</td>
+                    <td style="text-align:center;" class="bad">100 mm</td></tr>
+                </tbody>
+              </table>
+              <p class="has-text-grey is-size-7 mt-1">
+                At 10 cm perturbation. DHB achieves 0mm with just <strong>1 demo</strong> —
+                geometric adaptation requires no statistical averaging.
+              </p>
+              <div class="insight-box" style="margin-top:0.5rem;">
+                <strong>Free SE(3) augmentation:</strong> data augmentation with arbitrary rigid-body
+                transforms costs <strong>0 ms</strong> of label recomputation — invariant supervision
+                is identical by construction.
               </div>
             </div>
           </div>
@@ -1129,7 +1151,7 @@
             <tbody>
               <tr>
                 <td><strong>0 cm</strong></td>
-                <td style="text-align:center;" class="best">~83%</td>
+                <td style="text-align:center;" class="best">67%</td>
                 <td style="text-align:center;" class="best"><strong>0.0 mm</strong></td>
                 <td style="text-align:center;">0%</td>
               </tr>
@@ -1314,12 +1336,14 @@
           <strong>GPU-accelerated batch adaptation (CuSADi):</strong>
           For RL training with thousands of parallel environments, the DHB decoder is compiled to CUDA
           kernels via <a href="https://github.com/se-hwan/cusadi" target="_blank">CuSADi</a>.
-          Benchmarks on RTX A2000:
+          Preliminary benchmarks on RTX A2000 (CasADi compiled C backend):
           <strong>43&times;</strong> speedup at batch 100,
           <strong>199&times;</strong> at batch 1000,
           <strong>387&times;</strong> at batch 2000
-          (1.8 ms for 2000 trajectories vs 685 ms on CPU).
-          This enables real-time invariant-space trajectory adaptation across IsaacGym/IsaacLab environments during RL policy training.
+          (1.8 ms for 2000 50-step trajectories vs 685 ms CPU).
+          This enables real-time invariant-space trajectory adaptation across
+          IsaacGym/IsaacLab environments during RL policy training.
+          Comprehensive benchmarks with GPU profiling are in preparation.
         </div>
       </div>
     </div>
