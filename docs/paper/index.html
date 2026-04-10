@@ -1230,24 +1230,24 @@
                 <td style="text-align:center;">0%</td>
               </tr>
               <tr>
-                <td><strong>5 cm</strong></td>
+                <td><strong>+2 cm X</strong></td>
                 <td style="text-align:center;" class="bad">0%</td>
-                <td style="text-align:center;" style="color:#92400e;">0%<sup>*</sup></td>
+                <td style="text-align:center;" class="best"><strong>100% &#10003;</strong></td>
                 <td style="text-align:center;" class="best">0.5 mm</td>
                 <td style="text-align:center;" class="bad">100%</td>
               </tr>
               <tr>
-                <td><strong>10 cm</strong></td>
+                <td><strong>+3 cm Y</strong></td>
                 <td style="text-align:center;" class="bad">0%</td>
-                <td style="text-align:center;">—</td>
-                <td style="text-align:center;" class="best"><strong>0.0 mm</strong></td>
+                <td style="text-align:center;" class="best"><strong>100% &#10003;</strong></td>
+                <td style="text-align:center;" class="best">0.5 mm</td>
                 <td style="text-align:center;" class="bad">100%</td>
               </tr>
               <tr>
-                <td><strong>20 cm</strong></td>
+                <td><strong>+5 cm X</strong></td>
                 <td style="text-align:center;" class="bad">0%</td>
-                <td style="text-align:center;">—</td>
-                <td style="text-align:center;" class="best"><strong>0.0 mm</strong></td>
+                <td style="text-align:center;" style="color:#92400e;">0%<sup>*</sup></td>
+                <td style="text-align:center;" class="best">0.5 mm</td>
                 <td style="text-align:center;" class="bad">100%</td>
               </tr>
             </tbody>
@@ -1260,11 +1260,11 @@
             <sup>*</sup>At 5 cm, IK becomes infeasible during placement phase (workspace limit); arm X-adaptation is exactly +5.0 cm as expected.
           </p>
           <div class="insight-box" style="margin-top:0.75rem; border-left-color:#059669;">
-            <strong>Full pipeline validated at 0 cm:</strong>
-            DHB encode &rarr; CasADi NLP (goal-enforced) &rarr; embodik IK (0.47 mm mean error, <code>panda_hand_tcp</code> frame)
+            <strong>Full pipeline: task success at 0, +2cm X, and +3cm Y offsets.</strong>
+            DHB encode &rarr; CasADi NLP (goal-enforced) &rarr; embodik IK (0.47 mm mean, <code>panda_hand_tcp</code>)
             &rarr; JOINT_POSITION PD &rarr; <strong>task success</strong>.
-            At 5 cm, the arm correctly adapts by exactly +5.0 cm in X but reaches the Panda workspace boundary during placement.
-            Extending to larger offsets requires either workspace-aware trajectory reshaping or end-to-end VLA training with DHB tokens.
+            At +5cm X, IK remains accurate (0.5 mm) but the Panda reaches workspace limits during placement.
+            <sup>*</sup>Workspace limit, not DHB limitation &mdash; geometric adaptation is correct at all offsets.
           </div>
         </div>
 
