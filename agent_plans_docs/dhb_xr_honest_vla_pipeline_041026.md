@@ -1,7 +1,7 @@
 # DHB-XR Honest VLA Integration Pipeline Plan
 
 **Date:** 2026-04-10
-**Status:** Ready to execute
+**Status:** In progress — Step 1.1 running (20 seeds x 7 offsets)
 **Goal:** Ground DHB-XR's value proposition for VLAs with honest, peer-review-surviving experiments
 
 ---
@@ -31,8 +31,8 @@ Two independent critic agents reviewed the current SmolVLA + DHB-XR pipeline and
 ## Execution Plan
 
 ### Step 1: Degradation Curve Experiment (FIRST PRIORITY)
-- [ ] **1.1** Run SmolVLA on LIBERO-Spatial task 0 at offsets: 0, 1, 2, 3, 5, 7, 10 cm (Y-axis)
-- [ ] **1.2** 20 seeds per offset condition (current data: only 3-6 trials -- insufficient)
+- [x] **1.1** Run SmolVLA on LIBERO-Spatial task 0 at offsets: 0, 1, 2, 3, 5, 7, 10 cm (Y-axis) — RUNNING
+- [x] **1.2** 20 seeds per offset condition — script: `_workspace/eval_degradation_curve.py`
 - [ ] **1.3** Record success rate + mean reward at each offset
 - [ ] **1.4** For each trajectory, measure FAST token edit distance (0cm vs offset) and DHB invariant distance
 - [ ] **1.5** Plot: success rate vs offset (the paper's motivating figure)
