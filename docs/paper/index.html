@@ -572,6 +572,40 @@
 </section>
 
 
+<!-- ═══════════════════════════════════════════════════════════ ABSTRACT + CONTRIBUTIONS -->
+<section class="section" style="padding:2rem 0;">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-10">
+        <h2 class="section-title">Abstract</h2>
+        <p style="font-size:1.02rem; line-height:1.7; color:#374151;">
+          State-of-the-art VLA action tokenizers (FAST, OAT, ActionCodec) operate on raw end-effector
+          coordinates. Their tokens change 100% under workspace rotations and offer no mechanism for
+          spatial generalization. We show that tokenizing in SE(3)-<em>invariant</em> space simultaneously
+          improves compression and adds geometric stability. DHB-XR encodes trajectories via
+          Double-Reflection Householder frames; applying FAST to the resulting magnitude invariants
+          yields higher compression than FAST on raw coordinates, with 0.0% token change under
+          arbitrary rigid-body transforms. Arc-length invariant gripper encoding extends the guarantee
+          to the full 7-DOF action space. For RL-scale deployment, a GPU-accelerated batch decoder
+          (CuSADi) provides up to 387&times; speedup. DHB-XR is not an alternative to existing
+          tokenizers &mdash; it is a composable layer that makes them spatially robust by construction.
+        </p>
+
+        <h4 class="subtitle is-5 mt-4 mb-2" style="font-family:'Google Sans',sans-serif;">Contributions</h4>
+        <ol style="font-size:0.95rem; line-height:1.8; color:#374151; padding-left:1.5rem;">
+          <li><strong>SE(3)-invariant tokenization layer</strong> &mdash; any existing tokenizer inherits 0.0% token change under rigid-body transforms by operating on DHB magnitude invariants.</li>
+          <li><strong>Full 7-DOF action invariance</strong> &mdash; arc-length invariant gripper encoding extends the SE(3) guarantee to discrete manipulation signals.</li>
+          <li><strong>Improved compression</strong> &mdash; FAST+DHB achieves higher compression than FAST on raw coordinates, because invariants are smoother.</li>
+          <li><strong>Geometric adaptation with CasADi NLP</strong> &mdash; 0.0 mm endpoint error at offsets up to 20 cm with start+goal boundary enforcement.</li>
+          <li><strong>GPU-batched adaptation (CuSADi)</strong> &mdash; up to 387&times; speedup for RL training across thousands of parallel environments.</li>
+          <li><strong>Cross-embodiment execution</strong> &mdash; embodik IK maps adapted SE(3) trajectories to any robot's joint space at 60 &mu;s per step.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+
 <!-- ═══════════════════════════════════════════════════════════ TL;DR -->
 <section class="section" style="background:#f8fafc; padding:2.5rem 0;">
   <div class="container">
@@ -654,6 +688,44 @@
           </div>
         </div>
 
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════ RELATED WORK -->
+<section class="section" style="padding:1.5rem 0;">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-10">
+        <h2 class="section-title">Positioning</h2>
+        <div class="columns">
+          <div class="column">
+            <p style="font-size:0.92rem; line-height:1.7;">
+              <strong>vs FAST / OAT / ActionCodec:</strong> These tokenizers compress raw coordinates efficiently
+              but inherit coordinate-frame sensitivity. DHB-XR is not a replacement &mdash; it is a
+              <em>pre-processing layer</em> that makes any of them SE(3)-invariant. FAST+DHB achieves
+              higher compression than FAST alone.
+            </p>
+          </div>
+          <div class="column">
+            <p style="font-size:0.92rem; line-height:1.7;">
+              <strong>vs equivariant networks (EquivAct, RISE):</strong>
+              These learn equivariant features inside the policy network.
+              DHB-XR is orthogonal: it makes the <em>action representation itself</em> invariant,
+              so any architecture (equivariant or not) benefits. No architectural changes required.
+            </p>
+          </div>
+          <div class="column">
+            <p style="font-size:0.92rem; line-height:1.7;">
+              <strong>vs SpatialVLA / 3D-VLA:</strong>
+              These use 3D visual features for spatial reasoning.
+              DHB-XR operates on the <em>action side</em>, not the perception side.
+              Combining 3D-aware perception with invariant action tokenization is complementary.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1180,8 +1252,16 @@
             SmolVLA (<code>HuggingFaceVLA/smolvla_libero</code>, 500MB) evaluated on LIBERO-Spatial with bowl physically displaced.
             Token change measured using <code>physical-intelligence/fast</code> tokenizer under 35&deg; workspace rotation.
             DHB-XR geometric error is 0.0 mm at all offsets (CasADi NLP with start+goal enforcement).
-            Full task success at offset requires connecting DHB adaptation to joint-space execution via inverse kinematics.
           </p>
+          <div class="insight-box" style="margin-top:0.75rem; border-left-color:#f59e0b;">
+            <strong>Representation vs execution:</strong>
+            DHB-XR's geometric accuracy (0.0 mm) is proven at all offsets.
+            Standard VLA (SmolVLA) degrades to 0% at 5 cm due to token instability.
+            Converting geometric accuracy to task success at offset requires
+            IK-based joint-space control (embodik, 1.2 mm mean IK error achieved)
+            or end-to-end VLA policy training with DHB invariant tokens (StarVLA-DHB, in progress).
+            The representation layer is correct &mdash; the execution pipeline is the active engineering challenge.
+          </div>
         </div>
 
         <!-- TOKEN INSTABILITY DEMO — real FAST tokenizer -->
