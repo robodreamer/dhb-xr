@@ -1308,6 +1308,19 @@
             </p>
           </div>
         </div>
+
+        <!-- CuSADi GPU batch scaling -->
+        <div class="insight-box mt-4">
+          <strong>GPU-accelerated batch adaptation (CuSADi):</strong>
+          For RL training with thousands of parallel environments, the DHB decoder is compiled to CUDA
+          kernels via <a href="https://github.com/se-hwan/cusadi" target="_blank">CuSADi</a>.
+          Benchmarks on RTX A2000:
+          <strong>43&times;</strong> speedup at batch 100,
+          <strong>199&times;</strong> at batch 1000,
+          <strong>387&times;</strong> at batch 2000
+          (1.8 ms for 2000 trajectories vs 685 ms on CPU).
+          This enables real-time invariant-space trajectory adaptation across IsaacGym/IsaacLab environments during RL policy training.
+        </div>
       </div>
     </div>
   </div>
