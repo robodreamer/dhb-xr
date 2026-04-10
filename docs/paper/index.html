@@ -1208,7 +1208,7 @@
         <!-- SmolVLA vs DHB-XR Comparison Table -->
         <div class="box mb-5" style="background:#f8fafc; border:1px solid #e5e7eb;">
           <h4 class="subtitle is-5 mb-3" style="font-family:'Google Sans',sans-serif;">
-            SmolVLA (Standard VLA) vs DHB-XR on LIBERO-Spatial
+            SmolVLA (Standard VLA) vs DHB-XR + embodik IK on LIBERO-Spatial
           </h4>
           <div style="overflow-x:auto;">
           <table class="table results-table is-fullwidth" style="font-size:0.88rem;">
@@ -1216,32 +1216,37 @@
               <tr style="background:#1e293b; color:white;">
                 <th style="color:white; border:none;">Offset</th>
                 <th style="color:white; border:none; text-align:center;">SmolVLA<br/><span style="font-weight:400;font-size:0.78rem;">(raw tokens)</span></th>
-                <th style="color:white; border:none; text-align:center;">DHB-XR Geometric<br/><span style="font-weight:400;font-size:0.78rem;">(EE endpoint error)</span></th>
-                <th style="color:white; border:none; text-align:center;">Token Change<br/><span style="font-weight:400;font-size:0.78rem;">(FAST tokenizer)</span></th>
+                <th style="color:white; border:none; text-align:center;">DHB-XR + embodik<br/><span style="font-weight:400;font-size:0.78rem;">(IK joint control)</span></th>
+                <th style="color:white; border:none; text-align:center;">DHB-XR EE Error<br/><span style="font-weight:400;font-size:0.78rem;">(geometric)</span></th>
+                <th style="color:white; border:none; text-align:center;">FAST Token<br/>Change</th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td><strong>0 cm</strong></td>
-                <td style="text-align:center;" class="best">67%</td>
-                <td style="text-align:center;" class="best"><strong>0.0 mm</strong></td>
+                <td style="text-align:center;">67%</td>
+                <td style="text-align:center;" class="best"><strong>100% &#10003;</strong></td>
+                <td style="text-align:center;" class="best">0.5 mm</td>
                 <td style="text-align:center;">0%</td>
               </tr>
               <tr>
                 <td><strong>5 cm</strong></td>
                 <td style="text-align:center;" class="bad">0%</td>
-                <td style="text-align:center;" class="best"><strong>0.0 mm</strong></td>
+                <td style="text-align:center;" style="color:#92400e;">0%<sup>*</sup></td>
+                <td style="text-align:center;" class="best">0.5 mm</td>
                 <td style="text-align:center;" class="bad">100%</td>
               </tr>
               <tr>
                 <td><strong>10 cm</strong></td>
                 <td style="text-align:center;" class="bad">0%</td>
+                <td style="text-align:center;">—</td>
                 <td style="text-align:center;" class="best"><strong>0.0 mm</strong></td>
                 <td style="text-align:center;" class="bad">100%</td>
               </tr>
               <tr>
                 <td><strong>20 cm</strong></td>
                 <td style="text-align:center;" class="bad">0%</td>
+                <td style="text-align:center;">—</td>
                 <td style="text-align:center;" class="best"><strong>0.0 mm</strong></td>
                 <td style="text-align:center;" class="bad">100%</td>
               </tr>
@@ -1249,18 +1254,17 @@
           </table>
           </div>
           <p class="has-text-grey is-size-7 mt-2">
-            SmolVLA (<code>HuggingFaceVLA/smolvla_libero</code>, 500MB) evaluated on LIBERO-Spatial with bowl physically displaced.
-            Token change measured using <code>physical-intelligence/fast</code> tokenizer under 35&deg; workspace rotation.
-            DHB-XR geometric error is 0.0 mm at all offsets (CasADi NLP with start+goal enforcement).
+            <strong>DHB-XR + embodik IK achieves task success at 0 cm</strong> with 0.5 mm tracking error
+            (CasADi NLP &rarr; embodik IK &rarr; JOINT_POSITION PD control in MuJoCo).
+            SmolVLA (<code>HuggingFaceVLA/smolvla_libero</code>, 500MB) degrades to 0% at 5 cm due to token instability.
+            <sup>*</sup>At 5 cm, IK becomes infeasible during placement phase (workspace limit); arm X-adaptation is exactly +5.0 cm as expected.
           </p>
-          <div class="insight-box" style="margin-top:0.75rem; border-left-color:#f59e0b;">
-            <strong>Representation vs execution:</strong>
-            DHB-XR's geometric accuracy (0.0 mm) is proven at all offsets.
-            Standard VLA (SmolVLA) degrades to 0% at 5 cm due to token instability.
-            Converting geometric accuracy to task success at offset requires
-            IK-based joint-space control (embodik, 1.2 mm mean IK error achieved)
-            or end-to-end VLA policy training with DHB invariant tokens (StarVLA-DHB, in progress).
-            The representation layer is correct &mdash; the execution pipeline is the active engineering challenge.
+          <div class="insight-box" style="margin-top:0.75rem; border-left-color:#059669;">
+            <strong>Full pipeline validated at 0 cm:</strong>
+            DHB encode &rarr; CasADi NLP (goal-enforced) &rarr; embodik IK (0.47 mm mean error, <code>panda_hand_tcp</code> frame)
+            &rarr; JOINT_POSITION PD &rarr; <strong>task success</strong>.
+            At 5 cm, the arm correctly adapts by exactly +5.0 cm in X but reaches the Panda workspace boundary during placement.
+            Extending to larger offsets requires either workspace-aware trajectory reshaping or end-to-end VLA training with DHB tokens.
           </div>
         </div>
 
