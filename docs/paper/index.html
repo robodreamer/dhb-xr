@@ -1107,6 +1107,22 @@
           while raw-coordinate replay accumulates error proportional to the offset.
         </p>
 
+        <!-- TOKEN INSTABILITY DEMO -->
+        <div class="demo-task-title">
+          <span class="perturb-pill is-red">FAST: 113% change</span>
+          <span class="perturb-pill is-green">DHB: 0% change</span>
+          Why raw-coordinate tokenization fails — from a real LIBERO demo
+        </div>
+        <div class="result-figure mb-5">
+          <img src="assets/token_instability_demo.png"
+               alt="Token stability: FAST vs DHB under workspace transforms on real LIBERO demo" />
+          <p class="fig-caption">
+            Using a real LIBERO-Spatial pick-up-bowl demonstration.
+            <strong>Top row:</strong> FAST (DCT+BPE) tokens change 113% under a 35° rotation — a policy trained on original tokens receives completely different input at test time.
+            <strong>Bottom row:</strong> DHB magnitude tokens change by 10<sup>-13</sup>% under any SE(3) transform — a policy trained once generalizes everywhere by construction.
+          </p>
+        </div>
+
         <!-- ROBOT TASK GALLERY -->
         <div class="demo-task-title">
           <span class="perturb-pill is-blue">LIBERO-Spatial</span>
