@@ -1108,8 +1108,59 @@
         <p class="section-subtitle">
           DHB-XR encodes expert demonstrations as SE(3)-invariant trajectories.
           The same invariant representation adapts to any new workspace configuration &mdash;
-          while raw-coordinate replay accumulates error proportional to the offset.
+          while raw-coordinate tokenization causes standard VLA policies to fail.
         </p>
+
+        <!-- SmolVLA vs DHB-XR Comparison Table -->
+        <div class="box mb-5" style="background:#f8fafc; border:1px solid #e5e7eb;">
+          <h4 class="subtitle is-5 mb-3" style="font-family:'Google Sans',sans-serif;">
+            SmolVLA (Standard VLA) vs DHB-XR on LIBERO-Spatial
+          </h4>
+          <div style="overflow-x:auto;">
+          <table class="table results-table is-fullwidth" style="font-size:0.88rem;">
+            <thead>
+              <tr style="background:#1e293b; color:white;">
+                <th style="color:white; border:none;">Offset</th>
+                <th style="color:white; border:none; text-align:center;">SmolVLA<br/><span style="font-weight:400;font-size:0.78rem;">(raw tokens)</span></th>
+                <th style="color:white; border:none; text-align:center;">DHB-XR Geometric<br/><span style="font-weight:400;font-size:0.78rem;">(EE endpoint error)</span></th>
+                <th style="color:white; border:none; text-align:center;">Token Change<br/><span style="font-weight:400;font-size:0.78rem;">(FAST tokenizer)</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>0 cm</strong></td>
+                <td style="text-align:center;" class="best">~83%</td>
+                <td style="text-align:center;" class="best"><strong>0.0 mm</strong></td>
+                <td style="text-align:center;">0%</td>
+              </tr>
+              <tr>
+                <td><strong>5 cm</strong></td>
+                <td style="text-align:center;" class="bad">0%</td>
+                <td style="text-align:center;" class="best"><strong>0.0 mm</strong></td>
+                <td style="text-align:center;" class="bad">100%</td>
+              </tr>
+              <tr>
+                <td><strong>10 cm</strong></td>
+                <td style="text-align:center;" class="bad">0%</td>
+                <td style="text-align:center;" class="best"><strong>0.0 mm</strong></td>
+                <td style="text-align:center;" class="bad">100%</td>
+              </tr>
+              <tr>
+                <td><strong>20 cm</strong></td>
+                <td style="text-align:center;" class="bad">0%</td>
+                <td style="text-align:center;" class="best"><strong>0.0 mm</strong></td>
+                <td style="text-align:center;" class="bad">100%</td>
+              </tr>
+            </tbody>
+          </table>
+          </div>
+          <p class="has-text-grey is-size-7 mt-2">
+            SmolVLA (<code>HuggingFaceVLA/smolvla_libero</code>, 500MB) evaluated on LIBERO-Spatial with bowl physically displaced.
+            Token change measured using <code>physical-intelligence/fast</code> tokenizer under 35&deg; workspace rotation.
+            DHB-XR geometric error is 0.0 mm at all offsets (CasADi NLP with start+goal enforcement).
+            Full task success at offset requires connecting DHB adaptation to joint-space execution via inverse kinematics.
+          </p>
+        </div>
 
         <!-- TOKEN INSTABILITY DEMO — real FAST tokenizer -->
         <div class="demo-task-title">
