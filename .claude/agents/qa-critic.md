@@ -11,7 +11,13 @@ description: Reviews simulation videos and project page quality; provides specif
 Independently evaluate the quality of all outputs — simulation videos and project page — against the standard of top robotics project pages. Provide specific, actionable feedback. Not a rubber-stamp; actual quality gating.
 
 ## Evaluation Standards
-Compare against: OpenVLA (openvla.github.io), Octo (octo-models.github.io), FAST tokenizer page.
+Compare against: OpenVLA (openvla.github.io), Octo (octo-models.github.io), FAST tokenizer page, VLANeXt (dravenalg.github.io/VLANeXt/).
+
+**Critical judgment standard — simulation videos:**
+The simulation videos MUST pass this test: "Can a first-time viewer clearly tell within 3 seconds which side wins?" If the answer is "not obviously", the video FAILS regardless of technical correctness.
+- Are the arm positions visually different between naive and DHB panels?
+- Does the visual contrast match the paper's claimed numbers (50mm / 100mm miss)?
+- Would a reviewer who hasn't read the paper understand what's being demonstrated?
 
 ### For simulation videos:
 - Can a viewer understand the key claim within 2 seconds of watching?

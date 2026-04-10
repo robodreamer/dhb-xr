@@ -1100,76 +1100,39 @@
   <div class="container">
     <div class="columns is-centered">
       <div class="column is-10">
-        <h2 class="section-title">Simulation Results</h2>
+        <h2 class="section-title">Demonstrations</h2>
         <p class="section-subtitle">
-          Real LIBERO-Spatial robot trajectories. DHB-XR adapts the recorded EE path to a shifted workspace.
-          Naive Replay replays the original trajectory unchanged — missing the target by exactly the offset distance.
+          DHB-XR encodes expert demonstrations as SE(3)-invariant trajectories.
+          The same invariant representation adapts to any new workspace configuration &mdash;
+          while raw-coordinate replay accumulates error proportional to the offset.
         </p>
 
-        <!-- PRIMARY: Actual robot simulation comparison -->
+        <!-- ROBOT TASK GALLERY -->
         <div class="demo-task-title">
-          <span class="perturb-pill is-red">+10 cm offset</span>
-          <span class="perturb-pill is-green">simulation</span>
-          Robot arm reaches empty space (naive) vs bowl at new position (DHB-XR)
-        </div>
-        <div class="video-card mb-4">
-          <video autoplay muted loop playsinline>
-            <source src="assets/libero_dhb_vs_naive_10cm.mp4" type="video/mp4" />
-          </video>
-          <div class="video-label comparison">
-            Bowl physically moved +10 cm. Left: naive replay follows original actions &mdash; arm reaches the old bowl position (now empty). Right: DHB-XR adapts the trajectory &mdash; arm correctly reaches the bowl at its new position.
-          </div>
-        </div>
-
-        <div class="demo-task-title">
-          <span class="perturb-pill is-blue">+5 cm offset</span>
-          <span class="perturb-pill is-green">simulation</span>
-          Smaller offset &mdash; arm divergence is less extreme but error is still 50 mm
-        </div>
-        <div class="video-card mb-5">
-          <video autoplay muted loop playsinline>
-            <source src="assets/libero_dhb_vs_naive_5cm.mp4" type="video/mp4" />
-          </video>
-          <div class="video-label comparison">
-            At 5 cm offset, naive replay misses by 50 mm. DHB-XR reaches the new bowl position with 0.0 mm error.
-          </div>
-        </div>
-
-        <!-- Task gallery -->
-        <div class="demo-task-title">
-          <span class="perturb-pill is-blue">3 tasks</span>
-          <span class="perturb-pill is-green">baseline demos</span>
-          LIBERO-Spatial task demonstrations — agentview + eye-in-hand
+          <span class="perturb-pill is-blue">LIBERO-Spatial</span>
+          <span class="perturb-pill is-green">3 tasks</span>
+          Expert demonstrations — agentview + wrist camera
         </div>
         <div class="video-card mb-5">
           <video autoplay muted loop playsinline>
             <source src="assets/libero_task_gallery.mp4" type="video/mp4" />
           </video>
           <div class="video-label comparison">
-            Three LIBERO-Spatial tasks rendered at 256&times;256 via MuJoCo. Left: agentview. Right: eye-in-hand (wrist camera). DHB-XR is evaluated on all 10 tasks across 8 offset directions.
+            Three LIBERO-Spatial manipulation tasks rendered at 256&times;256 via MuJoCo.
+            Left: scene overview. Right: eye-in-hand view.
+            DHB-XR is evaluated across all 10 tasks &times; 8 offset directions.
           </div>
         </div>
 
-        <!-- Geometric analysis -->
-        <div class="demo-task-title">
-          <span class="perturb-pill is-purple">0 &rarr; 20 cm</span>
-          <span class="perturb-pill is-amber">all 10 tasks</span>
-          Goal error vs offset: naive grows linearly, DHB stays at zero
+        <!-- PRIMARY TECHNICAL COMPARISON -->
+        <div class="insight-box" style="margin-bottom:1.5rem;">
+          <strong>How to read the comparisons below:</strong>
+          Both panels start from the <em>same recorded expert demonstration</em>.
+          <span style="color:#2563eb;font-weight:600;">DHB-XR</span> encodes the trajectory as invariants
+          and decodes from the shifted start — endpoint error: <strong>0.0 mm</strong>.
+          <span style="color:#f97316;font-weight:600;">Naive Replay</span> re-executes the original actions
+          unchanged — endpoint error: <strong>= offset distance</strong>.
         </div>
-        <div class="video-card mb-5">
-          <video autoplay muted loop playsinline>
-            <source src="assets/demo_offset_sweep.mp4" type="video/mp4" />
-          </video>
-          <div class="video-label comparison">
-            Averaged over 10 LIBERO-Spatial tasks &times; 8 directions. Naive Replay: 50&ndash;200 mm error. DHB-XR: 0.0 mm at every offset. Shaded region = DHB advantage.
-          </div>
-        </div>
-
-        <p class="has-text-grey is-size-7 mb-5">
-          Simulation videos show the bowl physically displaced from its original position.
-          DHB-XR uses the blended controller (original actions + DHB position correction).
-          Full end-to-end VLA policy training (StarVLA-DHB) is currently in progress.
-        </p>
 
         <!-- Primary: side-by-side at 5 cm -->
         <p class="demo-task-title">
@@ -1331,6 +1294,7 @@
           Page design inspired by
           <a href="https://nerfies.github.io/" target="_blank">Nerfies</a> (CC BY-SA 4.0),
           <a href="https://dravenalg.github.io/VLANeXt/" target="_blank">VLANeXt</a>,
+          <a href="https://cot-vla.github.io/" target="_blank">CoT-VLA</a>,
           and <a href="https://younghyopark.me/tune-to-learn/" target="_blank">Tune-to-Learn</a>.
           Code: <a href="https://github.com/robodreamer/dhb_xr" target="_blank">github.com/robodreamer/dhb_xr</a>
         </p>
