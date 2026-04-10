@@ -1266,11 +1266,19 @@
             <sup>*</sup>At 5 cm, IK becomes infeasible during placement phase (workspace limit); arm X-adaptation is exactly +5.0 cm as expected.
           </p>
           <div class="insight-box" style="margin-top:0.75rem; border-left-color:#059669;">
-            <strong>15 of 22 offset configurations achieve 100% task success.</strong>
-            Maximum: <strong>5.83 cm combined offset</strong> (Y+3cm, Z&minus;5cm).
-            Pipeline: DHB encode &rarr; CasADi NLP &rarr; embodik IK (0.47 mm) &rarr; JOINT_POSITION PD &rarr; MuJoCo.
-            SmolVLA fails at <strong>every</strong> non-zero offset due to token instability.
-            All IK solutions achieve identical 0.47 mm mean error regardless of offset direction or magnitude.
+            <strong>15 of 25 tested offset configurations achieve 100% task success</strong> via geometric trajectory adaptation
+            (DHB encode &rarr; CasADi NLP &rarr; embodik IK &rarr; joint-space PD).
+            Maximum: <strong>5.83 cm combined</strong> (Y+3cm, Z&minus;5cm).
+            SmolVLA (closed-loop VLA inference) fails at <strong>every</strong> non-zero offset.
+          </div>
+          <div class="insight-box" style="margin-top:0.5rem; border-left-color:#f59e0b;">
+            <strong>Important distinction:</strong>
+            DHB-XR results use <em>open-loop geometric adaptation</em> (no visual feedback during execution).
+            SmolVLA uses <em>closed-loop VLA inference</em> (predicts actions from images each step).
+            The comparison demonstrates that the <strong>representation</strong> (invariant tokens) enables spatial
+            generalization that standard tokenization (FAST) cannot achieve.
+            End-to-end VLA training with DHB tokens (StarVLA-DHB) would combine invariant representation with
+            closed-loop visual feedback — this is the intended deployment mode.
           </div>
         </div>
 
