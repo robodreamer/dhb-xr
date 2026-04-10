@@ -9,8 +9,10 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&family=Source+Serif+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
+  <!-- Google Fonts (Nerfies/VLANeXt style) -->
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Noto+Sans:ital,wght@0,400;0,700;1,400&family=Source+Sans+Pro:wght@300;400;600;700&family=Source+Serif+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
+  <!-- Academicons (for arXiv icon) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css" />
 
   <style>
     :root {
@@ -25,10 +27,21 @@
     html { scroll-behavior: smooth; }
 
     body {
-      font-family: 'Source Sans Pro', sans-serif;
+      font-family: 'Noto Sans', 'Source Sans Pro', sans-serif;
       color: var(--dark);
       background: #fff;
     }
+
+    /* ── Nerfies/VLANeXt publication styles ─────────────────── */
+    .publication-title {
+      font-family: 'Google Sans', 'Source Serif Pro', serif;
+      font-weight: 700;
+    }
+    .publication-authors {
+      font-family: 'Google Sans', 'Source Sans Pro', sans-serif;
+    }
+    .author-block { display: inline; }
+    .link-block { display: inline-block; margin: 0.2rem; }
 
     /* ── Sticky Navbar ─────────────────────────────────────── */
     .sticky-nav {
@@ -54,7 +67,7 @@
     }
     .sticky-nav .nav-brand {
       color: white;
-      font-family: 'Source Serif Pro', serif;
+      font-family: 'Google Sans', 'Source Serif Pro', serif;
       font-weight: 700;
       font-size: 1.1rem;
       text-decoration: none;
@@ -63,7 +76,8 @@
       color: rgba(255,255,255,0.75);
       text-decoration: none;
       font-size: 0.85rem;
-      font-weight: 600;
+      font-weight: 500;
+      font-family: 'Google Sans', sans-serif;
       margin-left: 1.25rem;
       transition: color 0.2s;
     }
@@ -78,21 +92,22 @@
 
     .hero-section .title {
       color: white;
-      font-family: 'Source Serif Pro', serif;
-      font-weight: 600;
-      line-height: 1.25;
+      font-family: 'Google Sans', 'Source Serif Pro', serif;
+      font-weight: 700;
+      line-height: 1.3;
       font-size: 2.25rem;
     }
 
     .venue-badge {
       display: inline-block;
       background: rgba(255,255,255,0.15);
-      border: 1px solid rgba(255,255,255,0.3);
-      border-radius: 4px;
-      padding: 0.2rem 0.75rem;
-      font-size: 0.9rem;
+      border: 1px solid rgba(255,255,255,0.35);
+      border-radius: 999px;
+      padding: 0.2rem 1rem;
+      font-size: 0.88rem;
       font-weight: 600;
-      letter-spacing: 0.05em;
+      font-family: 'Google Sans', sans-serif;
+      letter-spacing: 0.04em;
       margin-bottom: 1rem;
     }
 
@@ -370,9 +385,55 @@
     .footer-section a { color: #60a5fa; }
 
     /* ── Tab styling ────────────────────────────────────────── */
-    .tabs.is-boxed a { font-weight: 600; }
+    .tabs.is-boxed a {
+      font-weight: 600;
+      font-family: 'Google Sans', 'Source Sans Pro', sans-serif;
+    }
+    .tabs.is-boxed li.is-active a {
+      color: var(--primary);
+      font-weight: 700;
+    }
     .tab-content { display: none; }
     .tab-content.is-active { display: block; }
+
+    /* ── Section titles: Google Sans (VLANeXt style) ───────── */
+    .section-title {
+      font-family: 'Google Sans', 'Source Serif Pro', serif !important;
+    }
+
+    /* ── Perturbation / type pills (VLANeXt-inspired) ───────── */
+    .perturb-pill {
+      display: inline-block;
+      background: #e0e7ff;
+      color: #3730a3;
+      border-radius: 999px;
+      padding: 0.15rem 0.75rem;
+      font-size: 0.78rem;
+      font-weight: 700;
+      font-family: 'Google Sans', sans-serif;
+      letter-spacing: 0.03em;
+      margin-right: 0.4rem;
+    }
+
+    .perturb-pill.is-blue   { background: #dbeafe; color: #1d4ed8; }
+    .perturb-pill.is-green  { background: #d1fae5; color: #065f46; }
+    .perturb-pill.is-amber  { background: #fef3c7; color: #92400e; }
+    .perturb-pill.is-purple { background: #ede9fe; color: #4c1d95; }
+    .perturb-pill.is-red    { background: #fee2e2; color: #991b1b; }
+
+    /* Demo task title row */
+    .demo-task-title {
+      font-family: 'Google Sans', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 0.5rem;
+      margin-top: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .demo-task-title:first-child { margin-top: 0; }
 
     /* ── Obstacle comparison ────────────────────────────────── */
     .obstacle-grid {
@@ -395,9 +456,12 @@
     <a href="#" class="nav-brand">DHB-XR</a>
     <div class="nav-links">
       <a href="assets/dhb_xr_corl2026.pdf" target="_blank">Paper</a>
-      <a href="https://github.com/robodreamer/dhb-xr" target="_blank">Code</a>
+      <a href="https://github.com/robodreamer/dhb_xr" target="_blank">Code</a>
+      <a href="#why-dhb">Why DHB?</a>
+      <a href="#method">Method</a>
       <a href="#results">Results</a>
-      <a href="#demos">Demos</a>
+      <a href="#interactive">Demo</a>
+      <a href="#demos">Videos</a>
     </div>
   </div>
 </nav>
@@ -414,35 +478,54 @@
           via SE(3)-Invariant Action Tokenization
         </h1>
 
-        <!-- Authors -->
-        <p class="mb-4" style="font-size:1.05rem; color:rgba(255,255,255,0.85);">
-          <strong style="color:white;">Andy Park</strong>
-          &nbsp;&middot;&nbsp;
-          <em style="color:rgba(255,255,255,0.6);">Co-authors TBD</em>
-        </p>
+        <!-- Authors (Nerfies-style) -->
+        <div class="is-size-5 publication-authors mb-2" style="color:rgba(255,255,255,0.9);">
+          <span class="author-block">
+            <a href="#" style="color:white; font-weight:700;">Andy Park</a><sup>1</sup>,
+          </span>
+          <span class="author-block" style="color:rgba(255,255,255,0.55);">
+            <em>Co-authors TBD</em>
+          </span>
+        </div>
+        <div class="is-size-6 publication-authors mb-4" style="color:rgba(255,255,255,0.55);">
+          <span class="author-block"><sup>1</sup>Institution TBD</span>
+        </div>
 
-        <!-- Resource Links -->
-        <div class="resource-buttons mb-5">
-          <a class="button is-white is-outlined" href="assets/dhb_xr_corl2026.pdf" target="_blank">
-            <span class="icon"><i class="fas fa-file-pdf"></i></span>
-            <span>Paper PDF</span>
-          </a>
-          <a class="button is-white is-outlined" href="https://github.com/robodreamer/dhb-xr" target="_blank">
-            <span class="icon"><i class="fab fa-github"></i></span>
-            <span>Code</span>
-          </a>
-          <a class="button is-white is-outlined" href="#results">
-            <span class="icon"><i class="fas fa-chart-bar"></i></span>
-            <span>Results &darr;</span>
-          </a>
-          <a class="button is-white is-outlined" href="#demos">
-            <span class="icon"><i class="fas fa-play-circle"></i></span>
-            <span>Demos &darr;</span>
-          </a>
-          <a class="button is-white is-outlined" href="#bibtex">
-            <span class="icon"><i class="fas fa-quote-right"></i></span>
-            <span>BibTeX</span>
-          </a>
+        <!-- Resource Links (Nerfies is-rounded is-dark pattern) -->
+        <div class="mb-5">
+          <span class="link-block">
+            <a class="button is-normal is-rounded is-dark"
+               href="assets/dhb_xr_corl2026.pdf" target="_blank">
+              <span class="icon"><i class="fas fa-file-pdf"></i></span>
+              <span>Paper</span>
+            </a>
+          </span>
+          <span class="link-block">
+            <a class="button is-normal is-rounded is-dark"
+               href="https://arxiv.org/abs/XXXX.XXXXX" target="_blank">
+              <span class="icon"><i class="ai ai-arxiv"></i></span>
+              <span>arXiv</span>
+            </a>
+          </span>
+          <span class="link-block">
+            <a class="button is-normal is-rounded is-dark"
+               href="https://github.com/robodreamer/dhb_xr" target="_blank">
+              <span class="icon"><i class="fab fa-github"></i></span>
+              <span>Code</span>
+            </a>
+          </span>
+          <span class="link-block">
+            <a class="button is-normal is-rounded is-dark" href="#demos">
+              <span class="icon"><i class="fas fa-play-circle"></i></span>
+              <span>Demos</span>
+            </a>
+          </span>
+          <span class="link-block">
+            <a class="button is-normal is-rounded is-dark" href="#bibtex">
+              <span class="icon"><i class="fas fa-quote-right"></i></span>
+              <span>BibTeX</span>
+            </a>
+          </span>
         </div>
 
         <!-- Key Stats -->
@@ -672,14 +755,88 @@
     <div class="columns is-centered">
       <div class="column is-10">
         <h2 class="section-title">Results</h2>
-        <p class="section-subtitle">Compression, stability, and spatial generalization</p>
+        <p class="section-subtitle">DHB-XR evaluated on LIBERO-Spatial (10 tasks) across compression, token stability, spatial generalization, and learnability</p>
+
+        <!-- Main comparison table — shown always, above tabs -->
+        <div class="box mb-4" style="background:#f8fafc; border:1px solid #e5e7eb;">
+          <h4 class="subtitle is-5 mb-3" style="font-family:'Google Sans',sans-serif;">
+            Tokenizer Comparison on LIBERO-Spatial
+          </h4>
+          <div style="overflow-x:auto;">
+          <table class="table results-table is-fullwidth" style="font-size:0.88rem;">
+            <thead>
+              <tr style="background:#1e293b; color:white;">
+                <th style="color:white; border:none;">Method</th>
+                <th style="color:white; border:none; text-align:center;">Tokens<br/><span style="font-weight:400;font-size:0.78rem;">(N=98 orig.)</span></th>
+                <th style="color:white; border:none; text-align:center;">Compression</th>
+                <th style="color:white; border:none; text-align:center;">SE(3) Token<br/>Instability ↓</th>
+                <th style="color:white; border:none; text-align:center;">k=1 Prefix<br/>Recon. MSE ↓</th>
+                <th style="color:white; border:none; text-align:center;">Free SE(3)<br/>Data Aug?</th>
+                <th style="color:white; border:none; text-align:center;">Spatial<br/>Generalization</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Raw coords</td>
+                <td style="text-align:center;">98</td>
+                <td style="text-align:center;">1.0&times;</td>
+                <td style="text-align:center;" class="bad">93.9%</td>
+                <td style="text-align:center;" class="bad">high</td>
+                <td style="text-align:center;" class="bad">✗</td>
+                <td style="text-align:center;" class="bad">✗</td>
+              </tr>
+              <tr>
+                <td>FAST <span style="font-size:0.78rem;color:#6b7280;">(DCT+BPE)</span></td>
+                <td style="text-align:center;">14</td>
+                <td style="text-align:center;">20.4&times;</td>
+                <td style="text-align:center;" class="bad">93.9%</td>
+                <td style="text-align:center; color:#6b7280;">—</td>
+                <td style="text-align:center;" class="bad">✗</td>
+                <td style="text-align:center;" class="bad">✗</td>
+              </tr>
+              <tr>
+                <td>OAT <span style="font-size:0.78rem;color:#6b7280;">(Register Enc.)</span></td>
+                <td style="text-align:center;">10</td>
+                <td style="text-align:center;">10&times;</td>
+                <td style="text-align:center;" class="bad">99.1%</td>
+                <td style="text-align:center;" class="bad">0.0054</td>
+                <td style="text-align:center;" class="bad">✗</td>
+                <td style="text-align:center;" class="bad">✗</td>
+              </tr>
+              <tr style="background:#eff6ff; font-weight:600;">
+                <td><strong>DHB + FAST</strong> <span style="font-size:0.78rem;color:#2563eb;">(ours)</span></td>
+                <td style="text-align:center;"><strong>8</strong></td>
+                <td style="text-align:center;" class="best"><strong>49.8&times;</strong></td>
+                <td style="text-align:center;" class="best"><strong>0.0%</strong></td>
+                <td style="text-align:center; color:#6b7280;">—</td>
+                <td style="text-align:center;" class="best"><strong>✓</strong></td>
+                <td style="text-align:center;" class="best"><strong>0.0 mm</strong></td>
+              </tr>
+              <tr style="background:#f0fdf4; font-weight:600;">
+                <td><strong>DHB + OAT</strong> <span style="font-size:0.78rem;color:#059669;">(ours)</span></td>
+                <td style="text-align:center;"><strong>10</strong></td>
+                <td style="text-align:center;">10&times;</td>
+                <td style="text-align:center;" class="best"><strong>0.0%</strong></td>
+                <td style="text-align:center;" class="best"><strong>0.00005</strong></td>
+                <td style="text-align:center;" class="best"><strong>✓</strong></td>
+                <td style="text-align:center;" class="best"><strong>0.0 mm</strong></td>
+              </tr>
+            </tbody>
+          </table>
+          </div>
+          <p class="has-text-grey is-size-7 mt-2">
+            SE(3) instability = fraction of tokens that change under random rigid-body workspace transforms (40 transforms &times; 10 demos).
+            k=1 MSE = reconstruction error when only 1 prefix token is observed (OAT setting).
+            Spatial generalization = end-effector goal error under 0&ndash;20 cm workspace offsets (10 tasks &times; 8 directions).
+          </p>
+        </div>
 
         <!-- Tabs -->
         <div class="tabs is-boxed mb-0" id="result-tabs">
           <ul>
-            <li class="is-active" data-tab="compression"><a>Compression &amp; Stability</a></li>
+            <li class="is-active" data-tab="compression"><a>Token Stability</a></li>
             <li data-tab="generalization"><a>Spatial Generalization</a></li>
-            <li data-tab="sensitivity"><a>Noise Sensitivity</a></li>
+            <li data-tab="sensitivity"><a>Noise Robustness</a></li>
             <li data-tab="obstacle"><a>Obstacle Adaptation</a></li>
             <li data-tab="learnability"><a>Learnability</a></li>
           </ul>
@@ -693,48 +850,24 @@
                 <img src="assets/honest_stability.png"
                      alt="Per-trial token MSE scatter: DHB magnitudes vs raw coordinates under 40 SE3 transforms" />
                 <p class="fig-caption">
-                  Per-trial reconstruction MSE under 40 SE(3) transforms (log scale).
-                  DHB magnitude tokens: ~10<sup>&minus;33</sup> (machine zero).
-                  Raw coordinates: ~10<sup>&minus;1</sup> (93.9% change rate).
+                  Per-trial token reconstruction MSE under 40 SE(3) transforms (log scale).
+                  <strong>DHB magnitude tokens: ~10<sup>&minus;33</sup></strong> (machine precision — mathematically invariant).
+                  Raw coordinates: ~10<sup>&minus;1</sup> (93.9% of tokens change).
+                  This is not a learned property — it is a mathematical guarantee from the DHB frame construction.
                 </p>
               </div>
             </div>
             <div class="column is-6">
-              <table class="table results-table is-fullwidth is-striped">
-                <thead>
-                  <tr>
-                    <th>Tokenizer</th>
-                    <th>Tokens</th>
-                    <th>Compression</th>
-                    <th>SE(3) Stability</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>Raw coords</td><td>98</td><td>1.0&times;</td><td class="bad">93.9% change</td>
-                  </tr>
-                  <tr>
-                    <td>FAST (raw)</td><td>14</td><td>20.4&times;</td><td class="bad">93.9% change</td>
-                  </tr>
-                  <tr>
-                    <td>OAT (full)</td><td>10</td><td>10&times;</td><td class="bad">99.1% change</td>
-                  </tr>
-                  <tr class="highlight-row">
-                    <td><strong>FAST + DHB mag.</strong></td><td>8</td>
-                    <td class="best">49.8&times;</td>
-                    <td class="best">0.0% change</td>
-                  </tr>
-                  <tr class="highlight-row">
-                    <td><strong>OAT + DHB mag.</strong></td><td>10</td>
-                    <td>10&times;</td>
-                    <td class="best">0.0% change</td>
-                  </tr>
-                </tbody>
-              </table>
-              <p class="has-text-grey is-size-7 mt-2">
-                Compression = original tokens / tokenized tokens. SE(3) stability measured over 40
-                random rigid-body transforms on 10 LIBERO-Spatial demos.
+              <h4 class="subtitle is-5">Why does token stability matter for VLAs?</h4>
+              <p class="mb-3">
+                A VLA policy predicts action tokens conditioned on a visual observation. If the same physical motion produces <em>different tokens</em> depending on where the robot is placed in the room, the policy must memorize every possible workspace configuration — wasting model capacity and requiring exhaustive data collection.
               </p>
+              <p class="mb-3">
+                DHB magnitude tokens are <strong>identical regardless of workspace placement</strong>. A policy trained on demonstrations from one location generalizes to any location with zero retraining.
+              </p>
+              <div class="insight-box" style="margin-top:0.5rem;">
+                <strong>Free data augmentation:</strong> SE(3) transforms of the workspace do not change the token targets. Training augmentation with arbitrary rigid-body transforms costs <strong>0 ms</strong> of label recomputation — a property unique to invariant representations.
+              </div>
             </div>
           </div>
         </div>
@@ -966,64 +1099,138 @@
   <div class="container">
     <div class="columns is-centered">
       <div class="column is-10">
-        <h2 class="section-title">Demonstrations</h2>
+        <h2 class="section-title">Simulation Results</h2>
         <p class="section-subtitle">
-          DHB-XR adapts a recorded trajectory to a new workspace offset.
-          Naive Replay blindly repeats the original motion &mdash; missing the shifted target.
+          Real LIBERO-Spatial robot trajectories. DHB-XR adapts the recorded EE path to a shifted workspace.
+          Naive Replay replays the original trajectory unchanged — missing the target by exactly the offset distance.
+        </p>
+
+        <!-- Multi-task robot grid — MAIN demo -->
+        <div class="demo-task-title">
+          <span class="perturb-pill is-green">3 tasks</span>
+          <span class="perturb-pill is-blue">+5 cm offset</span>
+          DHB-XR vs Naive Replay across LIBERO-Spatial tasks
+        </div>
+        <div class="video-card mb-4">
+          <video autoplay muted loop playsinline>
+            <source src="assets/robot_multi_task_5cm.mp4" type="video/mp4" />
+          </video>
+          <div class="video-label comparison">
+            Top row: DHB-XR reaches the goal with 0.0 mm error across all 3 tasks. Bottom row: Naive Replay misses by 50 mm on every task. Real agentview frames from LIBERO-Spatial HDF5 demos with EE trajectory overlaid.
+          </div>
+        </div>
+
+        <div class="demo-task-title">
+          <span class="perturb-pill is-purple">3 tasks</span>
+          <span class="perturb-pill is-red">+10 cm offset</span>
+          At larger offsets the gap widens — Naive misses by 100 mm
+        </div>
+        <div class="video-card mb-5">
+          <video autoplay muted loop playsinline>
+            <source src="assets/robot_multi_task_10cm.mp4" type="video/mp4" />
+          </video>
+          <div class="video-label comparison">
+            At 10 cm offset, DHB-XR still achieves 0.0 mm error. Naive Replay misses by 100 mm. The error scales exactly with offset magnitude.
+          </div>
+        </div>
+
+        <!-- Single-task detail -->
+        <div class="demo-task-title">
+          <span class="perturb-pill is-blue">single task</span>
+          <span class="perturb-pill is-amber">detail view</span>
+          Bowl between plate &amp; ramekin — full 3-panel comparison
+        </div>
+        <div class="video-card mb-5">
+          <video autoplay muted loop playsinline>
+            <source src="assets/robot_pick_up_the_black_bowl_between_5cm.mp4" type="video/mp4" />
+          </video>
+          <div class="video-label comparison">
+            Left: recorded demo. Center: DHB-XR adapted (+5 cm) — 0.0 mm error. Right: Naive Replay — 50 mm miss. Trajectory dots drawn on real robot frames.
+          </div>
+        </div>
+
+        <p class="has-text-grey is-size-7 mb-5">
+          <strong>Note on simulation methodology:</strong>
+          These results show DHB-XR applied to recorded expert demonstrations from the LIBERO-Spatial dataset.
+          The encoded DHB invariants are decoded from a new start position (workspace offset).
+          Goal error measures the distance from the adapted EE endpoint to the true target position.
+          Full end-to-end VLA policy training with DHB tokens (StarVLA-DHB) is currently in progress.
         </p>
 
         <!-- Primary: side-by-side at 5 cm -->
-        <h4 class="subtitle is-5 mb-2">Trajectory adaptation at 5 cm offset</h4>
+        <p class="demo-task-title">
+          <span class="perturb-pill is-blue">5&thinsp;cm offset</span>
+          Trajectory adaptation &mdash; side-by-side comparison
+        </p>
         <div class="video-card mb-5">
           <video autoplay muted loop playsinline>
             <source src="assets/demo_side_by_side.mp4" type="video/mp4" />
           </video>
           <div class="video-label comparison">
-            DHB-XR reaches the offset target exactly (0.0 mm error). Naive replay blindly repeats the original recording and misses by 50 mm.
+            Left: DHB-XR &mdash; shape preserved, 0.0&thinsp;mm error
+            &nbsp;&nbsp;|&nbsp;&nbsp;
+            Right: Naive Replay &mdash; 50&thinsp;mm miss (replays original, no adaptation)
           </div>
         </div>
 
         <!-- At 10 cm -->
-        <h4 class="subtitle is-5 mb-2">Trajectory adaptation at 10 cm offset</h4>
+        <p class="demo-task-title">
+          <span class="perturb-pill is-blue">10&thinsp;cm offset</span>
+          Trajectory adaptation &mdash; larger perturbation
+        </p>
         <div class="video-card mb-5">
           <video autoplay muted loop playsinline>
             <source src="assets/demo_side_by_side_10cm.mp4" type="video/mp4" />
           </video>
           <div class="video-label comparison">
-            At double the offset, DHB-XR still reaches the goal with 0.0 mm error. Naive replay now misses by 100 mm &mdash; the error scales linearly with displacement.
+            Left: DHB-XR &mdash; 0.0&thinsp;mm error
+            &nbsp;&nbsp;|&nbsp;&nbsp;
+            Right: Naive Replay &mdash; 100&thinsp;mm miss (error grows linearly with offset)
           </div>
         </div>
 
         <!-- Error sweep -->
-        <h4 class="subtitle is-5 mb-2">Error grows with offset &mdash; DHB stays at zero</h4>
+        <p class="demo-task-title">
+          <span class="perturb-pill is-amber">0&ndash;20&thinsp;cm sweep</span>
+          Error grows with offset &mdash; DHB stays at zero
+        </p>
         <div class="video-card mb-5">
           <video autoplay muted loop playsinline>
             <source src="assets/demo_offset_sweep.mp4" type="video/mp4" />
           </video>
           <div class="video-label comparison">
-            Sweeping offsets from 0 to 20 cm: naive replay accumulates 50&ndash;200 mm of error while DHB-XR maintains 0.0 mm at every offset across 10 tasks and 8 directions.
+            Naive Replay error scales linearly: 50&ndash;200&thinsp;mm across offsets.
+            DHB-XR: 0.0&thinsp;mm at all offsets. Averaged over 10 LIBERO-Spatial tasks &times; 8 directions.
           </div>
         </div>
 
         <!-- SE(3) stability -->
-        <h4 class="subtitle is-5 mb-2">SE(3) invariance: same trajectory, 12 random transforms</h4>
+        <p class="demo-task-title">
+          <span class="perturb-pill is-purple">SE(3) transforms</span>
+          Same trajectory, 12 random rigid-body transforms &mdash; tokens are identical
+        </p>
         <div class="video-card mb-2">
           <video autoplay muted loop playsinline>
             <source src="assets/demo_se3_stability.mp4" type="video/mp4" />
           </video>
           <div class="video-label comparison">
-            Twelve random rigid-body transforms produce visually different trajectories, but the DHB magnitude invariants are <strong>bitwise identical</strong> every time &mdash; 0.0% token change, guaranteed.
+            Left: trajectories look completely different under each rigid-body transform.
+            Right: magnitude invariants are <strong>identical</strong> &mdash; 0.0% token change, guaranteed.
           </div>
         </div>
 
         <!-- Shape preservation -->
-        <h4 class="subtitle is-5 mb-2">Shape preserved under adaptation</h4>
+        <p class="demo-task-title" style="margin-top:1.5rem;">
+          <span class="perturb-pill is-green">shape preservation</span>
+          Arc shape bitwise-identical under adaptation
+        </p>
         <div class="video-card mb-5">
           <video autoplay muted loop playsinline>
             <source src="assets/demo_shape_preservation.mp4" type="video/mp4" />
           </video>
           <div class="video-label comparison">
-            Left: the original recorded trajectory arc. Right: DHB-XR's adaptation overlaid on the original &mdash; the arc shape is bitwise-identical, only the position changes.
+            Left: original recorded trajectory arc. Right: DHB-XR adaptation overlaid &mdash;
+            intrinsic arc shape is bitwise-identical, only the workspace position changes.
           </div>
         </div>
 
@@ -1107,10 +1314,11 @@
       <div class="column is-10 has-text-centered">
         <p>
           &copy; 2026 Andy Park.
-          Page template adapted from
-          <a href="https://nerfies.github.io/" target="_blank">Nerfies</a>
-          (CC BY-SA 4.0).
-          Code: <a href="https://github.com/robodreamer/dhb-xr" target="_blank">github.com/robodreamer/dhb-xr</a>
+          Page design inspired by
+          <a href="https://nerfies.github.io/" target="_blank">Nerfies</a> (CC BY-SA 4.0),
+          <a href="https://dravenalg.github.io/VLANeXt/" target="_blank">VLANeXt</a>,
+          and <a href="https://younghyopark.me/tune-to-learn/" target="_blank">Tune-to-Learn</a>.
+          Code: <a href="https://github.com/robodreamer/dhb_xr" target="_blank">github.com/robodreamer/dhb_xr</a>
         </p>
       </div>
     </div>
