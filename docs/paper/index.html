@@ -1199,13 +1199,12 @@
     <div class="columns is-centered">
       <div class="column is-10">
         <h2 class="section-title">Demonstrations</h2>
-        <p class="section-subtitle">
-          DHB-XR encodes expert demonstrations as SE(3)-invariant trajectories.
-          The same invariant representation adapts to any new workspace configuration &mdash;
-          while raw-coordinate tokenization causes standard VLA policies to fail.
-        </p>
 
-        <!-- SmolVLA vs DHB-XR Comparison Table -->
+        <!-- ── ACT 1: THE PROBLEM ── -->
+        <h4 class="subtitle is-5 mt-2 mb-3" style="font-family:'Google Sans',sans-serif; color:#dc2626;">
+          <span style="background:#fee2e2; border-radius:6px; padding:0.2rem 0.6rem; font-size:0.85rem; margin-right:0.5rem;">1</span>
+          The Problem: Standard VLA tokens break under workspace changes
+        </h4>
         <div class="box mb-5" style="background:#f8fafc; border:1px solid #e5e7eb;">
           <h4 class="subtitle is-5 mb-3" style="font-family:'Google Sans',sans-serif;">
             SmolVLA (Standard VLA) vs DHB-XR + embodik IK on LIBERO-Spatial
@@ -1268,7 +1267,11 @@
           </div>
         </div>
 
-        <!-- TOKEN INSTABILITY DEMO — real FAST tokenizer -->
+        <!-- ── ACT 2: THE MECHANISM ── -->
+        <h4 class="subtitle is-5 mt-5 mb-3" style="font-family:'Google Sans',sans-serif; color:#059669;">
+          <span style="background:#dcfce7; border-radius:6px; padding:0.2rem 0.6rem; font-size:0.85rem; margin-right:0.5rem;">2</span>
+          The Mechanism: DHB tokens are mathematically invariant
+        </h4>
         <div class="demo-task-title">
           <span class="perturb-pill is-red">FAST: 100% tokens change</span>
           <span class="perturb-pill is-green">DHB: 0% tokens change</span>
@@ -1314,7 +1317,11 @@
           </div>
         </div>
 
-        <!-- ROBOT TASK GALLERY -->
+        <!-- ── ACT 3: THE RESULT ── -->
+        <h4 class="subtitle is-5 mt-5 mb-3" style="font-family:'Google Sans',sans-serif; color:#2563eb;">
+          <span style="background:#dbeafe; border-radius:6px; padding:0.2rem 0.6rem; font-size:0.85rem; margin-right:0.5rem;">3</span>
+          The Result: Task success with real IK-based execution
+        </h4>
         <div class="demo-task-title">
           <span class="perturb-pill is-blue">LIBERO-Spatial</span>
           <span class="perturb-pill is-green">3 tasks</span>
