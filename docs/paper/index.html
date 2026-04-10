@@ -1106,56 +1106,54 @@
           Naive Replay replays the original trajectory unchanged — missing the target by exactly the offset distance.
         </p>
 
-        <!-- Multi-task robot grid — MAIN demo -->
+        <!-- Task gallery: what the domain looks like -->
         <div class="demo-task-title">
-          <span class="perturb-pill is-green">3 tasks</span>
-          <span class="perturb-pill is-blue">+5 cm offset</span>
-          DHB-XR vs Naive Replay across LIBERO-Spatial tasks
+          <span class="perturb-pill is-blue">3 tasks</span>
+          <span class="perturb-pill is-green">expert demos</span>
+          LIBERO-Spatial task demonstrations — agentview + eye-in-hand
         </div>
-        <div class="video-card mb-4">
+        <div class="video-card mb-5">
           <video autoplay muted loop playsinline>
-            <source src="assets/robot_multi_task_5cm.mp4" type="video/mp4" />
+            <source src="assets/libero_task_gallery.mp4" type="video/mp4" />
           </video>
           <div class="video-label comparison">
-            Top row: DHB-XR reaches the goal with 0.0 mm error across all 3 tasks. Bottom row: Naive Replay misses by 50 mm on every task. Real agentview frames from LIBERO-Spatial HDF5 demos with EE trajectory overlaid.
+            Three LIBERO-Spatial tasks: pick-and-place from different object configurations. Left column: agentview. Right column: eye-in-hand (wrist camera). Rendered at 256&times;256 via MuJoCo.
+          </div>
+        </div>
+
+        <!-- Trajectory adaptation comparison -->
+        <div class="demo-task-title">
+          <span class="perturb-pill is-blue">geometric analysis</span>
+          <span class="perturb-pill is-red">+5 cm</span>
+          EE trajectory adaptation: DHB-XR vs Naive Replay
+        </div>
+        <div class="video-card mb-5">
+          <video autoplay muted loop playsinline>
+            <source src="assets/demo_side_by_side.mp4" type="video/mp4" />
+          </video>
+          <div class="video-label comparison">
+            Left: DHB-XR encodes the demo trajectory as invariants, decodes from the shifted start — reaches the new target exactly (0.0 mm). Right: Naive Replay replays the original recording unchanged — misses the shifted target by 50 mm.
           </div>
         </div>
 
         <div class="demo-task-title">
-          <span class="perturb-pill is-purple">3 tasks</span>
-          <span class="perturb-pill is-red">+10 cm offset</span>
-          At larger offsets the gap widens — Naive misses by 100 mm
+          <span class="perturb-pill is-purple">scaling</span>
+          <span class="perturb-pill is-amber">0 → 20 cm</span>
+          Naive error grows linearly; DHB error stays zero
         </div>
         <div class="video-card mb-5">
           <video autoplay muted loop playsinline>
-            <source src="assets/robot_multi_task_10cm.mp4" type="video/mp4" />
+            <source src="assets/demo_offset_sweep.mp4" type="video/mp4" />
           </video>
           <div class="video-label comparison">
-            At 10 cm offset, DHB-XR still achieves 0.0 mm error. Naive Replay misses by 100 mm. The error scales exactly with offset magnitude.
-          </div>
-        </div>
-
-        <!-- Single-task detail -->
-        <div class="demo-task-title">
-          <span class="perturb-pill is-blue">single task</span>
-          <span class="perturb-pill is-amber">detail view</span>
-          Bowl between plate &amp; ramekin — full 3-panel comparison
-        </div>
-        <div class="video-card mb-5">
-          <video autoplay muted loop playsinline>
-            <source src="assets/robot_pick_up_the_black_bowl_between_5cm.mp4" type="video/mp4" />
-          </video>
-          <div class="video-label comparison">
-            Left: recorded demo. Center: DHB-XR adapted (+5 cm) — 0.0 mm error. Right: Naive Replay — 50 mm miss. Trajectory dots drawn on real robot frames.
+            Naive Replay error (orange) grows linearly — 50 mm at 5 cm, 200 mm at 20 cm. DHB-XR (blue) maintains 0.0 mm at all offsets. Shaded region shows the growing advantage.
           </div>
         </div>
 
         <p class="has-text-grey is-size-7 mb-5">
-          <strong>Note on simulation methodology:</strong>
-          These results show DHB-XR applied to recorded expert demonstrations from the LIBERO-Spatial dataset.
-          The encoded DHB invariants are decoded from a new start position (workspace offset).
-          Goal error measures the distance from the adapted EE endpoint to the true target position.
-          Full end-to-end VLA policy training with DHB tokens (StarVLA-DHB) is currently in progress.
+          Trajectory adaptation results are based on DHB encoding of recorded LIBERO expert demonstrations.
+          Goal error = distance from adapted EE endpoint to the offset target position (10 tasks &times; 8 directions).
+          Full end-to-end VLA policy training (StarVLA-DHB) is currently in progress.
         </p>
 
         <!-- Primary: side-by-side at 5 cm -->
