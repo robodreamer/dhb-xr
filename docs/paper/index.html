@@ -1334,7 +1334,25 @@
         <div class="demo-task-title">
           <span class="perturb-pill is-green">embodik IK</span>
           <span class="perturb-pill is-blue">JOINT_POSITION PD</span>
-          Panda arm completes pick-and-place at original and +3 cm Y offset
+          Same task at +3 cm Y offset: DHB-XR succeeds, SmolVLA fails
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+          <div class="video-card">
+            <video autoplay muted loop playsinline>
+              <source src="assets/dhb_embodik_Y3cm.mp4" type="video/mp4" />
+            </video>
+            <div class="video-label dhb">
+              DHB-XR + embodik IK at +3 cm Y &mdash; <strong>TASK SUCCESS</strong>
+            </div>
+          </div>
+          <div class="video-card">
+            <video autoplay muted loop playsinline>
+              <source src="assets/smolvla_fail_Y3cm.mp4" type="video/mp4" />
+            </video>
+            <div class="video-label naive">
+              SmolVLA (standard VLA) at +3 cm Y &mdash; <strong>TASK FAILED</strong>
+            </div>
+          </div>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.5rem;">
           <div class="video-card">
@@ -1342,15 +1360,14 @@
               <source src="assets/dhb_embodik_0cm.mp4" type="video/mp4" />
             </video>
             <div class="video-label dhb">
-              0 cm (original position) &mdash; TASK SUCCESS
+              DHB-XR at 0 cm (baseline) &mdash; TASK SUCCESS
             </div>
           </div>
-          <div class="video-card">
-            <video autoplay muted loop playsinline>
-              <source src="assets/dhb_embodik_Y3cm.mp4" type="video/mp4" />
-            </video>
-            <div class="video-label dhb">
-              +3 cm Y offset (bowl shifted laterally) &mdash; TASK SUCCESS
+          <div style="display:flex; align-items:center; justify-content:center; border:2px dashed #e5e7eb; border-radius:10px; padding:1.5rem; text-align:center;">
+            <div>
+              <div style="font-size:2rem; color:#059669; font-weight:700;">15/22</div>
+              <div style="font-size:0.85rem; color:#6b7280;">offset configs<br/>achieve 100% success</div>
+              <div style="font-size:0.78rem; color:#6b7280; margin-top:0.5rem;">max: 5.83 cm combined<br/>(Y+3cm, Z&minus;5cm)</div>
             </div>
           </div>
         </div>
