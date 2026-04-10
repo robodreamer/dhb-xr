@@ -1107,19 +1107,20 @@
           while raw-coordinate replay accumulates error proportional to the offset.
         </p>
 
-        <!-- TOKEN INSTABILITY DEMO -->
+        <!-- TOKEN INSTABILITY DEMO — real FAST tokenizer -->
         <div class="demo-task-title">
-          <span class="perturb-pill is-red">FAST: 113% change</span>
-          <span class="perturb-pill is-green">DHB: 0% change</span>
-          Why raw-coordinate tokenization fails — from a real LIBERO demo
+          <span class="perturb-pill is-red">FAST: 100% tokens change</span>
+          <span class="perturb-pill is-green">DHB: 0% tokens change</span>
+          Actual token IDs from <code>physical-intelligence/fast</code> on a real LIBERO demo
         </div>
         <div class="result-figure mb-5">
-          <img src="assets/token_instability_demo.png"
-               alt="Token stability: FAST vs DHB under workspace transforms on real LIBERO demo" />
+          <img src="assets/fast_vs_dhb_token_stability.png"
+               alt="FAST 100% token change vs DHB 0% on real LIBERO demo under 35-degree workspace rotation" />
           <p class="fig-caption">
-            Using a real LIBERO-Spatial pick-up-bowl demonstration.
-            <strong>Top row:</strong> FAST (DCT+BPE) tokens change 113% under a 35° rotation — a policy trained on original tokens receives completely different input at test time.
-            <strong>Bottom row:</strong> DHB magnitude tokens change by 10<sup>-13</sup>% under any SE(3) transform — a policy trained once generalizes everywhere by construction.
+            Using the <strong>actual <code>physical-intelligence/fast</code> tokenizer</strong> on a real LIBERO-Spatial expert demo.
+            Under a 35° workspace rotation, FAST produces <strong>100% different token IDs</strong> (105/105 tokens changed, red bars) —
+            a VLA policy trained on the blue tokens receives entirely wrong input at test time.
+            DHB magnitude tokens are <strong>mathematically identical</strong> (1.2×10<sup>-13</sup>% change) under any SE(3) transform.
           </p>
         </div>
 
