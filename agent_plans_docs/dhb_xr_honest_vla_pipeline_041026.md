@@ -1,7 +1,8 @@
 # DHB-XR Honest VLA Integration Pipeline Plan
 
 **Date:** 2026-04-10
-**Status:** In progress — Step 1.1 running (20 seeds x 7 offsets)
+**Status:** In progress — Step 1 DONE, Step 2.1-2.3 DONE, Step 2.4 datasets building (~37 min ETA)
+**Last updated:** 2026-04-11
 **Goal:** Ground DHB-XR's value proposition for VLAs with honest, peer-review-surviving experiments
 
 ---
@@ -33,9 +34,10 @@ Two independent critic agents reviewed the current SmolVLA + DHB-XR pipeline and
 ### Step 1: Degradation Curve Experiment (FIRST PRIORITY)
 - [x] **1.1** Run SmolVLA on LIBERO-Spatial task 0 at offsets: 0, 1, 2, 3, 5, 7, 10 cm (Y-axis) — RUNNING
 - [x] **1.2** 20 seeds per offset condition — script: `_workspace/eval_degradation_curve.py`
-- [ ] **1.3** Record success rate + mean reward at each offset
+- [x] **1.3** Record success rate + mean reward at each offset — DONE
+  - 0cm: 70% (14/20), 1cm: 55%, 2cm: 55%, 3cm: 25%, 5cm: 10%, 7cm: 0%, 10cm: 0%
 - [ ] **1.4** For each trajectory, measure FAST token edit distance (0cm vs offset) and DHB invariant distance
-- [ ] **1.5** Plot: success rate vs offset (the paper's motivating figure)
+- [x] **1.5** Plot: success rate vs offset — DONE (`docs/paper/assets/degradation_curve.png`)
 - [ ] **1.6** Include rotational offsets: 0, 5, 10, 15, 20, 30 degrees
 
 **Script base:** `examples/integration/eval_smolvla_libero_offset.py`
@@ -58,7 +60,7 @@ Two independent critic agents reviewed the current SmolVLA + DHB-XR pipeline and
 - [x] **2.2** For each demo, DHB-decode at 9 random offsets (uniform [-5cm, +5cm] per axis) -> 450 augmented demos — DONE
 - [x] **2.3** Include arc-length invariant gripper encoding for augmented demos — DONE
   - Output: `_workspace/augmented_demos_task0.npz` (5.4 MB)
-- [ ] **2.4** Fine-tune SmolVLA (3 runs):
+- [ ] **2.4** Fine-tune SmolVLA (3 runs) — datasets building, training script ready:
   - (a) Original 50 demos only (baseline)
   - (b) 50 original + 450 DHB-augmented demos
   - (c) 50 original + 450 naive-offset demos (translate EE positions without shape preservation)
