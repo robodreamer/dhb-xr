@@ -67,7 +67,7 @@ Two independent critic agents reviewed the current SmolVLA + DHB-XR pipeline and
 - [x] **2.2** For each demo, DHB-decode at 9 random offsets (uniform [-5cm, +5cm] per axis) -> 450 augmented demos — DONE
 - [x] **2.3** Include arc-length invariant gripper encoding for augmented demos — DONE
   - Output: `_workspace/augmented_demos_task0.npz` (5.4 MB)
-- [ ] **2.4** Fine-tune SmolVLA (3 runs) — datasets building, training script ready:
+- [ ] **2.4** Fine-tune SmolVLA (3 runs) — original DONE, DHB/naive next:
   - (a) Original 50 demos only (baseline)
   - (b) 50 original + 450 DHB-augmented demos
   - (c) 50 original + 450 naive-offset demos (translate EE positions without shape preservation)
