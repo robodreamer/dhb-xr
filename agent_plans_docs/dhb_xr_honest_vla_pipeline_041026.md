@@ -54,9 +54,10 @@ Two independent critic agents reviewed the current SmolVLA + DHB-XR pipeline and
 ---
 
 ### Step 2: DHB Augmentation Training (~10 GPU-hours)
-- [ ] **2.1** DHB-encode all 50 LIBERO-Spatial task 0 demos
-- [ ] **2.2** For each demo, DHB-decode at 9 random offsets (uniform [-5cm, +5cm] per axis) -> 450 augmented demos
-- [ ] **2.3** Include arc-length invariant gripper encoding for augmented demos
+- [x] **2.1** DHB-encode all 50 LIBERO-Spatial task 0 demos — DONE (18.8s, 0 failures)
+- [x] **2.2** For each demo, DHB-decode at 9 random offsets (uniform [-5cm, +5cm] per axis) -> 450 augmented demos — DONE
+- [x] **2.3** Include arc-length invariant gripper encoding for augmented demos — DONE
+  - Output: `_workspace/augmented_demos_task0.npz` (5.4 MB)
 - [ ] **2.4** Fine-tune SmolVLA (3 runs):
   - (a) Original 50 demos only (baseline)
   - (b) 50 original + 450 DHB-augmented demos
