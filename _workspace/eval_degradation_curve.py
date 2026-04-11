@@ -72,18 +72,33 @@ def quat_to_axis_angle(quat):
     return np.zeros(3, dtype=np.float32)
 
 
-def load_smolvla(model_id: str = "HuggingFaceVLA/smolvla_libero", device: str = "cuda"):
-    """Load SmolVLA policy + preprocessor/postprocessor pipelines."""
+def load_smolvla(model_id: str = "HuggingFaceVLA/smolvla_libero",
+                  checkpoint: str = None, device: str = "cuda"):
+    """Load SmolVLA policy + preprocessor/postprocessor pipelines.
+
+    Args:
+        model_id: HuggingFace model ID for base model + preprocessors
+        checkpoint: Optional local checkpoint path (e.g. from LoRA fine-tuning).
+                    If provided, loads weights from checkpoint instead of HF.
+        device: torch device
+    """
     import torch
     from lerobot.policies.smolvla.modeling_smolvla import SmolVLAPolicy
     import lerobot.policies.smolvla.processor_smolvla  # noqa: F401
     from lerobot.policies.factory import make_pre_post_processors
 
-    print(f"Loading {model_id}...")
-    t0 = time.time()
-    policy = SmolVLAPolicy.from_pretrained(model_id)
+    if checkpoint:
+        print(f"Loading from checkpoint: {checkpoint}")
+        t0 = time.time()
+        policy = SmolVLAPolicy.from_pretrained(checkpoint)
+    else:
+        print(f"Loading {model_id}...")
+        t0 = time.time()
+        policy = SmolVLAPolicy.from_pretrained(model_id)
     print(f"Loaded in {time.time()-t0:.0f}s")
     policy = policy.to(device).eval()
+
+    # Always use base model's preprocessors (normalization stats, tokenizer)
     preprocessor, postprocessor = make_pre_post_processors(
         policy.config, pretrained_path=model_id
     )
@@ -163,6 +178,8 @@ def main():
                         help="Number of trials per offset condition")
     parser.add_argument("--offsets", type=float, nargs="+", default=None,
                         help="Override offset list in cm (default: 0,1,2,3,5,7,10)")
+    parser.add_argument("--checkpoint", default=None,
+                        help="Local checkpoint path (LoRA fine-tuned)")
     parser.add_argument("--out", default="_workspace/degradation_curve_results.json")
     args = parser.parse_args()
 
@@ -171,8 +188,10 @@ def main():
     print(f"Device: {device}")
     print(f"Task: {args.task}, Axis: {args.axis}, Seeds: {args.seeds}")
     print(f"Offsets (cm): {offsets_cm}")
+    if args.checkpoint:
+        print(f"Checkpoint: {args.checkpoint}")
 
-    policy = load_smolvla(device=device)
+    policy = load_smolvla(checkpoint=args.checkpoint, device=device)
     env, dpath, task_name = make_env(args.task)
     print(f"Task name: {task_name}")
 
