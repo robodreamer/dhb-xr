@@ -102,9 +102,12 @@ def load_smolvla(model_id: str = "HuggingFaceVLA/smolvla_libero",
     print(f"Loaded in {time.time()-t0:.0f}s")
     policy = policy.to(device).eval()
 
-    # Always use base model's preprocessors (normalization stats, tokenizer)
+    # Use checkpoint's preprocessors when available (they contain the normalization
+    # stats the LoRA adapter was trained with). Fall back to base model otherwise.
+    preprocessor_path = checkpoint if checkpoint else model_id
+    print(f"Loading preprocessors from: {preprocessor_path}")
     preprocessor, postprocessor = make_pre_post_processors(
-        policy.config, pretrained_path=model_id
+        policy.config, pretrained_path=preprocessor_path
     )
     policy._preprocessor = preprocessor
     policy._postprocessor = postprocessor
