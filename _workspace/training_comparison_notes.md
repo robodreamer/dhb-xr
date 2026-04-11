@@ -1,4 +1,4 @@
-# SmolVLA Fine-tuning Results & Next Steps
+# SmolVLA Fine-tuning Results & Next Steps (Updated 2026-04-11)
 
 ## Results (all 0% — training pipeline issue)
 
@@ -45,13 +45,31 @@ The LoRA fine-tuning broke the base model because:
 - LoRA may not have enough capacity to learn offset-aware actions
 - Full fine-tuning with small LR on the action head only
 
-## Recommendation
+## RESOLVED: Normalization Mismatch (2026-04-11)
 
-Option C is most likely to work — use the existing HF dataset format and just add
-augmented episodes. This avoids the normalization mismatch entirely.
+Fixed by loading preprocessors from checkpoint path instead of base model.
+Original fine-tuned now gets 80% at 0cm (up from 0%).
 
-## What's Still Valid
+## RESOLVED: DHB Action Scale Bug (2026-04-11)
 
-The degradation curve (base SmolVLA: 70% → 0% at 7cm) is correct and honest.
-The motion DB results (retrieval invariance, compression) are correct.
-The training pipeline needs debugging but the experimental design is sound.
+DHB-augmented actions were in raw Cartesian meters (max ~0.01) instead of
+OSC-normalized space (max ~0.94). For pure translation, original actions
+are already correct by SE(3) invariance. Fixed: DHB and naive now use
+identical original actions, differing only in rendered images at offsets.
+
+## Current Status
+
+- Original 20K training RUNNING (GPU)
+- DHB dataset rebuilding with fixed actions (CPU)
+- After DHB dataset done: train DHB 20K, then naive 20K, then evaluate all 3
+
+## Results After Normalization Fix (5K steps)
+
+| Model | 0cm | 3cm | 5cm | 7cm |
+|-------|-----|-----|-----|-----|
+| Base SmolVLA | 70% | 25% | 10% | 0% |
+| Original FT (5K, 4 epochs) | 80% | 20% | 0% | 0% |
+| DHB-aug FT (5K, 0.4 epochs, BAD ACTIONS) | 0% | 0% | 0% | 0% |
+| Naive-aug FT (5K, 0.4 epochs) | 40% | 10% | 0% | 0% |
+
+Next: retrain with fixed actions + 20K steps for fair comparison.
