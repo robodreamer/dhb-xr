@@ -103,61 +103,24 @@ def dhb_augment_demo(demo, offset_vec):
     adapted_pos = dec["positions"]
     adapted_quat = dec["quaternions"]  # wxyz
 
-    # Compute adapted actions (delta EE) from adapted trajectory
-    # Original actions are 7D: [dx, dy, dz, drx, dry, drz, gripper]
+    # For purely translational offsets, the original OSC action deltas are
+    # already correct — relative EE motion doesn't change under translation.
+    # This is exactly the SE(3) invariance property: the "shape" of motion
+    # is preserved, so the same delta actions work at the offset position.
+    #
+    # We only need to change actions for rotational perturbations or
+    # obstacle-aware adaptations (not implemented in this script).
     orig_actions = demo["actions"]
-    N_orig = len(orig_actions)
-    N_adapted = len(adapted_pos)
-
-    # Interpolate adapted trajectory to match original action count
-    from scipy.interpolate import interp1d
-    t_adapted = np.linspace(0, 1, N_adapted)
-    t_orig = np.linspace(0, 1, N_orig + 1)  # +1 because positions have one more than actions
-
-    interp_pos = interp1d(t_adapted, adapted_pos, axis=0, fill_value="extrapolate")(t_orig)
-
-    # Compute delta positions (adapted actions)
     adapted_actions = orig_actions.copy()
-    for i in range(N_orig):
-        # Replace position deltas with adapted ones
-        adapted_actions[i, :3] = interp_pos[i + 1] - interp_pos[i]
+    N_orig = len(orig_actions)
 
-    # Arc-length invariant gripper
-    # Compute arc-length of original and adapted trajectories
-    orig_diffs = np.diff(ee_pos, axis=0)
-    orig_cumlen = np.concatenate([[0], np.cumsum(np.linalg.norm(orig_diffs, axis=1))])
-    orig_total = orig_cumlen[-1] if orig_cumlen[-1] > 0 else 1.0
-    orig_arc_frac = orig_cumlen / orig_total
-
-    # Detect gripper transitions and their arc-length positions
-    gripper_cmds = orig_actions[:, 6]
-    gripper_transitions = []
-    for t in range(1, len(gripper_cmds)):
-        if (gripper_cmds[t] > 0) != (gripper_cmds[t - 1] > 0):
-            gripper_transitions.append((orig_arc_frac[t], gripper_cmds[t]))
-
-    # Map gripper transitions to adapted arc-length
-    adapted_diffs = np.diff(interp_pos, axis=0)
-    adapted_cumlen = np.concatenate([[0], np.cumsum(np.linalg.norm(adapted_diffs, axis=1))])
-    adapted_total = adapted_cumlen[-1] if adapted_cumlen[-1] > 0 else 1.0
-    adapted_arc_frac = adapted_cumlen / adapted_total
-
-    current_gripper = gripper_cmds[0]
-    trans_idx = 0
-    for t in range(N_orig):
-        arc = adapted_arc_frac[t] if t < len(adapted_arc_frac) else 1.0
-        while trans_idx < len(gripper_transitions):
-            frac, val = gripper_transitions[trans_idx]
-            if arc >= frac:
-                current_gripper = val
-                trans_idx += 1
-            else:
-                break
-        adapted_actions[t, 6] = current_gripper
+    # For purely translational offsets, the arc-length is identical
+    # (same trajectory shape), so gripper timing is unchanged too.
+    # The adapted_actions already has the correct gripper values from orig_actions.copy().
 
     return {
         "actions": adapted_actions,
-        "ee_pos": interp_pos[:-1],  # positions at each step
+        "ee_pos": ee_pos + offset_vec,  # shifted positions
         "offset": offset_vec,
     }
 
