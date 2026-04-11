@@ -1,5 +1,6 @@
 """Motion database: store trajectories and invariants, similarity search."""
 
+import json
 import numpy as np
 from typing import List, Dict, Any, Optional
 
@@ -74,6 +75,44 @@ class MotionDatabase:
             dists = [soft_dtw_distance(U_q, U) for U in self.invariants_list]
             idx = np.argsort(dists)[:k]
             return [(self.invariants_list[i], self.metadata_list[i], dists[i]) for i in idx]
+
+        # Use FAISS index when available and embeddings match
+        if self.use_faiss and self.index is not None and self.embedding_dim is not None:
+            flat = U_q.flatten().astype(np.float32)
+            if flat.shape[0] == self.embedding_dim:
+                q_emb = flat.reshape(1, -1)
+                k_actual = min(k, len(self.invariants_list))
+                distances, indices = self.index.search(q_emb, k_actual)
+                return [
+                    (self.invariants_list[indices[0, j]], self.metadata_list[indices[0, j]], float(distances[0, j]))
+                    for j in range(k_actual)
+                    if indices[0, j] >= 0
+                ]
+
+        # Brute-force fallback
         dists = [invariant_distance(U_q, U) for U in self.invariants_list]
         idx = np.argsort(dists)[:k]
         return [(self.invariants_list[i], self.metadata_list[i], dists[i]) for i in idx]
+
+    def save(self, path: str) -> None:
+        """Persist the database to disk.  Writes ``<path>.npz`` (invariants) and ``<path>.json`` (metadata)."""
+        arrs = {f"inv_{i}": inv for i, inv in enumerate(self.invariants_list)}
+        np.savez(path + ".npz", **arrs)
+        meta = {
+            "dhb_method": "double_reflection" if self.dhb_method == DHBMethod.DOUBLE_REFLECTION else "original",
+            "metadata_list": self.metadata_list,
+        }
+        with open(path + ".json", "w") as f:
+            json.dump(meta, f)
+
+    @classmethod
+    def load(cls, path: str) -> "MotionDatabase":
+        """Load a database from ``<path>.npz`` and ``<path>.json``."""
+        with open(path + ".json", "r") as f:
+            meta = json.load(f)
+        db = cls(dhb_method=meta["dhb_method"], use_faiss=False)
+        db.metadata_list = meta["metadata_list"]
+        data = np.load(path + ".npz")
+        n = len(db.metadata_list)
+        db.invariants_list = [data[f"inv_{i}"].astype(np.float32) for i in range(n)]
+        return db
