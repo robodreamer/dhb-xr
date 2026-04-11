@@ -1,8 +1,15 @@
 # DHB-XR Honest VLA Integration Pipeline Plan
 
 **Date:** 2026-04-10
-**Status:** In progress — Step 1 DONE, Step 2.1-2.3 DONE, Step 2.4 datasets building (~37 min ETA)
+**Status:** In progress — Step 1 DONE, Step 2.1-2.3 DONE, Step 2.4 datasets DONE, training next
 **Last updated:** 2026-04-11
+
+### Dataset Sizes (with rendered images at offset positions)
+| Dataset | Episodes | Frames | Size |
+|---------|----------|--------|------|
+| Original (0cm) | 50 | 3,999 | 592 MB |
+| DHB augmented ([-5,+5]cm) | 450 | 45,539 | 6.5 GB |
+| Naive augmented ([-5,+5]cm) | 450 | 43,021 | 6.1 GB |
 **Goal:** Ground DHB-XR's value proposition for VLAs with honest, peer-review-surviving experiments
 
 ---
