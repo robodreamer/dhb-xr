@@ -1,0 +1,273 @@
+{
+  "metadata": {
+    "task_id": 0,
+    "task_name": "pick up the black bowl between the plate and the ramekin and place it on the plate",
+    "axis": "Y",
+    "seeds_per_offset": 10,
+    "offsets_cm": [
+      0.0,
+      3.0,
+      5.0
+    ],
+    "timestamp": "2026-04-11 18:47:20"
+  },
+  "trials": [
+    {
+      "offset_cm": 0.0,
+      "seed": 0,
+      "demo_idx": 0,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 23.9
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 1,
+      "demo_idx": 1,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 23.8
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 2,
+      "demo_idx": 2,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 24.0
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 3,
+      "demo_idx": 3,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 24.1
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 4,
+      "demo_idx": 4,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 24.1
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 5,
+      "demo_idx": 5,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 24.1
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 6,
+      "demo_idx": 6,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 24.0
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 7,
+      "demo_idx": 7,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 24.0
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 8,
+      "demo_idx": 8,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 24.1
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 9,
+      "demo_idx": 9,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 24.1
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 0,
+      "demo_idx": 0,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 24.2
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 1,
+      "demo_idx": 1,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 24.2
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 2,
+      "demo_idx": 2,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 24.1
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 3,
+      "demo_idx": 3,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 24.2
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 4,
+      "demo_idx": 4,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 24.2
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 5,
+      "demo_idx": 5,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 24.2
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 6,
+      "demo_idx": 6,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 24.1
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 7,
+      "demo_idx": 7,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 24.1
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 8,
+      "demo_idx": 8,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 24.0
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 9,
+      "demo_idx": 9,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 24.1
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 0,
+      "demo_idx": 0,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 24.0
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 1,
+      "demo_idx": 1,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 24.0
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 2,
+      "demo_idx": 2,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 23.9
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 3,
+      "demo_idx": 3,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 24.0
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 4,
+      "demo_idx": 4,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 23.9
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 5,
+      "demo_idx": 5,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 24.0
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 6,
+      "demo_idx": 6,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 24.4
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 7,
+      "demo_idx": 7,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 24.1
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 8,
+      "demo_idx": 8,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 24.2
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 9,
+      "demo_idx": 9,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 24.1
+    }
+  ],
+  "summary": {
+    "0.0cm": {
+      "successes": 0,
+      "total": 10,
+      "rate": 0.0
+    },
+    "3.0cm": {
+      "successes": 0,
+      "total": 10,
+      "rate": 0.0
+    },
+    "5.0cm": {
+      "successes": 0,
+      "total": 10,
+      "rate": 0.0
+    }
+  }
+}
