@@ -87,14 +87,18 @@ def load_smolvla(model_id: str = "HuggingFaceVLA/smolvla_libero",
     import lerobot.policies.smolvla.processor_smolvla  # noqa: F401
     from lerobot.policies.factory import make_pre_post_processors
 
+    print(f"Loading {model_id}...")
+    t0 = time.time()
+    policy = SmolVLAPolicy.from_pretrained(model_id)
+
     if checkpoint:
-        print(f"Loading from checkpoint: {checkpoint}")
-        t0 = time.time()
-        policy = SmolVLAPolicy.from_pretrained(checkpoint)
-    else:
-        print(f"Loading {model_id}...")
-        t0 = time.time()
-        policy = SmolVLAPolicy.from_pretrained(model_id)
+        print(f"Applying LoRA adapter from: {checkpoint}")
+        from peft import PeftModel
+        # The LoRA targets are on the inner model, accessed through policy
+        # First wrap, then merge for efficient inference
+        policy = PeftModel.from_pretrained(policy, checkpoint)
+        policy = policy.merge_and_unload()
+
     print(f"Loaded in {time.time()-t0:.0f}s")
     policy = policy.to(device).eval()
 
