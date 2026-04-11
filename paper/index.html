@@ -1319,7 +1319,7 @@
           <div id="degradation-curve-container" class="result-figure mb-4">
             <img src="assets/degradation_curve.png"
                  alt="SmolVLA success rate degrades sharply under workspace offset"
-                 onerror="this.parentElement.innerHTML='<p style=\'text-align:center; padding:2rem; color:#6b7280; background:#f1f5f9; border-radius:8px;\'>Degradation curve experiment in progress (20 seeds &times; 7 offsets)...</p>'" />
+                 onerror="this.parentElement.innerHTML='<p style=\'text-align:center; padding:2rem; color:#6b7280; background:#f1f5f9; border-radius:8px;\'>Figure failed to load.</p>'" />
           </div>
 
           <div class="insight-box" style="border-left-color:#dc2626;">
@@ -1589,11 +1589,13 @@
         </div>
 
         <div class="insight-box" style="border-left-color:#7c3aed;">
-          <strong>Next step &mdash; fine-tuning experiment (in progress):</strong>
-          We are fine-tuning SmolVLA on DHB-augmented LIBERO-Spatial data
-          to test whether geometric augmentation translates to improved VLA spatial robustness.
-          If a VLA trained on 50 original demos fails at 3 cm offset, does a VLA trained on
-          450 augmented demos succeed? Results coming soon.
+          <strong>Why this matters for VLA training:</strong>
+          Every augmented trajectory is geometrically correct by construction &mdash;
+          the invariant encoding guarantees that motion shape is preserved across
+          all spatial configurations. Standard domain randomization of workspace
+          positions distorts the trajectory shape; DHB augmentation preserves it.
+          This is <em>free SE(3) data augmentation</em>: no teleoperation, no relabeling,
+          just mathematics.
         </div>
 
       </div>
@@ -1679,9 +1681,25 @@
             <div style="font-size:0.8rem; color:#6b7280;">Top-5 accuracy<br/>@ 10 cm offset</div>
           </div>
         </div>
-        <p style="font-size:0.85rem; color:#6b7280; text-align:center; margin-top:-1rem; margin-bottom:2rem;">
-          Every column is identical &mdash; that <em>is</em> the result. No other trajectory representation achieves offset-invariant retrieval.
+        <p style="font-size:0.85rem; color:#6b7280; text-align:center; margin-top:-1rem; margin-bottom:1rem;">
+          Every column is identical &mdash; that <em>is</em> the result.
         </p>
+
+        <!-- Retrieval contrast: DHB vs Position-based -->
+        <div class="insight-box mb-4" style="border-left-color:#dc2626;">
+          <strong>Contrast: position-based retrieval degrades under offset.</strong>
+          At 0 cm, position-based nearest-neighbor retrieval achieves 99.6% same-task accuracy &mdash;
+          better than DHB (19.8%) because positions carry task-specific information.
+          But at <strong>10 cm offset</strong>, position-based drops to <strong>60.4%</strong> (a 40-point loss),
+          while DHB stays at 19.8%. Under random SE(3) transforms,
+          <strong>DHB achieves 100% self-retrieval</strong> vs <strong>11% for position-based</strong>.
+          Positions work nearby; DHB works everywhere.
+        </div>
+
+        <div class="result-figure mb-4">
+          <img src="assets/motion_db_results.png"
+               alt="Left: DHB retrieval is flat across offsets while position degrades. Right: compression vs purity trade-off." />
+        </div>
 
         <!-- Row 3: Compression table -->
         <h4 class="subtitle is-5 mt-4 mb-3" style="font-family:'Google Sans',sans-serif; font-weight:600;">
@@ -1838,7 +1856,7 @@
   title     = {The Geometry Was Free All Along:
                {SE(3)}-Invariant Action Tokenization
                for Spatially Robust {VLA} Models},
-  author    = {Park, Andy and HUMANOID Research},
+  author    = {Park, Andy},
   booktitle = {Conference on Robot Learning (CoRL)},
   year      = {2026},
   note      = {Under review}
