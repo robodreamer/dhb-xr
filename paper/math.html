@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DHB-XR: Mathematical Foundations</title>
+
+  <!-- Bulma CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Google Fonts (same as main page) -->
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Noto+Sans:ital,wght@0,400;0,700;1,400&family=Source+Sans+Pro:wght@300;400;600;700&family=Source+Serif+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
+  <!-- Academicons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css" />
+  <!-- KaTeX -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --accent: #7c3aed;
+      --success: #059669;
+      --dark: #111827;
+      --gray: #6b7280;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Noto Sans', 'Source Sans Pro', sans-serif;
+      color: var(--dark);
+      background: #fff;
+    }
+
+    .publication-title {
+      font-family: 'Google Sans', 'Source Serif Pro', serif;
+      font-weight: 700;
+    }
+    .publication-authors {
+      font-family: 'Google Sans', 'Source Sans Pro', sans-serif;
+    }
+    .link-block { display: inline-block; margin: 0.2rem; }
+
+    /* Hero */
+    .hero-section {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e1b4b 100%);
+      padding: 4rem 0 3rem;
+      color: white;
+    }
+    .hero-section .title {
+      color: white;
+      font-family: 'Google Sans', 'Source Serif Pro', serif;
+      font-weight: 700;
+      line-height: 1.3;
+      font-size: 2.25rem;
+    }
+    .hero-section .subtitle {
+      color: rgba(255,255,255,0.8);
+      font-family: 'Google Sans', 'Source Sans Pro', sans-serif;
+      font-size: 1.15rem;
+      line-height: 1.5;
+    }
+
+    /* Sections */
+    .section-title {
+      font-family: 'Source Serif Pro', serif;
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: var(--dark);
+      margin-bottom: 0.5rem;
+      border-bottom: 3px solid var(--primary);
+      padding-bottom: 0.5rem;
+      display: inline-block;
+    }
+
+    .section-subtitle {
+      color: var(--gray);
+      font-size: 1.05rem;
+      margin-bottom: 2rem;
+    }
+
+    /* Math content styling */
+    .math-block {
+      background: #f8fafc;
+      border-left: 4px solid var(--primary);
+      border-radius: 0 8px 8px 0;
+      padding: 1.25rem 1.5rem;
+      margin: 1.5rem 0;
+      overflow-x: auto;
+    }
+
+    .definition-box {
+      background: linear-gradient(135deg, #eff6ff, #f0f9ff);
+      border: 1px solid #bfdbfe;
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+    }
+    .definition-box .def-title {
+      font-family: 'Google Sans', sans-serif;
+      font-weight: 700;
+      color: var(--primary);
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .theorem-box {
+      background: linear-gradient(135deg, #faf5ff, #f5f3ff);
+      border: 1px solid #ddd6fe;
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+    }
+    .theorem-box .thm-title {
+      font-family: 'Google Sans', sans-serif;
+      font-weight: 700;
+      color: var(--accent);
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .remark-box {
+      background: linear-gradient(135deg, #ecfdf5, #f0fdf4);
+      border: 1px solid #a7f3d0;
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+    }
+    .remark-box .remark-title {
+      font-family: 'Google Sans', sans-serif;
+      font-weight: 700;
+      color: var(--success);
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Tutorial cards */
+    .tutorial-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 1.5rem;
+      height: 100%;
+      transition: box-shadow 0.2s, border-color 0.2s;
+    }
+    .tutorial-card:hover {
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      border-color: var(--primary);
+    }
+    .tutorial-card .card-title {
+      font-family: 'Google Sans', sans-serif;
+      font-weight: 600;
+      font-size: 1.05rem;
+      margin-bottom: 0.5rem;
+    }
+    .tutorial-card code {
+      font-size: 0.85rem;
+      color: var(--accent);
+    }
+
+    /* Resource buttons (same as main page) */
+    .resource-buttons .button {
+      margin: 0.25rem;
+      font-weight: 600;
+      border-radius: 6px;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero-section .title { font-size: 1.6rem; }
+      .section-title { font-size: 1.4rem; }
+    }
+
+    /* TOC */
+    .toc {
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
+    }
+    .toc a {
+      color: var(--primary);
+      text-decoration: none;
+      font-size: 0.95rem;
+      line-height: 1.8;
+    }
+    .toc a:hover { text-decoration: underline; }
+
+    /* Colab badge */
+    .colab-badge img {
+      height: 20px;
+      vertical-align: middle;
+    }
+
+    /* Footer */
+    footer {
+      background: #0f172a;
+      color: rgba(255,255,255,0.6);
+      padding: 2rem 0;
+    }
+    footer a { color: #60a5fa; }
+  </style>
+</head>
+<body>
+
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!--  HERO                                                       -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<section class="hero-section">
+  <div class="container has-text-centered" style="max-width: 860px;">
+    <h1 class="title is-2 publication-title">DHB-XR: Mathematical Foundations</h1>
+    <p class="subtitle" style="margin-top: 0.75rem;">
+      SE(3)-Invariant Trajectory Encoding via Rotation-Minimizing Frames
+    </p>
+    <p class="publication-authors" style="color: rgba(255,255,255,0.7); font-size: 0.95rem;">
+      Andy Park &nbsp;&middot;&nbsp; HUMANOID
+    </p>
+
+    <div class="resource-buttons" style="margin-top: 1.5rem;">
+      <a class="button is-dark is-small link-block" href="index.html">
+        <span class="icon"><i class="fas fa-arrow-left"></i></span>
+        <span>Back to Project Page</span>
+      </a>
+      <a class="button is-dark is-small link-block" href="https://github.com/robodreamer/dhb-xr">
+        <span class="icon"><i class="fab fa-github"></i></span>
+        <span>Code</span>
+      </a>
+      <a class="button is-dark is-small link-block" href="assets/dhb_xr_paper.pdf">
+        <span class="icon"><i class="fas fa-file-pdf"></i></span>
+        <span>Paper PDF</span>
+      </a>
+      <a class="button is-dark is-small link-block" href="https://colab.research.google.com/github/robodreamer/dhb-xr/blob/main/notebooks/tutorial_dhb_basics.ipynb">
+        <span class="icon"><i class="fas fa-book"></i></span>
+        <span>Notebooks</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!--  TABLE OF CONTENTS                                          -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="container" style="max-width: 860px;">
+    <div class="toc">
+      <strong style="font-family: 'Google Sans', sans-serif;">Contents</strong>
+      <div class="columns is-multiline" style="margin-top: 0.5rem;">
+        <div class="column is-half">
+          <a href="#overview">1. Overview</a><br/>
+          <a href="#moving-frames">2. Moving Frames on Curves</a><br/>
+          <a href="#invariant-encoding">3. Invariant Encoding</a><br/>
+          <a href="#decoding">4. Decoding &amp; Adaptation</a><br/>
+        </div>
+        <div class="column is-half">
+          <a href="#tutorials">5. Interactive Tutorials</a><br/>
+          <a href="#7dof">6. Full 7-DOF Invariance</a><br/>
+          <a href="#diff-geom">7. Connections to Differential Geometry</a><br/>
+          <a href="#numerical">8. Numerical Properties</a><br/>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!--  1. OVERVIEW                                                -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<section class="section" id="overview">
+  <div class="container" style="max-width: 860px;">
+    <h2 class="section-title">1. Overview</h2>
+    <p class="section-subtitle">Why geometry-aware trajectory encoding matters</p>
+
+    <div class="content">
+      <p>
+        DHB-XR (Double-reflection Householder Bishop frame with eXtended Representation) encodes robot
+        end-effector trajectories as sequences of <strong>discrete curvature and torsion invariants</strong>
+        that are completely independent of where or how the trajectory is positioned in the workspace.
+        The key insight is simple but powerful: <em>a trajectory's shape is independent of where it is executed.</em>
+        A pouring motion is the same pouring motion whether the cup sits on the left side of the table or the right.
+      </p>
+      <p>
+        Concretely, given a sequence of $N$ Cartesian waypoints $\{\mathbf{p}_i\}_{i=0}^{N-1} \in \mathbb{R}^3$,
+        DHB-XR produces a sequence of $N-2$ invariant 4-tuples $(m_i, \varphi_x, \varphi_y, \varphi_z)$ that
+        encode the magnitude of each step and the frame rotation between consecutive steps.
+        Applying any rigid-body transform $T \in \mathrm{SE}(3)$ to the input trajectory produces
+        <strong>exactly the same invariants</strong>, bit-for-bit identical in double precision.
+      </p>
+      <p>
+        This property connects directly to the <strong>fundamental theorem of space curves</strong> in
+        differential geometry: curvature $\kappa(s)$ and torsion $\tau(s)$ determine a curve uniquely
+        up to rigid motion. DHB invariants are the discrete, numerically robust analogue of $(\kappa, \tau)$,
+        computed via Householder reflections rather than cross products, which makes them singularity-free
+        even at inflection points where the classical Frenet-Serret frame degenerates.
+      </p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!--  2. MOVING FRAMES ON CURVES                                 -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<section class="section" id="moving-frames">
+  <div class="container" style="max-width: 860px;">
+    <h2 class="section-title">2. Moving Frames on Curves</h2>
+    <p class="section-subtitle">From Frenet-Serret to rotation-minimizing Bishop frames</p>
+
+    <div class="content">
+
+      <h4>2.1 Frenet-Serret Frame</h4>
+      <p>
+        The classical approach associates a moving orthonormal frame $\{\mathbf{T}, \mathbf{N}, \mathbf{B}\}$
+        to each point on a smooth curve $\gamma(s)$ parameterized by arc length:
+      </p>
+      <div class="math-block">
+        $$
+        \mathbf{T} = \gamma'(s), \quad
+        \mathbf{N} = \frac{\mathbf{T}'}{\|\mathbf{T}'\|}, \quad
+        \mathbf{B} = \mathbf{T} \times \mathbf{N}
+        $$
+      </div>
+      <p>
+        The evolution of this frame is governed by the Frenet-Serret equations:
+      </p>
+      <div class="math-block">
+        $$
+        \frac{d}{ds}
+        \begin{pmatrix} \mathbf{T} \\ \mathbf{N} \\ \mathbf{B} \end{pmatrix}
+        =
+        \begin{pmatrix}
+          0 & \kappa & 0 \\
+          -\kappa & 0 & \tau \\
+          0 & -\tau & 0
+        \end{pmatrix}
+        \begin{pmatrix} \mathbf{T} \\ \mathbf{N} \\ \mathbf{B} \end{pmatrix}
+        $$
+      </div>
+
+      <div class="remark-box">
+        <div class="remark-title">Problem: Inflection-Point Singularity</div>
+        <p>
+          When $\kappa(s) = 0$ (the curve has an inflection point or is locally straight),
+          the normal $\mathbf{N}$ is undefined because $\mathbf{T}' = \mathbf{0}$. This is not
+          a rare edge case in robotics: straight-line segments between waypoints are extremely common.
+        </p>
+      </div>
+
+      <h4>2.2 Bishop Frame (Rotation-Minimizing Frame)</h4>
+      <p>
+        The Bishop frame $\{\mathbf{T}, \mathbf{U}_1, \mathbf{U}_2\}$ avoids this singularity
+        by choosing normal vectors that undergo <em>zero rotation about the tangent</em> (rotation-minimizing).
+        Instead of curvature $\kappa$ and torsion $\tau$, the Bishop frame uses two curvature components
+        $k_1, k_2$ related by:
+      </p>
+      <div class="math-block">
+        $$
+        \kappa = \sqrt{k_1^2 + k_2^2}, \qquad
+        \theta(s) = \arctan\!\left(\frac{k_2}{k_1}\right), \qquad
+        \tau = \frac{d\theta}{ds}
+        $$
+      </div>
+      <p>
+        The frame evolves smoothly even through inflection points because neither $k_1$ nor $k_2$
+        appears in a denominator.
+      </p>
+
+      <h4>2.3 DHB-DR: Double-Reflection Frame Update</h4>
+      <p>
+        For a discrete polyline $\{\mathbf{p}_i\}$, we need a way to propagate the Bishop frame from
+        step $i$ to step $i+1$ without computing cross products. DHB uses the double-reflection method
+        of Bloomenthal and Lim (described by Wang et al. 2008), which propagates an exact
+        rotation-minimizing frame via two Householder reflections.
+      </p>
+
+      <div class="definition-box">
+        <div class="def-title">Definition: DHB-DR Frame Propagation</div>
+        <p>Let $F_i = [\mathbf{x}_i, \mathbf{y}_i, \mathbf{z}_i]$ be the Bishop frame at step $i$, and let
+        $\Delta\mathbf{d}_i = \mathbf{p}_{i+1} - \mathbf{p}_i$ be the chord vector. Define:</p>
+        <div class="math-block">
+          $$
+          \mathbf{v}_1 = \Delta\mathbf{d}_{i+1} - \Delta\mathbf{d}_i, \qquad
+          \mathbf{u}_1 = \frac{\mathbf{v}_1}{\|\mathbf{v}_1\|}
+          $$
+        </div>
+        <p><strong>First reflection</strong> (aligns old tangent toward new tangent):</p>
+        <div class="math-block">
+          $$
+          R_1 = I - 2\,\mathbf{u}_1 \mathbf{u}_1^\top, \qquad
+          \mathbf{x}_{\mathrm{ref}} = R_1 \, \mathbf{x}_i
+          $$
+        </div>
+        <p><strong>Second reflection</strong> (corrects the remaining tilt):</p>
+        <div class="math-block">
+          $$
+          \mathbf{v}_2 = \mathbf{x}_{i+1} - \mathbf{x}_{\mathrm{ref}}, \qquad
+          \mathbf{u}_2 = \frac{\mathbf{v}_2}{\|\mathbf{v}_2\|}
+          $$
+          $$
+          \mathbf{y}_{i+1} = \left(I - 2\,\mathbf{u}_2 \mathbf{u}_2^\top\right)
+                              \left(I - 2\,\mathbf{u}_1 \mathbf{u}_1^\top\right) \mathbf{y}_i
+          $$
+        </div>
+        <p>where $\mathbf{x}_{i+1} = \Delta\mathbf{d}_{i+1} / \|\Delta\mathbf{d}_{i+1}\|$ is the new tangent
+        and $\mathbf{z}_{i+1} = \mathbf{x}_{i+1} \times \mathbf{y}_{i+1}$.</p>
+      </div>
+
+      <p>
+        Each reflection is a Householder transformation, which is orthogonal by construction.
+        The composition of two Householder reflections is a proper rotation (determinant $+1$),
+        ensuring the frame stays right-handed and unit-orthonormal to machine precision.
+      </p>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!--  3. INVARIANT ENCODING                                      -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<section class="section" id="invariant-encoding">
+  <div class="container" style="max-width: 860px;">
+    <h2 class="section-title">3. Invariant Encoding</h2>
+    <p class="section-subtitle">From frames to SE(3)-invariant tokens</p>
+
+    <div class="content">
+      <p>
+        Given the Bishop frame sequence $\{F_i\}$, we extract two types of invariants at each step:
+      </p>
+
+      <h4>3.1 Magnitude Invariant</h4>
+      <p>
+        The step magnitude is the projection of the displacement onto the tangent direction:
+      </p>
+      <div class="math-block">
+        $$
+        m_i = \mathbf{x}_i \cdot \Delta\mathbf{p}_i = \|\Delta\mathbf{p}_i\|
+        $$
+      </div>
+      <p>
+        Since $\mathbf{x}_i$ is the unit tangent aligned with $\Delta\mathbf{p}_i$, the magnitude
+        is simply the Euclidean step length, which is invariant under rigid transforms.
+      </p>
+
+      <h4>3.2 Frame Rotation Invariants</h4>
+      <p>
+        The relative rotation between consecutive frames captures how the curve bends and twists:
+      </p>
+      <div class="math-block">
+        $$
+        \Delta R_i = F_i^\top F_{i+1} \in \mathrm{SO}(3)
+        $$
+      </div>
+      <p>
+        We extract three scalar angles from $\Delta R_i$ via the Euler XYZ decomposition:
+      </p>
+      <div class="math-block">
+        $$
+        (\varphi_x, \varphi_y, \varphi_z) = \mathrm{EulerXYZ}(\Delta R_i)
+        $$
+      </div>
+
+      <div class="definition-box">
+        <div class="def-title">Definition: DHB Invariant Tuple</div>
+        <p>The invariant encoding at step $i$ is the 4-tuple:</p>
+        <div class="math-block">
+          $$
+          \mathbf{h}_i = (m_i,\; \varphi_x^{(i)},\; \varphi_y^{(i)},\; \varphi_z^{(i)}) \in \mathbb{R}^4
+          $$
+        </div>
+        <p>A trajectory of $N$ waypoints yields $N-2$ invariant tuples
+        (the first two points define the initial frame and are consumed).</p>
+      </div>
+
+      <div class="theorem-box">
+        <div class="thm-title">Theorem: SE(3)-Invariance</div>
+        <p>
+          For any rigid-body transform $T = (R, \mathbf{t}) \in \mathrm{SE}(3)$ and trajectory
+          $\{\mathbf{p}_i\}$, the DHB invariants of $\{R\mathbf{p}_i + \mathbf{t}\}$ are
+          identical to those of $\{\mathbf{p}_i\}$.
+        </p>
+        <p><em>Proof sketch.</em>
+          Translation: $\Delta\mathbf{p}_i' = R\mathbf{p}_{i+1} + \mathbf{t} - R\mathbf{p}_i - \mathbf{t}
+          = R\,\Delta\mathbf{p}_i$. The magnitude $\|R\,\Delta\mathbf{p}_i\| = \|\Delta\mathbf{p}_i\|$
+          since $R$ is orthogonal.
+          Rotation: The transformed Bishop frame is $F_i' = R\,F_i$. Thus
+          $\Delta R_i' = (RF_i)^\top (RF_{i+1}) = F_i^\top R^\top R\,F_{i+1} = F_i^\top F_{i+1} = \Delta R_i$.
+          Both components are exactly preserved. $\square$
+        </p>
+      </div>
+
+      <h4>3.3 DHB-QR Variant: Quaternion Representation</h4>
+      <p>
+        The Euler angle decomposition $(\varphi_x, \varphi_y, \varphi_z)$ suffers from gimbal lock
+        when $\varphi_y \to \pm\pi/2$. The DHB-QR variant instead stores the unit quaternion
+        $\mathbf{q}_i \in \mathbb{S}^3$ representing $\Delta R_i$:
+      </p>
+      <div class="math-block">
+        $$
+        \mathbf{h}_i^{\mathrm{QR}} = (m_i,\; q_w,\; q_x,\; q_y,\; q_z) \in \mathbb{R}^5
+        $$
+      </div>
+      <p>
+        This adds one dimension per step but avoids all singularities. For VLA tokenization,
+        the Euler variant is preferred (fewer tokens), since the inter-frame rotations are typically
+        small and far from gimbal lock.
+      </p>
+
+      <h4>3.4 DHB-TI: Arc-Length Reparameterization</h4>
+      <p>
+        The magnitudes $\{m_i\}$ encode the absolute step sizes, which change if the trajectory
+        is executed at a different speed. For speed-invariant encoding, DHB-TI normalizes each
+        magnitude by the total arc length $L = \sum_i m_i$:
+      </p>
+      <div class="math-block">
+        $$
+        \hat{m}_i = \frac{m_i}{L}, \qquad \sum_i \hat{m}_i = 1
+        $$
+      </div>
+      <p>
+        The result is a <strong>Sim(3)-invariant</strong> representation: invariant under translation,
+        rotation, and uniform scaling.
+      </p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!--  4. DECODING & ADAPTATION                                   -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<section class="section" id="decoding">
+  <div class="container" style="max-width: 860px;">
+    <h2 class="section-title">4. Decoding &amp; Adaptation</h2>
+    <p class="section-subtitle">Reconstructing and adapting trajectories from invariants</p>
+
+    <div class="content">
+      <h4>4.1 Forward Integration</h4>
+      <p>
+        Given an initial position $\mathbf{p}_0$, a second position $\mathbf{p}_1$ (which together
+        define the initial tangent $\mathbf{x}_0$), and an initial frame $F_0$, the trajectory is
+        reconstructed by iterating:
+      </p>
+      <div class="math-block">
+        $$
+        F_{i+1} = F_i \cdot \mathrm{RotXYZ}(\varphi_x^{(i)}, \varphi_y^{(i)}, \varphi_z^{(i)})
+        $$
+        $$
+        \mathbf{p}_{i+2} = \mathbf{p}_{i+1} + m_i \cdot \mathbf{x}_{i+1}
+        $$
+      </div>
+      <p>
+        where $\mathbf{x}_{i+1}$ is the first column of $F_{i+1}$ (the tangent vector).
+      </p>
+
+      <div class="theorem-box">
+        <div class="thm-title">Exact Invertibility</div>
+        <p>
+          The encode-decode round-trip is exact in IEEE 754 double precision:
+          $\mathrm{Decode}(\mathrm{Encode}(\{\mathbf{p}_i\}), \mathbf{p}_0, \mathbf{p}_1, F_0)
+          = \{\mathbf{p}_i\}$ with MSE $\approx 10^{-33}$.
+          This is a consequence of the Householder reflection structure: each reflection is involutory
+          ($R^2 = I$), so the forward and inverse operations cancel to machine epsilon.
+        </p>
+      </div>
+
+      <h4>4.2 Adaptation via Initial Conditions</h4>
+      <p>
+        Since the invariants are SE(3)-independent, adapting a trajectory to a new start pose
+        is as simple as decoding with different initial conditions. For a <strong>pure translation</strong>
+        offset $\delta \in \mathbb{R}^3$:
+      </p>
+      <div class="math-block">
+        $$
+        \mathbf{p}_0' = \mathbf{p}_0 + \delta, \quad
+        \mathbf{p}_1' = \mathbf{p}_1 + \delta, \quad
+        F_0' = F_0
+        $$
+      </div>
+      <p>
+        This is a closed-form solution requiring zero optimization. The decoded trajectory is
+        an exact rigid translation of the original.
+      </p>
+
+      <h4>4.3 Constrained Adaptation via NLP</h4>
+      <p>
+        For more complex adaptations (obstacle avoidance, via-point constraints, orientation targets),
+        we formulate a nonlinear program (NLP) over the initial conditions:
+      </p>
+      <div class="math-block">
+        $$
+        \min_{\mathbf{p}_0', \mathbf{p}_1', F_0'} \;
+        \sum_i \|\mathbf{h}_i' - \mathbf{h}_i\|^2
+        \quad \text{s.t.} \quad
+        g(\{\mathbf{p}_j'\}) \leq 0
+        $$
+      </div>
+      <p>
+        where $g$ encodes obstacle avoidance or workspace constraints. Since the invariants are smooth
+        functions of the initial conditions, this NLP is well-conditioned and solvable with standard
+        tools (Fatrop, CasADi, IPOPT).
+      </p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!--  5. INTERACTIVE TUTORIALS                                   -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<section class="section" id="tutorials" style="background: #f8fafc;">
+  <div class="container" style="max-width: 860px;">
+    <h2 class="section-title">5. Interactive Tutorials</h2>
+    <p class="section-subtitle">Hands-on Colab notebooks to build intuition</p>
+
+    <div class="columns is-multiline">
+
+      <div class="column is-half">
+        <div class="tutorial-card">
+          <div class="card-title">
+            <i class="fas fa-play-circle" style="color: var(--primary);"></i>
+            DHB Basics
+          </div>
+          <p style="font-size: 0.9rem; color: var(--gray);">
+            Encode a trajectory, inspect the invariant tuples, decode it back.
+            Verify the round-trip MSE is effectively zero.
+          </p>
+          <p><code>tutorial_dhb_basics.ipynb</code></p>
+          <a class="colab-badge" href="https://colab.research.google.com/github/robodreamer/dhb-xr/blob/main/notebooks/tutorial_dhb_basics.ipynb" target="_blank">
+            <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab" />
+          </a>
+        </div>
+      </div>
+
+      <div class="column is-half">
+        <div class="tutorial-card">
+          <div class="card-title">
+            <i class="fas fa-cube" style="color: var(--accent);"></i>
+            SE(3) Invariance Demo
+          </div>
+          <p style="font-size: 0.9rem; color: var(--gray);">
+            Apply 100 random rigid transforms to a trajectory and verify all
+            produce bit-identical invariants.
+          </p>
+          <p><code>tutorial_invariance_demo.ipynb</code></p>
+          <a class="colab-badge" href="https://colab.research.google.com/github/robodreamer/dhb-xr/blob/main/notebooks/tutorial_invariance_demo.ipynb" target="_blank">
+            <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab" />
+          </a>
+        </div>
+      </div>
+
+      <div class="column is-half">
+        <div class="tutorial-card">
+          <div class="card-title">
+            <i class="fas fa-barcode" style="color: var(--success);"></i>
+            Action Tokenization
+          </div>
+          <p style="font-size: 0.9rem; color: var(--gray);">
+            Convert a trajectory into discrete tokens via VQ-VAE, reconstruct it,
+            and measure the tokenization error.
+          </p>
+          <p><code>tutorial_action_tokenization.ipynb</code></p>
+          <a class="colab-badge" href="https://colab.research.google.com/github/robodreamer/dhb-xr/blob/main/notebooks/tutorial_action_tokenization.ipynb" target="_blank">
+            <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab" />
+          </a>
+        </div>
+      </div>
+
+      <div class="column is-half">
+        <div class="tutorial-card">
+          <div class="card-title">
+            <i class="fas fa-robot" style="color: #dc2626;"></i>
+            VLA Integration
+          </div>
+          <p style="font-size: 0.9rem; color: var(--gray);">
+            End-to-end pipeline: encode demonstrations, train a VQ-VAE codebook,
+            and decode VLA-predicted tokens back to Cartesian space.
+          </p>
+          <p><code>tutorial_vla_integration.ipynb</code></p>
+          <a class="colab-badge" href="https://colab.research.google.com/github/robodreamer/dhb-xr/blob/main/notebooks/tutorial_vla_integration.ipynb" target="_blank">
+            <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab" />
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!--  6. FULL 7-DOF INVARIANCE                                   -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<section class="section" id="7dof">
+  <div class="container" style="max-width: 860px;">
+    <h2 class="section-title">6. Full 7-DOF Invariance</h2>
+    <p class="section-subtitle">Position + orientation + gripper in a unified invariant representation</p>
+
+    <div class="content">
+      <p>
+        Robot manipulation trajectories are not just 3D curves. Each waypoint carries a full
+        6-DOF pose (position + orientation) plus a scalar gripper command, totaling 7 DOF.
+        DHB-XR handles each component:
+      </p>
+
+      <h4>6.1 Position Invariants (3-DOF)</h4>
+      <p>
+        The 4-tuple $(m_i, \varphi_x, \varphi_y, \varphi_z)$ described above, invariant under SE(3)
+        applied to the position coordinates.
+      </p>
+
+      <h4>6.2 Orientation Invariants (3-DOF)</h4>
+      <p>
+        End-effector orientations $\{R_i^{\mathrm{ee}}\} \subset \mathrm{SO}(3)$ are encoded as
+        <em>relative rotations in the Bishop frame</em>:
+      </p>
+      <div class="math-block">
+        $$
+        \Delta R_i^{\mathrm{ee}} = (F_i^\top R_i^{\mathrm{ee}})^\top (F_{i+1}^\top R_{i+1}^{\mathrm{ee}})
+        $$
+      </div>
+      <p>
+        Expressing the end-effector orientation relative to the Bishop frame factors out the
+        trajectory's own rotation, yielding three additional invariant angles per step.
+      </p>
+
+      <h4>6.3 Gripper Encoding (1-DOF)</h4>
+      <p>
+        The scalar gripper state $g_i \in [0, 1]$ is re-parameterized by arc-length fraction:
+      </p>
+      <div class="math-block">
+        $$
+        \hat{g}(s) = g\!\left(\frac{s}{L}\right), \qquad s = \sum_{j=0}^{i} m_j
+        $$
+      </div>
+      <p>
+        This binds the gripper state to the geometric progress along the curve rather than
+        to a time index, making it invariant under speed changes and spatial transforms.
+      </p>
+
+      <div class="remark-box">
+        <div class="remark-title">Combined Invariant Vector</div>
+        <p>The full 7-DOF invariant at each step is a 8-dimensional vector:</p>
+        <div class="math-block">
+          $$
+          \mathbf{h}_i^{\text{full}} = \left(m_i,\; \varphi_x,\; \varphi_y,\; \varphi_z,\;
+          \psi_x,\; \psi_y,\; \psi_z,\; \hat{g}_i\right) \in \mathbb{R}^8
+          $$
+        </div>
+        <p>where $(\psi_x, \psi_y, \psi_z)$ are the orientation invariant angles.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!--  7. CONNECTIONS TO DIFFERENTIAL GEOMETRY                    -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<section class="section" id="diff-geom" style="background: #f8fafc;">
+  <div class="container" style="max-width: 860px;">
+    <h2 class="section-title">7. Connections to Differential Geometry</h2>
+    <p class="section-subtitle">DHB invariants as discrete curvature and torsion</p>
+
+    <div class="content">
+
+      <h4>7.1 The Fundamental Theorem of Space Curves</h4>
+      <div class="theorem-box">
+        <div class="thm-title">Theorem (Classical)</div>
+        <p>
+          A smooth regular curve $\gamma: [0, L] \to \mathbb{R}^3$ is uniquely determined, up to
+          rigid motion, by its curvature function $\kappa(s) > 0$ and torsion function $\tau(s)$.
+        </p>
+      </div>
+      <p>
+        This is the continuous analogue of what DHB achieves discretely. The DHB invariants
+        $(\varphi_x, \varphi_y, \varphi_z)$ encode the same information as $(\kappa, \tau)$
+        but in a representation that works for polylines (discrete curves) without requiring
+        smoothness or non-vanishing curvature.
+      </p>
+
+      <h4>7.2 Discrete Curvature-Torsion Correspondence</h4>
+      <p>
+        For a discrete polyline, the classical discrete curvature at vertex $i$ is the turning angle
+        $\theta_i = \arccos(\mathbf{x}_i \cdot \mathbf{x}_{i+1})$. The DHB Euler angles $(\varphi_x, \varphi_y, \varphi_z)$
+        decompose this turning into three orthogonal components relative to the rotation-minimizing frame:
+      </p>
+      <div class="math-block">
+        $$
+        \theta_i = \|\mathrm{Log}(\Delta R_i)\|, \qquad
+        \kappa_i \approx \frac{\theta_i}{(m_i + m_{i+1})/2}
+        $$
+      </div>
+      <p>
+        The torsion is encoded in the $\varphi_z$ component (rotation about the tangent axis),
+        while $\varphi_x$ and $\varphi_y$ encode the two components of curvature in the
+        Bishop normal plane.
+      </p>
+
+      <h4>7.3 Gauge-Theoretic Interpretation</h4>
+      <p>
+        The choice of initial frame $F_0$ is a <strong>gauge freedom</strong>. Different choices of
+        $F_0$ produce different frame sequences $\{F_i\}$ but identical relative rotations
+        $\Delta R_i = F_i^\top F_{i+1}$. In the language of fiber bundles, the Bishop frame
+        is a section of the frame bundle $\mathrm{SO}(3) \to \mathcal{F}(\gamma) \to \gamma$,
+        and the invariants $\{\Delta R_i\}$ are the <strong>discrete connection</strong> (holonomy data).
+      </p>
+      <p>
+        The SE(3)-invariance of DHB is then the statement that the discrete connection is
+        independent of the base-point gauge: applying $T \in \mathrm{SE}(3)$ changes the section
+        ($F_i \mapsto R \cdot F_i$) but not the connection ($\Delta R_i$ is unchanged).
+      </p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!--  8. NUMERICAL PROPERTIES                                    -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<section class="section" id="numerical">
+  <div class="container" style="max-width: 860px;">
+    <h2 class="section-title">8. Numerical Properties</h2>
+    <p class="section-subtitle">Why the round-trip error is astronomically small</p>
+
+    <div class="content">
+
+      <h4>8.1 Why MSE $\approx 10^{-33}$</h4>
+      <p>
+        The Householder reflection $R = I - 2\mathbf{u}\mathbf{u}^\top$ is <em>involutory</em>:
+        $R^2 = I$ exactly in floating point (no rounding). When the encode step computes
+        $R_1, R_2$ and the decode step applies $R_2, R_1$ in reverse, the cancellation is
+        exact to the last bit. The residual $\sim 10^{-33}$ comes only from the Euler angle
+        extraction and re-composition, which introduces $O(\epsilon^2)$ error where
+        $\epsilon \approx 10^{-16}$ is machine epsilon.
+      </p>
+
+      <h4>8.2 Edge Cases</h4>
+
+      <div class="definition-box">
+        <div class="def-title">Collinear Steps</div>
+        <p>
+          When three consecutive waypoints are collinear, $\mathbf{v}_1 = \Delta\mathbf{d}_{i+1} - \Delta\mathbf{d}_i$
+          is a zero vector, and the first reflection is undefined. DHB handles this by detecting
+          $\|\mathbf{v}_1\| < \epsilon$ and setting $R_1 = I$ (no reflection needed, since the
+          tangent direction has not changed). The frame propagates unchanged through straight segments.
+        </p>
+      </div>
+
+      <div class="definition-box">
+        <div class="def-title">Zero Velocity</div>
+        <p>
+          If $\Delta\mathbf{p}_i = \mathbf{0}$ (the robot pauses at a waypoint), the tangent is
+          undefined. DHB-XR handles this by carrying the previous tangent forward:
+          $\mathbf{x}_{i+1} = \mathbf{x}_i$, $m_i = 0$. The frame rotation is recorded as identity.
+        </p>
+      </div>
+
+      <div class="definition-box">
+        <div class="def-title">180-degree Rotations</div>
+        <p>
+          When the tangent reverses direction ($\mathbf{x}_{i+1} = -\mathbf{x}_i$), the Householder
+          reflection axis lies in the plane perpendicular to $\mathbf{x}_i$. The double-reflection
+          algorithm handles this correctly because Householder reflections are well-defined for any
+          non-zero vector. The Euler angles will show $\varphi_y = \pm\pi$, which is representable
+          (though near gimbal lock for the Euler variant; the quaternion variant DHB-QR avoids this).
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!--  BIBTEX                                                     -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="container" style="max-width: 860px;">
+    <h2 class="section-title">BibTeX</h2>
+    <pre style="background: #1e293b; color: #e2e8f0; border-radius: 8px; padding: 1.25rem; font-size: 0.85rem; overflow-x: auto;"><code>@article{park2026dhbxr,
+  title   = {DHB-XR: SE(3)-Invariant Trajectory Encoding for
+             Vision-Language-Action Models},
+  author  = {Park, Andy},
+  journal = {arXiv preprint},
+  year    = {2026}
+}</code></pre>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!--  FOOTER                                                     -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<footer>
+  <div class="container has-text-centered" style="max-width: 860px;">
+    <p style="font-size: 0.9rem;">
+      <a href="index.html">DHB-XR Project Page</a> &nbsp;&middot;&nbsp;
+      <a href="https://github.com/robodreamer/dhb-xr">GitHub</a>
+    </p>
+    <p style="font-size: 0.8rem; margin-top: 0.5rem;">
+      Page template inspired by <a href="https://nerfies.github.io" target="_blank">Nerfies</a>.
+    </p>
+  </div>
+</footer>
+
+
+</body>
+</html>
