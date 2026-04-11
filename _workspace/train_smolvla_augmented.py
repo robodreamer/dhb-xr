@@ -83,10 +83,6 @@ def build_lerobot_dataset(mode: str, task_id: int = 0, root: str = None):
             "shape": (action_dim,),
             "names": ["action"],
         },
-        "task": {
-            "dtype": "string",
-            "shape": (1,),
-        },
     }
 
     dataset = LeRobotDataset.create(
@@ -131,31 +127,44 @@ def train(mode: str, dataset_root: str, steps: int = 5000, batch_size: int = 4):
     import subprocess
 
     output_dir = f"_workspace/smolvla_finetuned_{mode}"
-    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    # Clean up from previous failed runs
+    out_path = Path(output_dir)
+    if out_path.exists():
+        shutil.rmtree(out_path)
 
-    cmd = [
-        sys.executable, "-m", "lerobot.scripts.lerobot_train",
-        f"--policy.path=HuggingFaceVLA/smolvla_libero",
-        f"--dataset.repo_id=local/placeholder",
-        f"--dataset.root={dataset_root}",
-        f"--env.type=libero",
-        f"--output_dir={output_dir}",
-        f"--batch_size={batch_size}",
-        f"--steps={steps}",
-        f"--eval_freq={steps}",  # Only eval at end
-        f"--save_freq={steps}",
-        f"--log_freq=100",
-        "--peft.method_type=LORA",
-        "--peft.r=16",
-        "--use_policy_training_preset=True",
-    ]
+    # We need to register SmolVLA processor steps before training
+    # Wrap the lerobot-train call with a Python -c that imports the processor first
+    train_script = f"""
+import lerobot.policies.smolvla.processor_smolvla  # Register SmolVLA processor steps
+from lerobot.scripts.lerobot_train import main
+import sys
+sys.argv = [
+    'lerobot-train',
+    '--policy.path=HuggingFaceVLA/smolvla_libero',
+    '--dataset.repo_id=local/placeholder',
+    '--dataset.root={dataset_root}',
+    '--env.type=libero',
+    '--output_dir={output_dir}',
+    '--batch_size={batch_size}',
+    '--steps={steps}',
+    '--eval_freq={steps}',
+    '--save_freq={steps}',
+    '--log_freq=100',
+    '--peft.method_type=LORA',
+    '--peft.r=16',
+    '--use_policy_training_preset=True',
+]
+main()
+"""
 
     print(f"\nTraining SmolVLA ({mode})...")
     print(f"  Steps: {steps}")
     print(f"  Output: {output_dir}")
-    print(f"  Command: {' '.join(cmd)}")
 
-    result = subprocess.run(cmd, capture_output=False)
+    result = subprocess.run(
+        [sys.executable, "-c", train_script],
+        capture_output=False
+    )
     return result.returncode
 
 
