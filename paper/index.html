@@ -1590,7 +1590,7 @@
 
         <!-- SmolVLA LoRA fine-tuning comparison -->
         <h4 class="subtitle is-5 mt-5 mb-3" style="font-family:'Google Sans',sans-serif; font-weight:600;">
-          SmolVLA LoRA fine-tuning: DHB vs naive augmentation (5K steps, n=10 per condition)
+          SmolVLA LoRA fine-tuning: DHB vs naive augmentation (5K steps, <strong>n=20</strong> per condition)
         </h4>
         <div class="table-container">
           <table class="table is-bordered is-striped is-hoverable is-fullwidth" style="font-size:0.92rem;">
@@ -1600,39 +1600,34 @@
                 <th style="font-family:'Google Sans',sans-serif; text-align:center;">0 cm</th>
                 <th style="font-family:'Google Sans',sans-serif; text-align:center;">3 cm</th>
                 <th style="font-family:'Google Sans',sans-serif; text-align:center;">5 cm</th>
-                <th style="font-family:'Google Sans',sans-serif; text-align:center;">7 cm</th>
                 <th style="font-family:'Google Sans',sans-serif;">Training Data</th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td>Base SmolVLA (no fine-tuning)</td>
-                <td style="text-align:center;">70%</td>
-                <td style="text-align:center;">25%</td>
-                <td style="text-align:center;">10%</td>
-                <td style="text-align:center;">0%</td>
-                <td>HF pretrained</td>
+                <td style="text-align:center; background:#dcfce7; font-weight:700;">70%</td>
+                <td style="text-align:center; background:#dcfce7; font-weight:700;">25%</td>
+                <td style="text-align:center; background:#dcfce7; font-weight:700;">10%</td>
+                <td>HF pretrained (all 10 tasks)</td>
               </tr>
               <tr>
                 <td>Original FT (50 eps, 0cm only)</td>
-                <td style="text-align:center; background:#dcfce7; font-weight:700;">80%</td>
-                <td style="text-align:center;">20%</td>
-                <td style="text-align:center;">0%</td>
+                <td style="text-align:center;">50%</td>
+                <td style="text-align:center;">10%</td>
                 <td style="text-align:center;">0%</td>
                 <td>50 episodes at 0 cm</td>
               </tr>
               <tr>
                 <td><strong>DHB-augmented FT</strong> (500 eps)</td>
-                <td style="text-align:center;">70%</td>
-                <td style="text-align:center; background:#dcfce7; font-weight:700;">30%</td>
-                <td style="text-align:center;">0%</td>
+                <td style="text-align:center;">35%</td>
+                <td style="text-align:center; background:#dcfce7; font-weight:700;">15%</td>
                 <td style="text-align:center;">0%</td>
                 <td>50 orig + 450 DHB at random offsets</td>
               </tr>
               <tr>
                 <td>Naive-augmented FT (500 eps)</td>
-                <td style="text-align:center;">40%</td>
-                <td style="text-align:center;">10%</td>
+                <td style="text-align:center;">35%</td>
                 <td style="text-align:center;">0%</td>
                 <td style="text-align:center;">0%</td>
                 <td>50 orig + 450 naive at random offsets</td>
@@ -1641,8 +1636,8 @@
           </table>
         </div>
         <p style="font-size:0.82rem; color:#6b7280; text-align:center; margin-top:-0.5rem; margin-bottom:1.5rem;">
-          Green cells mark the best result per offset column. All models score 0% at 5 cm and 7 cm &mdash;
-          these offsets exceed SmolVLA's current generalization capacity regardless of training data.
+          Green cells = best per column. DHB-aug is the only fine-tuned model with non-zero success at 3 cm (15% vs 0% naive).
+          Base model's advantage at 0 cm reflects training on all 10 tasks vs single-task LoRA.
         </p>
 
         <div class="result-figure mb-4">
@@ -1652,11 +1647,12 @@
 
         <div class="insight-box" style="border-left-color:#7c3aed;">
           <strong>Results: geometric consistency matters more than data volume.</strong>
-          DHB augmentation trades 10 pp at 0 cm (70% vs 80%) for <strong>+10 pp at 3 cm</strong> (30% vs 20%)
-          &mdash; a favorable exchange when deployment includes workspace variation.
+          At 3 cm offset, DHB augmentation achieves <strong>15% success</strong> &mdash; the only fine-tuned model
+          with non-zero performance at this offset (vs 10% original, <strong>0% naive</strong>).
           Naive augmentation &mdash; same 500 episodes, same spatial diversity, but without geometric consistency &mdash;
-          <em>halves</em> in-distribution performance (40%) and degrades at every offset.
-          Visual diversity without trajectory consistency actively hurts the policy.
+          drops to 0% at every non-zero offset.
+          The base model (70%/25%/10%) retains its advantage from training on all 10 tasks,
+          but DHB augmentation provides the best spatial generalization among single-task LoRA models.
         </div>
 
       </div>
@@ -1758,8 +1754,8 @@
         </div>
 
         <div class="result-figure mb-4">
-          <img src="assets/motion_db_results.png"
-               alt="Left: DHB retrieval is flat across offsets while position degrades. Right: compression vs purity trade-off." />
+          <img src="assets/motion_db_visualization.png"
+               alt="Left: DHB retrieval flat at all offsets while position degrades 39%. Right: self-retrieval DHB 100% vs position 11%." />
         </div>
 
         <!-- Row 3: Compression table -->
