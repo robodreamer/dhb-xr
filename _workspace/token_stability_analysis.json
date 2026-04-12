@@ -1,0 +1,55 @@
+{
+  "offsets_cm": [
+    0,
+    1,
+    2,
+    3,
+    5,
+    7,
+    10
+  ],
+  "per_offset": {
+    "0cm": {
+      "dhb_invariant_distance_mean": 0.0,
+      "dhb_invariant_distance_std": 0.0,
+      "absolute_position_change": 0.0,
+      "delta_action_change": 0.0
+    },
+    "1cm": {
+      "dhb_invariant_distance_mean": 1.9520482238422095e-14,
+      "dhb_invariant_distance_std": 2.7081067318447134e-14,
+      "absolute_position_change": 1.0,
+      "delta_action_change": 0.0
+    },
+    "2cm": {
+      "dhb_invariant_distance_mean": 2.7219909430379987e-14,
+      "dhb_invariant_distance_std": 2.9442126028272864e-14,
+      "absolute_position_change": 1.0,
+      "delta_action_change": 0.0
+    },
+    "3cm": {
+      "dhb_invariant_distance_mean": 1.943806998512952e-14,
+      "dhb_invariant_distance_std": 1.779267186603313e-14,
+      "absolute_position_change": 1.0,
+      "delta_action_change": 0.0
+    },
+    "5cm": {
+      "dhb_invariant_distance_mean": 2.2763777256403555e-13,
+      "dhb_invariant_distance_std": 3.649073114408179e-13,
+      "absolute_position_change": 1.0,
+      "delta_action_change": 0.0
+    },
+    "7cm": {
+      "dhb_invariant_distance_mean": 1.4927904888519323e-13,
+      "dhb_invariant_distance_std": 3.818127334527362e-13,
+      "absolute_position_change": 1.0,
+      "delta_action_change": 0.0
+    },
+    "10cm": {
+      "dhb_invariant_distance_mean": 2.546024415317081e-13,
+      "dhb_invariant_distance_std": 3.3040607900595155e-13,
+      "absolute_position_change": 1.0,
+      "delta_action_change": 0.0
+    }
+  }
+}
