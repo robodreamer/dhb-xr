@@ -10,7 +10,7 @@
       5.0,
       7.0
     ],
-    "timestamp": "2026-04-11 13:07:02"
+    "timestamp": "2026-04-11 21:35:18"
   },
   "trials": [
     {
@@ -19,7 +19,7 @@
       "demo_idx": 0,
       "success": false,
       "reward": 0.0,
-      "time_s": 23.3
+      "time_s": 22.7
     },
     {
       "offset_cm": 0.0,
@@ -35,7 +35,7 @@
       "demo_idx": 2,
       "success": false,
       "reward": 0.0,
-      "time_s": 23.2
+      "time_s": 23.4
     },
     {
       "offset_cm": 0.0,
@@ -43,7 +43,7 @@
       "demo_idx": 3,
       "success": false,
       "reward": 0.0,
-      "time_s": 23.1
+      "time_s": 23.3
     },
     {
       "offset_cm": 0.0,
@@ -51,7 +51,7 @@
       "demo_idx": 4,
       "success": true,
       "reward": 1.0,
-      "time_s": 21.8
+      "time_s": 22.2
     },
     {
       "offset_cm": 0.0,
@@ -59,23 +59,23 @@
       "demo_idx": 5,
       "success": true,
       "reward": 1.0,
-      "time_s": 20.7
+      "time_s": 21.7
     },
     {
       "offset_cm": 0.0,
       "seed": 6,
       "demo_idx": 6,
-      "success": false,
-      "reward": 0.0,
-      "time_s": 23.2
+      "success": true,
+      "reward": 1.0,
+      "time_s": 21.7
     },
     {
       "offset_cm": 0.0,
       "seed": 7,
       "demo_idx": 7,
-      "success": true,
-      "reward": 1.0,
-      "time_s": 21.0
+      "success": false,
+      "reward": 0.0,
+      "time_s": 23.3
     },
     {
       "offset_cm": 0.0,
@@ -83,7 +83,7 @@
       "demo_idx": 8,
       "success": true,
       "reward": 1.0,
-      "time_s": 23.0
+      "time_s": 20.8
     },
     {
       "offset_cm": 0.0,
@@ -91,7 +91,7 @@
       "demo_idx": 9,
       "success": false,
       "reward": 0.0,
-      "time_s": 23.1
+      "time_s": 23.3
     },
     {
       "offset_cm": 3.0,
@@ -99,7 +99,7 @@
       "demo_idx": 0,
       "success": false,
       "reward": 0.0,
-      "time_s": 23.2
+      "time_s": 23.4
     },
     {
       "offset_cm": 3.0,
@@ -107,7 +107,7 @@
       "demo_idx": 1,
       "success": true,
       "reward": 1.0,
-      "time_s": 19.0
+      "time_s": 18.0
     },
     {
       "offset_cm": 3.0,
@@ -115,7 +115,7 @@
       "demo_idx": 2,
       "success": false,
       "reward": 0.0,
-      "time_s": 23.2
+      "time_s": 23.3
     },
     {
       "offset_cm": 3.0,
@@ -123,7 +123,7 @@
       "demo_idx": 3,
       "success": false,
       "reward": 0.0,
-      "time_s": 23.2
+      "time_s": 23.3
     },
     {
       "offset_cm": 3.0,
@@ -131,7 +131,7 @@
       "demo_idx": 4,
       "success": false,
       "reward": 0.0,
-      "time_s": 23.2
+      "time_s": 23.3
     },
     {
       "offset_cm": 3.0,
@@ -139,7 +139,7 @@
       "demo_idx": 5,
       "success": false,
       "reward": 0.0,
-      "time_s": 23.2
+      "time_s": 23.3
     },
     {
       "offset_cm": 3.0,
@@ -155,7 +155,7 @@
       "demo_idx": 7,
       "success": false,
       "reward": 0.0,
-      "time_s": 23.2
+      "time_s": 23.3
     },
     {
       "offset_cm": 3.0,
@@ -171,7 +171,7 @@
       "demo_idx": 9,
       "success": false,
       "reward": 0.0,
-      "time_s": 23.2
+      "time_s": 23.3
     },
     {
       "offset_cm": 5.0,
@@ -179,7 +179,7 @@
       "demo_idx": 0,
       "success": false,
       "reward": 0.0,
-      "time_s": 23.2
+      "time_s": 23.3
     },
     {
       "offset_cm": 5.0,
@@ -187,34 +187,34 @@
       "demo_idx": 1,
       "success": false,
       "reward": 0.0,
-      "time_s": 23.2
+      "time_s": 23.3
     },
     {
       "offset_cm": 5.0,
       "seed": 2,
       "demo_idx": 2,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 23.3
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 3,
+      "demo_idx": 3,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 23.3
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 4,
+      "demo_idx": 4,
       "success": false,
       "reward": 0.0,
       "time_s": 23.4
     },
     {
       "offset_cm": 5.0,
-      "seed": 3,
-      "demo_idx": 3,
-      "success": false,
-      "reward": 0.0,
-      "time_s": 23.2
-    },
-    {
-      "offset_cm": 5.0,
-      "seed": 4,
-      "demo_idx": 4,
-      "success": false,
-      "reward": 0.0,
-      "time_s": 23.2
-    },
-    {
-      "offset_cm": 5.0,
       "seed": 5,
       "demo_idx": 5,
       "success": false,
@@ -227,7 +227,7 @@
       "demo_idx": 6,
       "success": false,
       "reward": 0.0,
-      "time_s": 23.2
+      "time_s": 23.3
     },
     {
       "offset_cm": 5.0,
@@ -251,7 +251,7 @@
       "demo_idx": 9,
       "success": false,
       "reward": 0.0,
-      "time_s": 23.2
+      "time_s": 23.3
     },
     {
       "offset_cm": 7.0,
@@ -267,7 +267,7 @@
       "demo_idx": 1,
       "success": false,
       "reward": 0.0,
-      "time_s": 23.2
+      "time_s": 23.3
     },
     {
       "offset_cm": 7.0,
@@ -275,7 +275,7 @@
       "demo_idx": 2,
       "success": false,
       "reward": 0.0,
-      "time_s": 23.5
+      "time_s": 23.3
     },
     {
       "offset_cm": 7.0,
@@ -283,7 +283,7 @@
       "demo_idx": 3,
       "success": false,
       "reward": 0.0,
-      "time_s": 23.2
+      "time_s": 23.3
     },
     {
       "offset_cm": 7.0,
@@ -291,7 +291,7 @@
       "demo_idx": 4,
       "success": false,
       "reward": 0.0,
-      "time_s": 23.1
+      "time_s": 23.3
     },
     {
       "offset_cm": 7.0,
@@ -299,7 +299,7 @@
       "demo_idx": 5,
       "success": false,
       "reward": 0.0,
-      "time_s": 23.2
+      "time_s": 23.3
     },
     {
       "offset_cm": 7.0,
@@ -307,7 +307,7 @@
       "demo_idx": 6,
       "success": false,
       "reward": 0.0,
-      "time_s": 23.2
+      "time_s": 23.4
     },
     {
       "offset_cm": 7.0,
@@ -315,7 +315,7 @@
       "demo_idx": 7,
       "success": false,
       "reward": 0.0,
-      "time_s": 23.3
+      "time_s": 23.4
     },
     {
       "offset_cm": 7.0,
