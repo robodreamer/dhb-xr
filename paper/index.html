@@ -466,6 +466,7 @@
       <a href="#demos">Videos</a>
       <a href="#augmentation">Augmentation</a>
       <a href="#motion-db">Motion DB</a>
+      <a href="#getting-started">Getting Started</a>
       <a href="math.html">Math Deep-Dive</a>
     </div>
   </div>
@@ -1892,6 +1893,103 @@
           IsaacGym/IsaacLab environments during RL policy training.
           Comprehensive benchmarks with GPU profiling are in preparation.
         </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════ GETTING STARTED -->
+<section class="section" id="getting-started">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-10">
+        <h2 class="section-title">Getting Started</h2>
+        <p class="section-subtitle">Four steps from install to invariant trajectory adaptation</p>
+
+        <!-- Step 1: Install -->
+        <h3 class="is-size-5 has-text-weight-semibold mb-3" style="font-family:'Google Sans','Source Sans Pro',sans-serif;">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--primary);color:white;font-size:0.85rem;margin-right:0.5rem;">1</span>
+          Install
+        </h3>
+        <div style="background:#1e293b;color:#e2e8f0;border-radius:8px;padding:1.25rem 1.5rem;font-family:'Courier New',monospace;font-size:0.9rem;line-height:1.7;overflow-x:auto;margin-bottom:2rem;">
+<pre style="margin:0;background:transparent;color:inherit;padding:0;"><span style="color:#94a3b8;"># PyPI</span>
+<span style="color:#7dd3fc;">pip</span> install dhb-xr
+
+<span style="color:#94a3b8;"># or with pixi</span>
+<span style="color:#7dd3fc;">pixi</span> add dhb-xr</pre>
+        </div>
+
+        <!-- Step 2: Encode & Decode -->
+        <h3 class="is-size-5 has-text-weight-semibold mb-3" style="font-family:'Google Sans','Source Sans Pro',sans-serif;">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--primary);color:white;font-size:0.85rem;margin-right:0.5rem;">2</span>
+          Encode a trajectory and decode from a new pose
+        </h3>
+        <div style="background:#1e293b;color:#e2e8f0;border-radius:8px;padding:1.25rem 1.5rem;font-family:'Courier New',monospace;font-size:0.9rem;line-height:1.7;overflow-x:auto;margin-bottom:2rem;">
+<pre style="margin:0;background:transparent;color:inherit;padding:0;"><span style="color:#c084fc;">from</span> <span style="color:#7dd3fc;">dhb_xr.encoder.dhb_dr</span> <span style="color:#c084fc;">import</span> encode_dhb_dr
+<span style="color:#c084fc;">from</span> <span style="color:#7dd3fc;">dhb_xr.decoder.dhb_dr</span> <span style="color:#c084fc;">import</span> decode_dhb_dr
+
+<span style="color:#94a3b8;"># Encode: positions (N,3) + quaternions (N,4 wxyz) -> invariants</span>
+enc = <span style="color:#7dd3fc;">encode_dhb_dr</span>(positions, quaternions)
+
+<span style="color:#94a3b8;"># Decode from a new start pose -> adapted trajectory</span>
+dec = <span style="color:#7dd3fc;">decode_dhb_dr</span>(
+    enc[<span style="color:#fde68a;">"linear_motion_invariants"</span>],
+    enc[<span style="color:#fde68a;">"angular_motion_invariants"</span>],
+    initial_pose={
+        <span style="color:#fde68a;">"position"</span>: new_start,
+        <span style="color:#fde68a;">"quaternion"</span>: new_quat,
+    },
+)</pre>
+        </div>
+
+        <!-- Step 3: Notebooks -->
+        <h3 class="is-size-5 has-text-weight-semibold mb-3" style="font-family:'Google Sans','Source Sans Pro',sans-serif;">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--primary);color:white;font-size:0.85rem;margin-right:0.5rem;">3</span>
+          Try the tutorial notebooks
+        </h3>
+        <div class="columns is-multiline mb-5">
+          <div class="column is-6-tablet is-3-desktop">
+            <a href="https://colab.research.google.com/github/robodreamer/dhb-xr/blob/main/notebooks/tutorial_dhb_basics.ipynb" target="_blank" class="box has-text-centered" style="border:1px solid #e5e7eb;border-radius:10px;padding:1rem;transition:box-shadow 0.2s;">
+              <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab" style="height:20px;margin-bottom:0.5rem;" /><br/>
+              <span class="is-size-7 has-text-weight-semibold">DHB Basics</span><br/>
+              <span class="is-size-7 has-text-grey">Encode, decode, visualize</span>
+            </a>
+          </div>
+          <div class="column is-6-tablet is-3-desktop">
+            <a href="https://colab.research.google.com/github/robodreamer/dhb-xr/blob/main/notebooks/tutorial_invariance_demo.ipynb" target="_blank" class="box has-text-centered" style="border:1px solid #e5e7eb;border-radius:10px;padding:1rem;transition:box-shadow 0.2s;">
+              <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab" style="height:20px;margin-bottom:0.5rem;" /><br/>
+              <span class="is-size-7 has-text-weight-semibold">Invariance Demo</span><br/>
+              <span class="is-size-7 has-text-grey">SE(3) invariance proof</span>
+            </a>
+          </div>
+          <div class="column is-6-tablet is-3-desktop">
+            <a href="https://colab.research.google.com/github/robodreamer/dhb-xr/blob/main/notebooks/tutorial_action_tokenization.ipynb" target="_blank" class="box has-text-centered" style="border:1px solid #e5e7eb;border-radius:10px;padding:1rem;transition:box-shadow 0.2s;">
+              <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab" style="height:20px;margin-bottom:0.5rem;" /><br/>
+              <span class="is-size-7 has-text-weight-semibold">Action Tokenization</span><br/>
+              <span class="is-size-7 has-text-grey">VLA token pipeline</span>
+            </a>
+          </div>
+          <div class="column is-6-tablet is-3-desktop">
+            <a href="https://colab.research.google.com/github/robodreamer/dhb-xr/blob/main/notebooks/tutorial_vla_integration.ipynb" target="_blank" class="box has-text-centered" style="border:1px solid #e5e7eb;border-radius:10px;padding:1rem;transition:box-shadow 0.2s;">
+              <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab" style="height:20px;margin-bottom:0.5rem;" /><br/>
+              <span class="is-size-7 has-text-weight-semibold">VLA Integration</span><br/>
+              <span class="is-size-7 has-text-grey">Plug into your VLA</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Step 4: Read the math -->
+        <h3 class="is-size-5 has-text-weight-semibold mb-3" style="font-family:'Google Sans','Source Sans Pro',sans-serif;">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--primary);color:white;font-size:0.85rem;margin-right:0.5rem;">4</span>
+          Read the math
+        </h3>
+        <div class="insight-box" style="border-left-color:var(--accent);">
+          Want the full derivation of SE(3)-invariant differential geometry behind DHB-XR?
+          See the <a href="math.html"><strong>Math Deep-Dive</strong></a> for the complete
+          Frenet-Serret formulation, curvature/torsion computation, and reconstruction proofs.
+        </div>
+
       </div>
     </div>
   </div>
