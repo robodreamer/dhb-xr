@@ -1645,10 +1645,15 @@
           these offsets exceed SmolVLA's current generalization capacity regardless of training data.
         </p>
 
+        <div class="result-figure mb-4">
+          <img src="assets/augmentation_comparison.png"
+               alt="SmolVLA augmentation comparison: DHB best at 3cm, naive worst overall" />
+        </div>
+
         <div class="insight-box" style="border-left-color:#7c3aed;">
           <strong>Results: geometric consistency matters more than data volume.</strong>
-          DHB augmentation improves out-of-distribution performance (+10 pp at 3 cm over original FT: 30% vs 20%)
-          while preserving near in-distribution accuracy (70% vs 80%).
+          DHB augmentation trades 10 pp at 0 cm (70% vs 80%) for <strong>+10 pp at 3 cm</strong> (30% vs 20%)
+          &mdash; a favorable exchange when deployment includes workspace variation.
           Naive augmentation &mdash; same 500 episodes, same spatial diversity, but without geometric consistency &mdash;
           <em>halves</em> in-distribution performance (40%) and degrades at every offset.
           Visual diversity without trajectory consistency actively hurts the policy.
