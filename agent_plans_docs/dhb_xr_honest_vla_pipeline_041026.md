@@ -1,7 +1,16 @@
 # DHB-XR Honest VLA Integration Pipeline Plan
 
 **Date:** 2026-04-10
-**Status:** In progress — Step 1 DONE, Step 2.1-2.3 DONE, Step 2.4 datasets DONE, training next
+**Status:** Steps 1-2 COMPLETE. DHB-aug +10% at 3cm over original (30% vs 20%).
+**Last updated:** 2026-04-12
+
+### FINAL RESULTS (5K steps, n=10, LIBERO-Spatial task 0)
+| Model | 0cm | 3cm | 5cm | 7cm |
+|-------|-----|-----|-----|-----|
+| Base SmolVLA | 70% | 25% | 10% | 0% |
+| Original FT (50 eps) | 80% | 20% | 0% | 0% |
+| **DHB-aug FT (500 eps)** | **70%** | **30%** | 0% | 0% |
+| Naive-aug FT (500 eps) | 40% | 10% | 0% | 0% |
 **Last updated:** 2026-04-11
 
 ### Dataset Sizes (with rendered images at offset positions)
