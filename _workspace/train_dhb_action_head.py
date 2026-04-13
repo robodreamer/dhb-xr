@@ -179,7 +179,9 @@ def main():
                 pad = torch.zeros(T - len(inv_tensor), 8)
                 inv_tensor = torch.cat([inv_tensor, pad])
 
-            features.append(vlm_feat.cpu())
+            # Squeeze batch dim from single-demo extraction
+            vlm_feat_squeezed = vlm_feat.squeeze(0).cpu()  # (S, vlm_dim)
+            features.append(vlm_feat_squeezed)
             invariants.append(inv_tensor)
 
             if (i + 1) % 10 == 0:
