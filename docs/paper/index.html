@@ -1316,11 +1316,13 @@
             <strong>100% different token IDs</strong> under any rigid-body workspace shift.
           </p>
 
-          <!-- Degradation curve figure will be inserted here once experiment completes -->
           <div id="degradation-curve-container" class="result-figure mb-4">
-            <img src="assets/degradation_curve.png"
-                 alt="SmolVLA success rate degrades sharply under workspace offset"
-                 onerror="this.parentElement.innerHTML='<p style=\'text-align:center; padding:2rem; color:#6b7280; background:#f1f5f9; border-radius:8px;\'>Figure failed to load.</p>'" />
+            <img src="assets/combined_degradation.png"
+                 alt="SmolVLA degrades under both translational (70% to 0% at 7cm) and rotational (70% to 0% at 20 deg) perturbation" />
+            <p class="fig-caption">
+              <strong>Left:</strong> Translational offset (Y-axis, n=20). Success drops from 70% to 0% within 7 cm.
+              <strong>Right:</strong> Rotational offset (Z-axis, n=10). Robust to 0&ndash;10&deg;, sharp cliff at 15&deg; (20%), 0% at 20&deg;+.
+            </p>
           </div>
 
           <div class="insight-box" style="border-left-color:#dc2626;">
