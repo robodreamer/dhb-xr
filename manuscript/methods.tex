@@ -10,7 +10,7 @@
 \includegraphics[width=0.95\textwidth]{teaser}
 \vspace{-3mm}
 \caption{\textbf{\dhb{} overview.}
-\textbf{(a)} Current VLAs degrade 14--18\% under spatial shift; \dhb{} adapts in 7\,ms.
+\textbf{(a)} SmolVLA (500M) degrades from 70\% to 0\% at 7\,cm offset; \dhb{} adapts in 7\,ms.
 \textbf{(b)} 6D pose adaptation from a single demo: different start orientations and
 positions --- motion shape preserved in all cases.
 \textbf{(c)} Per-trial invariance measurement: DHB magnitude MSE $\sim 10^{-33}$
@@ -137,6 +137,21 @@ an effect we call \emph{free SE(3) augmentation}: any downstream tokenizer
 inherits perfect geometric stability simply by operating on DHB invariants.
 We recommend magnitude-only tokenization as the default for VLA integration.
 
+\paragraph{Arc-length invariant gripper encoding.}
+The continuous 6-DOF trajectory is SE(3)-invariant by construction, but
+manipulation tasks also require a discrete gripper signal (open/close).
+We extend the invariance guarantee to the full 7-DOF action space by
+mapping gripper transitions to \emph{normalized arc-length fractions}
+of the trajectory.
+Specifically, each gripper phase transition (open$\to$close at the grasp point,
+close$\to$open at the place point) is recorded at its arc-length fraction
+$s/L \in [0,1]$ along the demo trajectory.
+During adapted execution, the gripper triggers at the same arc-length
+fraction of the adapted trajectory, regardless of workspace position.
+Since arc length is invariant to rigid-body transforms of the workspace,
+the gripper encoding inherits the SE(3) invariance of the trajectory ---
+yielding a \emph{fully invariant 7-DOF action representation}.
+
 \subsection{Geometric Adaptation}
 \label{sec:adaptation}
 
@@ -168,3 +183,17 @@ where $I^\star$ are ground-truth DHB invariants computed offline from demo traje
 
 The head is a drop-in replacement for FAST, OFT, or DiT heads, enabling
 \emph{controlled ablation} of geometric invariance on the same backbone.
+
+\paragraph{GPU-accelerated batch adaptation (CuSADi).}
+For reinforcement learning or massive data augmentation where thousands
+of trajectories must be adapted simultaneously, we provide a
+GPU-accelerated batch decoder via
+CuSADi~\cite{cusadi2024}\footnote{\url{https://github.com/se-hwan/cusadi}}.
+The CasADi symbolic graph of \texttt{decode\_dhb\_dr} is exported once,
+compiled to CUDA kernels by CuSADi, and evaluated in parallel across
+the batch.
+Benchmarks on an RTX A2000 show $43\times$ speedup at batch 100,
+$199\times$ at batch 1000, and $387\times$ at batch 2000
+(e.g.\ $1.8\,\text{ms}$ for 2000 50-step trajectories vs $685\,\text{ms}$ on CPU).
+This enables real-time invariant-space trajectory adaptation across
+thousands of parallel IsaacGym/IsaacLab environments during RL training.
