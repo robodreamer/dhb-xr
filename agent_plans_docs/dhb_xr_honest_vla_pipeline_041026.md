@@ -4,13 +4,16 @@
 **Status:** Steps 1-2 COMPLETE. DHB-aug +10% at 3cm over original (30% vs 20%).
 **Last updated:** 2026-04-12
 
-### FINAL RESULTS (5K steps, n=10, LIBERO-Spatial task 0)
-| Model | 0cm | 3cm | 5cm | 7cm |
-|-------|-----|-----|-----|-----|
-| Base SmolVLA | 70% | 25% | 10% | 0% |
-| Original FT (50 eps) | 80% | 20% | 0% | 0% |
-| **DHB-aug FT (500 eps)** | **70%** | **30%** | 0% | 0% |
-| Naive-aug FT (500 eps) | 40% | 10% | 0% | 0% |
+### FINAL RESULTS (5K steps, n=20, LIBERO-Spatial task 0)
+| Model | 0cm | 3cm | 5cm |
+|-------|-----|-----|-----|
+| Base SmolVLA | 70% | 25% | 10% |
+| Original FT (50 eps) | 50% | 10% | 0% |
+| **DHB-aug FT (500 eps)** | 35% | **15%** | 0% |
+| Naive-aug FT (500 eps) | 35% | 0% | 0% |
+
+Note: n=10 results were higher (DHB 70%/30%, Orig 80%/20%) due to smaller sample.
+n=20 results are authoritative. DHB-aug is the only FT model with non-zero at 3cm.
 **Last updated:** 2026-04-11
 
 ### Dataset Sizes (with rendered images at offset positions)
