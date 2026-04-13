@@ -1,0 +1,46 @@
+{
+  "dhb_invariants": {
+    "final_loss": 0.0040136766619980335,
+    "params": 816264,
+    "stability": {
+      "0cm": {
+        "mean_change": 0.0,
+        "std_change": 0.0
+      },
+      "3cm": {
+        "mean_change": 2.2177278014012813e-09,
+        "std_change": 6.780427546506861e-10
+      },
+      "5cm": {
+        "mean_change": 6.15760353817052e-09,
+        "std_change": 1.5582231916007996e-09
+      },
+      "10cm": {
+        "mean_change": 3.4562359019219e-08,
+        "std_change": 1.091417515668883e-08
+      }
+    }
+  },
+  "raw_actions": {
+    "final_loss": 0.0022394672851078212,
+    "params": 816135,
+    "stability": {
+      "0cm": {
+        "mean_change": 0.0,
+        "std_change": 0.0
+      },
+      "3cm": {
+        "mean_change": 8.494308811890505e-10,
+        "std_change": 3.1379691083905105e-10
+      },
+      "5cm": {
+        "mean_change": 2.324195208514013e-09,
+        "std_change": 1.7966235610162976e-09
+      },
+      "10cm": {
+        "mean_change": 1.1680306899464198e-08,
+        "std_change": 5.548340849738182e-09
+      }
+    }
+  }
+}
