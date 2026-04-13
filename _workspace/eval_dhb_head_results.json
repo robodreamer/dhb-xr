@@ -1,0 +1,367 @@
+{
+  "metadata": {
+    "task_id": 0,
+    "task_name": "pick up the black bowl between the plate and the ramekin and place it on the plate",
+    "axis": "Y",
+    "seeds_per_offset": 10,
+    "offsets_cm": [
+      0.0,
+      3.0,
+      5.0
+    ],
+    "gain": 2.0,
+    "max_steps": 80,
+    "action_horizon": 30,
+    "checkpoint": "_workspace/dhb_action_head_trained.pt",
+    "timestamp": "2026-04-13 06:46:52"
+  },
+  "trials": [
+    {
+      "offset_cm": 0.0,
+      "seed": 0,
+      "demo_idx": 0,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 2.0,
+      "trajectory_len": 28,
+      "total_steps": 62,
+      "inv_norm": 1.9857923984527588
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 1,
+      "demo_idx": 1,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 1.8,
+      "trajectory_len": 28,
+      "total_steps": 62,
+      "inv_norm": 1.9748040437698364
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 2,
+      "demo_idx": 2,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 1.9,
+      "trajectory_len": 28,
+      "total_steps": 62,
+      "inv_norm": 2.4906165599823
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 3,
+      "demo_idx": 3,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 1.8,
+      "trajectory_len": 28,
+      "total_steps": 62,
+      "inv_norm": 1.7627573013305664
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 4,
+      "demo_idx": 4,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 1.8,
+      "trajectory_len": 28,
+      "total_steps": 62,
+      "inv_norm": 2.308100461959839
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 5,
+      "demo_idx": 5,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 1.8,
+      "trajectory_len": 28,
+      "total_steps": 62,
+      "inv_norm": 1.772286295890808
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 6,
+      "demo_idx": 6,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 1.8,
+      "trajectory_len": 28,
+      "total_steps": 62,
+      "inv_norm": 2.3913044929504395
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 7,
+      "demo_idx": 7,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 1.8,
+      "trajectory_len": 28,
+      "total_steps": 62,
+      "inv_norm": 2.559011936187744
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 8,
+      "demo_idx": 8,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 1.8,
+      "trajectory_len": 28,
+      "total_steps": 61,
+      "inv_norm": 2.233405113220215
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 9,
+      "demo_idx": 9,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 1.9,
+      "trajectory_len": 28,
+      "total_steps": 62,
+      "inv_norm": 1.6354992389678955
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 0,
+      "demo_idx": 0,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 1.9,
+      "trajectory_len": 28,
+      "total_steps": 62,
+      "inv_norm": 1.624639868736267
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 1,
+      "demo_idx": 1,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 1.9,
+      "trajectory_len": 28,
+      "total_steps": 62,
+      "inv_norm": 2.489530563354492
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 2,
+      "demo_idx": 2,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 1.9,
+      "trajectory_len": 28,
+      "total_steps": 62,
+      "inv_norm": 2.393235206604004
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 3,
+      "demo_idx": 3,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 1.9,
+      "trajectory_len": 28,
+      "total_steps": 62,
+      "inv_norm": 2.6992340087890625
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 4,
+      "demo_idx": 4,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 1.9,
+      "trajectory_len": 28,
+      "total_steps": 62,
+      "inv_norm": 2.653014898300171
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 5,
+      "demo_idx": 5,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 1.9,
+      "trajectory_len": 28,
+      "total_steps": 62,
+      "inv_norm": 2.615243673324585
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 6,
+      "demo_idx": 6,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 1.9,
+      "trajectory_len": 28,
+      "total_steps": 62,
+      "inv_norm": 1.9967619180679321
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 7,
+      "demo_idx": 7,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 2.0,
+      "trajectory_len": 28,
+      "total_steps": 62,
+      "inv_norm": 2.05206036567688
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 8,
+      "demo_idx": 8,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 2.1,
+      "trajectory_len": 28,
+      "total_steps": 62,
+      "inv_norm": 2.1039376258850098
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 9,
+      "demo_idx": 9,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 2.1,
+      "trajectory_len": 28,
+      "total_steps": 62,
+      "inv_norm": 2.379857063293457
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 0,
+      "demo_idx": 0,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 2.1,
+      "trajectory_len": 28,
+      "total_steps": 62,
+      "inv_norm": 2.369577407836914
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 1,
+      "demo_idx": 1,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 2.1,
+      "trajectory_len": 28,
+      "total_steps": 62,
+      "inv_norm": 2.005659341812134
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 2,
+      "demo_idx": 2,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 2.0,
+      "trajectory_len": 28,
+      "total_steps": 62,
+      "inv_norm": 2.3205764293670654
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 3,
+      "demo_idx": 3,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 2.1,
+      "trajectory_len": 28,
+      "total_steps": 62,
+      "inv_norm": 2.427741527557373
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 4,
+      "demo_idx": 4,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 2.1,
+      "trajectory_len": 28,
+      "total_steps": 62,
+      "inv_norm": 2.225109577178955
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 5,
+      "demo_idx": 5,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 2.1,
+      "trajectory_len": 28,
+      "total_steps": 62,
+      "inv_norm": 2.255911350250244
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 6,
+      "demo_idx": 6,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 2.1,
+      "trajectory_len": 28,
+      "total_steps": 62,
+      "inv_norm": 1.6890161037445068
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 7,
+      "demo_idx": 7,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 2.0,
+      "trajectory_len": 28,
+      "total_steps": 62,
+      "inv_norm": 2.293154001235962
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 8,
+      "demo_idx": 8,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 2.2,
+      "trajectory_len": 28,
+      "total_steps": 62,
+      "inv_norm": 2.589553117752075
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 9,
+      "demo_idx": 9,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 2.0,
+      "trajectory_len": 28,
+      "total_steps": 62,
+      "inv_norm": 2.837190628051758
+    }
+  ],
+  "summary": {
+    "0.0cm": {
+      "successes": 0,
+      "total": 10,
+      "rate": 0.0
+    },
+    "3.0cm": {
+      "successes": 0,
+      "total": 10,
+      "rate": 0.0
+    },
+    "5.0cm": {
+      "successes": 0,
+      "total": 10,
+      "rate": 0.0
+    }
+  }
+}
