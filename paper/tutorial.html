@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DHB-XR Tutorial</title>
+
+  <!-- Bulma CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Google Fonts (Nerfies/VLANeXt style) -->
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Noto+Sans:ital,wght@0,400;0,700;1,400&family=Source+Sans+Pro:wght@300;400;600;700&family=Source+Serif+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --accent: #7c3aed;
+      --success: #059669;
+      --dark: #111827;
+      --gray: #6b7280;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Noto Sans', 'Source Sans Pro', sans-serif;
+      color: var(--dark);
+      background: #fff;
+    }
+    .publication-title {
+      font-family: 'Google Sans', 'Source Serif Pro', serif;
+      font-weight: 700;
+    }
+    .section-title {
+      font-family: 'Google Sans', 'Source Serif Pro', serif;
+      font-weight: 700;
+      font-size: 1.75rem;
+      margin-bottom: 0.75rem;
+    }
+    .section-subtitle {
+      color: var(--gray);
+      font-size: 1.05rem;
+      margin-bottom: 2rem;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: var(--primary);
+      font-weight: 500;
+      font-family: 'Google Sans', sans-serif;
+      text-decoration: none;
+      font-size: 0.95rem;
+    }
+    .back-link:hover { color: var(--primary-dark); }
+    .step-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: white;
+      font-size: 0.85rem;
+      margin-right: 0.5rem;
+    }
+    .code-block {
+      background: #1e293b;
+      color: #e2e8f0;
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      font-family: 'Courier New', monospace;
+      font-size: 0.88rem;
+      line-height: 1.7;
+      overflow-x: auto;
+      margin-bottom: 2rem;
+    }
+    .code-block pre {
+      margin: 0;
+      background: transparent;
+      color: inherit;
+      padding: 0;
+    }
+    .code-block .comment { color: #94a3b8; }
+    .code-block .keyword { color: #c084fc; }
+    .code-block .module { color: #7dd3fc; }
+    .code-block .string { color: #fde68a; }
+    .code-block .output { color: #86efac; }
+    .colab-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 1rem;
+      transition: box-shadow 0.2s;
+    }
+    .colab-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .example-label {
+      display: inline-block;
+      background: #eff6ff;
+      color: var(--primary);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.15rem 0.6rem;
+      border-radius: 4px;
+      margin-bottom: 0.5rem;
+      font-family: 'Google Sans', sans-serif;
+    }
+    .insight-box {
+      background: #f8fafc;
+      border-left: 4px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.95rem;
+    }
+    .links-grid a {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      color: var(--dark);
+      text-decoration: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      font-size: 0.95rem;
+    }
+    .links-grid a:hover {
+      border-color: var(--primary);
+      box-shadow: 0 2px 8px rgba(37,99,235,0.1);
+    }
+    .hero-mini {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e1b4b 100%);
+      padding: 2.5rem 0 2rem;
+      color: white;
+    }
+    .hero-mini .title { color: white; }
+    .footer-section {
+      background: #0f172a;
+      color: rgba(255,255,255,0.6);
+      padding: 2rem 1.5rem;
+    }
+    .footer-section a { color: rgba(255,255,255,0.75); }
+    .footer-section a:hover { color: white; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════ HERO -->
+<section class="hero-mini">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-10">
+        <a href="index.html" class="back-link" style="color:rgba(255,255,255,0.7);margin-bottom:1rem;">
+          <i class="fas fa-arrow-left"></i> Back to Project Page
+        </a>
+        <h1 class="title is-2 publication-title mt-3">DHB-XR Tutorial</h1>
+        <p style="color:rgba(255,255,255,0.75);font-size:1.1rem;">
+          From install to invariant trajectory adaptation in minutes.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════ QUICK START -->
+<section class="section" id="quick-start">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-10">
+        <h2 class="section-title"><span class="step-number">1</span> Quick Start</h2>
+        <p class="section-subtitle">Install and run your first encode/decode in three lines.</p>
+
+        <h3 class="is-size-5 has-text-weight-semibold mb-3" style="font-family:'Google Sans',sans-serif;">Install</h3>
+        <div class="code-block">
+<pre><span class="comment"># PyPI</span>
+<span class="module">pip</span> install dhb-xr
+
+<span class="comment"># or with pixi</span>
+<span class="module">pixi</span> add dhb-xr</pre>
+        </div>
+
+        <h3 class="is-size-5 has-text-weight-semibold mb-3" style="font-family:'Google Sans',sans-serif;">Encode and Decode</h3>
+        <div class="code-block">
+<pre><span class="keyword">from</span> <span class="module">dhb_xr.encoder.dhb_dr</span> <span class="keyword">import</span> encode_dhb_dr
+<span class="keyword">from</span> <span class="module">dhb_xr.decoder.dhb_dr</span> <span class="keyword">import</span> decode_dhb_dr
+
+<span class="comment"># Encode: positions (N,3) + quaternions (N,4 wxyz) -> invariants</span>
+enc = <span class="module">encode_dhb_dr</span>(positions, quaternions)
+
+<span class="comment"># Decode from a new start pose -> adapted trajectory</span>
+dec = <span class="module">decode_dhb_dr</span>(
+    enc[<span class="string">"linear_motion_invariants"</span>],
+    enc[<span class="string">"angular_motion_invariants"</span>],
+    initial_pose={<span class="string">"position"</span>: new_start, <span class="string">"quaternion"</span>: new_quat},
+)</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════ INTERACTIVE TUTORIALS -->
+<section class="section" id="notebooks" style="background:#f8fafc;">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-10">
+        <h2 class="section-title"><span class="step-number">2</span> Interactive Tutorials</h2>
+        <p class="section-subtitle">Run these Colab notebooks to explore DHB-XR hands-on.</p>
+
+        <div class="columns is-multiline">
+          <div class="column is-6-tablet is-3-desktop">
+            <a href="https://colab.research.google.com/github/robodreamer/dhb-xr/blob/main/notebooks/tutorial_dhb_basics.ipynb" target="_blank" class="box has-text-centered colab-card">
+              <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab" style="height:20px;margin-bottom:0.5rem;" /><br/>
+              <span class="is-size-7 has-text-weight-semibold">DHB Basics</span><br/>
+              <span class="is-size-7 has-text-grey">Encode, decode, and visualize trajectories with the core API.</span>
+            </a>
+          </div>
+          <div class="column is-6-tablet is-3-desktop">
+            <a href="https://colab.research.google.com/github/robodreamer/dhb-xr/blob/main/notebooks/tutorial_invariance_demo.ipynb" target="_blank" class="box has-text-centered colab-card">
+              <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab" style="height:20px;margin-bottom:0.5rem;" /><br/>
+              <span class="is-size-7 has-text-weight-semibold">Invariance Demo</span><br/>
+              <span class="is-size-7 has-text-grey">Verify that tokens stay identical under arbitrary SE(3) transforms.</span>
+            </a>
+          </div>
+          <div class="column is-6-tablet is-3-desktop">
+            <a href="https://colab.research.google.com/github/robodreamer/dhb-xr/blob/main/notebooks/tutorial_action_tokenization.ipynb" target="_blank" class="box has-text-centered colab-card">
+              <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab" style="height:20px;margin-bottom:0.5rem;" /><br/>
+              <span class="is-size-7 has-text-weight-semibold">Action Tokenization</span><br/>
+              <span class="is-size-7 has-text-grey">Walk through the full VLA token pipeline from raw actions to discrete tokens.</span>
+            </a>
+          </div>
+          <div class="column is-6-tablet is-3-desktop">
+            <a href="https://colab.research.google.com/github/robodreamer/dhb-xr/blob/main/notebooks/tutorial_vla_integration.ipynb" target="_blank" class="box has-text-centered colab-card">
+              <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab" style="height:20px;margin-bottom:0.5rem;" /><br/>
+              <span class="is-size-7 has-text-weight-semibold">VLA Integration</span><br/>
+              <span class="is-size-7 has-text-grey">Drop DHB-XR into an existing VLA model as a replacement action head.</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════ CODE EXAMPLES -->
+<section class="section" id="examples">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-10">
+        <h2 class="section-title"><span class="step-number">3</span> Code Examples</h2>
+        <p class="section-subtitle">Copy-paste snippets for the most common workflows.</p>
+
+        <!-- Example 1 -->
+        <span class="example-label">Example 1</span>
+        <h3 class="is-size-5 has-text-weight-semibold mb-3" style="font-family:'Google Sans',sans-serif;">
+          Encode a trajectory and verify invariance
+        </h3>
+        <div class="code-block">
+<pre><span class="keyword">from</span> <span class="module">dhb_xr.encoder.dhb_dr</span> <span class="keyword">import</span> encode_dhb_dr
+<span class="keyword">import</span> <span class="module">numpy</span> <span class="keyword">as</span> np
+
+<span class="comment"># Your trajectory</span>
+positions = np.random.randn(50, 3).cumsum(axis=0) * 0.01
+quaternions = np.tile([1, 0, 0, 0], (50, 1))
+
+<span class="comment"># Encode</span>
+enc = <span class="module">encode_dhb_dr</span>(positions, quaternions)
+invariants = enc[<span class="string">"linear_motion_invariants"</span>]
+
+<span class="comment"># Apply SE(3) transform</span>
+offset = np.array([0.1, 0.05, 0])
+shifted = <span class="module">encode_dhb_dr</span>(positions + offset, quaternions)
+
+<span class="comment"># Invariants are identical!</span>
+print(f<span class="string">"Distance: {np.linalg.norm(invariants - shifted['linear_motion_invariants']):.10f}"</span>)
+<span class="output"># -> 0.0000000000</span></pre>
+        </div>
+
+        <!-- Example 2 -->
+        <span class="example-label">Example 2</span>
+        <h3 class="is-size-5 has-text-weight-semibold mb-3" style="font-family:'Google Sans',sans-serif;">
+          Build a motion database
+        </h3>
+        <div class="code-block">
+<pre><span class="keyword">from</span> <span class="module">dhb_xr.database</span> <span class="keyword">import</span> MotionDatabase
+
+db = MotionDatabase()
+<span class="keyword">for</span> traj_pos, traj_quat <span class="keyword">in</span> my_trajectories:
+    db.add(traj_pos, traj_quat, metadata={<span class="string">"task"</span>: <span class="string">"pick"</span>})
+
+<span class="comment"># Retrieve nearest -- works at any workspace offset</span>
+results = db.retrieve(query_pos, query_quat, k=5)</pre>
+        </div>
+
+        <!-- Example 3 -->
+        <span class="example-label">Example 3</span>
+        <h3 class="is-size-5 has-text-weight-semibold mb-3" style="font-family:'Google Sans',sans-serif;">
+          DHB action head for VLA
+        </h3>
+        <div class="code-block">
+<pre><span class="keyword">from</span> <span class="module">dhb_xr.integration.vla.action_head</span> <span class="keyword">import</span> DHBActionHead
+
+head = DHBActionHead(vlm_dim=768, action_horizon=50)
+<span class="comment"># Predicts invariants from VLM features</span>
+result = head(vlm_hidden, target_invariants=ground_truth)
+loss = result[<span class="string">"loss"</span>]  <span class="comment"># invariant MSE</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════ LINKS -->
+<section class="section" id="links" style="background:#f8fafc;">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-10">
+        <h2 class="section-title"><span class="step-number">4</span> Links</h2>
+        <p class="section-subtitle">Further reading and resources.</p>
+
+        <div class="columns is-multiline links-grid">
+          <div class="column is-6-tablet is-3-desktop">
+            <a href="math.html">
+              <i class="fas fa-square-root-variable" style="color:var(--accent);"></i>
+              Math Deep-Dive
+            </a>
+          </div>
+          <div class="column is-6-tablet is-3-desktop">
+            <a href="https://github.com/robodreamer/dhb-xr" target="_blank">
+              <i class="fab fa-github" style="color:var(--dark);"></i>
+              GitHub Repo
+            </a>
+          </div>
+          <div class="column is-6-tablet is-3-desktop">
+            <a href="assets/dhb_xr_corl2026.pdf" target="_blank">
+              <i class="fas fa-file-pdf" style="color:#dc2626;"></i>
+              Paper (PDF)
+            </a>
+          </div>
+          <div class="column is-6-tablet is-3-desktop">
+            <a href="index.html">
+              <i class="fas fa-arrow-left" style="color:var(--primary);"></i>
+              Project Page
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════ FOOTER -->
+<footer class="footer footer-section">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-10 has-text-centered">
+        <p>
+          &copy; 2026 Andy Park.
+          <a href="index.html">DHB-XR Project Page</a> |
+          <a href="https://github.com/robodreamer/dhb-xr" target="_blank">GitHub</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
