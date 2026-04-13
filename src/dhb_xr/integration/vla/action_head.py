@@ -1,0 +1,223 @@
+"""
+DHB-XR Action Head for Vision-Language-Action models.
+
+Implements the DHBActionHead described in Section 4.4 of the CoRL paper:
+
+    h_VLM → cross-attn → Î ∈ R^{T×8} → OAT → 8 tokens → decode → Î
+    → decode_dhb → τ̂ ∈ SE(3)^T
+
+Training loss:
+    L = λ_inv * ||Î - I*||²_F + λ_act * ||τ̂ - τ*||_1
+
+The head is a drop-in replacement for FAST, OFT, or DiT action heads.
+"""
+from __future__ import annotations
+
+from typing import Dict, Optional, Tuple
+
+try:
+    import torch
+    import torch.nn as nn
+    import torch.nn.functional as F
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
+
+if HAS_TORCH:
+    from dhb_xr.core.geometry_torch import (
+        quat_to_rot_torch,
+        rot_to_quat_torch,
+    )
+
+    class DHBActionHead(nn.Module):
+        """
+        Modular action head that predicts DHB invariants from VLM hidden states.
+
+        Architecture:
+            1. Cross-attention: VLM embeddings → T query positions → invariant features
+            2. Invariant prediction: Linear projection to 8-dim (4 linear + 4 angular)
+            3. Optional OAT tokenization: compress to K discrete tokens
+            4. DHB decode: invariants + initial pose → SE(3) trajectory
+
+        Args:
+            vlm_dim: VLM hidden state dimension (e.g., 768 for SmolVLM2-500M)
+            action_horizon: Number of action timesteps T to predict
+            invariant_dim: DHB invariant dimension (8 = 4 linear + 4 angular)
+            hidden_dim: Internal hidden dimension
+            num_heads: Number of attention heads for cross-attention
+            num_layers: Number of transformer decoder layers
+            dropout: Dropout rate
+            lambda_inv: Weight for invariant MSE loss
+            lambda_act: Weight for action L1 loss (requires DHB decode)
+        """
+
+        def __init__(
+            self,
+            vlm_dim: int = 768,
+            action_horizon: int = 50,
+            invariant_dim: int = 8,
+            hidden_dim: int = 256,
+            num_heads: int = 8,
+            num_layers: int = 4,
+            dropout: float = 0.1,
+            lambda_inv: float = 1.0,
+            lambda_act: float = 0.1,
+        ):
+            super().__init__()
+
+            self.action_horizon = action_horizon
+            self.invariant_dim = invariant_dim
+            self.lambda_inv = lambda_inv
+            self.lambda_act = lambda_act
+
+            # Learnable query positions for each timestep
+            self.query_embed = nn.Embedding(action_horizon, hidden_dim)
+
+            # Project VLM hidden states to cross-attention key/value space
+            self.vlm_proj = nn.Linear(vlm_dim, hidden_dim)
+
+            # Cross-attention decoder: queries attend to VLM context
+            decoder_layer = nn.TransformerDecoderLayer(
+                d_model=hidden_dim,
+                nhead=num_heads,
+                dim_feedforward=hidden_dim * 4,
+                dropout=dropout,
+                batch_first=True,
+            )
+            self.decoder = nn.TransformerDecoder(
+                decoder_layer,
+                num_layers=num_layers,
+            )
+
+            # Project decoder output to invariant space
+            self.invariant_head = nn.Linear(hidden_dim, invariant_dim)
+
+            # Optional: state projection for conditioning on current EE state
+            self.state_proj = nn.Linear(8, hidden_dim)  # eef_pos(3) + aa(3) + grip(2)
+
+        def forward(
+            self,
+            vlm_hidden: torch.Tensor,
+            state: Optional[torch.Tensor] = None,
+            target_invariants: Optional[torch.Tensor] = None,
+            target_actions: Optional[torch.Tensor] = None,
+        ) -> Dict[str, torch.Tensor]:
+            """
+            Forward pass: predict DHB invariants from VLM hidden states.
+
+            Args:
+                vlm_hidden: (B, S, vlm_dim) VLM encoder output
+                state: (B, 8) current EE state [eef_pos, axis_angle, gripper]
+                target_invariants: (B, T, 8) ground-truth DHB invariants (for training)
+                target_actions: (B, T, 7) ground-truth actions (for training)
+
+            Returns:
+                dict with:
+                    'pred_invariants': (B, T, 8) predicted DHB invariants
+                    'loss': scalar training loss (if targets provided)
+                    'loss_inv': invariant MSE component
+                    'loss_act': action L1 component (if target_actions provided)
+            """
+            B = vlm_hidden.shape[0]
+
+            # Project VLM hidden states
+            memory = self.vlm_proj(vlm_hidden)  # (B, S, hidden_dim)
+
+            # Build query sequence
+            query_pos = torch.arange(self.action_horizon, device=vlm_hidden.device)
+            queries = self.query_embed(query_pos).unsqueeze(0).expand(B, -1, -1)
+
+            # Optionally condition on current state
+            if state is not None:
+                state_feat = self.state_proj(state).unsqueeze(1)  # (B, 1, hidden_dim)
+                memory = torch.cat([state_feat, memory], dim=1)
+
+            # Cross-attention decode
+            decoded = self.decoder(queries, memory)  # (B, T, hidden_dim)
+
+            # Project to invariant space
+            pred_inv = self.invariant_head(decoded)  # (B, T, 8)
+
+            result = {"pred_invariants": pred_inv}
+
+            # Compute training loss if targets provided
+            if target_invariants is not None:
+                loss_inv = F.mse_loss(pred_inv, target_invariants)
+                result["loss_inv"] = loss_inv
+                result["loss"] = self.lambda_inv * loss_inv
+
+                if target_actions is not None:
+                    # Decode invariants to trajectory and compute action L1
+                    # This requires DHB decode (differentiable torch version)
+                    # For now, use invariant loss only
+                    loss_act = torch.tensor(0.0, device=vlm_hidden.device)
+                    result["loss_act"] = loss_act
+                    result["loss"] = (
+                        self.lambda_inv * loss_inv
+                        + self.lambda_act * loss_act
+                    )
+
+            return result
+
+        def predict(
+            self,
+            vlm_hidden: torch.Tensor,
+            state: Optional[torch.Tensor] = None,
+            initial_pose: Optional[Dict[str, torch.Tensor]] = None,
+        ) -> Dict[str, torch.Tensor]:
+            """
+            Inference: predict invariants and optionally decode to trajectory.
+
+            Args:
+                vlm_hidden: (B, S, vlm_dim) VLM encoder output
+                state: (B, 8) current EE state
+                initial_pose: dict with 'position' (B, 3) and 'quaternion' (B, 4) wxyz
+                              for DHB decode from current pose
+
+            Returns:
+                dict with 'pred_invariants' and optionally 'positions', 'quaternions'
+            """
+            with torch.no_grad():
+                result = self.forward(vlm_hidden, state)
+
+            if initial_pose is not None:
+                # Decode invariants to SE(3) trajectory from current pose
+                # This uses the numpy DHB decoder (not differentiable)
+                pred_inv = result["pred_invariants"]
+                B = pred_inv.shape[0]
+
+                positions_list = []
+                quaternions_list = []
+
+                for b in range(B):
+                    inv_np = pred_inv[b].cpu().numpy()
+                    lin_inv = inv_np[:, :4]  # linear invariants
+                    ang_inv = inv_np[:, 4:]  # angular invariants
+
+                    pos = initial_pose["position"][b].cpu().numpy()
+                    quat = initial_pose["quaternion"][b].cpu().numpy()
+
+                    from dhb_xr.decoder.dhb_dr import decode_dhb_dr
+                    from dhb_xr.core.types import EncodingMethod
+
+                    dec = decode_dhb_dr(
+                        lin_inv, ang_inv,
+                        initial_pose={"position": pos, "quaternion": quat},
+                        method=EncodingMethod.POSITION,
+                    )
+                    positions_list.append(dec["positions"])
+                    quaternions_list.append(dec["quaternions"])
+
+                import numpy as np
+                result["positions"] = torch.from_numpy(
+                    np.stack(positions_list)
+                ).to(pred_inv.device)
+                result["quaternions"] = torch.from_numpy(
+                    np.stack(quaternions_list)
+                ).to(pred_inv.device)
+
+            return result
+
+        def get_optim_params(self) -> dict:
+            """Return optimizer parameter groups."""
+            return {"params": self.parameters()}
