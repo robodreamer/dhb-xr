@@ -94,8 +94,8 @@ Two independent critic agents reviewed the current SmolVLA + DHB-XR pipeline and
 ---
 
 ### Step 3: DHB Invariant Action Head (strongest, ~1-2 weeks if time permits)
-- [ ] **3.1** Implement `DHBActionHead` for SmolVLA that predicts DHB invariant tokens (8D per step)
-- [ ] **3.2** Use OAT-style tokenizer (already implemented in `src/dhb_xr/tokenization/`) to compress invariants to 8 register tokens
+- [x] **3.1** Implement `DHBActionHead` — DONE (0.8M params, 8 tests, demo trains to loss 0.006)
+- [ ] **3.2** Integrate OAT tokenizer into DHBActionHead for discrete token prediction
 - [ ] **3.3** At inference: VLA sees offset scene -> predicts DHB tokens -> decode from actual EE pose -> embodik IK
 - [ ] **3.4** Train on zero-offset demos only
 - [ ] **3.5** Evaluate at 0cm + offsets -- VLA genuinely infers at every offset

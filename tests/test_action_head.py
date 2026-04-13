@@ -93,3 +93,25 @@ class TestDHBActionHead:
         assert "params" in params
         param_count = sum(p.numel() for p in params["params"])
         assert param_count > 0
+
+    def test_oat_integration(self):
+        """OAT tokenizer integrates with the action head."""
+        head_oat = DHBActionHead(
+            vlm_dim=128,
+            action_horizon=20,
+            invariant_dim=8,
+            hidden_dim=64,
+            num_heads=4,
+            num_layers=2,
+            use_oat=True,
+            oat_num_registers=4,
+        )
+        if head_oat.oat is None:
+            pytest.skip("OAT tokenizer not available")
+
+        head_oat.train()
+        vlm_hidden = torch.randn(self.B, self.S, 128)
+        target_inv = torch.randn(self.B, 20, 8)
+        result = head_oat(vlm_hidden, target_invariants=target_inv)
+        assert "oat_loss" in result
+        assert result["loss"].requires_grad

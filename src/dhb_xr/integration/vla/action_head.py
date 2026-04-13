@@ -62,12 +62,16 @@ if HAS_TORCH:
             dropout: float = 0.1,
             lambda_inv: float = 1.0,
             lambda_act: float = 0.1,
+            use_oat: bool = False,
+            oat_num_registers: int = 8,
+            oat_fsq_levels: Optional[list] = None,
         ):
             super().__init__()
 
             self.action_horizon = action_horizon
             self.invariant_dim = invariant_dim
             self.lambda_inv = lambda_inv
+            self.use_oat = use_oat
             self.lambda_act = lambda_act
 
             # Learnable query positions for each timestep
@@ -94,6 +98,25 @@ if HAS_TORCH:
 
             # Optional: state projection for conditioning on current EE state
             self.state_proj = nn.Linear(8, hidden_dim)  # eef_pos(3) + aa(3) + grip(2)
+
+            # Optional: OAT tokenizer for discrete token prediction
+            self.oat = None
+            if use_oat:
+                try:
+                    from dhb_xr.tokenization.oat_tokenizer import OATTokenizer
+                    self.oat = OATTokenizer(
+                        input_dim=invariant_dim,
+                        input_horizon=action_horizon,
+                        emb_dim=hidden_dim,
+                        latent_dim=4,
+                        num_registers=oat_num_registers,
+                        fsq_levels=oat_fsq_levels or [8, 5, 5, 5],
+                        encoder_depth=2,
+                        decoder_depth=2,
+                        num_heads=num_heads,
+                    )
+                except ImportError:
+                    pass
 
         def forward(
             self,
@@ -138,13 +161,27 @@ if HAS_TORCH:
             # Project to invariant space
             pred_inv = self.invariant_head(decoded)  # (B, T, 8)
 
-            result = {"pred_invariants": pred_inv}
+            # Optional OAT tokenization: compress to discrete tokens
+            if self.oat is not None and self.training:
+                oat_loss = self.oat(pred_inv)
+                tokens = self.oat.tokenize(pred_inv)
+                pred_inv_recon = self.oat.detokenize(tokens)
+            else:
+                oat_loss = None
+                pred_inv_recon = pred_inv
+
+            result = {"pred_invariants": pred_inv, "pred_invariants_recon": pred_inv_recon}
+            if self.oat is not None:
+                result["oat_loss"] = oat_loss
 
             # Compute training loss if targets provided
             if target_invariants is not None:
                 loss_inv = F.mse_loss(pred_inv, target_invariants)
                 result["loss_inv"] = loss_inv
-                result["loss"] = self.lambda_inv * loss_inv
+                total = self.lambda_inv * loss_inv
+                if oat_loss is not None:
+                    total = total + 0.1 * oat_loss
+                result["loss"] = total
 
                 if target_actions is not None:
                     # Decode invariants to trajectory and compute action L1
@@ -152,10 +189,10 @@ if HAS_TORCH:
                     # For now, use invariant loss only
                     loss_act = torch.tensor(0.0, device=vlm_hidden.device)
                     result["loss_act"] = loss_act
-                    result["loss"] = (
-                        self.lambda_inv * loss_inv
-                        + self.lambda_act * loss_act
-                    )
+                    total = self.lambda_inv * loss_inv + self.lambda_act * loss_act
+                    if oat_loss is not None:
+                        total = total + 0.1 * oat_loss
+                    result["loss"] = total
 
             return result
 
