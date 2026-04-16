@@ -1,0 +1,224 @@
+{
+  "trials": [
+    {
+      "offset_cm": 0.0,
+      "seed": 0,
+      "success": false,
+      "reward": 0.0,
+      "inv_norm": 2.061150312423706
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 1,
+      "success": false,
+      "reward": 0.0,
+      "inv_norm": 1.6537665128707886
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 2,
+      "success": false,
+      "reward": 0.0,
+      "inv_norm": 1.967010498046875
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 3,
+      "success": false,
+      "reward": 0.0,
+      "inv_norm": 1.0186200141906738
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 4,
+      "success": false,
+      "reward": 0.0,
+      "inv_norm": 2.0402543544769287
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 5,
+      "success": false,
+      "reward": 0.0,
+      "inv_norm": 1.5791056156158447
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 6,
+      "success": false,
+      "reward": 0.0,
+      "inv_norm": 2.5139060020446777
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 7,
+      "success": false,
+      "reward": 0.0,
+      "inv_norm": 2.0068795680999756
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 8,
+      "success": false,
+      "reward": 0.0,
+      "inv_norm": 1.1202346086502075
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 9,
+      "success": false,
+      "reward": 0.0,
+      "inv_norm": 1.9583332538604736
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 0,
+      "success": false,
+      "reward": 0.0,
+      "inv_norm": 2.0926971435546875
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 1,
+      "success": false,
+      "reward": 0.0,
+      "inv_norm": 1.6422839164733887
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 2,
+      "success": false,
+      "reward": 0.0,
+      "inv_norm": 1.8813177347183228
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 3,
+      "success": false,
+      "reward": 0.0,
+      "inv_norm": 1.1158581972122192
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 4,
+      "success": false,
+      "reward": 0.0,
+      "inv_norm": 1.9214750528335571
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 5,
+      "success": false,
+      "reward": 0.0,
+      "inv_norm": 1.32114839553833
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 6,
+      "success": false,
+      "reward": 0.0,
+      "inv_norm": 2.5008432865142822
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 7,
+      "success": false,
+      "reward": 0.0,
+      "inv_norm": 1.8713757991790771
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 8,
+      "success": false,
+      "reward": 0.0,
+      "inv_norm": 1.3444340229034424
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 9,
+      "success": false,
+      "reward": 0.0,
+      "inv_norm": 1.960868000984192
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 0,
+      "success": false,
+      "reward": 0.0,
+      "inv_norm": 2.2230777740478516
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 1,
+      "success": false,
+      "reward": 0.0,
+      "inv_norm": 1.4303158521652222
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 2,
+      "success": false,
+      "reward": 0.0,
+      "inv_norm": 1.8478952646255493
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 3,
+      "success": false,
+      "reward": 0.0,
+      "inv_norm": 1.0784579515457153
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 4,
+      "success": false,
+      "reward": 0.0,
+      "inv_norm": 2.0510623455047607
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 5,
+      "success": false,
+      "reward": 0.0,
+      "inv_norm": 1.3536831140518188
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 6,
+      "success": false,
+      "reward": 0.0,
+      "inv_norm": 2.4331085681915283
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 7,
+      "success": false,
+      "reward": 0.0,
+      "inv_norm": 1.914771318435669
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 8,
+      "success": false,
+      "reward": 0.0,
+      "inv_norm": 1.2262873649597168
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 9,
+      "success": false,
+      "reward": 0.0,
+      "inv_norm": 2.177931785583496
+    }
+  ],
+  "metadata": {
+    "checkpoint": "_workspace/dhb_head_e2e.pt",
+    "offsets_cm": [
+      0.0,
+      3.0,
+      5.0
+    ],
+    "seeds_per_offset": 10,
+    "action_horizon": 30
+  }
+}

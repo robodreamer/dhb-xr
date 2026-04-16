@@ -1,0 +1,44 @@
+% Draft C: Invariant Manipulation Learning — first-principles framing
+\documentclass{article}
+\input{corl2026_main}
+
+\title{Don't Learn What You Can Compute:\\
+       SE(3)-Invariant Action Spaces for Robot Manipulation}
+
+\author{Andy Park \and \textit{(co-authors TBD)}}
+
+\begin{document}
+\maketitle
+
+%% ── ABSTRACT ────────────────────────────────────────────────────────────────
+\begin{abstract}
+Every modern Vision-Language-Action model is, by construction,
+\emph{coordinate-frame dependent}: actions are represented as absolute
+end-effector poses or joint angles, making policies brittle to any
+rigid-body change in workspace configuration.
+We argue this is a fundamental design flaw, not an empirical limitation,
+and propose \emph{invariant manipulation learning} as a corrective principle.
+\dhb{} builds this principle into the action representation: trajectories are
+encoded on the $\se{3}$ quotient space of shape-modulo-pose, producing tokens
+with a provable invariance guarantee.
+A 7\,ms $\fatrop{}$-based adaptation step re-grounds the invariant shape to
+any target pose, enabling zero-shot spatial generalization without retraining.
+We validate across four contributions in priority order:
+(1) spatial generalization on LIBERO-PRO and RoboCasa;
+(2) geometry-aware action tokenization (41$\times$ token stability, 8 tokens);
+(3) sample efficiency via invariant motion retrieval; and
+(4) cross-embodiment transfer via embodik IK decoding.
+Our results position invariant representations as a foundational building
+block for robust, deployable manipulation policies.
+\end{abstract}
+
+%% ── SHARED SECTIONS ─────────────────────────────────────────────────────────
+\input{intro_varC}
+\input{related_work}
+\input{methods}
+\input{experiments}
+\input{discussion}
+
+\bibliography{references}
+% bibliographystyle set by corl_2026.sty (corlabbrvnat)
+\end{document}

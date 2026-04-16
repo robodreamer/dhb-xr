@@ -1,0 +1,11 @@
+{
+  "n_demos": 20,
+  "n_transforms": 40,
+  "relative_actions_mean_pct": 18.23,
+  "relative_actions_p95_pct": 33.33,
+  "relative_actions_max_pct": 38.33,
+  "dhb_magnitudes_mean_pct": 0.0,
+  "dhb_magnitudes_max_pct": 0.0,
+  "fast_raw_literature_pct": 93.9,
+  "conclusion": "Relative actions show 18.2% token change under SE(3) transforms, comparable to raw coordinates (18% vs 93.9%). DHB invariants show 0.000% change (ideally 0%). Per-step relative invariance does not imply global shape invariance."
+}

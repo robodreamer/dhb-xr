@@ -25,7 +25,7 @@ Key advantages for VLA:
   - **Data efficiency**: 1 demo + DHB adaptation covers spatial variations that
     would otherwise require 100s of demonstrations
   - **Robustness**: SE(3)-invariant encoding is immune to spatial perturbations
-  - **Speed**: Fatrop solver adapts trajectory in ~7ms (100+ Hz replanning)
+  - **Speed**: Decode-only adaptation in ~5-10ms; Fatrop constrained solve <1s
   - **Composability**: DHB invariants can augment any VLA policy as a trajectory
     representation layer
 

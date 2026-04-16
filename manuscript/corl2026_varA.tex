@@ -1,0 +1,46 @@
+% Draft A: Spatial Generalization framing
+\documentclass{article}
+\input{corl2026_main}
+
+\title{Encode Once, Adapt Anywhere:\\
+       SE(3)-Invariant Actions for Spatially Robust VLA Policies}
+
+\author{Andy Park \and \textit{(co-authors TBD)}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Vision-Language-Action (VLA) models have achieved impressive in-distribution
+performance on tabletop manipulation benchmarks, yet they fail sharply when
+the spatial configuration of the scene changes at test time---a table height
+shift, a repositioned robot base, or a translated object placement can reduce
+success rates from near-perfect to near-zero.
+We identify the root cause as \emph{coordinate-frame dependence}: all current
+VLA action representations, whether discrete bins, FAST-compressed tokens, or
+continuous regression heads, are functions of absolute world coordinates and
+therefore collapse under rigid-body transforms.
+We present \dhb{}, a framework for \emph{invariant trajectory encoding} on
+$\se{3}$.
+\dhb{} encodes end-effector trajectories into a representation that is
+provably invariant to any rigid-body transform, then recovers executable
+joint commands via a 7\,ms geometric adaptation step.
+On LIBERO-Spatial (10 tasks, 8 perturbation directions, 0--20\,cm offsets),
+\dhb{} achieves $0.0\,\text{mm}$ goal endpoint error at every perturbation
+level, compared to 50--200\,mm for naive trajectory replay ---
+validating that the invariant encoding perfectly preserves motion shape
+under arbitrary spatial shifts.
+Token stability is provably perfect: DHB magnitude tokens change $0.0\%$
+under random SE(3) transforms, vs $99.1\%$ for raw action tokens.
+\end{abstract}
+
+%% ── SHARED SECTIONS ─────────────────────────────────────────────────────────
+\input{intro_varA}
+\input{related_work}
+\input{methods}
+\input{experiments}
+\input{discussion}
+
+\bibliography{references}
+% bibliographystyle set by corl_2026.sty (corlabbrvnat)
+\end{document}

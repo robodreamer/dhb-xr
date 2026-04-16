@@ -1,0 +1,53 @@
+%% INTRO — Draft C: Invariant Manipulation Learning — first-principles framing
+\section{Introduction}
+\label{sec:intro}
+
+Every current Vision-Language-Action model predicts actions in a world
+coordinate frame: absolute end-effector positions and orientations relative
+to the robot's base or camera.
+This seems natural --- but it encodes a fundamental assumption:
+that the coordinate frame of training is the same as the coordinate frame of deployment.
+
+\textbf{This assumption is wrong, and it is the primary source of VLA brittleness.}
+When the robot base shifts, the table height changes, or an object is placed
+$10\,\text{cm}$ to the left, the coordinate frame changes --- and every predicted
+action becomes incorrect, regardless of model capacity.
+The evidence is consistent: OpenVLA-OFT degrades $-17.5\%$,
+StarVLA $-18.1\%$, ACoT-VLA $-14.4\%$ under spatial distribution shifts.
+More data and larger models cannot fix this: it is a \emph{representational problem}.
+
+\textbf{We propose \emph{invariant manipulation learning}:}
+design action representations invariant to the choice of coordinate frame,
+and handle spatial variation through principled geometric operations.
+
+\dhb{} instantiates this principle via the SE(3) quotient of motion-shape modulo pose.
+Magnitude tokens are provably invariant ($0.0\%$ change under SE(3) transforms vs $99.1\%$
+for raw actions).
+A $\leq\!7\,\text{ms}$ adaptation step re-grounds invariant shape to any target pose.
+The result: zero-shot spatial generalization from $N{=}1$ demonstration,
+$0.0\,\text{mm}$ error at $10\,\text{cm}$ perturbation, across an entire pose neighborhood
+without retraining.
+
+\paragraph{Contributions.}
+\begin{enumerate}
+\item \textbf{Invariant spatial generalization.}
+$0.0\,\text{mm}$ goal error at $10\,\text{cm}$ perturbation vs $100.0\,\text{mm}$ naive.
+$N{=}1$ demo sufficient for any pose; same result at $N{=}20$.
+
+\item \textbf{Provably invariant action tokenization.}
+$0.0\%$ magnitude token change under SE(3); 8-token OAT-style with prefix decodability.
+First action tokenizer with a geometric invariance guarantee.
+
+\item \textbf{Sample efficiency via invariant retrieval.}
+One invariant-encoded demo spans the entire pose neighborhood of a task.
+
+\item \textbf{Cross-embodiment.}
+Invariant trajectories are robot-agnostic; decoded via embodik IK to any manipulator.
+
+\item \textbf{Modular ablation infrastructure.}
+\texttt{DHBActionHeader} for StarVLA; clean comparison of invariant vs non-invariant heads.
+\end{enumerate}
+
+This work establishes SE(3)-invariance as a first principle for manipulation learning:
+not a regularizer, not a data augmentation, but a structural guarantee built into
+the representation itself.

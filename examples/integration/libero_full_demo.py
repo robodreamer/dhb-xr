@@ -189,7 +189,7 @@ def adapt_trajectory(
     whose DHB invariants stay close to the demo while satisfying boundary
     constraints. Falls back to simple encode-decode if no solver is available.
 
-    Solver priority: Fatrop (~7ms) > CasADi/IPOPT (~50ms) > encode-decode
+    Solver priority: Fatrop (<1s) > CasADi/IPOPT (~50ms) > encode-decode (~5-10ms)
     """
     # Goal: shift by same offset as start
     offset = new_start_pos - positions[0]

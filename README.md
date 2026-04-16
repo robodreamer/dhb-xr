@@ -475,7 +475,7 @@ DHB-XR includes adapters for loading trajectory data from popular VLA benchmarks
 
 | Without DHB-XR | With DHB-XR |
 |---------------|-------------|
-| Retrain or add data augmentation | Re-decode from new pose (~7ms, Fatrop solver) |
+| Retrain or add data augmentation | Re-decode from new pose (~5-10ms decode, <1s Fatrop) |
 | Actions tied to absolute positions | Invariants are SE(3)-invariant by construction |
 | 100s of demos per spatial arrangement | **1 demo + DHB adaptation covers spatial variations** |
 
@@ -597,7 +597,7 @@ The most compelling showcase of DHB-XR's value — directly comparing naive repl
 
 # Results:
 #   Naive replay:  11.1 cm from NEW plate (wrong target)
-#   DHB-adapted:    4.6 cm from NEW plate (correct target, Fatrop ~7ms)
+#   DHB-adapted:    4.6 cm from NEW plate (correct target, decode ~5-10ms)
 #   Improvement:    6.5 cm closer to correct target
 ```
 

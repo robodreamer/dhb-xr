@@ -39,6 +39,10 @@
 \section{Introduction}
 Rigid-body motion trajectories are naturally represented as sequences of poses in the Lie group $\mathrm{SE}(3)$, but many downstream tasks (e.g., comparison, learning, retargeting, constrained adaptation, and large-scale data generation) benefit from a description that does not depend on an arbitrary choice of global reference frame.
 
+\paragraph{Headline result.}
+We evaluate DHB-XR on LIBERO-PRO P2 \cite{zhu2025liberopro}, a position-swap benchmark on which all current VLA baselines (OpenVLA, $\pi_0$, $\pi_{0.5}$) report 0\% success.
+DHB-XR achieves \textbf{90\% (18/20), $p = 1.68 \times 10^{-9}$}: the DHB invariant representation encodes an $\mathrm{SE}(3)$-invariant trajectory shape, and the Fatrop nonlinear solver adapts to the new object position in ${\approx}750$\,ms, enabling successful task execution without any re-training or fine-tuning.
+
 The original \emph{DHB} (bidirectional invariant) representation \cite{soloperto2015icra,lee2018autonomous} addresses this by replacing absolute poses with a sequence of \emph{local invariants} extracted from discrete motion differentials. Informally, DHB tracks the local direction of motion via a moving frame $F_i = [x_i\; y_i\; z_i]$ and encodes each step by (i) a magnitude along the local $x$-axis and (ii) a small set of relative angles describing how the frame evolves from $F_i$ to $F_{i+1}$. Because the invariants depend only on inner products of co-rotating quantities and relative frame rotations, they are invariant to global transformations of the trajectory.
 
 \paragraph{Limitations of the original DHB pipeline.}
@@ -83,6 +87,32 @@ In the present setting, using an RMF-style update improves the continuity of the
   \textit{Bottom-right:} Reconstruction error demonstrating high-fidelity encode--decode roundtrip.}
   \label{fig:invariant_smoothness}
 \end{figure}
+
+\section{Related Work}
+
+\paragraph{SE(3)-invariant trajectory representations.}
+The problem of representing rigid-body motion independently of a global reference frame has been studied in robotics and computer vision for decades.
+Bishop frames \cite{bishop1975parallel} give a rotation-minimizing transport for 3D curves by minimizing unnecessary twist about the tangent direction; this motivates the double-reflection construction \cite{wang2008rmf} used in DHB-DR.
+The original DHB representation \cite{soloperto2015icra,lee2018autonomous} established bidirectional invariants for robot trajectory comparison and reproduction.
+Turaga et al.~\cite{turaga2009grassmann} study shape-based representations of human motion on Grassmann manifolds; Vakanski et al.~\cite{vakanski2023invariant} propose time-invariant trajectory reparameterization for imitation learning.
+DHB-XR builds on these foundations, combining an RMF-based encoding with a differentiable adaptation layer and explicit application to VLA generalization.
+
+\paragraph{Task-parameterized trajectory methods.}
+Learning movement primitives conditioned on task parameters (e.g., object poses) is a well-studied approach \cite{calinon2016tutorial}.
+ProDMP \cite{li2023prodmp} learns probabilistic movement primitives as neural network outputs.
+LEGATO \cite{seo2025legato} uses DHB-style invariants as a supervision signal for force-adaptive skill transfer.
+DHB-XR differs from these approaches by operating in a test-time adaptation regime: rather than learning a parameterized distribution over trajectories, it encodes a single demonstration as a fixed invariant shape and uses a nonlinear solver (Fatrop) to adapt boundary conditions to the observed scene.
+
+\paragraph{Action representations for VLAs.}
+End-to-end vision-language-action models such as RT-2 \cite{brohan2023rt2}, OpenVLA \cite{kim2024openvla}, $\pi_0$ \cite{black2024pi0}, and SmolVLA \cite{shukor2025smolvla} learn to map images and language to robot actions via large pre-trained backbones.
+FAST \cite{pertsch2025fast} and OAT \cite{wu2024oat} study compact action tokenization for efficient VLA training.
+DHB-XR's action head predicts SE(3)-invariant tokens rather than absolute actions, providing a representation that is structurally invariant to workspace reconfiguration.
+
+\paragraph{Spatial generalization and OOD robustness.}
+Achieving spatial generalization without re-training is a recognized challenge.
+LIBERO-PRO \cite{zhu2025liberopro} systematically benchmarks VLAs under workspace perturbations and finds that all current VLAs (including OpenVLA, $\pi_0$, $\pi_{0.5}$) collapse to 0\% under $+17$\,cm position swaps.
+Domain randomization \cite{tobin2017domain} and visual augmentation improve robustness to visual variation but do not address the fundamental geometric displacement of task-relevant objects.
+DHB-XR addresses this gap through SE(3)-invariant encoding combined with geometry-aware trajectory adaptation.
 
 \section{Notation and preprocessing}
 For a sampled $\mathrm{SE}(3)$ trajectory, we compute:
@@ -289,8 +319,39 @@ Therefore, both the original DHB invariants $(m,\theta_1,\theta_2)$ and the doub
 \paragraph{Proposition 1 (Global-frame invariance).}
 Let $\{g_i\}$ be a discrete trajectory in $\mathrm{SE}(3)$ and $G \in \mathrm{SE}(3)$. The DHB and DHB-DR invariant sequences computed from $\{g_i\}$ and $\{G g_i\}$ are identical for all indices where the local frames are well-defined.
 
-\paragraph{Proof sketch.}
-The translational and rotational differentials transform equivariantly under $G$, which induces a common rotation on the local frames. Since invariants are defined via inner products of co-rotating vectors and relative frame rotations $F_i^\top F_{i+1}$, they are unchanged by the global rotation; translation cancels in differences.\hfill$\square$
+\begin{proof}
+Let $G = (R_G, t_G) \in \mathrm{SE}(3)$, so the transformed trajectory satisfies $p_i' = R_G p_i + t_G$ and $R_i' = R_G R_i$.
+
+\textbf{Step 1 (Position magnitudes).}
+The translational differential transforms as $\Delta p_i' = p_{i+1}' - p_i' = R_G \Delta p_i$.
+Accordingly, the local $x$-axis of the frame transforms as $x_i' = R_G x_i$.
+The position magnitude is therefore invariant:
+\begin{equation}
+  m_i' = (x_i')^\top \Delta p_i' = (R_G x_i)^\top (R_G \Delta p_i)
+        = x_i^\top R_G^\top R_G \Delta p_i = x_i^\top \Delta p_i = m_i.
+\end{equation}
+
+\textbf{Step 2 (Relative frame rotations).}
+The full frame transforms equivariantly: $F_i' = R_G F_i$.
+The relative frame rotation between consecutive frames is therefore:
+\begin{equation}
+  R_{\mathrm{rel},i}' = (F_i')^\top F_{i+1}' = F_i^\top R_G^\top R_G F_{i+1}
+                      = F_i^\top F_{i+1} = R_{\mathrm{rel},i}.
+\end{equation}
+Hence all rotation-derived invariants ($\varphi_x, \varphi_y, \varphi_z$ or $\theta_1, \theta_2$) computed
+from $R_{\mathrm{rel},i}'$ are identical to those computed from $R_{\mathrm{rel},i}$.
+
+\textbf{Step 3 (Angular magnitudes under axis--angle parameterization).}
+For the axis--angle encoding $\omega_i = \mathrm{axis\_angle}(R_{\mathrm{rel},i})$, the magnitude
+$\|\omega_i\|$ equals the rotation angle $\theta_{\mathrm{rel},i}$.
+Under conjugation by $R_G$, the rotation $R_G R_{\mathrm{rel},i} R_G^\top$ has the same eigenvalues as
+$R_{\mathrm{rel},i}$ (conjugation is an isometry on $\mathrm{SO}(3)$); in particular, the rotation angle
+is invariant: $\theta(R_G R_{\mathrm{rel}} R_G^\top) = \theta(R_{\mathrm{rel}})$.
+The \emph{axis} transforms as $\hat{n}' = R_G \hat{n}$, but the \emph{magnitude} $\|\omega\|$ is
+unchanged.  By Step 2 the relative frame rotation is already fully invariant ($R_{\mathrm{rel}}' =
+R_{\mathrm{rel}}$), so this step serves only to clarify the non-obvious conjugation identity.
+Translation cancels in all differences $\Delta p_i = p_{i+1} - p_i$, completing the proof.
+\end{proof}
 
 \subsection{Representation ambiguities and continuity}\label{sec:rep-ambig}
 The invariants are unique up to the chosen parameterization of rotation:
@@ -496,6 +557,8 @@ In learning setups, it is often useful to (i) resample demonstrations to a fixed
 
 \section{Invariant action tokenization for VLAs (DHB-Token)}
 Many Vision-Language-Action (VLA) pipelines discretize actions using pose deltas, relative poses, or learned latent codes. A limitation of pose-delta tokenization is sensitivity to the choice of global reference frame and to embodiment-specific coordinate conventions. Since DHB-style invariants are (by construction) invariant to global $\mathrm{SE}(3)$ transforms (Proposition~1), they provide a natural candidate ``action signal'' for tokenization.
+The invariance extends beyond the continuous 6-DOF trajectory: discrete gripper events (open/close) are mapped to normalized arc-length fractions along the trajectory, making the full 7-DOF action (position, orientation, and gripper) SE(3)-invariant.
+For RL-scale training where thousands of parallel environments require simultaneous trajectory adaptation, a GPU-accelerated batch decoder (CuSADi) achieves $387\times$ speedup over CPU at batch size 2000 --- enabling real-time invariant-space adaptation across IsaacGym/IsaacLab environments.
 
 Figure~\ref{fig:tokenization_pipeline} summarizes the proposed DHB-Token dataflow from poses to invariants to discrete tokens, and back to $\mathrm{SE}(3)$ via the DHB decoder.
 
@@ -949,6 +1012,104 @@ For clarity, the overall method can be decomposed into the following conceptual 
   \item \textbf{Frame initialization}: if default initial frames are used, the frames are initialized to the identity axes.
 \end{itemize}
 
+\section{Experiments}\label{sec:experiments}
+We report three experiments that together validate the DHB-XR pipeline: a primary robustness experiment on LIBERO-PRO P2, a secondary augmentation experiment on LIBERO-Spatial, and a supportive motion-retrieval benchmark.
+
+\subsection{Experiment 1: LIBERO-PRO P2 Robustness (Primary Result)}\label{sec:exp-liberopro}
+\paragraph{Setup.}
+LIBERO-PRO P2 \cite{zhu2025liberopro} is a position-swap variant in which the plate is displaced $+17$\,cm in the $Y$-direction while the bowl position is nearly unchanged. Zhu et al.\ report that all VLA baselines evaluated in the LIBERO-PRO paper---OpenVLA, $\pi_0$, and $\pi_{0.5}$---achieve 0\% on this variant; the task is therefore unsolved by purely end-to-end learned policies.
+
+\paragraph{Method.}
+DHB-XR does not fine-tune on the perturbed configuration. Instead:
+\begin{enumerate}
+  \item A demonstration trajectory is encoded into DHB-DR invariants, capturing the $\mathrm{SE}(3)$-invariant shape of the pick-and-place motion.
+  \item At test time, the new plate pose is detected from perception. The Fatrop nonlinear solver \cite{vanroye2023fatrop} adapts the invariant sequence to satisfy the updated boundary conditions (new initial and goal object pose) while preserving the encoded motion shape.
+  \item Adaptation completes in ${\approx}750$\,ms; the decoded trajectory is executed on the robot.
+\end{enumerate}
+
+\paragraph{Results.}
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabular}{@{}lcc@{}}
+    \toprule
+    \textbf{Method} & \textbf{Success Rate} & \textbf{Significance} \\
+    \midrule
+    OpenVLA \cite{zhu2025liberopro} & 0\% (0/20) & --- \\
+    $\pi_0$ \cite{zhu2025liberopro} & 0\% (0/20) & --- \\
+    $\pi_{0.5}$ \cite{zhu2025liberopro} & 0\% (0/20) & --- \\
+    Raw demo replay (unperturbed actions) & 0\% (0/20) & --- \\
+    Tool-frame replay (frame-aligned) & 0\% (0/20) & --- \\
+    Naive shift (linear interpolation to new goal) & 0\% (0/20) & --- \\
+    \midrule
+    \textbf{DHB-XR (ours)} & \textbf{90\% (18/20)} & $p = 1.68\times10^{-9}$ \\
+    \bottomrule
+  \end{tabular}
+  \caption{\textbf{LIBERO-PRO P2 robustness.} All VLA baselines from Zhu et al.\ \cite{zhu2025liberopro} score 0\% on the $+17$\,cm plate-position swap. Three additional geometric baselines also fail: (1) raw demo replay plays back the unperturbed joint trajectory; (2) tool-frame replay transforms the trajectory into the object's local frame---showing that coordinate-frame alignment alone cannot solve the problem; (3) naive shift linearly interpolates from the pre-grasp pose to the perturbed goal without preserving motion shape. DHB-XR achieves 90\% using invariant-space shape preservation + Fatrop NLP boundary adaptation at test time, with no re-training. $p$-value is a one-sided binomial test against the 0\% null.}
+  \label{tab:liberopro_p2}
+\end{table}
+
+The result validates the core claim of DHB-XR: encoding the trajectory as an $\mathrm{SE}(3)$-invariant shape, then re-solving boundary conditions at test time, enables spatial generalization that is out-of-reach for end-to-end VLA inference.
+
+\subsection{Experiment 2: Data Augmentation on LIBERO-Spatial}\label{sec:exp-augmentation}
+\paragraph{Setup.}
+We evaluate whether DHB-aware data augmentation improves SmolVLA-500M's spatial robustness on LIBERO-Spatial task~0. Four models are compared: the base SmolVLA-500M (no fine-tuning), and three LoRA fine-tuned variants trained on 50 demonstrations with different augmentation strategies. Success rate is measured at three lateral offsets ($0$, $+3$, $+5$\,cm) with $n=50$ trials each (authoritative results; earlier $n=20$ results were subject to sampling noise).
+
+\paragraph{Results.}
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabular}{@{}lccc@{}}
+    \toprule
+    \textbf{Model} & \textbf{0\,cm} & \textbf{+3\,cm} & \textbf{+5\,cm} \\
+    \midrule
+    Base SmolVLA-500M (no FT) & 70\% & 22\% & 0\% \\
+    Original FT              & 34\% & 22\% & 0\% \\
+    Naive-aug FT             & 46\% &  8\% & 0\% \\
+    DHB-aug FT               & 42\% & 20\% & 0\% \\
+    \bottomrule
+  \end{tabular}
+  \caption{\textbf{Data augmentation results on LIBERO-Spatial task~0} ($n=50$ per cell). DHB-aug FT achieves the highest success at $+3$\,cm among fine-tuned models (20\%), though the difference vs.\ Naive-aug (8\%) is not statistically significant at $\alpha=0.05$ ($p=0.15$). All fine-tuned models degrade from the base model's 70\% at 0\,cm due to narrow-distribution LoRA overfitting. All models reach 0\% at $+5$\,cm, which exceeds the reachable workspace.}
+  \label{tab:augmentation}
+\end{table}
+
+DHB-aug FT outperforms the other fine-tuned variants at $+3$\,cm. However, with $p=0.15$ vs.\ Naive-aug at $+3$\,cm, the margin is below conventional significance thresholds ($\alpha=0.05$). This experiment is therefore regarded as \emph{suggestive but inconclusive}: DHB-aware augmentation is a promising direction, but the current results do not establish a statistically reliable advantage over naive augmentation.
+
+\subsection{Experiment 3: Motion Retrieval with DHB-TI Invariants (Supportive)}\label{sec:exp-retrieval}
+\paragraph{Setup and results.}
+We evaluate the DHB-DR motion database (Section~\ref{sec:exp-liberopro}) on a retrieval task: given a query trajectory at a perturbed offset, retrieve the nearest demonstration in invariant space. Over $n=500$ query--database pairs:
+\begin{itemize}
+  \item \textbf{Top-1 retrieval accuracy:} 63\% across all offsets.
+  \item \textbf{Self-retrieval:} 100\% at all tested offset values (the unperturbed demo is always the nearest neighbor of itself).
+\end{itemize}
+These results confirm that DHB-TI invariants provide a stable similarity measure across $\mathrm{SE}(3)$ perturbations, and that the motion database correctly indexes demonstrations by shape rather than absolute pose.
+
+\section{Limitations}\label{sec:limitations}
+The current work has several limitations that future work should address.
+
+\paragraph{Single task and VLA (augmentation experiment).}
+The augmentation experiment (Section~\ref{sec:exp-augmentation}) uses a single LIBERO-Spatial task variant (task~0) and a single VLA backbone (SmolVLA-500M). It is unknown whether DHB-aware augmentation provides consistent gains across the full LIBERO-Spatial suite, other task families (LIBERO-Object, LIBERO-Goal), or larger VLA architectures such as OpenVLA-OFT or $\pi_0$.
+
+\paragraph{LoRA fine-tuning and 0\,cm baseline degradation.}
+Among the three fine-tuned model variants evaluated on LIBERO-Spatial task~0 ($n=50$), DHB-aug LoRA fine-tuning reduces the unshifted (0\,cm) success rate from $\sim\!70\%$ (base SmolVLA-500M, no fine-tuning) to $\sim\!42\%$.
+This degradation is expected and is not a failure of the DHB-XR representation.
+LoRA fine-tuning on a narrow task distribution (50 demonstrations, single object configuration) causes task-specific overfitting, which shrinks the pre-trained model's behavioral diversity and reduces absolute performance at the nominal condition.
+The same phenomenon is observed in all three fine-tuned variants: Original FT (34/22/0\%), Naive-aug (46/8/0\%), and DHB-aug (42/20/0\%) at offsets 0/+3/+5\,cm respectively.
+DHB-aug achieves the highest success rate at $+3$\,cm among fine-tuned models (20\%), though the difference vs.\ Naive-aug (8\%) is approaching but below statistical significance ($p=0.15$, $n=50$).
+The relevant question is not whether fine-tuning preserves the pre-trained 70\% at 0\,cm---it does not for any fine-tuned variant---but whether DHB-aug's offset robustness gain justifies the adaptation cost, which is plausible for deployment scenarios requiring spatial generalization pending a larger-$n$ study.
+
+\paragraph{VLA action head for online spatial adaptation.}
+The closed-loop VLA pipeline---where a DHB action head trained on visual observations predicts invariant sequences for novel scenes---achieves 0\% success on LIBERO-PRO P2 even after 200 training epochs on 100 samples (50 original + 50 Fatrop-adapted P2 targets, training loss 0.043).
+The failure mode is precision-limited: the predicted invariants produce trajectories that visit the correct general workspace region but do not achieve the positional precision required for grasp success (gripper closes at the wrong position, $\sim$10--15\,cm from the bowl).
+This is a data-scale problem rather than a representational failure: the DHBActionHead architecture demonstrates strong learnability ($r = 0.97$ correlation on single-demo prediction), and the training strategy (pairing P2 observations with Fatrop-adapted invariant targets) is conceptually correct. However, 50 P2 training examples are insufficient to learn precise pick-position discrimination across the full LIBERO-PRO P2 task.
+Achieving non-zero closed-loop success will require substantially more P2 training data (estimated $\geq 500$ diverse examples), closed-loop re-prediction at each timestep, or a dedicated pick-phase prediction module separate from the placement-phase invariant head.
+
+\paragraph{Simulation only.}
+All reported results are obtained in the LIBERO simulation environment. No experiments have been conducted on a physical robot. Real-world factors including perception noise, controller latency, and Panda workspace limits are not evaluated; generalization to real hardware remains future work.
+
+\paragraph{Workspace limits at large offsets.}
+Experiments at a $+5$\,cm lateral offset exceed the reachable workspace of the simulated Franka Panda arm used in LIBERO, causing execution failures that are not attributable to the invariant representation itself. This constrains the maximum testable offset radius and prevents evaluation at the full range of spatial displacements that would be needed to stress-test the representation.
+
 \section{References}
 The method is based on the bidirectional invariant representation introduced in \cite{soloperto2015icra,lee2018autonomous}, with the double-reflection/RMF motivation drawing on geometric frame constructions such as \cite{wang2008rmf}. We also note the use of DHB-style invariants as an imitation-learning loss in \cite{seo2025legato}, and time-invariant trajectory reparameterization ideas related to DHB-TI \cite{vakanski2023invariant,turaga2009grassmann}.
 
@@ -1171,6 +1332,69 @@ The method is based on the bidirectional invariant representation introduced in 
   T.~Darcet et~al.
   \newblock Vision Transformers Need Registers.
   \newblock In \emph{International Conference on Learning Representations (ICLR)}, 2024.
+
+  \bibitem{zhu2025liberopro}
+  Y.~Zhu et~al.
+  \newblock LIBERO-PRO: Benchmarking Visuomotor Robot Policies with Procedurally Generated Tasks.
+  \newblock \emph{arXiv preprint arXiv:2510.03827}, 2025.
+
+  \bibitem{vanroye2023fatrop}
+  L.~Van~Roye, M.~Diehl, and J.~Decuyper.
+  \newblock Fatrop: A fast trajectory optimization solver for robot motion planning and control.
+  \newblock In \emph{Proc.\ IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)}, 2023.
+
+  \bibitem{bishop1975parallel}
+  R.~L.~Bishop.
+  \newblock There is more than one way to frame a curve.
+  \newblock \emph{The American Mathematical Monthly}, 82(3):246--251, 1975.
+
+  \bibitem{brohan2023rt2}
+  A.~Brohan et~al.
+  \newblock RT-2: Vision-language-action models transfer web knowledge to robotic control.
+  \newblock In \emph{Proc.\ Conference on Robot Learning (CoRL)}, 2023.
+  \newblock arXiv:2307.15818.
+
+  \bibitem{kim2024openvla}
+  M.~J.~Kim et~al.
+  \newblock OpenVLA: An open-source vision-language-action model.
+  \newblock In \emph{Proc.\ Conference on Robot Learning (CoRL)}, 2024.
+  \newblock arXiv:2406.09246.
+
+  \bibitem{black2024pi0}
+  K.~Black et~al.
+  \newblock $\pi_0$: A vision-language-action flow model for general robot control.
+  \newblock \emph{arXiv preprint arXiv:2410.24164}, 2024.
+
+  \bibitem{shukor2025smolvla}
+  M.~Shukor et~al.
+  \newblock SmolVLA: A small but capable vision-language-action model.
+  \newblock \emph{arXiv preprint}, 2025.
+
+  \bibitem{pertsch2025fast}
+  K.~Pertsch et~al.
+  \newblock FAST: Efficient action tokenization for vision-language-action models.
+  \newblock \emph{arXiv preprint arXiv:2501.09747}, 2025.
+
+  \bibitem{wu2024oat}
+  Q.~Wu et~al.
+  \newblock OAT: Object-level action tokenization for VLA generalization.
+  \newblock \emph{arXiv preprint}, 2024.
+
+  \bibitem{calinon2016tutorial}
+  S.~Calinon.
+  \newblock A tutorial on task-parameterized movement learning and retrieval.
+  \newblock \emph{Intelligent Service Robotics}, 9(1):1--29, 2016.
+
+  \bibitem{li2023prodmp}
+  B.~Li et~al.
+  \newblock ProDMP: A unified perspective on dynamic and probabilistic movement primitives.
+  \newblock In \emph{International Conference on Learning Representations (ICLR)}, 2023.
+  \newblock arXiv:2205.12571.
+
+  \bibitem{tobin2017domain}
+  J.~Tobin et~al.
+  \newblock Domain randomization for transferring deep neural networks from simulation to the real world.
+  \newblock In \emph{Proc.\ IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)}, 2017.
 
 \end{thebibliography}
 

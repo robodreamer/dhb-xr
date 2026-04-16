@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **VLA Integration**: Comprehensive LIBERO and RoboCASA support for Vision-Language-Action benchmarks
 - **LIBERO-PRO Support**: Full integration with LIBERO-PRO perturbation robustness testing
-- **Trajectory Adaptation**: Fatrop and CasADi solvers for real-time trajectory retargeting (~7ms)
+- **Trajectory Adaptation**: Fatrop and CasADi solvers for trajectory retargeting (decode ~5-10ms, Fatrop NLP <1s)
 - **Swap Demo**: Compelling demonstration showing DHB-XR vs naive replay under spatial perturbations (6.5cm improvement)
 - **Simulation Integration**: Real-time LIBERO environment execution with OpenCV visualization and video recording
 - **VLA Documentation**: Extensive documentation explaining how DHB-XR addresses VLA spatial generalization challenges

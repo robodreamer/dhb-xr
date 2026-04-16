@@ -76,3 +76,14 @@ Thumbs.db
 **/dhb_gen_*/
 data/generated/
 figures/
+
+# Vendor repos — cloned locally, not committed (run vendor/setup.sh to restore)
+vendor/starVLA/
+vendor/vla-evaluation-harness/
+
+# Large training datasets — store locally or in DVC/LFS, not git
+_workspace/lerobot_v3_*/
+_workspace/*.pt
+_workspace/*.npz
+_workspace/*.mp4
+_workspace/*.log

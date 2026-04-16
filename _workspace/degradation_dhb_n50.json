@@ -1,0 +1,1233 @@
+{
+  "metadata": {
+    "task_id": 0,
+    "task_name": "pick up the black bowl between the plate and the ramekin and place it on the plate",
+    "axis": "Y",
+    "seeds_per_offset": 50,
+    "offsets_cm": [
+      0.0,
+      3.0,
+      5.0
+    ],
+    "timestamp": "2026-04-13 16:22:43"
+  },
+  "trials": [
+    {
+      "offset_cm": 0.0,
+      "seed": 0,
+      "demo_idx": 0,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 59.5
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 1,
+      "demo_idx": 1,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 63.3
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 2,
+      "demo_idx": 2,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 75.8
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 3,
+      "demo_idx": 3,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 70.3
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 4,
+      "demo_idx": 4,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 74.0
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 5,
+      "demo_idx": 5,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 73.8
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 6,
+      "demo_idx": 6,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 75.3
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 7,
+      "demo_idx": 7,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 74.7
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 8,
+      "demo_idx": 8,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 74.4
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 9,
+      "demo_idx": 9,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 74.1
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 10,
+      "demo_idx": 10,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 66.7
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 11,
+      "demo_idx": 11,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 71.0
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 12,
+      "demo_idx": 12,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 61.3
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 13,
+      "demo_idx": 13,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 76.3
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 14,
+      "demo_idx": 14,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 68.0
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 15,
+      "demo_idx": 15,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 52.3
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 16,
+      "demo_idx": 16,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 51.8
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 17,
+      "demo_idx": 17,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 52.1
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 18,
+      "demo_idx": 18,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 51.9
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 19,
+      "demo_idx": 19,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 51.4
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 20,
+      "demo_idx": 20,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 49.3
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 21,
+      "demo_idx": 21,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 47.4
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 22,
+      "demo_idx": 22,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 52.2
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 23,
+      "demo_idx": 23,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 44.8
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 24,
+      "demo_idx": 24,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 51.7
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 25,
+      "demo_idx": 25,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 52.1
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 26,
+      "demo_idx": 26,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 52.2
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 27,
+      "demo_idx": 27,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 51.8
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 28,
+      "demo_idx": 28,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 45.1
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 29,
+      "demo_idx": 29,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 48.9
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 30,
+      "demo_idx": 30,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 51.4
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 31,
+      "demo_idx": 31,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 51.2
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 32,
+      "demo_idx": 32,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 48.2
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 33,
+      "demo_idx": 33,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 46.1
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 34,
+      "demo_idx": 34,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 51.2
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 35,
+      "demo_idx": 35,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 51.1
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 36,
+      "demo_idx": 36,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 51.1
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 37,
+      "demo_idx": 37,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 52.0
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 38,
+      "demo_idx": 38,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 51.1
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 39,
+      "demo_idx": 39,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 51.6
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 40,
+      "demo_idx": 40,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 52.4
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 41,
+      "demo_idx": 41,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 49.2
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 42,
+      "demo_idx": 42,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 52.6
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 43,
+      "demo_idx": 43,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 52.7
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 44,
+      "demo_idx": 44,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 47.6
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 45,
+      "demo_idx": 45,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 48.8
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 46,
+      "demo_idx": 46,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 46.2
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 47,
+      "demo_idx": 47,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 52.6
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 48,
+      "demo_idx": 48,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 48.2
+    },
+    {
+      "offset_cm": 0.0,
+      "seed": 49,
+      "demo_idx": 49,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 53.0
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 0,
+      "demo_idx": 0,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 52.4
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 1,
+      "demo_idx": 1,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 49.0
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 2,
+      "demo_idx": 2,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 52.7
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 3,
+      "demo_idx": 3,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 52.5
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 4,
+      "demo_idx": 4,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 45.6
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 5,
+      "demo_idx": 5,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 51.0
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 6,
+      "demo_idx": 6,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 51.4
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 7,
+      "demo_idx": 7,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 51.5
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 8,
+      "demo_idx": 8,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 51.2
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 9,
+      "demo_idx": 9,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 51.3
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 10,
+      "demo_idx": 10,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 51.1
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 11,
+      "demo_idx": 11,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 50.9
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 12,
+      "demo_idx": 12,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 50.9
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 13,
+      "demo_idx": 13,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 51.3
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 14,
+      "demo_idx": 14,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 44.4
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 15,
+      "demo_idx": 15,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 50.5
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 16,
+      "demo_idx": 16,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 50.8
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 17,
+      "demo_idx": 17,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 50.9
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 18,
+      "demo_idx": 18,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 51.0
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 19,
+      "demo_idx": 19,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 51.7
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 20,
+      "demo_idx": 20,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 51.9
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 21,
+      "demo_idx": 21,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 51.8
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 22,
+      "demo_idx": 22,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 51.6
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 23,
+      "demo_idx": 23,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 50.1
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 24,
+      "demo_idx": 24,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 50.9
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 25,
+      "demo_idx": 25,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 52.3
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 26,
+      "demo_idx": 26,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 52.7
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 27,
+      "demo_idx": 27,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 52.5
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 28,
+      "demo_idx": 28,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 52.5
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 29,
+      "demo_idx": 29,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 52.4
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 30,
+      "demo_idx": 30,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 52.4
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 31,
+      "demo_idx": 31,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 52.3
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 32,
+      "demo_idx": 32,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 52.4
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 33,
+      "demo_idx": 33,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 51.9
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 34,
+      "demo_idx": 34,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 52.3
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 35,
+      "demo_idx": 35,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 44.8
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 36,
+      "demo_idx": 36,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 52.1
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 37,
+      "demo_idx": 37,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 52.2
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 38,
+      "demo_idx": 38,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 52.6
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 39,
+      "demo_idx": 39,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 50.2
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 40,
+      "demo_idx": 40,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 51.8
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 41,
+      "demo_idx": 41,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 48.1
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 42,
+      "demo_idx": 42,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 51.0
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 43,
+      "demo_idx": 43,
+      "success": true,
+      "reward": 1.0,
+      "time_s": 47.5
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 44,
+      "demo_idx": 44,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 51.1
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 45,
+      "demo_idx": 45,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 50.9
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 46,
+      "demo_idx": 46,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 50.8
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 47,
+      "demo_idx": 47,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 50.7
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 48,
+      "demo_idx": 48,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 51.2
+    },
+    {
+      "offset_cm": 3.0,
+      "seed": 49,
+      "demo_idx": 49,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 51.0
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 0,
+      "demo_idx": 0,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 51.1
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 1,
+      "demo_idx": 1,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 50.8
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 2,
+      "demo_idx": 2,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 51.1
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 3,
+      "demo_idx": 3,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 50.9
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 4,
+      "demo_idx": 4,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 50.5
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 5,
+      "demo_idx": 5,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 51.1
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 6,
+      "demo_idx": 6,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 50.6
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 7,
+      "demo_idx": 7,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 41.5
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 8,
+      "demo_idx": 8,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 34.7
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 9,
+      "demo_idx": 9,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 37.2
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 10,
+      "demo_idx": 10,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 37.3
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 11,
+      "demo_idx": 11,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 32.4
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 12,
+      "demo_idx": 12,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 32.1
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 13,
+      "demo_idx": 13,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 33.7
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 14,
+      "demo_idx": 14,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 32.4
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 15,
+      "demo_idx": 15,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 32.0
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 16,
+      "demo_idx": 16,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 31.9
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 17,
+      "demo_idx": 17,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 31.8
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 18,
+      "demo_idx": 18,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 32.0
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 19,
+      "demo_idx": 19,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 31.8
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 20,
+      "demo_idx": 20,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 32.1
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 21,
+      "demo_idx": 21,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 31.9
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 22,
+      "demo_idx": 22,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 31.8
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 23,
+      "demo_idx": 23,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 31.8
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 24,
+      "demo_idx": 24,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 32.0
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 25,
+      "demo_idx": 25,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 31.8
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 26,
+      "demo_idx": 26,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 32.2
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 27,
+      "demo_idx": 27,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 32.2
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 28,
+      "demo_idx": 28,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 32.4
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 29,
+      "demo_idx": 29,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 23.5
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 30,
+      "demo_idx": 30,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 23.1
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 31,
+      "demo_idx": 31,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 23.3
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 32,
+      "demo_idx": 32,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 23.1
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 33,
+      "demo_idx": 33,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 23.4
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 34,
+      "demo_idx": 34,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 23.2
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 35,
+      "demo_idx": 35,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 23.5
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 36,
+      "demo_idx": 36,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 23.2
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 37,
+      "demo_idx": 37,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 23.0
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 38,
+      "demo_idx": 38,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 23.2
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 39,
+      "demo_idx": 39,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 23.1
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 40,
+      "demo_idx": 40,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 23.1
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 41,
+      "demo_idx": 41,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 23.1
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 42,
+      "demo_idx": 42,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 23.0
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 43,
+      "demo_idx": 43,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 23.0
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 44,
+      "demo_idx": 44,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 23.1
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 45,
+      "demo_idx": 45,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 23.0
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 46,
+      "demo_idx": 46,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 23.3
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 47,
+      "demo_idx": 47,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 23.2
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 48,
+      "demo_idx": 48,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 22.9
+    },
+    {
+      "offset_cm": 5.0,
+      "seed": 49,
+      "demo_idx": 49,
+      "success": false,
+      "reward": 0.0,
+      "time_s": 22.9
+    }
+  ],
+  "summary": {
+    "0.0cm": {
+      "successes": 21,
+      "total": 50,
+      "rate": 0.42
+    },
+    "3.0cm": {
+      "successes": 10,
+      "total": 50,
+      "rate": 0.2
+    },
+    "5.0cm": {
+      "successes": 0,
+      "total": 50,
+      "rate": 0.0
+    }
+  }
+}

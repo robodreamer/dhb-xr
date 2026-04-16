@@ -1,0 +1,53 @@
+%% INTRO — Draft B: Geometry-Aware Action Tokenization framing
+\section{Introduction}
+\label{sec:intro}
+
+Discrete action tokenization has become a cornerstone of modern VLA models.
+\fast{}~\cite{fast2025} achieves $27.8\times$ compression via DCT+BPE,
+enabling dexterous tasks where per-dimension binning fails.
+\oat{}~\cite{oat2026} introduces ordered token spaces via register encoders and
+nested dropout, enabling prefix-decodable autoregressive policies.
+These advances have driven VLA accuracy to $94$--$98\%$ on LIBERO~\cite{libero2023}.
+
+\textbf{Yet all current action tokenizers share a critical blind spot: they are
+geometry-unaware.}
+One might expect relative actions (delta-EEF, velocity commands) to solve this ---
+and indeed they help: our experiment shows \fast{} on delta-EEF achieves $18.2\%$
+token change under SE(3) workspace shifts vs $93.9\%$ for raw coordinates.
+But $18.2\%$ is far from invariant, because the \emph{sequence of per-step deltas}
+encoding a task shape changes when objects move, even though each delta is locally
+frame-invariant.
+Our LIBERO-PRO P2 experiment confirms this empirically: tool-frame-relative replay
+(the most natural relative-action baseline) achieves $0\%$ success ($0/20$) under
+a $17\,\text{cm}$ object position swap --- the same as raw replay.
+Spatial robustness requires \emph{global shape invariance}, not per-step local invariance.
+
+\textbf{We show that the fix is to tokenize in $\se{3}$-invariant space.}
+\dhb{} encodes trajectories via the Double-Reflection invariant frame,
+separating motion shape from global pose.
+Magnitude tokens change $0.0\%$ under any rigid-body transform.
+The invariant token stream enables geometric adaptation at $\leq\!7\,\text{ms}$:
+re-ground the encoded shape to any new target pose without retraining or re-encoding.
+\fast{} can compress actions; \dhb{} can generalize across poses.
+
+\textit{FAST compresses in raw space and cannot generalize spatially.
+DHB-XR tokenizes in invariant space and adapts geometrically at 7\,ms.}
+
+\paragraph{Contributions.}
+\begin{enumerate}
+\item \textbf{Geometry-aware invariant tokenization.}
+First action tokenizer with provable SE(3)-invariance: $0.0\%$ magnitude token change
+vs $99.1\%$ raw, with 8-token OAT-style compression and prefix decodability.
+
+\item \textbf{Spatial generalization.}
+$0.0\,\text{mm}$ goal error at $10\,\text{cm}$ perturbation vs $100.0\,\text{mm}$ naive,
+validated end-to-end in simulation.
+
+\item \textbf{StarVLA ablation head.}
+\texttt{DHBActionHeader} as a drop-in StarVLA module: clean ablation of FAST head
+vs MLP head vs \dhb{} head on the same Qwen2.5-VL backbone.
+
+\item \textbf{Sample efficiency.}
+$N{=}1$ invariant demo covers any pose neighborhood;
+same generalization as $N{=}20$ raw demos.
+\end{enumerate}

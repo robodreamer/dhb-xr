@@ -1,0 +1,27 @@
+{
+  "mode": "gt",
+  "demos": [
+    "demo_1",
+    "demo_16",
+    "demo_37",
+    "demo_30",
+    "demo_21",
+    "demo_0",
+    "demo_27",
+    "demo_43",
+    "demo_46",
+    "demo_44"
+  ],
+  "results": {
+    "0.0cm": {
+      "successes": 7,
+      "total": 10,
+      "rate": 70.0
+    },
+    "3.0cm": {
+      "successes": 5,
+      "total": 10,
+      "rate": 50.0
+    }
+  }
+}

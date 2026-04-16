@@ -1,0 +1,19 @@
+# DHB-XR evaluation on LIBERO-Pro P2 (position swap) — the headline result
+# DHB-XR: 90% (18/20), p=1.68e-9 vs 0% for all VLA baselines
+# Run: vla-eval run --config configs/eval/libero_pro_p2_dhb.yaml
+server:
+  url: "ws://localhost:8000"
+docker:
+  image: ghcr.io/allenai/vla-evaluation-harness/libero-pro:latest
+output_dir: "./results/harness"
+benchmarks:
+  - benchmark: "vla_eval.benchmarks.libero_pro.benchmark:LIBEROProBenchmark"
+    subname: libero_pro_p2_swap
+    mode: sync
+    episodes_per_task: 50
+    params:
+      suite: libero_spatial
+      perturbation: swap     # P2: plate/bowl position swap (+17cm)
+      seed: 42               # must match training data seed
+      num_steps_wait: 10
+      send_state: true       # required: DHB needs EEF state for adaptation

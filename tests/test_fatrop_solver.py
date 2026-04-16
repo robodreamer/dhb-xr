@@ -229,5 +229,130 @@ class TestGetOptimizer:
         assert hasattr(opt, 'generate')
 
 
+class TestFatropOrientationSmooth:
+    """Tests that Fatrop adaptation produces smooth SE(3) orientations.
+
+    The core claim of DHB-XR is full 6D SE(3) adaptation. These tests verify
+    the Fatrop solver produces smooth, continuous quaternion trajectories —
+    not discontinuous/spinning orientations.
+    """
+
+    @staticmethod
+    def _angular_step_degrees(quats_wxyz: np.ndarray) -> np.ndarray:
+        """Angular change in degrees between consecutive timesteps."""
+        from scipy.spatial.transform import Rotation
+        rots = Rotation.from_quat(quats_wxyz[:, [1, 2, 3, 0]])  # wxyz->xyzw
+        angles = []
+        for t in range(1, len(rots)):
+            rel = rots[t - 1].inv() * rots[t]
+            angles.append(np.degrees(rel.magnitude()))
+        return np.array(angles)
+
+    def test_identity_adaptation_preserves_orientation(self):
+        """Identity adaptation (same start/goal) must return smooth orientations.
+
+        When start/goal poses are the SAME as the demo's start/goal, the adapted
+        trajectory should closely match the original — especially no spinning.
+        Max angular step must be < 5 deg/step.
+        """
+        from dhb_xr.optimization.fatrop_solver import generate_trajectory_fatrop
+
+        # Create a trajectory with non-trivial orientation (30 deg rotation around Z)
+        n = 40
+        t = np.linspace(0, 1, n)
+        positions = np.column_stack([
+            0.1 + 0.3 * t,
+            0.5 - 0.1 * t,
+            0.9 + 0.1 * np.sin(np.pi * t),
+        ])
+        angles = np.radians(30) * t
+        quaternions = np.zeros((n, 4))
+        quaternions[:, 0] = np.cos(angles / 2)
+        quaternions[:, 3] = np.sin(angles / 2)
+
+        # Identity adaptation: start/goal = demo start/goal
+        result = generate_trajectory_fatrop(
+            positions, quaternions,
+            pose_target_init={'position': positions[0], 'quaternion': quaternions[0]},
+            pose_target_final={'position': positions[-1], 'quaternion': quaternions[-1]},
+            traj_length=30,
+            use_fatrop=False,  # IPOPT for reliability
+        )
+
+        adapted_quat = result['quaternions']
+        steps = self._angular_step_degrees(adapted_quat)
+        max_step = steps.max()
+
+        assert result['success'], "Solver failed to converge"
+        assert max_step < 5.0, (
+            f"Identity adaptation has {max_step:.1f} deg/step max angular change — "
+            f"orientations are spinning. Must be < 5 deg/step."
+        )
+
+    def test_shifted_goal_produces_smooth_orientation(self):
+        """Position-only perturbation must still produce smooth orientations.
+
+        Shift goal position by 10cm in Y (like P2 perturbation) while keeping
+        same start/goal orientations. Angular steps must be < 10 deg/step.
+        """
+        from dhb_xr.optimization.fatrop_solver import generate_trajectory_fatrop
+
+        n = 40
+        t = np.linspace(0, 1, n)
+        positions = np.column_stack([
+            0.1 + 0.3 * t,
+            0.5 - 0.1 * t,
+            0.9 + 0.1 * np.sin(np.pi * t),
+        ])
+        angles = np.radians(20) * t
+        quaternions = np.zeros((n, 4))
+        quaternions[:, 0] = np.cos(angles / 2)
+        quaternions[:, 3] = np.sin(angles / 2)
+
+        # Shift goal by 10cm in Y
+        shifted_goal = positions[-1].copy()
+        shifted_goal[1] += 0.10
+
+        result = generate_trajectory_fatrop(
+            positions, quaternions,
+            pose_target_init={'position': positions[0], 'quaternion': quaternions[0]},
+            pose_target_final={'position': shifted_goal, 'quaternion': quaternions[-1]},
+            traj_length=30,
+            use_fatrop=False,
+        )
+
+        adapted_quat = result['quaternions']
+        steps = self._angular_step_degrees(adapted_quat)
+        max_step = steps.max()
+
+        assert max_step < 10.0, (
+            f"Shifted-goal adaptation has {max_step:.1f} deg/step max angular change — "
+            f"orientations are spinning. Must be < 10 deg/step."
+        )
+
+    def test_adapted_quaternions_are_unit(self):
+        """All adapted quaternions must have unit norm."""
+        from dhb_xr.optimization.fatrop_solver import generate_trajectory_fatrop
+
+        n = 30
+        t = np.linspace(0, 1, n)
+        positions = np.column_stack([0.3 * t, 0.5 * np.ones(n), 0.9 * np.ones(n)])
+        quaternions = np.tile(np.array([1.0, 0.0, 0.0, 0.0]), (n, 1))
+
+        result = generate_trajectory_fatrop(
+            positions, quaternions,
+            pose_target_init={'position': positions[0], 'quaternion': quaternions[0]},
+            pose_target_final={'position': positions[-1], 'quaternion': quaternions[-1]},
+            traj_length=20,
+            use_fatrop=False,
+        )
+
+        norms = np.linalg.norm(result['quaternions'], axis=1)
+        max_deviation = np.max(np.abs(norms - 1.0))
+        assert max_deviation < 1e-4, (
+            f"Quaternion norm deviation {max_deviation:.2e} — quaternions are not unit."
+        )
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

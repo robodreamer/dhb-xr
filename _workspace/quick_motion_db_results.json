@@ -1,0 +1,156 @@
+{
+  "description": "Quick motion DB comparison: DHB-DR vs DHB-TI vs magnitude-only vs position",
+  "n_demos": 500,
+  "M": 64,
+  "within_task_l2_0cm": {
+    "dhb_dr_full": {
+      "top1": 0.36,
+      "top5": 0.698,
+      "n": 500
+    },
+    "dhb_dr_mag": {
+      "top1": 0.63,
+      "top5": 0.888,
+      "n": 500
+    },
+    "dhb_ti_full": {
+      "top1": 0.46,
+      "top5": 0.806,
+      "n": 500
+    },
+    "dhb_ti_mag": {
+      "top1": 0.614,
+      "top5": 0.878,
+      "n": 500
+    },
+    "position": {
+      "top1": 0.992,
+      "top5": 1.0,
+      "n": 500
+    }
+  },
+  "self_retrieval_under_offset": {
+    "dhb_dr_full": {
+      "0cm": 1.0,
+      "3cm": 1.0,
+      "5cm": 1.0,
+      "10cm": 1.0
+    },
+    "dhb_dr_mag": {
+      "0cm": 1.0,
+      "3cm": 1.0,
+      "5cm": 1.0,
+      "10cm": 1.0
+    },
+    "dhb_ti_full": {
+      "0cm": 1.0,
+      "3cm": 1.0,
+      "5cm": 1.0,
+      "10cm": 1.0
+    },
+    "dhb_ti_mag": {
+      "0cm": 1.0,
+      "3cm": 1.0,
+      "5cm": 1.0,
+      "10cm": 1.0
+    },
+    "position": {
+      "0cm": 1.0,
+      "3cm": 1.0,
+      "5cm": 0.9,
+      "10cm": 0.62
+    }
+  },
+  "within_task_at_offsets": {
+    "dhb_dr_full": {
+      "0cm": {
+        "top1": 0.36,
+        "top5": 0.698
+      },
+      "3cm": {
+        "top1": 0.36,
+        "top5": 0.698
+      },
+      "5cm": {
+        "top1": 0.36,
+        "top5": 0.698
+      },
+      "10cm": {
+        "top1": 0.36,
+        "top5": 0.698
+      }
+    },
+    "dhb_dr_mag": {
+      "0cm": {
+        "top1": 0.63,
+        "top5": 0.888
+      },
+      "3cm": {
+        "top1": 0.63,
+        "top5": 0.888
+      },
+      "5cm": {
+        "top1": 0.63,
+        "top5": 0.888
+      },
+      "10cm": {
+        "top1": 0.63,
+        "top5": 0.888
+      }
+    },
+    "dhb_ti_full": {
+      "0cm": {
+        "top1": 0.46,
+        "top5": 0.806
+      },
+      "3cm": {
+        "top1": 0.46,
+        "top5": 0.806
+      },
+      "5cm": {
+        "top1": 0.46,
+        "top5": 0.806
+      },
+      "10cm": {
+        "top1": 0.46,
+        "top5": 0.806
+      }
+    },
+    "dhb_ti_mag": {
+      "0cm": {
+        "top1": 0.614,
+        "top5": 0.878
+      },
+      "3cm": {
+        "top1": 0.614,
+        "top5": 0.878
+      },
+      "5cm": {
+        "top1": 0.614,
+        "top5": 0.878
+      },
+      "10cm": {
+        "top1": 0.614,
+        "top5": 0.878
+      }
+    },
+    "position": {
+      "0cm": {
+        "top1": 0.992,
+        "top5": 1.0
+      },
+      "3cm": {
+        "top1": 0.992,
+        "top5": 1.0
+      },
+      "5cm": {
+        "top1": 0.992,
+        "top5": 1.0
+      },
+      "10cm": {
+        "top1": 0.992,
+        "top5": 1.0
+      }
+    }
+  }
+}

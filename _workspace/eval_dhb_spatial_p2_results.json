@@ -1,0 +1,81 @@
+{
+  "dhb_spatial": {
+    "method": "dhb_spatial",
+    "perturbation": "P2_position_swap",
+    "successes": 0,
+    "total": 10,
+    "rate": 0.0,
+    "trials": [
+      {
+        "seed": 0,
+        "success": false,
+        "reward": 0.0,
+        "success_at": null,
+        "method": "dhb_spatial"
+      },
+      {
+        "seed": 1,
+        "success": false,
+        "reward": 0.0,
+        "success_at": null,
+        "method": "dhb_spatial"
+      },
+      {
+        "seed": 2,
+        "success": false,
+        "reward": 0.0,
+        "success_at": null,
+        "method": "dhb_spatial"
+      },
+      {
+        "seed": 3,
+        "success": false,
+        "reward": 0.0,
+        "success_at": null,
+        "method": "dhb_spatial"
+      },
+      {
+        "seed": 4,
+        "success": false,
+        "reward": 0.0,
+        "success_at": null,
+        "method": "dhb_spatial"
+      },
+      {
+        "seed": 5,
+        "success": false,
+        "reward": 0.0,
+        "success_at": null,
+        "method": "dhb_spatial"
+      },
+      {
+        "seed": 6,
+        "success": false,
+        "reward": 0.0,
+        "success_at": null,
+        "method": "dhb_spatial"
+      },
+      {
+        "seed": 7,
+        "success": false,
+        "reward": 0.0,
+        "success_at": null,
+        "method": "dhb_spatial"
+      },
+      {
+        "seed": 8,
+        "success": false,
+        "reward": 0.0,
+        "success_at": null,
+        "method": "dhb_spatial"
+      },
+      {
+        "seed": 9,
+        "success": false,
+        "reward": 0.0,
+        "success_at": null,
+        "method": "dhb_spatial"
+      }
+    ]
+  }
+}

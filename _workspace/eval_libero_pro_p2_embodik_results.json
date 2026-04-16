@@ -1,0 +1,60 @@
+{
+  "mode": "libero_pro_p2_embodik",
+  "trials": [
+    {
+      "demo": "demo0",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "demo": "demo1",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "demo": "demo2",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "demo": "demo3",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "demo": "demo4",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "demo": "demo5",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "demo": "demo6",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "demo": "demo7",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "demo": "demo8",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "demo": "demo9",
+      "success": false,
+      "reward": 0.0
+    }
+  ],
+  "summary": {
+    "successes": 0,
+    "total": 10,
+    "rate": 0.0
+  }
+}

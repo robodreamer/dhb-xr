@@ -1,0 +1,49 @@
+% Draft B: Geometry-Aware Action Tokenization framing
+\documentclass{article}
+\input{corl2026_main}
+
+\title{The Geometry Was Free All Along:\\
+       SE(3)-Invariant Action Tokenization for Spatially Robust VLA Models}
+
+\author{Andy Park \and \textit{(co-authors TBD)}}
+
+\begin{document}
+\maketitle
+
+%% ── ABSTRACT ────────────────────────────────────────────────────────────────
+\begin{abstract}
+State-of-the-art action tokenizers for Vision-Language-Action (VLA) models ---
+\fast{} (DCT+BPE), OAT, ActionCodec --- operate on raw end-effector
+coordinates. Their tokens change $93.9\%$ under rigid-body transforms and
+offer no mechanism for spatial generalization.
+We show that tokenizing in $\se{3}$-\emph{invariant} space simultaneously
+improves compression and adds geometric stability.
+\dhb{} encodes trajectories via Double-Reflection invariant frames; applying
+\fast{} to the resulting magnitude invariants yields $\mathbf{49.8\times}$
+compression --- $\mathbf{2.4\times}$ better than \fast{} on raw coordinates ---
+with $\mathbf{0.0\%}$ token change under arbitrary SE(3) transforms.
+An OAT-style register encoder on the same invariants achieves
+$k{=}1$ prefix MSE $= 0.00005$, meaning a single token reconstructs the full
+motion shape.
+Because the invariant targets are SE(3)-invariant by construction, data
+augmentation with arbitrary rigid-body transforms is \emph{free} --- no label
+recomputation required.
+On LIBERO-Spatial (10 tasks), \dhb{} achieves $0.0\,\text{mm}$ goal error at
+perturbations up to $20\,\text{cm}$ and $100\%$ simulated task success at
+$0$--$5\,\text{cm}$ offsets where naive replay degrades.
+A jointly-trained invariant predictor across all 10 tasks reaches
+$0.023$ MSE, confirming that invariants are learnable.
+\dhb{} is a drop-in representation layer: any existing tokenizer inherits
+perfect geometric stability simply by operating on invariant input.
+\end{abstract}
+
+%% ── SHARED SECTIONS ─────────────────────────────────────────────────────────
+\input{intro_varB}
+\input{related_work}
+\input{methods}
+\input{experiments}
+\input{discussion}
+
+\bibliography{references}
+% bibliographystyle set by corl_2026.sty (corlabbrvnat)
+\end{document}

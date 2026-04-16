@@ -35,7 +35,7 @@ DHB invariants are **SE(3)-invariant** — the encoded motion shape is independe
 
 | VLA Scenario | Without DHB-XR | With DHB-XR |
 |-------------|---------------|-------------|
-| Object shifts on table | Retrain or fail | Re-decode from new pose (~7ms) |
+| Object shifts on table | Retrain or fail | Re-decode from new pose (~5-10ms) |
 | Different robot starting config | Action replay fails | Adapt with same invariants |
 | Transfer between robots | Need new training data | Same invariants, different kinematics |
 | Few-shot learning | Need 100s of demos per arrangement | 1 demo + DHB adaptation covers spatial variations |
@@ -49,7 +49,7 @@ DHB invariants are **SE(3)-invariant** — the encoded motion shape is independe
 | Naive replay (same actions) | 5.2 cm | 11.1 cm |
 | DHB-adapted (Fatrop solver) | 20.8 cm | **4.6 cm** |
 
-When the plate moves ~17cm (via LIBERO-PRO swap perturbation), naive replay reaches for the old position and fails. DHB-adapted trajectory correctly targets the new plate position — 6.5cm closer to the correct target, solved in ~7ms.
+When the plate moves ~17cm (via LIBERO-PRO swap perturbation), naive replay reaches for the old position and fails. DHB-adapted trajectory correctly targets the new plate position — 6.5cm closer to the correct target, decoded in ~5-10ms.
 
 ### LIBERO-PRO perturbation compatibility
 

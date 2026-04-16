@@ -1,0 +1,19 @@
+{
+  "unperturbed_rate": 95.0,
+  "perturbed_raw_rate": 0.0,
+  "perturbed_tool_frame_rate": 0.0,
+  "perturbed_naive_shift_rate": 0.0,
+  "perturbed_dhb_rate": 90.0,
+  "swap_desc": "plate_1: main_table_plate_region \u2192 main_table_box_region; cookies_1: main_table_box_region \u2192 main_table_plate_region",
+  "n_demos": 20,
+  "notes": {
+    "unperturbed_rate": "95% (19/20) raw replay, unperturbed env",
+    "perturbed_raw_rate": "0% (0/20) raw replay in P2 env",
+    "perturbed_tool_frame_rate": "0% (0/20) tool-frame-relative replay in P2 env — coordinate frame alone doesn't solve it",
+    "perturbed_naive_shift_rate": "0% (0/20) naive rigid shift to perturbed plate — shape preservation required",
+    "perturbed_dhb_rate": "90% (18/20) DHB Fatrop-adapted replay, p=1.68e-9 vs 0% null",
+    "tool_frame_description": "EEF trajectory expressed relative to object frame, re-executed at perturbed object pose",
+    "naive_shift_description": "Linear interpolation from pre-grasp pose to new plate position, no motion shape preservation",
+    "dhb_description": "SE(3)-invariant encoding + Fatrop NLP boundary re-solve, motion shape preserved"
+  }
+}

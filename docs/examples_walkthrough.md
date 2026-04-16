@@ -374,7 +374,7 @@ pixi run python examples/integration/libero_pro_dhb_demo.py --batch
 
 **Why this matters for VLA:** Current VLA policies (vision + language → actions) fail under spatial perturbations because actions are tied to absolute positions. DHB-XR decouples motion shape from spatial context, enabling adaptation to new object positions without retraining:
 
-- 1 demo → encode invariants → adapt to any spatial configuration (Fatrop solver, ~7ms)
+- 1 demo → encode invariants → adapt to any spatial configuration (SE(3) decode, ~5-10ms)
 - Data augmentation for spatial variations becomes unnecessary
 - The same invariants work regardless of where objects are placed
 

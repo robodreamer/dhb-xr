@@ -1,0 +1,262 @@
+{
+  "results": [
+    {
+      "demo": "demo_0",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_1",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_10",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_11",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_12",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_13",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_14",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_15",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_16",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_17",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_18",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_19",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_2",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_20",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_21",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_22",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_23",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_24",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "demo": "demo_25",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_26",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_27",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_28",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_29",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_3",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_30",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_31",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_32",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_33",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_34",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "demo": "demo_35",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "demo": "demo_36",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_37",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_38",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_39",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_4",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_40",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_41",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_42",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_43",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_44",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_45",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "demo": "demo_46",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_47",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "demo": "demo_48",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_49",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_5",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_6",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_7",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_8",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "demo": "demo_9",
+      "success": true,
+      "reward": 1.0
+    }
+  ],
+  "summary": {
+    "total": 50,
+    "successes": 45,
+    "success_rate": 90.0,
+    "method": "GT decode + P-controller position tracking",
+    "gain": 2.0,
+    "substeps": 2
+  }
+}

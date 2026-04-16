@@ -1,0 +1,79 @@
+{
+  "method": "dhb_pos_only_debug",
+  "perturbation": "P2_position_swap",
+  "successes": 0,
+  "total": 10,
+  "rate": 0.0,
+  "trials": [
+    {
+      "seed": 0,
+      "success": false,
+      "reward": 0.0,
+      "success_at": null,
+      "method": "dhb_pos_only_debug"
+    },
+    {
+      "seed": 1,
+      "success": false,
+      "reward": 0.0,
+      "success_at": null,
+      "method": "dhb_pos_only_debug"
+    },
+    {
+      "seed": 2,
+      "success": false,
+      "reward": 0.0,
+      "success_at": null,
+      "method": "dhb_pos_only_debug"
+    },
+    {
+      "seed": 3,
+      "success": false,
+      "reward": 0.0,
+      "success_at": null,
+      "method": "dhb_pos_only_debug"
+    },
+    {
+      "seed": 4,
+      "success": false,
+      "reward": 0.0,
+      "success_at": null,
+      "method": "dhb_pos_only_debug"
+    },
+    {
+      "seed": 5,
+      "success": false,
+      "reward": 0.0,
+      "success_at": null,
+      "method": "dhb_pos_only_debug"
+    },
+    {
+      "seed": 6,
+      "success": false,
+      "reward": 0.0,
+      "success_at": null,
+      "method": "dhb_pos_only_debug"
+    },
+    {
+      "seed": 7,
+      "success": false,
+      "reward": 0.0,
+      "success_at": null,
+      "method": "dhb_pos_only_debug"
+    },
+    {
+      "seed": 8,
+      "success": false,
+      "reward": 0.0,
+      "success_at": null,
+      "method": "dhb_pos_only_debug"
+    },
+    {
+      "seed": 9,
+      "success": false,
+      "reward": 0.0,
+      "success_at": null,
+      "method": "dhb_pos_only_debug"
+    }
+  ]
+}

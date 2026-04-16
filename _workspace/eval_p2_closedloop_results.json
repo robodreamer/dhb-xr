@@ -1,0 +1,83 @@
+{
+  "mode": "p2_closedloop_spatial",
+  "replan_every": 20,
+  "trials": [
+    {
+      "condition": "p2_dhb",
+      "seed": 0,
+      "success": false,
+      "reward": 0.0,
+      "steps": 150
+    },
+    {
+      "condition": "p2_dhb",
+      "seed": 1,
+      "success": false,
+      "reward": 0.0,
+      "steps": 150
+    },
+    {
+      "condition": "p2_dhb",
+      "seed": 2,
+      "success": false,
+      "reward": 0.0,
+      "steps": 150
+    },
+    {
+      "condition": "p2_dhb",
+      "seed": 3,
+      "success": false,
+      "reward": 0.0,
+      "steps": 150
+    },
+    {
+      "condition": "p2_dhb",
+      "seed": 4,
+      "success": false,
+      "reward": 0.0,
+      "steps": 150
+    },
+    {
+      "condition": "p2_dhb",
+      "seed": 5,
+      "success": false,
+      "reward": 0.0,
+      "steps": 150
+    },
+    {
+      "condition": "p2_dhb",
+      "seed": 6,
+      "success": false,
+      "reward": 0.0,
+      "steps": 150
+    },
+    {
+      "condition": "p2_dhb",
+      "seed": 7,
+      "success": false,
+      "reward": 0.0,
+      "steps": 150
+    },
+    {
+      "condition": "p2_dhb",
+      "seed": 8,
+      "success": false,
+      "reward": 0.0,
+      "steps": 150
+    },
+    {
+      "condition": "p2_dhb",
+      "seed": 9,
+      "success": false,
+      "reward": 0.0,
+      "steps": 150
+    }
+  ],
+  "summary": {
+    "p2_dhb": {
+      "successes": 0,
+      "total": 10,
+      "rate": 0.0
+    }
+  }
+}

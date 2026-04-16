@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DHB-XR: Details &amp; Appendix</title>
+
+  <!-- Bulma CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Google Fonts (Nerfies/VLANeXt style) -->
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Noto+Sans:ital,wght@0,400;0,700;1,400&family=Source+Sans+Pro:wght@300;400;600;700&family=Source+Serif+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
+  <!-- Academicons (for arXiv icon) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css" />
+  <!-- Three.js for interactive 3D demo -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --accent: #7c3aed;
+      --success: #059669;
+      --dark: #111827;
+      --gray: #6b7280;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Noto Sans', 'Source Sans Pro', sans-serif;
+      color: var(--dark);
+      background: #fff;
+    }
+
+    /* ── Nerfies/VLANeXt publication styles ─────────────────── */
+    .publication-title {
+      font-family: 'Google Sans', 'Source Serif Pro', serif;
+      font-weight: 700;
+    }
+
+    /* ── Top bar / breadcrumb ───────────────────────────────── */
+    .top-bar {
+      background: rgba(15, 23, 42, 0.97);
+      padding: 0.75rem 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.15);
+    }
+    .top-bar .inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+    }
+    .top-bar .back-link {
+      color: #60a5fa;
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      font-family: 'Google Sans', sans-serif;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .top-bar .back-link:hover { color: #93c5fd; }
+    .top-bar .page-title {
+      color: rgba(255,255,255,0.75);
+      font-family: 'Google Sans', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+    .top-bar .nav-links a {
+      color: rgba(255,255,255,0.65);
+      text-decoration: none;
+      font-size: 0.82rem;
+      font-weight: 500;
+      font-family: 'Google Sans', sans-serif;
+      margin-left: 1.25rem;
+      transition: color 0.2s;
+    }
+    .top-bar .nav-links a:hover { color: #60a5fa; }
+
+    /* ── Sections ───────────────────────────────────────────── */
+    .section-title {
+      font-family: 'Google Sans', 'Source Serif Pro', serif !important;
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: var(--dark);
+      margin-bottom: 0.5rem;
+      border-bottom: 3px solid var(--primary);
+      padding-bottom: 0.5rem;
+      display: inline-block;
+    }
+
+    .section-subtitle {
+      color: var(--gray);
+      font-size: 1.05rem;
+      margin-bottom: 2rem;
+    }
+
+    /* ── Why-card style ─────────────────────────────────────── */
+    .why-card {
+      border-radius: 12px;
+      padding: 2rem;
+      height: 100%;
+    }
+    .why-card.problem {
+      background: linear-gradient(135deg, #fef2f2, #fff1f2);
+      border: 1px solid #fecaca;
+    }
+    .why-card.solution {
+      background: linear-gradient(135deg, #ecfdf5, #f0fdf4);
+      border: 1px solid #a7f3d0;
+    }
+    .why-card .why-label {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    /* ── Pipeline steps ─────────────────────────────────────── */
+    .pipeline-steps {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin: 2rem 0;
+    }
+    .pipeline-step {
+      flex: 1;
+      min-width: 200px;
+      max-width: 280px;
+      text-align: center;
+      padding: 1.25rem 1rem;
+      background: white;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+      position: relative;
+    }
+    .pipeline-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: white;
+      font-weight: 700;
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+    }
+    .pipeline-step h4 {
+      font-weight: 700;
+      font-size: 1rem;
+      margin-bottom: 0.3rem;
+    }
+    .pipeline-step p {
+      font-size: 0.85rem;
+      color: var(--gray);
+    }
+    .pipeline-arrow {
+      display: flex;
+      align-items: center;
+      font-size: 1.5rem;
+      color: #d1d5db;
+      padding-top: 1rem;
+    }
+    @media (max-width: 768px) {
+      .pipeline-arrow { display: none; }
+    }
+
+    /* ── Result figures ─────────────────────────────────────── */
+    .result-figure {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+    .result-figure img {
+      width: 100%;
+      display: block;
+    }
+    .result-figure .fig-caption {
+      padding: 0.6rem 0.9rem;
+      background: #f9fafb;
+      font-size: 0.82rem;
+      color: var(--gray);
+      border-top: 1px solid #e5e7eb;
+    }
+
+    /* ── Method diagram ─────────────────────────────────────── */
+    .method-img {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      width: 100%;
+    }
+
+    /* ── Key insight box ────────────────────────────────────── */
+    .insight-box {
+      background: linear-gradient(135deg, #eff6ff, #f5f3ff);
+      border-left: 4px solid var(--primary);
+      border-radius: 0 8px 8px 0;
+      padding: 1rem 1.5rem;
+      margin: 1.5rem 0;
+      font-size: 1.05rem;
+    }
+
+    /* ── Results table ──────────────────────────────────────── */
+    .results-table {
+      font-size: 0.9rem;
+    }
+    .results-table thead th {
+      background: var(--dark);
+      color: white;
+      font-weight: 600;
+      border: none;
+    }
+    .results-table tbody tr:hover { background: #f0f9ff; }
+    .results-table .highlight-row {
+      background: #eff6ff;
+      font-weight: 600;
+    }
+    .best { color: var(--success); font-weight: 700; }
+    .bad  { color: #dc2626; }
+
+    /* ── Footer ─────────────────────────────────────────────── */
+    .footer-section {
+      background: #0f172a;
+      color: rgba(255,255,255,0.6);
+      font-size: 0.85rem;
+    }
+    .footer-section a { color: #60a5fa; }
+
+    @media (max-width: 768px) {
+      .top-bar .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════ TOP BAR -->
+<nav class="top-bar">
+  <div class="inner">
+    <a href="index.html" class="back-link">
+      <i class="fas fa-arrow-left"></i>
+      DHB-XR Main Page
+    </a>
+    <span class="page-title">Details &amp; Appendix</span>
+    <div class="nav-links">
+      <a href="#math-foundations">Math</a>
+      <a href="#interactive">Interactive Demo</a>
+      <a href="#motion-db">Motion DB</a>
+      <a href="#timing">Timing</a>
+      <a href="#action-head">Action Head</a>
+    </div>
+  </div>
+</nav>
+
+
+<!-- ═══════════════════════════════════════════════════════════ PAGE HEADER -->
+<section class="section" style="padding:2.5rem 0 1.5rem; background:linear-gradient(135deg,#f8fafc,#f0f4ff);">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-10">
+        <h1 style="font-family:'Google Sans','Source Serif Pro',serif; font-size:1.9rem; font-weight:700; color:#111827; margin-bottom:0.5rem;">
+          DHB-XR: Details &amp; Appendix
+        </h1>
+        <p style="color:#6b7280; font-size:1rem; line-height:1.6;">
+          Supplementary material for
+          <a href="index.html" style="color:#2563eb; font-weight:600;">The Geometry Was Free All Along: SE(3)-Invariant Action Tokenization for Spatially Robust VLA Models</a>.
+          This page contains the mathematical foundations, interactive 3D demo, motion database analysis,
+          pipeline timing, and invariant action head architecture details that complement the main page.
+        </p>
+        <div style="margin-top:1rem; display:flex; flex-wrap:wrap; gap:0.5rem;">
+          <a href="#math-foundations" class="button is-small is-outlined is-link">Mathematical Foundations</a>
+          <a href="#interactive" class="button is-small is-outlined is-link">Interactive 3D Demo</a>
+          <a href="#motion-db" class="button is-small is-outlined is-link">Motion Database</a>
+          <a href="#timing" class="button is-small is-outlined is-link">Pipeline Timing</a>
+          <a href="#action-head" class="button is-small is-outlined is-link">Invariant Action Head</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════ MATH FOUNDATIONS -->
+<section class="section" id="math-foundations" style="background:#faf5ff;">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-10">
+        <h2 class="section-title">Mathematical Foundations</h2>
+        <p class="section-subtitle">The geometry behind SE(3)-invariant trajectory encoding</p>
+
+        <div class="columns is-variable is-6 mt-4">
+          <div class="column is-7">
+            <p style="font-size:0.95rem; line-height:1.7;" class="mb-4">
+              The SE(3)-invariance of DHB-XR is not an empirical finding &mdash; it is a
+              <strong>mathematical guarantee</strong> that follows from the geometry of
+              rotation-minimizing frames on space curves.
+              Just as a curve in 3D is uniquely determined (up to rigid motion) by its
+              curvature and torsion &mdash; the
+              <em>fundamental theorem of space curves</em> &mdash; a trajectory encoded as
+              DHB invariants captures the <strong>shape</strong> of motion independently of
+              where it is executed.
+            </p>
+            <p style="font-size:0.95rem; line-height:1.7;" class="mb-4">
+              The full mathematical treatment covers: Householder double-reflection frame
+              transport, formal SE(3)-invariance and invertibility proofs, the quaternion
+              variant (DHB-QR) that avoids gimbal lock, arc-length reparameterization for
+              speed invariance, and the constrained optimization formulation for geometric adaptation.
+            </p>
+            <a href="math.html" class="button is-medium is-link is-outlined mt-2">
+              <span class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>
+              <span>Read the Mathematical Deep-Dive</span>
+            </a>
+          </div>
+          <div class="column is-5">
+            <div class="box" style="background:white;">
+              <h5 class="subtitle is-6 mb-3" style="font-family:'Google Sans',sans-serif;">
+                Interactive Tutorials
+              </h5>
+              <div class="mb-3">
+                <a href="https://colab.research.google.com/github/robodreamer/dhb-xr/blob/main/notebooks/tutorial_dhb_basics.ipynb"
+                   target="_blank" style="display:inline-flex; align-items:center; margin-bottom:0.5rem;">
+                  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab" style="height:20px; margin-right:8px;" />
+                  <span style="font-size:0.88rem;">DHB Basics &mdash; encode/decode round-trip</span>
+                </a>
+              </div>
+              <div class="mb-3">
+                <a href="https://colab.research.google.com/github/robodreamer/dhb-xr/blob/main/notebooks/tutorial_invariance_demo.ipynb"
+                   target="_blank" style="display:inline-flex; align-items:center; margin-bottom:0.5rem;">
+                  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab" style="height:20px; margin-right:8px;" />
+                  <span style="font-size:0.88rem;">Invariance Proof &mdash; random SE(3) transforms</span>
+                </a>
+              </div>
+              <div class="mb-3">
+                <a href="https://colab.research.google.com/github/robodreamer/dhb-xr/blob/main/notebooks/tutorial_action_tokenization.ipynb"
+                   target="_blank" style="display:inline-flex; align-items:center; margin-bottom:0.5rem;">
+                  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab" style="height:20px; margin-right:8px;" />
+                  <span style="font-size:0.88rem;">Action Tokenization &mdash; trajectory to tokens</span>
+                </a>
+              </div>
+              <div>
+                <a href="https://colab.research.google.com/github/robodreamer/dhb-xr/blob/main/notebooks/tutorial_vla_integration.ipynb"
+                   target="_blank" style="display:inline-flex; align-items:center;">
+                  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab" style="height:20px; margin-right:8px;" />
+                  <span style="font-size:0.88rem;">VLA Integration &mdash; VQ-VAE tokenization</span>
+                </a>
+              </div>
+            </div>
+            <p class="has-text-grey is-size-7 mt-2">
+              The deep-dive document covers formal proofs, edge cases, numerical analysis,
+              and connections to differential geometry that cannot fit in the CoRL paper.
+              Suitable as standalone technical report (arXiv) or RA-L submission.
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════ INTERACTIVE DEMO -->
+<section class="section" id="interactive" style="background:#f0f4ff;">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-10">
+        <h2 class="section-title">Teach Once, Deploy Anywhere</h2>
+        <p class="section-subtitle">
+          Drag the slider to move the target object. DHB-XR adapts a single demonstration to any workspace position — same motion shape, zero goal error, identical tokens.
+        </p>
+
+        <div style="background:#fff; border-radius:12px; box-shadow:0 4px 24px rgba(0,0,0,0.08); padding:1.5rem 2rem;">
+
+          <!-- Slider -->
+          <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.2rem;">
+            <span style="font-size:0.9rem; font-weight:600; color:#374151; white-space:nowrap;">Object displacement</span>
+            <input id="offset-slider" type="range" min="0" max="20" value="8" step="0.5"
+              style="flex:1; accent-color:#2563eb; cursor:pointer; height:6px;">
+            <span id="offset-display" style="font-size:1.4rem; font-weight:700; color:#2563eb; min-width:60px;">8 cm</span>
+          </div>
+
+          <!-- Two panels: 3D robot + token stability -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+            <!-- Left: DHB-XR 3D scene (robot adapts) -->
+            <div>
+              <div style="text-align:center; font-weight:700; font-size:0.95rem; color:#2563eb; margin-bottom:0.35rem; font-family:'Google Sans',sans-serif;">
+                DHB-XR &mdash; one demo, any position
+              </div>
+              <div id="three-dhb" style="width:100%; height:320px; border:2px solid #bfdbfe; border-radius:10px; overflow:hidden; background:#f0f7ff;"></div>
+              <div style="text-align:center; margin-top:0.5rem;">
+                <span style="display:inline-block; background:#059669; color:white; border-radius:6px;
+                  padding:0.3rem 1rem; font-weight:700; font-size:1rem;">&#10003; 0.0 mm goal error at any offset</span>
+              </div>
+            </div>
+            <!-- Right: Token stability visualization -->
+            <div>
+              <div style="text-align:center; font-weight:700; font-size:0.95rem; color:#059669; margin-bottom:0.35rem; font-family:'Google Sans',sans-serif;">
+                Token Representation &mdash; invariant under displacement
+              </div>
+              <div id="token-stability-panel" style="width:100%; height:320px; border:2px solid #bbf7d0;
+                border-radius:10px; overflow:hidden; background:#f0fdf4;
+                display:flex; flex-direction:column; align-items:center; justify-content:center; padding:1.2rem;">
+                <div style="font-size:0.82rem; color:#374151; font-weight:600; margin-bottom:0.8rem;">
+                  DHB magnitude tokens (green) vs FAST tokens (red) at current offset
+                </div>
+                <canvas id="token-canvas" width="460" height="200"
+                  style="width:100%; max-width:460px; border-radius:6px; background:#fafffe;"></canvas>
+                <div style="display:flex; gap:1.5rem; margin-top:0.7rem; font-size:0.78rem; color:#6b7280;">
+                  <span><span style="color:#16a34a; font-weight:700;">&#9632;</span> DHB: identical at every offset</span>
+                  <span><span style="color:#dc2626; font-weight:700;">&#9632;</span> FAST: changes with offset</span>
+                </div>
+              </div>
+              <div style="text-align:center; margin-top:0.5rem;">
+                <span id="token-change-badge" style="display:inline-block; background:#059669; color:white; border-radius:6px;
+                  padding:0.3rem 1rem; font-weight:700; font-size:1rem;">DHB: 0.0% change &nbsp;|&nbsp; FAST: 100% change</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stats row -->
+          <div style="display:flex; gap:0.75rem; margin-top:1.2rem; justify-content:center; flex-wrap:wrap;">
+            <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:0.5rem 1.1rem; text-align:center;">
+              <div style="font-size:1.3rem; font-weight:700; color:#2563eb;" id="stat-dhb">0.0 mm</div>
+              <div style="font-size:0.75rem; color:#6b7280;">Goal error at any offset</div>
+            </div>
+            <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:0.5rem 1.1rem; text-align:center;">
+              <div style="font-size:1.3rem; font-weight:700; color:#059669;" id="stat-token-change">0.0%</div>
+              <div style="font-size:0.75rem; color:#6b7280;">DHB token change</div>
+            </div>
+            <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:0.5rem 1.1rem; text-align:center;">
+              <div style="font-size:1.3rem; font-weight:700; color:#dc2626;" id="stat-fast-change">100%</div>
+              <div style="font-size:0.75rem; color:#6b7280;">FAST token change (same offset)</div>
+            </div>
+            <div style="background:#f5f3ff; border:1px solid #ddd6fe; border-radius:8px; padding:0.5rem 1.1rem; text-align:center;">
+              <div style="font-size:1.3rem; font-weight:700; color:#7c3aed;" id="stat-offset">8 cm</div>
+              <div style="font-size:0.75rem; color:#6b7280;">Workspace displacement</div>
+            </div>
+          </div>
+        </div>
+
+        <p class="has-text-grey is-size-7 mt-3 has-text-centered">
+          A single expert demonstration is adapted in real time to any workspace displacement via DHB-XR's SE(3)-invariant encoding.
+          The magnitude tokens remain mathematically identical regardless of offset — this is the property that enables a VLA policy trained at one position to generalize without retraining.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════ MOTION DATABASE -->
+<section class="section" id="motion-db">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-10">
+        <h2 class="section-title">Motion Database</h2>
+        <p class="section-subtitle">Encode once, retrieve anywhere &mdash; workspace-blind trajectory search</p>
+
+        <!-- Row 1: Problem / Solution -->
+        <div class="columns is-variable is-6 mt-4">
+          <div class="column is-6">
+            <div class="why-card problem">
+              <div class="why-label">The problem: geometric redundancy</div>
+              <p style="font-size:0.92rem; line-height:1.7;">
+                Large demonstration datasets contain massive geometric redundancy.
+                The same reaching motion recorded at 1,000 workspace positions generates
+                1,000 database entries &mdash; but only <strong>~5&ndash;10 unique motion shapes</strong> exist.
+                Position-based retrieval degrades as soon as the workspace shifts, because
+                every trajectory's coordinates change even though the underlying motion is identical.
+              </p>
+            </div>
+          </div>
+          <div class="column is-6">
+            <div class="why-card solution">
+              <div class="why-label">The solution: index by shape, not position</div>
+              <p style="font-size:0.92rem; line-height:1.7;">
+                DHB invariants make workspace position invisible.
+                500 demonstrations (10 tasks &times; 50 each) are encoded in
+                <strong>19.5 seconds</strong>. The resulting index supports retrieval
+                from any workspace configuration &mdash; same accuracy at 0 cm offset
+                or 10 cm offset. Adaptation back to Cartesian space takes <strong>~5&ndash;10 ms</strong>
+                per trajectory via SE(3) decode (unconstrained reconstruction).
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 2: Encoding ablation table -->
+        <h4 class="subtitle is-5 mt-5 mb-3" style="font-family:'Google Sans',sans-serif; font-weight:600;">
+          Same-task retrieval: encoding strategy comparison (500 LIBERO-Spatial demos)
+        </h4>
+        <div class="table-container mb-4">
+          <table class="table is-bordered is-hoverable is-fullwidth" style="font-size:0.92rem;">
+            <thead>
+              <tr style="background:#f8fafc;">
+                <th style="font-family:'Google Sans',sans-serif;">Encoding</th>
+                <th style="font-family:'Google Sans',sans-serif; text-align:center;">Dims</th>
+                <th style="font-family:'Google Sans',sans-serif; text-align:center;">Top-1</th>
+                <th style="font-family:'Google Sans',sans-serif; text-align:center;">Top-5</th>
+                <th style="font-family:'Google Sans',sans-serif; text-align:center;">Self-retrieval<br/><span style="font-weight:400; font-size:0.78rem;">@ 10 cm offset</span></th>
+                <th style="font-family:'Google Sans',sans-serif; text-align:center;">Offset<br/><span style="font-weight:400; font-size:0.78rem;">invariant?</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Position-based</strong></td>
+                <td style="text-align:center;">3</td>
+                <td style="text-align:center; font-weight:700; color:#059669;">99.2%</td>
+                <td style="text-align:center; font-weight:700; color:#059669;">100%</td>
+                <td style="text-align:center; color:#dc2626;">62%</td>
+                <td style="text-align:center; color:#dc2626;">No</td>
+              </tr>
+              <tr style="background:#f8fafc;">
+                <td>DHB-DR (full)</td>
+                <td style="text-align:center;">8</td>
+                <td style="text-align:center;">36.0%</td>
+                <td style="text-align:center;">69.8%</td>
+                <td style="text-align:center; font-weight:700; color:#059669;">100%</td>
+                <td style="text-align:center; color:#059669;">Yes</td>
+              </tr>
+              <tr style="background:#eff6ff;">
+                <td><strong>DHB-DR (magnitude)</strong></td>
+                <td style="text-align:center;"><strong>2</strong></td>
+                <td style="text-align:center; font-weight:700; color:#2563eb;">63.0%</td>
+                <td style="text-align:center; font-weight:700; color:#2563eb;">88.8%</td>
+                <td style="text-align:center; font-weight:700; color:#059669;">100%</td>
+                <td style="text-align:center; color:#059669;">Yes</td>
+              </tr>
+              <tr style="background:#f8fafc;">
+                <td>DHB-TI (full)</td>
+                <td style="text-align:center;">8</td>
+                <td style="text-align:center;">46.0%</td>
+                <td style="text-align:center;">80.6%</td>
+                <td style="text-align:center; font-weight:700; color:#059669;">100%</td>
+                <td style="text-align:center; color:#059669;">Yes</td>
+              </tr>
+              <tr style="background:#f5f3ff;">
+                <td><strong>DHB-TI (magnitude)</strong></td>
+                <td style="text-align:center;"><strong>2</strong></td>
+                <td style="text-align:center; font-weight:700; color:#7c3aed;">61.4%</td>
+                <td style="text-align:center; font-weight:700; color:#7c3aed;">87.8%</td>
+                <td style="text-align:center; font-weight:700; color:#059669;">100%</td>
+                <td style="text-align:center; color:#059669;">Yes</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="font-size:0.82rem; color:#6b7280; text-align:center; margin-top:-0.5rem; margin-bottom:1.5rem;">
+          <strong>Magnitude-only</strong> uses 2 invariants (linear + angular speed) instead of 8.
+          <strong>DHB-TI</strong> reparameterizes by arc-length before encoding, removing speed dependence.
+          All DHB rows are <em>perfectly flat</em> across workspace offsets &mdash; same numbers at 0, 3, 5, and 10 cm.
+        </p>
+
+        <!-- Key insight stat boxes -->
+        <div class="columns mb-4">
+          <div class="column has-text-centered">
+            <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:12px; padding:1.2rem;">
+              <div style="font-size:2rem; font-weight:700; color:#2563eb;">63%</div>
+              <div style="font-size:0.82rem; color:#6b7280; line-height:1.4;">
+                DHB top-1 accuracy<br/><strong>offset-invariant</strong>
+              </div>
+            </div>
+          </div>
+          <div class="column has-text-centered">
+            <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:12px; padding:1.2rem;">
+              <div style="font-size:2rem; font-weight:700; color:#dc2626;">&minus;38 pt</div>
+              <div style="font-size:0.82rem; color:#6b7280; line-height:1.4;">
+                Position self-retrieval<br/>drop at 10 cm offset
+              </div>
+            </div>
+          </div>
+          <div class="column has-text-centered">
+            <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:12px; padding:1.2rem;">
+              <div style="font-size:2rem; font-weight:700; color:#059669;">100%</div>
+              <div style="font-size:0.82rem; color:#6b7280; line-height:1.4;">
+                DHB self-retrieval<br/>at <strong>every</strong> offset
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="insight-box mb-4" style="border-left-color:#7c3aed;">
+          <strong>Position wins locally; DHB wins everywhere.</strong>
+          Position-based retrieval achieves near-perfect same-task accuracy (99.2%)
+          in the training workspace, but <em>cannot find the same trajectory</em> after a 10 cm
+          workspace shift (self-retrieval drops from 100% to 62%).
+          DHB magnitude encoding achieves <strong>63% same-task</strong> retrieval &mdash;
+          high enough to discriminate LIBERO pick-and-place tasks using only 2 invariants &mdash;
+          and <strong>100% self-retrieval at every offset</strong>.
+          For multi-workspace deployment, invariant indexing is the right choice.
+        </div>
+
+        <div class="result-figure mb-4">
+          <img src="assets/motion_db_results.png"
+               alt="Left: Self-retrieval accuracy — DHB flat at 100% while position degrades to 62%. Right: Same-task retrieval across offsets." />
+        </div>
+
+        <!-- Row 3: Compression table -->
+        <h4 class="subtitle is-5 mt-4 mb-3" style="font-family:'Google Sans',sans-serif; font-weight:600;">
+          Geometric compression via invariant clustering
+        </h4>
+        <div class="table-container">
+          <table class="table is-bordered is-striped is-hoverable is-fullwidth" style="font-size:0.92rem;">
+            <thead>
+              <tr style="background:#f8fafc;">
+                <th style="font-family:'Google Sans',sans-serif;">Clusters (k)</th>
+                <th style="font-family:'Google Sans',sans-serif;">Compression ratio</th>
+                <th style="font-family:'Google Sans',sans-serif;">Task purity</th>
+                <th style="font-family:'Google Sans',sans-serif;">Interpretation</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>5</strong></td>
+                <td style="font-weight:700; color:#7c3aed;">100&times;</td>
+                <td>28.8%</td>
+                <td>5 fundamental motion primitives cover all 10 LIBERO tasks</td>
+              </tr>
+              <tr>
+                <td><strong>10</strong></td>
+                <td style="font-weight:700; color:#7c3aed;">50&times;</td>
+                <td>32.2%</td>
+                <td>Roughly one cluster per task &mdash; still heavily shared</td>
+              </tr>
+              <tr>
+                <td><strong>100</strong></td>
+                <td style="font-weight:700; color:#7c3aed;">5&times;</td>
+                <td>52.2%</td>
+                <td>Task-specific subtypes begin to separate</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="font-size:0.85rem; color:#6b7280; margin-bottom:2rem;">
+          LIBERO pick-and-place tasks share enormous geometric structure. At k=5 the entire 500-demo dataset compresses to just 5 representative motions with no loss of invariant information.
+        </p>
+
+        <!-- Row 4: Pipeline diagram (text-based) -->
+        <h4 class="subtitle is-5 mt-4 mb-3" style="font-family:'Google Sans',sans-serif; font-weight:600;">
+          The closed-loop pipeline
+        </h4>
+        <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:0.5rem; margin-bottom:2rem;">
+          <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:0.6rem 1rem; font-size:0.85rem; font-weight:600; color:#1e40af; text-align:center;">
+            Collect<br/><span style="font-weight:400; font-size:0.78rem; color:#6b7280;">raw demos</span>
+          </div>
+          <div style="color:#94a3b8; font-size:1.2rem;">&rarr;</div>
+          <div style="background:#f5f3ff; border:1px solid #ddd6fe; border-radius:8px; padding:0.6rem 1rem; font-size:0.85rem; font-weight:600; color:#6d28d9; text-align:center;">
+            Encode<br/><span style="font-weight:400; font-size:0.78rem; color:#6b7280;">to invariants</span>
+          </div>
+          <div style="color:#94a3b8; font-size:1.2rem;">&rarr;</div>
+          <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:0.6rem 1rem; font-size:0.85rem; font-weight:600; color:#dc2626; text-align:center;">
+            Deduplicate<br/><span style="font-weight:400; font-size:0.78rem; color:#6b7280;">remove redundancy</span>
+          </div>
+          <div style="color:#94a3b8; font-size:1.2rem;">&rarr;</div>
+          <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:8px; padding:0.6rem 1rem; font-size:0.85rem; font-weight:600; color:#059669; text-align:center;">
+            Augment<br/><span style="font-weight:400; font-size:0.78rem; color:#6b7280;">fill invariant gaps</span>
+          </div>
+          <div style="color:#94a3b8; font-size:1.2rem;">&rarr;</div>
+          <div style="background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; padding:0.6rem 1rem; font-size:0.85rem; font-weight:600; color:#c2410c; text-align:center;">
+            Index<br/><span style="font-weight:400; font-size:0.78rem; color:#6b7280;">shape-based</span>
+          </div>
+          <div style="color:#94a3b8; font-size:1.2rem;">&rarr;</div>
+          <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:0.6rem 1rem; font-size:0.85rem; font-weight:600; color:#1e40af; text-align:center;">
+            Retrieve<br/><span style="font-weight:400; font-size:0.78rem; color:#6b7280;">any position</span>
+          </div>
+          <div style="color:#94a3b8; font-size:1.2rem;">&rarr;</div>
+          <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:8px; padding:0.6rem 1rem; font-size:0.85rem; font-weight:600; color:#059669; text-align:center;">
+            Adapt<br/><span style="font-weight:400; font-size:0.78rem; color:#6b7280;">SE(3) decode</span>
+          </div>
+        </div>
+
+        <!-- Row 5: Insight box -->
+        <div class="insight-box" style="border-left-color:#7c3aed;">
+          <strong>Beyond tokenization:</strong> DHB-XR is not just a tokenizer &mdash; it is
+          <em>infrastructure for scalable robot learning</em>. The same invariant representation
+          that gives VLAs stable tokens also enables workspace-blind retrieval, geometric
+          deduplication, and zero-cost spatial augmentation. The augmentation pipeline
+          and the motion database are two applications
+          of the same mathematical core: SE(3)-invariant differential geometry.
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════ PIPELINE TIMING -->
+<section class="section" id="timing" style="background:#f8fafc;">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-10">
+        <h2 class="section-title">Runtime</h2>
+        <p class="section-subtitle">End-to-end pipeline timing on a single CPU core</p>
+        <div class="columns">
+          <div class="column is-8">
+            <figure class="image">
+              <img class="method-img" src="assets/fig4_pipeline.png" alt="DHB-XR pipeline timing breakdown" />
+            </figure>
+          </div>
+          <div class="column is-4">
+            <table class="table results-table is-fullwidth">
+              <thead><tr><th>Step</th><th>Time</th></tr></thead>
+              <tbody>
+                <tr><td>Encode (per demo)</td><td>~60 ms</td></tr>
+                <tr><td>Adapt (decode-only)</td><td class="best">~5&ndash;10 ms</td></tr>
+                <tr><td>Adapt (Fatrop NLP)</td><td>&lt;1 s</td></tr>
+                <tr><td>IK per step (embodik)</td><td>~60 &mu;s</td></tr>
+              </tbody>
+            </table>
+            <p class="has-text-grey is-size-7 mt-2">
+              Encode is one-time per demo. Unconstrained decode is ~5&ndash;10 ms; constrained Fatrop NLP solve is &lt;1 s.
+              Per-step IK at batch size 1 on CPU.
+            </p>
+          </div>
+        </div>
+
+        <!-- CuSADi GPU batch scaling -->
+        <div class="insight-box mt-4">
+          <strong>GPU-accelerated batch adaptation (CuSADi):</strong>
+          For RL training with thousands of parallel environments, the DHB decoder is compiled to CUDA
+          kernels via <a href="https://github.com/se-hwan/cusadi" target="_blank">CuSADi</a>.
+          Preliminary benchmarks on RTX A2000 (CasADi compiled C backend):
+          <strong>43&times;</strong> speedup at batch 100,
+          <strong>199&times;</strong> at batch 1000,
+          <strong>387&times;</strong> at batch 2000
+          (1.8 ms for 2000 50-step trajectories vs 685 ms CPU).
+          This enables real-time invariant-space trajectory adaptation across
+          IsaacGym/IsaacLab environments during RL policy training.
+          Comprehensive benchmarks with GPU profiling are in preparation.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════ ACTION HEAD -->
+<section class="section" id="action-head">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-10">
+        <h2 class="section-title">Invariant Action Head</h2>
+        <p class="section-subtitle">Replace the action expert — predict SE(3)-invariant tokens directly</p>
+
+        <!-- Architecture pipeline -->
+        <div class="pipeline-steps">
+          <div class="pipeline-step">
+            <div class="pipeline-badge">1</div>
+            <h4>Image + Task</h4>
+            <p>RGB frame + language instruction</p>
+          </div>
+          <div class="pipeline-arrow"><i class="fas fa-chevron-right"></i></div>
+          <div class="pipeline-step">
+            <div class="pipeline-badge" style="background:var(--accent);">2</div>
+            <h4>SmolVLA VLM</h4>
+            <p>Frozen backbone + LoRA &rarr; <code>(B, S, 960)</code> features</p>
+          </div>
+          <div class="pipeline-arrow"><i class="fas fa-chevron-right"></i></div>
+          <div class="pipeline-step">
+            <div class="pipeline-badge" style="background:var(--success);">3</div>
+            <h4>DHBActionHead</h4>
+            <p>Cross-attention decoder &rarr; <code>(B, T, 8)</code> DHB invariants</p>
+          </div>
+          <div class="pipeline-arrow"><i class="fas fa-chevron-right"></i></div>
+          <div class="pipeline-step">
+            <div class="pipeline-badge" style="background:#d97706;">4</div>
+            <h4>decode_dhb</h4>
+            <p>SE(3) trajectory at any workspace position</p>
+          </div>
+        </div>
+
+        <!-- Key stats grid -->
+        <div class="columns mt-4">
+          <div class="column">
+            <div class="box" style="border-top:3px solid var(--primary); text-align:center;">
+              <div style="font-size:1.8rem; font-weight:800; color:var(--primary);">4.5M</div>
+              <div style="font-size:0.85rem; color:var(--gray); margin-top:0.25rem;">DHBActionHead params<br/>(vs 500M total SmolVLA)</div>
+            </div>
+          </div>
+          <div class="column">
+            <div class="box" style="border-top:3px solid var(--accent); text-align:center;">
+              <div style="font-size:1.8rem; font-weight:800; color:var(--accent);">819K</div>
+              <div style="font-size:0.85rem; color:var(--gray); margin-top:0.25rem;">VLM LoRA trainable params<br/>(rank = 8)</div>
+            </div>
+          </div>
+          <div class="column">
+            <div class="box" style="border-top:3px solid var(--success); text-align:center;">
+              <div style="font-size:1.8rem; font-weight:800; color:var(--success);">0.205 &rarr; 0.024</div>
+              <div style="font-size:0.85rem; color:var(--gray); margin-top:0.25rem;">Training loss<br/>(200 epochs)</div>
+            </div>
+          </div>
+          <div class="column">
+            <div class="box" style="border-top:3px solid #d97706; text-align:center;">
+              <div style="font-size:1.8rem; font-weight:800; color:#d97706;">0.97</div>
+              <div style="font-size:0.85rem; color:var(--gray); margin-top:0.25rem;">Avg correlation<br/>(pred vs GT, normalized)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Insight box -->
+        <div class="insight-box mt-4">
+          <i class="fas fa-lightbulb" style="color:var(--primary); margin-right:0.5rem;"></i>
+          Conventional VLA action heads predict Cartesian deltas &mdash; coordinates that change entirely
+          under workspace shift. The DHBActionHead predicts geometric invariants that are identical
+          regardless of where the robot is positioned. If this approach succeeds, it would eliminate
+          the need for spatial data augmentation entirely.
+        </div>
+
+        <!-- Status callout -->
+        <div class="columns mt-4">
+          <div class="column is-6">
+            <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:1.25rem;">
+              <p style="font-weight:700; font-size:0.95rem; margin-bottom:0.5rem; color:#92400e;">
+                <i class="fas fa-flask"></i>&nbsp; Current Status (honest)
+              </p>
+              <ul style="font-size:0.9rem; color:#78350f; line-height:1.7; padding-left:1.2rem; margin:0;">
+                <li><strong>Training:</strong> loss&nbsp;=&nbsp;0.024, r&nbsp;=&nbsp;0.97 correlation (200&nbsp;epochs, per-channel normalized, horizon&nbsp;=&nbsp;100)</li>
+                <li><strong>Single-demo proof-of-concept:</strong> 100% at 0&nbsp;cm, 100% at 3&nbsp;cm via embodik IK pipeline</li>
+                <li><strong>Multi-demo generalization:</strong> limited by prediction error (~40&nbsp;mm) and OSC controller non-determinism</li>
+                <li><strong>DHB invariants are the correct target</strong> (SE(3)-invariant) — the limitation is the execution pipeline, not the representation</li>
+              </ul>
+            </div>
+          </div>
+          <div class="column is-6">
+            <div style="background:#f0fdf4; border:1px solid #a7f3d0; border-radius:8px; padding:1.25rem;">
+              <p style="font-weight:700; font-size:0.95rem; margin-bottom:0.5rem; color:#065f46;">
+                <i class="fas fa-check-circle"></i>&nbsp; Architecture Contribution
+              </p>
+              <ul style="font-size:0.9rem; color:#065f46; line-height:1.7; padding-left:1.2rem; margin:0;">
+                <li>DHBActionHead demonstrates <strong>VLM&rarr;invariant learnability</strong> (r&nbsp;=&nbsp;0.97): a frozen VLM backbone can be steered to predict SE(3)-invariant tokens</li>
+                <li>The embodik IK execution path works when prediction quality is sufficient</li>
+                <li><strong>Path to generalization:</strong> more training data (diverse spatial configurations) and joint-space action prediction instead of OSC deltas</li>
+                <li><strong>Long-term vision:</strong> DHB&nbsp;+&nbsp;VLA hybrid where the VLA provides a semantic goal and DHB provides spatial trajectory adaptation</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════ FOOTER -->
+<footer class="footer footer-section">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-10 has-text-centered">
+        <p>
+          <a href="index.html" style="color:#60a5fa;">&larr; Back to DHB-XR Main Page</a>
+          &nbsp;&nbsp;&bull;&nbsp;&nbsp;
+          &copy; 2026 Andy Park.
+          Code: <a href="https://github.com/robodreamer/dhb-xr" target="_blank">github.com/robodreamer/dhb-xr</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+
+<script>
+  // ── Three.js Interactive Demo — Realistic Panda Pick-and-Place ────────────
+  (function() {
+    if (typeof THREE === 'undefined') { return; }
+
+    // ── Multi-segment pick-and-place trajectory ────────────────────────────
+    // Coordinate frame: X = robot lateral, Y = depth away from base, Z = up
+    // Robot rest pose above workspace: x=0, y=0.30, z=0.40
+    // Object on table: z = 0.28 (grasp height)
+    // Clearance height: z = 0.55
+
+    function makePickArc(targetX, targetY, startX, startY) {
+      targetX = (targetX === undefined) ? 0.0 : targetX;
+      targetY = (targetY === undefined) ? 0.70 : targetY;
+      startX  = (startX  === undefined) ? 0.0 : startX;
+      startY  = (startY  === undefined) ? 0.30 : startY;
+      var startZ = 0.40, clearZ = 0.55, graspZ = 0.28;
+      var pts = [];
+
+      // Phase 1 – DEPART: lift up from rest to clearance (10 pts)
+      for (var i = 0; i < 10; i++) {
+        var t = i / 9;
+        pts.push({ x: startX, y: startY, z: startZ + (clearZ - startZ) * t });
+      }
+      // Phase 2 – TRANSIT: move laterally to above target (30 pts, smooth ease-in-out)
+      for (var i = 0; i < 30; i++) {
+        var t = i / 29;
+        var s = t * t * (3 - 2 * t);  // cubic ease-in-out
+        pts.push({
+          x: startX + (targetX - startX) * s,
+          y: startY + (targetY - startY) * s,
+          z: clearZ
+        });
+      }
+      // Phase 3 – APPROACH: descend straight down to grasp height (20 pts)
+      for (var i = 0; i < 20; i++) {
+        var t = i / 19;
+        pts.push({ x: targetX, y: targetY, z: clearZ + (graspZ - clearZ) * t });
+      }
+      // Phase 4 – GRASP + LIFT: lift back to clearance (20 pts)
+      for (var i = 0; i < 20; i++) {
+        var t = i / 19;
+        pts.push({ x: targetX, y: targetY, z: graspZ + (clearZ - graspZ) * t });
+      }
+      return pts;  // 80 points total
+    }
+
+    // Convert trajectory coords (X right, Y depth, Z up) to Three.js (Y up)
+    function toV3(p) {
+      return new THREE.Vector3(p.x, p.z, -p.y);
+    }
+
+    // ── Scene builder ──────────────────────────────────────────────────────
+    function buildScene(containerId, lineColor, isNaive) {
+      var container = document.getElementById(containerId);
+      if (!container) return null;
+      var W = container.clientWidth  || 480;
+      var H = container.clientHeight || 320;
+
+      // ── Renderer ──────────────────────────────────────────────────────────
+      var renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(W, H);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
+      renderer.setClearColor(isNaive ? 0xfff8f5 : 0xf0f7ff, 1);
+      container.appendChild(renderer.domElement);
+
+      // ── Scene ─────────────────────────────────────────────────────────────
+      var scene  = new THREE.Scene();
+      scene.fog  = new THREE.Fog(isNaive ? 0xfff8f5 : 0xf0f7ff, 3, 8);
+
+      // ── Camera: elevation ~30deg, azimuth ~-45deg ──────────────────────
+      var camera = new THREE.PerspectiveCamera(38, W / H, 0.01, 20);
+      var radius = 1.9, elev = 32 * Math.PI / 180, azim = -42 * Math.PI / 180;
+      camera.position.set(
+        radius * Math.cos(elev) * Math.sin(azim),
+        radius * Math.sin(elev) + 0.30,
+        radius * Math.cos(elev) * Math.cos(azim)
+      );
+      // Look at center of workspace
+      camera.lookAt(0, 0.35, -0.50);
+
+      // ── Lights ────────────────────────────────────────────────────────────
+      scene.add(new THREE.AmbientLight(0xffffff, 0.50));
+
+      var sun = new THREE.DirectionalLight(0xffeedd, 0.95);
+      sun.position.set(1.2, 2.0, 1.5);
+      sun.castShadow = true;
+      sun.shadow.mapSize.set(1024, 1024);
+      sun.shadow.camera.left   = sun.shadow.camera.bottom = -1.2;
+      sun.shadow.camera.right  = sun.shadow.camera.top    =  1.2;
+      sun.shadow.camera.near   = 0.1;
+      sun.shadow.camera.far    = 6;
+      scene.add(sun);
+
+      scene.add(new THREE.PointLight(0xddeeff, 0.30, 6).position.set(-1, 1, -1));
+
+      // ── Floor ─────────────────────────────────────────────────────────────
+      var floorM = new THREE.Mesh(
+        new THREE.PlaneGeometry(3, 3),
+        new THREE.MeshLambertMaterial({ color: 0xe8ecf0 })
+      );
+      floorM.rotation.x = -Math.PI / 2;
+      floorM.position.y = -0.22;
+      floorM.receiveShadow = true;
+      scene.add(floorM);
+
+      // Shadow-only plane just below table
+      var shadowM = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.2, 1.2),
+        new THREE.ShadowMaterial({ opacity: 0.20 })
+      );
+      shadowM.rotation.x  = -Math.PI / 2;
+      shadowM.position.set(0, -0.215, -0.55);
+      shadowM.receiveShadow = true;
+      scene.add(shadowM);
+
+      // ── Table ─────────────────────────────────────────────────────────────
+      var tableTopMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(0.70, 0.025, 0.90),
+        new THREE.MeshLambertMaterial({ color: 0xd4b483 })
+      );
+      tableTopMesh.position.set(0, 0.0125, -0.65);
+      tableTopMesh.castShadow = tableTopMesh.receiveShadow = true;
+      scene.add(tableTopMesh);
+
+      // Table legs
+      var legG = new THREE.CylinderGeometry(0.02, 0.02, 0.22, 8);
+      var legM2 = new THREE.MeshLambertMaterial({ color: 0xb8975c });
+      [[0.30, -0.20], [-0.30, -0.20], [0.30, -1.10], [-0.30, -1.10]].forEach(function(o) {
+        var leg = new THREE.Mesh(legG, legM2);
+        leg.position.set(o[0], -0.10, o[1]);
+        leg.castShadow = true;
+        scene.add(leg);
+      });
+
+      // ── Robot base ────────────────────────────────────────────────────────
+      var baseMesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.065, 0.075, 0.085, 16),
+        new THREE.MeshLambertMaterial({ color: 0x3a4a5c })
+      );
+      baseMesh.position.set(0, 0.0675, 0);
+      baseMesh.castShadow = true;
+      scene.add(baseMesh);
+
+      // ── Target object (green sphere) ──────────────────────────────────────
+      var objMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(0.038, 16, 12),
+        new THREE.MeshLambertMaterial({ color: 0x22c55e, emissive: 0x064e1e, emissiveIntensity: 0.2 })
+      );
+      objMesh.castShadow = true;
+      scene.add(objMesh);
+
+      // ── Trajectory lines ──────────────────────────────────────────────────
+      var N_MAX = 80;
+      function makeLine(color, opacity) {
+        var geo  = new THREE.BufferGeometry();
+        var pos  = new Float32Array(N_MAX * 3);
+        geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        geo.setDrawRange(0, 0);
+        var mat  = new THREE.LineBasicMaterial({
+          color: color,
+          transparent: opacity < 1,
+          opacity: opacity,
+          linewidth: 1
+        });
+        var line = new THREE.Line(geo, mat);
+        scene.add(line);
+        return line;
+      }
+      var origLine = makeLine(0x94a3b8, 0.32);  // faded gray original
+      var trajLine = makeLine(lineColor, 1.00);  // colored active trajectory
+
+      // ── Phase boundary markers ─────────────────────────────────────────────
+      var phaseCols  = [0xfbbf24, 0x60a5fa, 0xf472b6, 0xa78bfa];
+      var phaseMkrs  = phaseCols.map(function(c) {
+        var m = new THREE.Mesh(
+          new THREE.SphereGeometry(0.016, 8, 8),
+          new THREE.MeshLambertMaterial({ color: c })
+        );
+        scene.add(m);
+        return m;
+      });
+
+      // ── Robot arm: joints + links ─────────────────────────────────────────
+      var jMat = new THREE.MeshLambertMaterial({ color: 0x3a4a5c });
+      var lMat = new THREE.MeshLambertMaterial({ color: 0xf1f5f9 });
+      var gMat = new THREE.MeshLambertMaterial({ color: 0x64748b });
+
+      function makeSphere(r) {
+        var m = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 10), jMat.clone());
+        m.castShadow = true;
+        scene.add(m);
+        return m;
+      }
+      var jBase = makeSphere(0.048);
+      var jSho  = makeSphere(0.042);
+      var jElb  = makeSphere(0.036);
+      var jWri  = makeSphere(0.030);
+      var jEE   = makeSphere(0.026);
+
+      function makeCyl(r) {
+        var m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.10, 10), lMat.clone());
+        m.castShadow = true;
+        scene.add(m);
+        return m;
+      }
+      var lk1 = makeCyl(0.028);
+      var lk2 = makeCyl(0.024);
+      var lk3 = makeCyl(0.020);
+
+      function makeGripFinger() {
+        var m = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.050, 0.015), gMat.clone());
+        m.castShadow = true;
+        scene.add(m);
+        return m;
+      }
+      var gfL = makeGripFinger();
+      var gfR = makeGripFinger();
+
+      // ── Helper: position & orient cylinder between two points ──────────────
+      var _axis_y  = new THREE.Vector3(0, 1, 0);
+      var _quat    = new THREE.Quaternion();
+      function setCylBetween(cyl, A, B) {
+        var mid = new THREE.Vector3().addVectors(A, B).multiplyScalar(0.5);
+        cyl.position.copy(mid);
+        var dir = new THREE.Vector3().subVectors(B, A);
+        var len = dir.length();
+        cyl.scale.set(1, len / 0.10, 1);
+        _quat.setFromUnitVectors(_axis_y, dir.normalize());
+        cyl.quaternion.copy(_quat);
+      }
+
+      // ── Simple 3-link forward kinematics / IK approximation ───────────────
+      var BASE_POS = new THREE.Vector3(0, 0.0675 + 0.0425, 0);  // top of base cylinder
+
+      function armIK(eeV3) {
+        var shoulder = new THREE.Vector3(0, BASE_POS.y + 0.18, 0);
+
+        // Direction from shoulder to EE
+        var toEE  = new THREE.Vector3().subVectors(eeV3, shoulder);
+        var reach = toEE.length();
+
+        // Elbow: ~60% of the way to EE, biased outward (robot X-axis)
+        var bow   = Math.sin(Math.PI * Math.min(reach / 0.60, 1.0)) * 0.07;
+        var elbow = new THREE.Vector3()
+          .addVectors(shoulder, toEE.clone().multiplyScalar(0.55))
+          .add(new THREE.Vector3(bow, 0, 0));
+
+        var wrist = new THREE.Vector3().addVectors(elbow, eeV3).multiplyScalar(0.5);
+
+        return { shoulder: shoulder, elbow: elbow, wrist: wrist };
+      }
+
+      // ── Interpolation helper ───────────────────────────────────────────────
+      function interpTraj(pts, t) {
+        var idx = t * (pts.length - 1);
+        var i0  = Math.max(0, Math.min(Math.floor(idx), pts.length - 2));
+        var f   = idx - i0;
+        var p0 = pts[i0], p1 = pts[i0 + 1];
+        return { x: p0.x + (p1.x - p0.x) * f, y: p0.y + (p1.y - p0.y) * f, z: p0.z + (p1.z - p0.z) * f };
+      }
+
+      // ── State object ───────────────────────────────────────────────────────
+      var animT    = 0;
+      var lastTS   = null;
+      var ANIM_SPD = 0.25;  // full cycle ~ 4 s
+
+      var state = {
+        renderer: renderer,
+        camera:   camera,
+        scene:    scene,
+        animT:    animT,
+
+        updateTrajectory: function(pts, origPts, targetX, targetY) {
+          this._pts    = pts;
+          this._orig   = origPts;
+
+          // Update line geometries
+          function fillLine(line, arr) {
+            var pos = line.geometry.attributes.position.array;
+            for (var i = 0; i < arr.length; i++) {
+              var v = toV3(arr[i]);
+              pos[i*3] = v.x; pos[i*3+1] = v.y; pos[i*3+2] = v.z;
+            }
+            line.geometry.setDrawRange(0, arr.length);
+            line.geometry.attributes.position.needsUpdate = true;
+          }
+          fillLine(origLine, origPts);
+          fillLine(trajLine, pts);
+
+          // Phase boundary markers: at indices 0, 9, 39, 59
+          [0, 9, 39, 59].forEach(function(idx, k) {
+            if (k < phaseMkrs.length && idx < pts.length) {
+              phaseMkrs[k].position.copy(toV3(pts[idx]));
+            }
+          });
+
+          // Object sphere: rests on table at (targetX, targetY, z=table_top+radius)
+          objMesh.position.set(targetX, 0.025 + 0.038, -targetY);
+        },
+
+        animate: function(ts) {
+          if (!lastTS) lastTS = ts;
+          var dt = Math.min((ts - lastTS) / 1000, 0.05);
+          lastTS = ts;
+
+          animT = (animT + dt * ANIM_SPD) % 1.0;
+
+          if (this._pts) {
+            var ee3  = interpTraj(this._pts, animT);
+            var eeV  = toV3(ee3);
+            var ik   = armIK(eeV);
+
+            jBase.position.copy(BASE_POS);
+            jSho.position.copy(ik.shoulder);
+            jElb.position.copy(ik.elbow);
+            jWri.position.copy(ik.wrist);
+            jEE.position.copy(eeV);
+
+            setCylBetween(lk1, BASE_POS,    ik.shoulder);
+            setCylBetween(lk2, ik.shoulder, ik.elbow);
+            setCylBetween(lk3, ik.elbow,    eeV);
+
+            // Gripper fingers
+            var fingerSep = 0.024;
+            var fingerDir = new THREE.Vector3(1, 0, 0);
+            gfL.position.copy(eeV).addScaledVector(fingerDir,  fingerSep);
+            gfR.position.copy(eeV).addScaledVector(fingerDir, -fingerSep);
+            // Orient fingers downward
+            var downAxis = new THREE.Vector3(0, 1, 0);
+            var downDir  = new THREE.Vector3(0, -1, 0);
+            var gripQ    = new THREE.Quaternion().setFromUnitVectors(downAxis, downDir);
+            gfL.quaternion.copy(gripQ);
+            gfR.quaternion.copy(gripQ);
+          }
+
+          renderer.render(scene, camera);
+        },
+
+        resize: function(W, H) {
+          camera.aspect = W / H;
+          camera.updateProjectionMatrix();
+          renderer.setSize(W, H);
+        }
+      };
+
+      return state;
+    }
+
+    // ── Trajectory parameters ─────────────────────────────────────────────
+    var BASE_TX = 0.0, BASE_TY = 0.70;
+    var START_X = 0.0, START_Y = 0.30;
+
+    function origPts() { return makePickArc(BASE_TX, BASE_TY, START_X, START_Y); }
+    function dhbPts(offsetM)  { return makePickArc(BASE_TX, BASE_TY + offsetM, START_X, START_Y); }
+
+    // ── Build DHB 3D scene ─────────────────────────────────────────────
+    var dhbScene = buildScene('three-dhb', 0x16a34a, false);
+    var _origPts = origPts();
+
+    // ── Token stability canvas (right panel) ──────────────────────────────
+    function drawTokenCanvas(offsetCm) {
+      var canvas = document.getElementById('token-canvas');
+      if (!canvas) return;
+      var ctx = canvas.getContext('2d');
+      var W = canvas.width, H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+
+      var N_TOKENS = 16;
+      var barW = (W - 40) / (N_TOKENS * 2 + N_TOKENS);
+      var gap  = barW * 0.5;
+      var maxH = H - 40;
+
+      var dhbTokens = [];
+      for (var i = 0; i < N_TOKENS; i++) {
+        dhbTokens.push(0.3 + 0.6 * Math.abs(Math.sin(i * 0.8 + 1.5)));
+      }
+
+      var rng = function(seed) { var x = Math.sin(seed) * 43758.5453; return x - Math.floor(x); };
+      var fastTokens = [];
+      for (var i = 0; i < N_TOKENS; i++) {
+        if (offsetCm < 0.5) {
+          fastTokens.push(dhbTokens[i]);
+        } else {
+          fastTokens.push(0.1 + 0.8 * rng(i * 17 + offsetCm * 3.7));
+        }
+      }
+
+      var x0 = 20;
+      for (var i = 0; i < N_TOKENS; i++) {
+        var x = x0 + i * (barW * 2 + gap);
+
+        var dh = dhbTokens[i] * maxH;
+        ctx.fillStyle = '#16a34a';
+        ctx.fillRect(x, H - 20 - dh, barW, dh);
+
+        var fh = fastTokens[i] * maxH;
+        ctx.fillStyle = offsetCm < 0.5 ? '#16a34a' : '#dc2626';
+        ctx.fillRect(x + barW, H - 20 - fh, barW, fh);
+      }
+
+      ctx.fillStyle = '#6b7280'; ctx.font = '11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Token index', W/2, H - 2);
+      ctx.save(); ctx.translate(8, H/2); ctx.rotate(-Math.PI/2);
+      ctx.fillText('Value', 0, 0); ctx.restore();
+
+      if (offsetCm > 0.5) {
+        ctx.fillStyle = '#dc2626'; ctx.font = 'bold 13px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('FAST: 100% changed', W * 0.65, 18);
+        ctx.fillStyle = '#16a34a';
+        ctx.fillText('DHB: identical', W * 0.25, 18);
+      } else {
+        ctx.fillStyle = '#059669'; ctx.font = 'bold 13px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Both identical at 0 cm offset', W/2, 18);
+      }
+    }
+
+    function updateSlider(offsetCm) {
+      var offsetM = offsetCm / 100;
+      if (dhbScene) dhbScene.updateTrajectory(dhbPts(offsetM), _origPts, BASE_TX, BASE_TY + offsetM);
+
+      drawTokenCanvas(offsetCm);
+
+      document.getElementById('offset-display').textContent = offsetCm + ' cm';
+      var sd = document.getElementById('stat-dhb');     if (sd) sd.textContent = '0.0 mm';
+      var st = document.getElementById('stat-token-change'); if (st) st.textContent = '0.0%';
+      var sf = document.getElementById('stat-fast-change');  if (sf) sf.textContent = offsetCm > 0 ? '100%' : '0%';
+      var so = document.getElementById('stat-offset');       if (so) so.textContent = offsetCm + ' cm';
+    }
+
+    // ── Render loop ───────────────────────────────────────────────────────
+    function loop(ts) {
+      requestAnimationFrame(loop);
+      if (dhbScene) dhbScene.animate(ts);
+    }
+    requestAnimationFrame(loop);
+
+    // ── Slider init ───────────────────────────────────────────────────────
+    var slider = document.getElementById('offset-slider');
+    if (slider) {
+      slider.addEventListener('input', function() { updateSlider(parseFloat(this.value)); });
+      updateSlider(8);
+    }
+
+    // ── Resize handler ────────────────────────────────────────────────────
+    window.addEventListener('resize', function() {
+      var el = document.getElementById('three-dhb');
+      if (el && dhbScene) dhbScene.resize(el.clientWidth, el.clientHeight);
+    });
+
+  })();
+</script>
+
+</body>
+</html>

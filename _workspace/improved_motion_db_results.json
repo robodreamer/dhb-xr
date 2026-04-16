@@ -1,0 +1,277 @@
+{
+  "description": "Improved motion DB: DHB-TI + magnitude-only + DTW comparison",
+  "n_demos": 500,
+  "within_task_l2": {
+    "dhb_dr_full": {
+      "top1": 0.36,
+      "top5": 0.698,
+      "total": 500
+    },
+    "dhb_dr_mag": {
+      "top1": 0.63,
+      "top5": 0.888,
+      "total": 500
+    },
+    "dhb_ti_full": {
+      "top1": 0.46,
+      "top5": 0.806,
+      "total": 500
+    },
+    "dhb_ti_mag": {
+      "top1": 0.614,
+      "top5": 0.878,
+      "total": 500
+    },
+    "position": {
+      "top1": 0.992,
+      "top5": 1.0,
+      "total": 500
+    }
+  },
+  "within_task_dtw_subsample50": {
+    "dhb_dr_full": {
+      "top1": 0.1,
+      "top5": 0.42,
+      "total": 50
+    },
+    "dhb_dr_mag": {
+      "top1": 0.14,
+      "top5": 0.42,
+      "total": 50
+    },
+    "dhb_ti_full": {
+      "top1": 0.4,
+      "top5": 0.78,
+      "total": 50
+    },
+    "dhb_ti_mag": {
+      "top1": 0.34,
+      "top5": 0.64,
+      "total": 50
+    }
+  },
+  "self_retrieval_under_offset": {
+    "dhb_dr_full": {
+      "0cm": {
+        "accuracy": 1.0,
+        "correct": 50,
+        "total": 50
+      },
+      "3cm": {
+        "accuracy": 1.0,
+        "correct": 50,
+        "total": 50
+      },
+      "5cm": {
+        "accuracy": 1.0,
+        "correct": 50,
+        "total": 50
+      },
+      "10cm": {
+        "accuracy": 1.0,
+        "correct": 50,
+        "total": 50
+      }
+    },
+    "dhb_dr_mag": {
+      "0cm": {
+        "accuracy": 1.0,
+        "correct": 50,
+        "total": 50
+      },
+      "3cm": {
+        "accuracy": 1.0,
+        "correct": 50,
+        "total": 50
+      },
+      "5cm": {
+        "accuracy": 1.0,
+        "correct": 50,
+        "total": 50
+      },
+      "10cm": {
+        "accuracy": 1.0,
+        "correct": 50,
+        "total": 50
+      }
+    },
+    "dhb_ti_full": {
+      "0cm": {
+        "accuracy": 1.0,
+        "correct": 50,
+        "total": 50
+      },
+      "3cm": {
+        "accuracy": 1.0,
+        "correct": 50,
+        "total": 50
+      },
+      "5cm": {
+        "accuracy": 1.0,
+        "correct": 50,
+        "total": 50
+      },
+      "10cm": {
+        "accuracy": 1.0,
+        "correct": 50,
+        "total": 50
+      }
+    },
+    "dhb_ti_mag": {
+      "0cm": {
+        "accuracy": 1.0,
+        "correct": 50,
+        "total": 50
+      },
+      "3cm": {
+        "accuracy": 1.0,
+        "correct": 50,
+        "total": 50
+      },
+      "5cm": {
+        "accuracy": 1.0,
+        "correct": 50,
+        "total": 50
+      },
+      "10cm": {
+        "accuracy": 1.0,
+        "correct": 50,
+        "total": 50
+      }
+    },
+    "position": {
+      "0cm": {
+        "accuracy": 1.0,
+        "correct": 50,
+        "total": 50
+      },
+      "3cm": {
+        "accuracy": 1.0,
+        "correct": 50,
+        "total": 50
+      },
+      "5cm": {
+        "accuracy": 0.9,
+        "correct": 45,
+        "total": 50
+      },
+      "10cm": {
+        "accuracy": 0.62,
+        "correct": 31,
+        "total": 50
+      }
+    }
+  },
+  "within_task_at_offsets": {
+    "dhb_dr_full": {
+      "0cm": {
+        "top1": 0.36,
+        "top5": 0.698,
+        "total": 500
+      },
+      "3cm": {
+        "top1": 0.36,
+        "top5": 0.698,
+        "total": 500
+      },
+      "5cm": {
+        "top1": 0.36,
+        "top5": 0.698,
+        "total": 500
+      },
+      "10cm": {
+        "top1": 0.36,
+        "top5": 0.698,
+        "total": 500
+      }
+    },
+    "dhb_dr_mag": {
+      "0cm": {
+        "top1": 0.63,
+        "top5": 0.888,
+        "total": 500
+      },
+      "3cm": {
+        "top1": 0.63,
+        "top5": 0.888,
+        "total": 500
+      },
+      "5cm": {
+        "top1": 0.63,
+        "top5": 0.888,
+        "total": 500
+      },
+      "10cm": {
+        "top1": 0.63,
+        "top5": 0.888,
+        "total": 500
+      }
+    },
+    "dhb_ti_full": {
+      "0cm": {
+        "top1": 0.46,
+        "top5": 0.806,
+        "total": 500
+      },
+      "3cm": {
+        "top1": 0.46,
+        "top5": 0.806,
+        "total": 500
+      },
+      "5cm": {
+        "top1": 0.46,
+        "top5": 0.806,
+        "total": 500
+      },
+      "10cm": {
+        "top1": 0.46,
+        "top5": 0.806,
+        "total": 500
+      }
+    },
+    "dhb_ti_mag": {
+      "0cm": {
+        "top1": 0.614,
+        "top5": 0.878,
+        "total": 500
+      },
+      "3cm": {
+        "top1": 0.614,
+        "top5": 0.878,
+        "total": 500
+      },
+      "5cm": {
+        "top1": 0.614,
+        "top5": 0.878,
+        "total": 500
+      },
+      "10cm": {
+        "top1": 0.614,
+        "top5": 0.878,
+        "total": 500
+      }
+    },
+    "position": {
+      "0cm": {
+        "top1": 0.992,
+        "top5": 1.0,
+        "total": 500
+      },
+      "3cm": {
+        "top1": 0.992,
+        "top5": 1.0,
+        "total": 500
+      },
+      "5cm": {
+        "top1": 0.992,
+        "top5": 1.0,
+        "total": 500
+      },
+      "10cm": {
+        "top1": 0.992,
+        "top5": 1.0,
+        "total": 500
+      }
+    }
+  }
+}

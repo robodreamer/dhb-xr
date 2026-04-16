@@ -46,14 +46,26 @@ def _axis_angle_to_rot_casadi(rvec, use_mx=False):
 
 
 def _rot_to_rvec_casadi(R):
-    """Rotation matrix to axis-angle (simplified, for small angles)."""
-    # Use logarithm approximation for CasADi compatibility
+    """Rotation matrix to axis-angle (CasADi-compatible, handles singularity at theta=0).
+
+    Uses a regularized formula to avoid 0/0 at identity (theta=0):
+      denom = 2*sin(theta) → near 0 for small theta
+      Use L'Hopital: lim_{theta→0} theta/sin(theta) = 1
+      So regularize: if sin(theta) < eps, use theta/(2*sin(theta)+eps) ≈ 0.5
+    """
     trace = R[0, 0] + R[1, 1] + R[2, 2]
-    theta = ca.acos(ca.fmax(-1, ca.fmin(1, (trace - 1) / 2)))
-    denom = 2 * ca.sin(theta) + 1e-12
-    rx = (R[2, 1] - R[1, 2]) / denom * theta
-    ry = (R[0, 2] - R[2, 0]) / denom * theta
-    rz = (R[1, 0] - R[0, 1]) / denom * theta
+    # Clamp trace to valid range for acos
+    cos_theta = ca.fmax(-1.0, ca.fmin(1.0, (trace - 1.0) / 2.0))
+    theta = ca.acos(cos_theta)
+    # Regularized denominator: avoids 0/0 when theta→0 or theta→pi
+    sin_theta = ca.sin(theta)
+    # Use conditional: if |sin_theta| < eps, denom ≈ 2 (theta→0) or use finite diff
+    eps = 1e-6
+    denom = ca.if_else(ca.fabs(sin_theta) > eps, 2.0 * sin_theta, 2.0 * (1.0 - theta**2 / 6.0))
+    scale = theta / denom
+    rx = (R[2, 1] - R[1, 2]) * scale
+    ry = (R[0, 2] - R[2, 0]) * scale
+    rz = (R[1, 0] - R[0, 1]) * scale
     return ca.vertcat(rx, ry, rz)
 
 

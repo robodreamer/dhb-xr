@@ -1,0 +1,10 @@
+{
+  "best_loss": 0.023802969940006732,
+  "epochs": 200,
+  "lr": 0.0003,
+  "lr_vlm": 1e-05,
+  "lora_rank": 8,
+  "n_demos": 50,
+  "action_horizon": 30,
+  "checkpoint": "_workspace/dhb_head_e2e_200ep.pt"
+}

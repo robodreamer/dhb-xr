@@ -1,0 +1,70 @@
+{
+  "mode": "p2_proper_closedloop",
+  "trials": [
+    {
+      "seed": 0,
+      "success": false,
+      "reward": 0.0,
+      "steps": 160
+    },
+    {
+      "seed": 1,
+      "success": false,
+      "reward": 0.0,
+      "steps": 160
+    },
+    {
+      "seed": 2,
+      "success": false,
+      "reward": 0.0,
+      "steps": 160
+    },
+    {
+      "seed": 3,
+      "success": false,
+      "reward": 0.0,
+      "steps": 160
+    },
+    {
+      "seed": 4,
+      "success": false,
+      "reward": 0.0,
+      "steps": 160
+    },
+    {
+      "seed": 5,
+      "success": false,
+      "reward": 0.0,
+      "steps": 160
+    },
+    {
+      "seed": 6,
+      "success": false,
+      "reward": 0.0,
+      "steps": 160
+    },
+    {
+      "seed": 7,
+      "success": false,
+      "reward": 0.0,
+      "steps": 160
+    },
+    {
+      "seed": 8,
+      "success": false,
+      "reward": 0.0,
+      "steps": 160
+    },
+    {
+      "seed": 9,
+      "success": false,
+      "reward": 0.0,
+      "steps": 160
+    }
+  ],
+  "summary": {
+    "successes": 0,
+    "total": 10,
+    "rate": 0.0
+  }
+}

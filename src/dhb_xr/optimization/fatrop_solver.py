@@ -6,7 +6,8 @@ significant speedup over IPOPT for trajectory optimization problems.
 
 Benchmark (50-step trajectory, after warmup):
     - IPOPT: ~45ms per solve
-    - Fatrop: ~7ms per solve (6x speedup)
+    - Fatrop: ~680ms per solve (full constrained OCP)
+    - Decode-only (no optimization): ~5ms per trajectory
 
 Note: First solve includes JIT compilation (~500ms). Reuse the generator
 object for subsequent solves to get the speedup benefit.
@@ -32,7 +33,7 @@ import time
 
 from dhb_xr.encoder.dhb_dr import encode_dhb_dr
 from dhb_xr.decoder.dhb_dr import decode_dhb_dr
-from dhb_xr.core.types import DHBMethod
+from dhb_xr.core.types import DHBMethod, EncodingMethod
 from dhb_xr.core import geometry as geom
 from dhb_xr.utils.resampling import resample_and_smooth
 
@@ -430,7 +431,6 @@ def generate_trajectory_fatrop(
 
     # Encode demo to invariants
     init_pose = {'position': pos_data[0], 'quaternion': quat_data[0]}
-    from dhb_xr.core.types import EncodingMethod
     result = encode_dhb_dr(pos_data, quat_data, init_pose=init_pose, method=EncodingMethod.POSITION)
     demo_lin = result['linear_motion_invariants']
     demo_ang = result['angular_motion_invariants']
@@ -463,14 +463,67 @@ def generate_trajectory_fatrop(
         goal_rot=goal_rot,
     )
 
-    # Convert rotations to quaternions
-    quaternions = np.array([geom.rot_to_quat(R) for R in result['rotations']])
+    # Decode adapted invariants through the DHB decoder to get correct SE(3).
+    #
+    # The Fatrop OCP rotation state represents the *linear* moving frame,
+    # NOT the end-effector orientation. The EE orientation is reconstructed
+    # from the *angular* invariants via the DHB decoder. Using the OCP's
+    # rotation matrices directly produces discontinuous, spinning quaternions
+    # because the linear frame can jump between local optima.
+    #
+    # By decoding the optimized invariants we get:
+    # - Positions from the linear frame dynamics (same as OCP)
+    # - Quaternions from the angular frame dynamics (correct EE orientation)
+    adapted_lin = result['linear_invariants']
+    adapted_ang = result['angular_invariants']
+
+    init_pose_decode = {
+        'position': pose_target_init['position'],
+        'quaternion': pose_target_init['quaternion'],
+    }
+
+    decoded = decode_dhb_dr(
+        adapted_lin,
+        adapted_ang,
+        initial_pose=init_pose_decode,
+        method=EncodingMethod.POSITION,
+        dhb_method=DHBMethod.DOUBLE_REFLECTION,
+        drop_padded=True,
+    )
+
+    decoded_pos = decoded['positions']
+    decoded_quat = decoded['quaternions']
+
+    # The OCP positions satisfy boundary constraints better than decoded
+    # positions (which may drift due to invariant discretization), so prefer
+    # the OCP positions for the final output.
+    positions_out = result['positions']
+
+    # If decoded quaternions are shorter (due to drop_padded=True removing
+    # the first 2 samples), pad to match positions length.
+    n_pos = len(positions_out)
+    if len(decoded_quat) < n_pos:
+        # Pad start with initial quaternion, end with last decoded
+        n_pad_start = n_pos - len(decoded_quat)
+        pad_start = np.tile(pose_target_init['quaternion'], (n_pad_start, 1))
+        decoded_quat = np.vstack([pad_start, decoded_quat])
+        decoded_pos = np.vstack([
+            np.tile(pose_target_init['position'], (n_pad_start, 1)),
+            decoded_pos,
+        ])
+    elif len(decoded_quat) > n_pos:
+        decoded_quat = decoded_quat[:n_pos]
+
+    # Ensure quaternion continuity (same hemisphere)
+    for i in range(1, len(decoded_quat)):
+        if np.dot(decoded_quat[i], decoded_quat[i - 1]) < 0:
+            decoded_quat[i] = -decoded_quat[i]
 
     return {
-        'positions': result['positions'],
-        'quaternions': quaternions,
-        'linear_invariants': result['linear_invariants'],
-        'angular_invariants': result['angular_invariants'],
+        'positions': positions_out,
+        'quaternions': decoded_quat,
+        'linear_invariants': adapted_lin,
+        'angular_invariants': adapted_ang,
         'solve_time': result['solve_time'],
         'success': result['success'],
         'solver': 'fatrop' if use_fatrop else 'ipopt',
