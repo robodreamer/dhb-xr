@@ -6,9 +6,17 @@
 - [x] Patch `embodik` evaluation to accept fresh checkpoints and emit debug summaries
 - [x] Verify trainer output format matches `embodik` evaluator
 - [x] Run smoke retrain in Pixi env at `action_horizon=100` and produce `_workspace/dhb_head_e2e_fix_smoke.pt`
-- [ ] Run `embodik` predict stage on smoke checkpoint with debug JSON
+- [x] Run `embodik` predict stage on smoke checkpoint with debug JSON
 - [x] Confirm intermediate checkpoint no longer shows persistent EE rotation / orientation drift
-- [ ] Run `embodik` IK stage on smoke predictions
-- [ ] Run `embodik` sim stage on smoke IK output
-- [ ] Review debug artifacts for wrong-Y signature, IK failures, and gripper-close position
-- [ ] Decide next iteration: longer e2e retrain, more replanning, or architecture/data changes
+- [x] Run `embodik` IK stage on smoke predictions
+- [x] Run `embodik` sim stage on smoke IK output
+- [x] Review debug artifacts for wrong-Y signature, IK failures, and gripper-close position
+- [x] Run recorded `embodik` sweep on smoke checkpoint (`0cm`, `3cm`, `3` seeds)
+- [x] Run recorded `embodik` sweep on 50-epoch full checkpoint (`0cm`, `3cm`, `3` seeds)
+- [x] Decide next iteration: continue e2e training toward the historically used `200` epochs
+- [x] Add resume / warm-start support to `_workspace/train_dhb_head_e2e.py`
+- [x] Continue e2e retraining from the current full checkpoint to `200` total epochs
+- [x] Run recorded `embodik` sweep on the `200`-epoch checkpoint (`0cm`, `3cm`, `3` seeds)
+- [x] Compare smoke vs `50ep` vs `200ep` checkpoints on loss and closed-loop success
+- [ ] Add trainer logging hooks for future `wandb` integration
+- [ ] Decide whether to keep smoke checkpoint as deployment baseline or redesign training / checkpoint selection

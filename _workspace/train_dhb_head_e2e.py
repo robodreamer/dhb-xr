@@ -266,6 +266,10 @@ def main():
     parser.add_argument("--lora_rank", type=int, default=8)
     parser.add_argument("--max_demos", type=int, default=50)
     parser.add_argument("--out", default="_workspace/dhb_head_e2e_dual.pt")
+    parser.add_argument("--resume", default=None,
+                        help="Resume or warm-start from an existing checkpoint. "
+                             "If optimizer state is present, resume uses it; "
+                             "otherwise it loads weights only.")
     parser.add_argument("--no_lora", action="store_true",
                         help="Freeze VLM completely, only train DHBActionHead")
     args = parser.parse_args()
@@ -358,17 +362,70 @@ def main():
 
     optimizer = torch.optim.AdamW(param_groups, weight_decay=0.01)
 
+    start_epoch = 0
+    best_loss = float("inf")
+    if args.resume:
+        resume_path = Path(args.resume)
+        if not resume_path.exists():
+            raise FileNotFoundError(f"Resume checkpoint not found: {resume_path}")
+
+        print(f"\nLoading resume checkpoint: {resume_path}")
+        checkpoint = torch.load(resume_path, map_location=device)
+
+        ckpt_config = checkpoint.get("config", {})
+        expected_action_horizon = ckpt_config.get("action_horizon")
+        if expected_action_horizon is not None and expected_action_horizon != args.action_horizon:
+            raise ValueError(
+                f"Resume checkpoint action_horizon={expected_action_horizon} "
+                f"does not match CLI action_horizon={args.action_horizon}"
+            )
+
+        lora_rank = ckpt_config.get("lora_rank")
+        if lora_rank is not None:
+            if args.no_lora and lora_rank != 0:
+                raise ValueError("Resume checkpoint uses LoRA but --no_lora was passed")
+            if not args.no_lora and lora_rank == 0:
+                raise ValueError("Resume checkpoint has no LoRA but current run expects LoRA")
+
+        dhb_head.load_state_dict(checkpoint["dhb_head_state_dict"])
+        if not args.no_lora and "vlm_lora_state_dict" in checkpoint:
+            missing, unexpected = policy.model.load_state_dict(
+                checkpoint["vlm_lora_state_dict"], strict=False
+            )
+            if unexpected:
+                raise ValueError(f"Unexpected LoRA keys in resume checkpoint: {unexpected}")
+            if missing:
+                print(f"  LoRA load: {len(missing)} missing keys tolerated")
+
+        if "optimizer_state_dict" in checkpoint:
+            optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+            start_epoch = int(checkpoint.get("epoch", 0))
+            print(f"  Resuming optimizer from epoch {start_epoch}")
+        else:
+            start_epoch = int(checkpoint.get("epoch", 0))
+            print(
+                "  No optimizer state found; warm-starting from model weights only "
+                f"at epoch {start_epoch}"
+            )
+
+        best_loss = float(checkpoint.get("best_loss", checkpoint.get("loss", float("inf"))))
+        print(f"  Best loss so far: {best_loss:.6f}")
+
     # ── Training loop ───────────────────────────────────────────────────
     print(f"\nTraining ({args.epochs} epochs, {len(dataset)} demos, "
           f"batch_size={args.batch_size})...")
 
     task_name = dataset.task_name
-    best_loss = float("inf")
+    if start_epoch >= args.epochs:
+        raise ValueError(
+            f"Resume checkpoint already at epoch {start_epoch}, "
+            f"which is >= requested total epochs {args.epochs}"
+        )
 
     policy.eval()  # Keep policy in eval mode (BN, dropout) but LoRA adapters train
     dhb_head.train()
 
-    for epoch in range(args.epochs):
+    for epoch in range(start_epoch, args.epochs):
         total_loss = 0.0
         total_loss_act = 0.0
         total_loss_inv = 0.0
@@ -448,6 +505,35 @@ def main():
                 checkpoint["vlm_lora_state_dict"] = lora_state
 
             torch.save(checkpoint, args.out)
+
+        resume_checkpoint = {
+            "dhb_head_state_dict": dhb_head.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+            "epoch": epoch + 1,
+            "best_loss": best_loss,
+            "loss": avg_loss,
+            "config": {
+                "vlm_dim": vlm_dim,
+                "action_horizon": args.action_horizon,
+                "invariant_dim": 8,
+                "hidden_dim": 256,
+                "num_heads": 8,
+                "num_layers": 4,
+                "lora_rank": args.lora_rank if not args.no_lora else 0,
+                "action_dim": 7,
+            },
+            "inv_mean": dataset.inv_mean.tolist(),
+            "inv_std": dataset.inv_std.tolist(),
+            "act_mean": dataset.act_mean.tolist(),
+            "act_std": dataset.act_std.tolist(),
+        }
+        if not args.no_lora:
+            resume_checkpoint["vlm_lora_state_dict"] = {
+                k: v for k, v in policy.model.state_dict().items()
+                if "lora" in k.lower()
+            }
+        last_path = str(Path(args.out).with_name(Path(args.out).stem + "_last.pt"))
+        torch.save(resume_checkpoint, last_path)
 
     # ── Summary ─────────────────────────────────────────────────────────
     print(f"\nTraining complete!")
