@@ -642,11 +642,69 @@ def stage_sim(args):
         "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate_demo.hdf5"
     )
     with h5py.File(dpath) as f:
+        demo_keys = sorted(f["data"].keys())
         all_init_states = [np.array(f["data"][k]["states"][0])
-                          for k in sorted(f["data"].keys())]
+                          for k in demo_keys]
 
     video_dir = Path(args.video_dir)
     video_dir.mkdir(parents=True, exist_ok=True)
+
+    def find_named_position(sim, body_tokens=(), site_tokens=(), geom_tokens=()):
+        """Best-effort lookup for an object's world position by fuzzy name match."""
+        def _matches(name, tokens):
+            name = name.lower()
+            return all(tok in name for tok in tokens)
+
+        model = sim.model
+        data = sim.data
+
+        for body_id in range(model.nbody):
+            body_name = model.body_id2name(body_id)
+            if body_name and _matches(body_name, body_tokens):
+                return np.array(data.body_xpos[body_id]), f"body:{body_name}"
+
+        for site_id in range(model.nsite):
+            site_name = model.site_id2name(site_id)
+            if site_name and _matches(site_name, site_tokens):
+                return np.array(data.site_xpos[site_id]), f"site:{site_name}"
+
+        for geom_id in range(model.ngeom):
+            geom_name = model.geom_id2name(geom_id)
+            if geom_name and _matches(geom_name, geom_tokens):
+                return np.array(data.geom_xpos[geom_id]), f"geom:{geom_name}"
+
+        return None, None
+
+    def capture_scene_refs(env):
+        sim = env.env.sim
+        bowl_pos, bowl_ref = find_named_position(
+            sim,
+            body_tokens=("bowl",),
+            site_tokens=("bowl",),
+            geom_tokens=("bowl",),
+        )
+        plate_pos, plate_ref = find_named_position(
+            sim,
+            body_tokens=("plate",),
+            site_tokens=("plate",),
+            geom_tokens=("plate",),
+        )
+        return {
+            "bowl_pos": bowl_pos,
+            "bowl_ref": bowl_ref,
+            "plate_pos": plate_pos,
+            "plate_ref": plate_ref,
+        }
+
+    def relative_snapshot(ee_pos, refs):
+        snap = {"ee_pos": np.array(ee_pos).tolist()}
+        bowl_pos = refs.get("bowl_pos")
+        plate_pos = refs.get("plate_pos")
+        if bowl_pos is not None:
+            snap["ee_minus_bowl"] = (np.array(ee_pos) - bowl_pos).tolist()
+        if plate_pos is not None:
+            snap["ee_minus_plate"] = (np.array(ee_pos) - plate_pos).tolist()
+        return snap
 
     def run_trajectory(q_traj, gripper_cmds, init_state, label="",
                        output_max=0.5, kp=150, substeps=3, offset_m=0.0):
@@ -663,6 +721,7 @@ def stage_sim(args):
             state[11] += offset_m
         env.set_init_state(state)
         obs = env.env._get_observations()
+        scene_refs = capture_scene_refs(env)
 
         robot = env.env.robots[0]
         ctrl = robot.controller
@@ -688,6 +747,10 @@ def stage_sim(args):
         n_steps = len(q_traj)
         success_at = None
         reward = 0.0
+        close_step = None
+        reopen_step = None
+        close_snapshot = None
+        reopen_snapshot = None
         append_frame(obs)
 
         for t in range(n_steps):
@@ -706,12 +769,21 @@ def stage_sim(args):
                     reward = r
                 append_frame(obs)
 
+            prev_grip = gripper_cmds[max(grip_idx - 1, 0)] if grip_idx > 0 else gripper_cmds[0]
+            cur_grip = gripper_cmds[grip_idx]
+            ee_pos = np.array(robot.controller.ee_pos)
+            if close_step is None and cur_grip > 0 and prev_grip <= 0:
+                close_step = t
+                close_snapshot = relative_snapshot(ee_pos, scene_refs)
+            if reopen_step is None and cur_grip <= 0 and prev_grip > 0:
+                reopen_step = t
+                reopen_snapshot = relative_snapshot(ee_pos, scene_refs)
+
             success = env.check_success()
             if success and success_at is None:
                 success_at = t
 
             if t % 20 == 0 or t == n_steps - 1:
-                ee_pos = np.array(robot.controller.ee_pos)
                 q_now = np.array(robot._joint_positions)
                 q_err = np.max(np.abs(q_now - q_traj[t, :7]))
                 print(f"  t={t:3d}: EE=[{ee_pos[0]:.3f},{ee_pos[1]:.3f},{ee_pos[2]:.3f}] "
@@ -740,6 +812,10 @@ def stage_sim(args):
         print(f"  Final: EE={ee_final}, success={final_success}, reward={reward:.2f}")
         if success_at is not None:
             print(f"  First success at step {success_at}")
+        if close_step is not None:
+            print(f"  First close at step {close_step}: EE={close_snapshot['ee_pos']}")
+        if reopen_step is not None:
+            print(f"  First reopen at step {reopen_step}: EE={reopen_snapshot['ee_pos']}")
 
         writer.close()
         env.close()
@@ -747,6 +823,17 @@ def stage_sim(args):
             "success": final_success,
             "reward": float(reward),
             "success_at": success_at,
+            "close_step": close_step,
+            "reopen_step": reopen_step,
+            "close_snapshot": close_snapshot,
+            "reopen_snapshot": reopen_snapshot,
+            "final_snapshot": relative_snapshot(ee_final, scene_refs),
+            "scene_refs": {
+                "bowl_ref": scene_refs.get("bowl_ref"),
+                "plate_ref": scene_refs.get("plate_ref"),
+                "bowl_pos": scene_refs.get("bowl_pos").tolist() if scene_refs.get("bowl_pos") is not None else None,
+                "plate_pos": scene_refs.get("plate_pos").tolist() if scene_refs.get("plate_pos") is not None else None,
+            },
             "video_path": video_path,
         }
 
@@ -773,6 +860,7 @@ def stage_sim(args):
                 init_state = data[seed_init_key]
             else:
                 init_state = init_state_base
+            demo_key = demo_keys[seed] if seed < len(demo_keys) else f"seed_{seed}"
             # Use per-seed gripper if available
             gripper_key = f"gripper_seed{seed}"
             gripper = data[gripper_key] if gripper_key in data else gripper_default
@@ -786,6 +874,7 @@ def stage_sim(args):
             sim_rows.append({
                 "offset_cm": float(offset_cm),
                 "seed": seed,
+                "demo_key": demo_key,
                 "attempt": "default",
                 **result,
             })
@@ -805,6 +894,7 @@ def stage_sim(args):
                 sim_rows.append({
                     "offset_cm": float(offset_cm),
                     "seed": seed,
+                    "demo_key": demo_key,
                     "attempt": "high_gains",
                     **result2,
                 })

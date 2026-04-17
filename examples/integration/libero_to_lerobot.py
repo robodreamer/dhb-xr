@@ -68,6 +68,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import h5py
+import imageio.v2 as imageio
 import numpy as np
 import pandas as pd
 from scipy.spatial.transform import Rotation
@@ -95,7 +96,7 @@ LIBERO_DEMO_PREFIX = "demo_"
 LIBERO_ACTIONS_KEY = "actions"
 LIBERO_ROBOT_STATES_KEY = "robot_states"
 LIBERO_AGENTVIEW_KEY = "agentview_rgb"
-LIBERO_WRIST_KEY = "wrist_rgb"
+LIBERO_WRIST_KEY = "eye_in_hand_rgb"
 
 # Default video resolution
 DEFAULT_VIDEO_RES = (512, 384)  # (width, height)
@@ -152,15 +153,17 @@ def load_libero_demo(h5_path: Path, demo_id: int) -> Dict:
         rotations = Rotation.from_quat(ee_quat)
         euler_angles = rotations.as_euler("xyz", degrees=False).astype(np.float32)  # [T, 3]
         
-        # Extract images
+        # Extract images. Current LIBERO spatial demos store image streams under
+        # demo["obs"], not at the demo root.
         agentview_rgb = None
         wrist_rgb = None
-        
-        if LIBERO_AGENTVIEW_KEY in demo:
-            agentview_rgb = np.array(demo[LIBERO_AGENTVIEW_KEY], dtype=np.uint8)  # [T, H, W, 3]
-        
-        if LIBERO_WRIST_KEY in demo:
-            wrist_rgb = np.array(demo[LIBERO_WRIST_KEY], dtype=np.uint8)  # [T, H, W, 3]
+
+        obs_group = demo["obs"] if "obs" in demo else demo
+        if LIBERO_AGENTVIEW_KEY in obs_group:
+            agentview_rgb = np.array(obs_group[LIBERO_AGENTVIEW_KEY], dtype=np.uint8)  # [T, H, W, 3]
+
+        if LIBERO_WRIST_KEY in obs_group:
+            wrist_rgb = np.array(obs_group[LIBERO_WRIST_KEY], dtype=np.uint8)  # [T, H, W, 3]
         
         return {
             "actions": actions,  # [T, 7] - joint velocities
@@ -203,7 +206,8 @@ def create_modality_metadata() -> Dict:
             "roll": {"start": 3, "end": 4},
             "pitch": {"start": 4, "end": 5},
             "yaw": {"start": 5, "end": 6},
-            "gripper": {"start": 6, "end": 7},
+            "pad": {"start": 6, "end": 7},
+            "gripper": {"start": 7, "end": 8},
         },
         "action": {
             "x": {"start": 0, "end": 1},
@@ -257,7 +261,7 @@ def create_info_metadata(num_tasks: int = 1) -> Dict:
                 },
             },
             "observation.state": {
-                "shape": [7],  # x, y, z, roll, pitch, yaw, gripper
+                "shape": [8],  # x, y, z, roll, pitch, yaw, pad, gripper
                 "dtype": "float32",
             },
             "action": {
@@ -320,10 +324,11 @@ def create_episode_dataframe(
     # Create timestamp (assuming 30 FPS)
     timestamps = np.arange(length, dtype=np.float32) / LEROBOT_VIDEO_FPS
     
-    # Prepare state vector: [x, y, z, roll, pitch, yaw, gripper]
+    # Prepare state vector: [x, y, z, roll, pitch, yaw, pad, gripper]
     state_vector = np.column_stack([
         demo_data["ee_pos"],  # x, y, z
         demo_data["euler_angles"],  # roll, pitch, yaw
+        np.zeros((length, 1), dtype=np.float32),  # pad dimension for libero_franka config
         demo_data["gripper_state"][:, 0:1],  # gripper (take first component)
     ]).astype(np.float32)
     
@@ -335,52 +340,67 @@ def create_episode_dataframe(
         demo_data["gripper_state"][:, 0:1],  # gripper
     ]).astype(np.float32)
     
-    # Convert video frames to list of PIL Images (stored as bytes)
-    def frames_to_bytes(frames: np.ndarray) -> List[bytes]:
-        """Convert frames to PIL Image bytes for storage."""
-        if frames is None:
-            frames = np.zeros((*DEFAULT_VIDEO_RES[::-1], 3), dtype=np.uint8)
-        
-        from io import BytesIO
-        from PIL import Image
-        
-        frame_bytes = []
-        for frame in frames:
-            # Resize if needed
-            if frame.shape != DEFAULT_VIDEO_RES[::-1] + (3,):
-                img = Image.fromarray(frame.astype(np.uint8))
-                img = img.resize((DEFAULT_VIDEO_RES[0], DEFAULT_VIDEO_RES[1]))
-                frame = np.array(img)
-            
-            # Convert to bytes
-            img = Image.fromarray(frame.astype(np.uint8), mode="RGB")
-            buffer = BytesIO()
-            img.save(buffer, format="PNG")
-            frame_bytes.append(buffer.getvalue())
-        
-        return frame_bytes
-    
-    agentview_bytes = frames_to_bytes(demo_data["agentview_rgb"])
-    wrist_bytes = frames_to_bytes(demo_data["wrist_rgb"])
-    
-    # Build dataframe
+    # Build one parquet row per environment step. The StarVLA LeRobot loader
+    # expects trajectory data to be indexed by timestep inside each episode
+    # parquet, while RGB frames are read from side-car mp4 files using the
+    # timestamps stored here.
     data_dict = {
-        "observation.state": [state_vector],  # Store as list of arrays
-        "action": [action_vector],
-        "observation.images.image": [agentview_bytes],
-        "observation.images.wrist_image": [wrist_bytes],
-        "timestamp": [timestamps],
-        "task_index": [np.full(length, task_index, dtype=np.int32)],
+        "observation.state": list(state_vector),
+        "action": list(action_vector),
+        "timestamp": timestamps.astype(np.float32),
+        "task_index": np.full(length, task_index, dtype=np.int32),
     }
     
     # Add DHB invariants if available
     if dhb_invariants and episode_index in dhb_invariants:
         dhb_feats = dhb_invariants[episode_index]
         for key, values in dhb_feats.items():
-            data_dict[f"dhb.{key}"] = [np.array(values, dtype=np.float32)]
+            arr = np.array(values, dtype=np.float32)
+            if len(arr) != length:
+                raise ValueError(
+                    f"DHB invariant '{key}' length mismatch for episode {episode_index}: "
+                    f"{len(arr)} != {length}"
+                )
+            data_dict[f"dhb.{key}"] = list(arr)
     
     df = pd.DataFrame(data_dict)
     return df
+
+
+def _resize_frame(frame: np.ndarray) -> np.ndarray:
+    """Resize LIBERO RGB frames to the configured LeRobot resolution."""
+    from PIL import Image
+
+    if frame.shape == DEFAULT_VIDEO_RES[::-1] + (3,):
+        return frame.astype(np.uint8)
+    img = Image.fromarray(frame.astype(np.uint8))
+    img = img.resize((DEFAULT_VIDEO_RES[0], DEFAULT_VIDEO_RES[1]))
+    return np.array(img, dtype=np.uint8)
+
+
+def write_episode_videos(
+    demo_data: Dict,
+    output_root: Path,
+    episode_index: int,
+) -> None:
+    """Write MP4 side-car videos for an episode in LeRobot v2.0 layout."""
+    chunk_index = episode_index // LEROBOT_CHUNK_SIZE
+    video_dir = output_root / "videos" / f"{chunk_index:06d}"
+    video_dir.mkdir(parents=True, exist_ok=True)
+
+    def _write_stream(frames: np.ndarray | None, video_key: str) -> None:
+        if frames is None:
+            frames = np.zeros((demo_data["length"], DEFAULT_VIDEO_RES[1], DEFAULT_VIDEO_RES[0], 3), dtype=np.uint8)
+        video_path = video_dir / f"episode_{episode_index:06d}_{video_key}.mp4"
+        writer = imageio.get_writer(video_path, fps=LEROBOT_VIDEO_FPS)
+        try:
+            for frame in frames:
+                writer.append_data(_resize_frame(frame))
+        finally:
+            writer.close()
+
+    _write_stream(demo_data.get("agentview_rgb"), "observation.images.image")
+    _write_stream(demo_data.get("wrist_rgb"), "observation.images.wrist_image")
 
 
 # ============================================================================
@@ -394,7 +414,8 @@ def convert_libero_to_lerobot(
     task_index: int = 0,
     dhb_invariants: Optional[Dict] = None,
     demo_ids: Optional[List[int]] = None,
-) -> Tuple[int, int]:
+    episode_offset: int = 0,
+) -> Tuple[int, int, List[Dict], Dict[int, str]]:
     """Convert a single LIBERO HDF5 file to LeRobot format.
     
     Args:
@@ -428,8 +449,9 @@ def convert_libero_to_lerobot(
     total_frames = 0
     
     # Convert each demo
-    for global_idx, demo_id in enumerate(demo_ids):
+    for local_idx, demo_id in enumerate(demo_ids):
         try:
+            global_idx = episode_offset + local_idx
             logger.info(f"  Loading demo {demo_id}...")
             demo_data = load_libero_demo(libero_h5_path, demo_id)
             
@@ -442,13 +464,14 @@ def convert_libero_to_lerobot(
             
             # Determine chunk index
             chunk_index = global_idx // LEROBOT_CHUNK_SIZE
-            chunk_dir = data_dir / f"chunk_{chunk_index:06d}"
+            chunk_dir = data_dir / f"{chunk_index:06d}"
             chunk_dir.mkdir(exist_ok=True)
             
             # Save parquet
             parquet_path = chunk_dir / f"episode_{global_idx:06d}.parquet"
             logger.info(f"  Saving to {parquet_path.relative_to(output_root)}")
             df.to_parquet(parquet_path, index=False)
+            write_episode_videos(demo_data, output_root, global_idx)
             
             total_frames += demo_data["length"]
             
@@ -456,35 +479,41 @@ def convert_libero_to_lerobot(
             logger.error(f"  Error converting demo {demo_id}: {e}")
             continue
     
-    # Save metadata files
-    logger.info("Writing metadata files...")
+    logger.info(f"Successfully converted {len(all_episodes)} episodes ({total_frames} frames)")
     
-    # modality.json
+    return len(all_episodes), total_frames, all_episodes, all_tasks
+
+
+def write_lerobot_metadata(
+    output_root: Path,
+    all_episodes: List[Dict],
+    all_tasks: Dict[int, str],
+    total_frames: int,
+) -> None:
+    """Write shared LeRobot metadata after all tasks are converted."""
+    meta_dir = output_root / "meta"
+    meta_dir.mkdir(parents=True, exist_ok=True)
+
+    logger.info("Writing metadata files...")
+
     modality_metadata = create_modality_metadata()
     with open(meta_dir / "modality.json", "w") as f:
         json.dump(modality_metadata, f, indent=2)
-    
-    # info.json
+
     info_metadata = create_info_metadata(num_tasks=len(all_tasks))
     info_metadata["num_episodes"] = len(all_episodes)
     info_metadata["num_frames"] = total_frames
     with open(meta_dir / "info.json", "w") as f:
         json.dump(info_metadata, f, indent=2)
-    
-    # episodes.jsonl
+
     with open(meta_dir / "episodes.jsonl", "w") as f:
         for ep_meta in all_episodes:
             f.write(json.dumps(ep_meta) + "\n")
-    
-    # tasks.jsonl
+
     with open(meta_dir / "tasks.jsonl", "w") as f:
         for task_idx, task_name_str in all_tasks.items():
             task_meta = create_task_metadata(task_idx, task_name_str)
             f.write(json.dumps(task_meta) + "\n")
-    
-    logger.info(f"Successfully converted {len(all_episodes)} episodes ({total_frames} frames)")
-    
-    return len(all_episodes), total_frames
 
 
 def compute_dataset_statistics(data_dir: Path) -> Dict:
@@ -506,7 +535,7 @@ def compute_dataset_statistics(data_dir: Path) -> Dict:
     all_data = defaultdict(list)
     
     # Collect all parquet files
-    parquet_files = sorted(data_dir.glob("chunk_*/episode_*.parquet"))
+    parquet_files = sorted(data_dir.glob("*/episode_*.parquet"))
     
     for pq_path in parquet_files:
         df = pd.read_parquet(pq_path)
@@ -645,6 +674,8 @@ Examples:
     # Convert each task
     total_episodes = 0
     total_frames = 0
+    all_episode_meta = []
+    all_task_meta = {}
     
     output_root = Path(args.output_root)
     
@@ -659,17 +690,22 @@ Examples:
             demo_ids = demo_ids[:args.max_demos]
         
         # Convert
-        num_eps, num_frames = convert_libero_to_lerobot(
+        num_eps, num_frames, episode_meta, task_meta = convert_libero_to_lerobot(
             h5_path,
             output_root,
             task_name=h5_path.stem,
             task_index=task_idx,
             dhb_invariants=dhb_invariants,
             demo_ids=demo_ids,
+            episode_offset=total_episodes,
         )
         
         total_episodes += num_eps
         total_frames += num_frames
+        all_episode_meta.extend(episode_meta)
+        all_task_meta.update(task_meta)
+
+    write_lerobot_metadata(output_root, all_episode_meta, all_task_meta, total_frames)
     
     # Compute statistics
     if args.compute_stats:
