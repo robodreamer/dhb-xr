@@ -7,10 +7,10 @@ benchmarks:
   - benchmark: "vla_eval.benchmarks.libero.benchmark:LIBEROBenchmark"
     subname: libero_spatial_smoke
     mode: sync
-    episodes_per_task: 2
+    episodes_per_task: 1
+    max_tasks: 1
     params:
       suite: libero_spatial
       seed: 7
       num_steps_wait: 10
       send_state: true
-      task_filter: ["pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate"]

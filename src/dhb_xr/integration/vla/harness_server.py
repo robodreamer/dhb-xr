@@ -442,14 +442,13 @@ class DHBModelServer(PredictModelServer):
 def write_harness_config(output_path: str = "configs/model_servers/dhbxr.yaml") -> None:
     """Write a template harness config for DHBModelServer."""
     config = {
-        "script": "src/dhb_xr/integration/vla/harness_server.py",
+        "script": "scripts/harness_server_entry.py",
         "args": {
             "demo_dataset": "/path/to/libero_spatial",
             "chunk_size": 8,
             "solver": "auto",
             "use_embodik_ik": False,
             "action_dim": 7,
-            "verbose": False,
         },
     }
     import yaml

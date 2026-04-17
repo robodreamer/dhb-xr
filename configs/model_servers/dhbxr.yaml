@@ -1,6 +1,6 @@
 # DHB-XR model server config for AllenAI vla-evaluation-harness
 # Usage (from dhb_xr repo root): vla-eval serve --config configs/model_servers/dhbxr.yaml
-script: "src/dhb_xr/integration/vla/harness_server.py"
+script: "scripts/harness_server_entry.py"
 args:
   demo_dataset: "/home/andypark/Projects/data/libero/libero_spatial"
   chunk_size: 8
@@ -8,4 +8,3 @@ args:
   use_embodik_ik: false   # set true to use embodik Panda IK
   action_dim: 7
   port: 8000
-  verbose: false

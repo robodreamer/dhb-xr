@@ -37,7 +37,7 @@ fatrop = ["casadi>=3.5", "rockit-meco>=0.1"]
 gpu = ["torch>=2.0"]
 cusadi = ["cusadi>=1.0", "torch>=2.0"]
 tokenization = ["torch>=2.0", "einops>=0.6"]
-database = ["faiss-cpu>=1.7", "dtaidistance>=3.0"]
+database = ["faiss-cpu>=1.7"]
 examples = ["jupyter>=1.0", "ipykernel>=6.0", "notebook>=6.0"]
 all = [
     "casadi>=3.5",
@@ -45,7 +45,6 @@ all = [
     "rockit-meco>=0.1",
     "torch>=2.0",
     "faiss-cpu>=1.7",
-    "dtaidistance>=3.0",
     "jupyter>=1.0",
     "ipykernel>=6.0",
     "notebook>=6.0",
