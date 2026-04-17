@@ -1,63 +1,98 @@
 #!/usr/bin/env python3
-"""Plot 3-way augmentation comparison: Original vs DHB vs Naive."""
+"""Plot preliminary augmentation comparison from the n=50 degradation JSONs."""
+
 import json
-import matplotlib.pyplot as plt
+from pathlib import Path
+
 import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
 
-matplotlib.rcParams.update({
-    'font.family': 'sans-serif',
-    'font.sans-serif': ['Helvetica', 'DejaVu Sans'],
-    'font.size': 12,
-    'figure.dpi': 150,
-})
+matplotlib.rcParams.update(
+    {
+        "font.family": "sans-serif",
+        "font.sans-serif": ["Helvetica", "DejaVu Sans"],
+        "font.size": 11,
+        "axes.labelsize": 12,
+        "axes.titlesize": 13,
+        "figure.dpi": 160,
+    }
+)
 
-offsets = [0, 3, 5, 7]
 
-# Load results
-base = json.load(open('_workspace/degradation_curve_results.json'))
-orig = json.load(open('_workspace/eval_original_finetuned.json'))
-dhb = json.load(open('_workspace/eval_dhb_finetuned.json'))
-naive = json.load(open('_workspace/eval_naive_finetuned.json'))
+ROOT = Path("/home/andypark/Projects/repos/dhb-xr")
+WORK = ROOT / "_workspace"
+ASSETS = ROOT / "docs/paper/assets"
 
-def get_rates(data, offsets):
-    rates = []
-    for o in offsets:
-        key = f"{o}cm" if f"{o}cm" in data['summary'] else f"{float(o)}cm"
-        rates.append(data['summary'][key]['rate'] * 100)
-    return rates
 
-base_rates = [70, 55, 10, 0]  # from 20-seed degradation curve (0,3,5,7)
-orig_rates = get_rates(orig, offsets)
-dhb_rates = get_rates(dhb, offsets)
-naive_rates = get_rates(naive, offsets)
+def load_json(name: str) -> dict:
+    with open(WORK / name) as f:
+        return json.load(f)
 
-fig, ax = plt.subplots(figsize=(8, 5))
 
-ax.plot(offsets, base_rates, 'o--', color='#6b7280', linewidth=1.5, markersize=7,
-        label='Base SmolVLA (n=20)', alpha=0.7)
-ax.plot(offsets, orig_rates, 's-', color='#2563eb', linewidth=2.5, markersize=9,
-        label='Original FT (50 eps, 0cm)')
-ax.plot(offsets, dhb_rates, 'D-', color='#059669', linewidth=2.5, markersize=9,
-        label='DHB-aug FT (500 eps)')
-ax.plot(offsets, naive_rates, '^-', color='#dc2626', linewidth=2.5, markersize=9,
-        label='Naive-aug FT (500 eps)')
+def get_rates(data: dict, offsets_cm: list[float]) -> list[float]:
+    out = []
+    for offset in offsets_cm:
+        key = f"{offset:.1f}cm"
+        out.append(data["summary"][key]["rate"] * 100.0)
+    return out
 
-# Annotate key point
-ax.annotate('+10%', xy=(3, 30), xytext=(3.5, 42),
-            fontsize=11, fontweight='bold', color='#059669',
-            arrowprops=dict(arrowstyle='->', color='#059669'))
 
-ax.set_xlabel('Workspace Offset (Y-axis, cm)')
-ax.set_ylabel('Task Success Rate (%)')
-ax.set_title('SmolVLA + DHB Augmentation\nLIBERO-Spatial Task 0 (n=10, 5K LoRA steps)')
-ax.set_ylim(-5, 95)
-ax.set_xlim(-0.5, 7.5)
-ax.legend(loc='upper right', fontsize=10)
-ax.grid(True, alpha=0.3)
+def main() -> None:
+    offsets = [0.0, 3.0, 5.0]
+    base = load_json("degradation_base_n50.json")
+    orig = load_json("degradation_orig_n50.json")
+    dhb = load_json("degradation_dhb_n50.json")
+    naive = load_json("degradation_naive_n50.json")
 
-plt.tight_layout()
-plt.savefig('docs/paper/assets/augmentation_comparison.png', dpi=200, bbox_inches='tight')
-plt.savefig('_workspace/augmentation_comparison_results.png', dpi=150, bbox_inches='tight')
-print("Saved: docs/paper/assets/augmentation_comparison.png")
-plt.close()
+    fig, ax = plt.subplots(figsize=(8.6, 4.8))
+
+    series = [
+        ("Base SmolVLA", get_rates(base, offsets), "#6b7280", "o--"),
+        ("Original FT", get_rates(orig, offsets), "#2563eb", "s-"),
+        ("DHB-aug FT", get_rates(dhb, offsets), "#059669", "D-"),
+        ("Naive-aug FT", get_rates(naive, offsets), "#dc2626", "^-"),
+    ]
+    for label, rates, color, style in series:
+        ax.plot(offsets, rates, style, color=color, linewidth=2.4, markersize=8, label=label)
+
+    # Call out the main boundary result at +3 cm.
+    dhb_3 = get_rates(dhb, offsets)[1]
+    naive_3 = get_rates(naive, offsets)[1]
+    ax.annotate(
+        f"{dhb_3:.0f}% vs {naive_3:.0f}%",
+        xy=(3.0, dhb_3),
+        xytext=(3.55, max(dhb_3, naive_3) + 13),
+        fontsize=10,
+        fontweight="bold",
+        color="#059669",
+        arrowprops=dict(arrowstyle="->", color="#059669", linewidth=1.5),
+    )
+
+    ax.set_xlabel("Workspace offset (Y-axis, cm)")
+    ax.set_ylabel("Task success rate (%)")
+    ax.set_title("Preliminary Augmentation Comparison (n=50)", fontweight="bold")
+    ax.set_ylim(-5, 100)
+    ax.set_xlim(-0.3, 5.5)
+    ax.grid(True, alpha=0.25)
+    ax.legend(frameon=False, fontsize=9, loc="upper right")
+    ax.text(
+        0.02,
+        0.02,
+        "Use this as directional evidence only: geometry-aware augmentation helps at the boundary,\n"
+        "but this is weaker than the main invariant-tokenization and open-loop adaptation results.",
+        transform=ax.transAxes,
+        fontsize=8.5,
+        color="#475569",
+        va="bottom",
+    )
+
+    plt.tight_layout()
+    out = ASSETS / "augmentation_comparison.png"
+    fig.savefig(out, dpi=220, bbox_inches="tight")
+    plt.close(fig)
+    print(f"Saved: {out}")
+
+
+if __name__ == "__main__":
+    main()

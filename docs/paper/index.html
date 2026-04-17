@@ -451,22 +451,22 @@
 
 <!-- ═══════════════════════════════════════════════════════════ STICKY NAV -->
 <nav class="sticky-nav" id="sticky-nav">
-  <div class="nav-inner">
-    <a href="#" class="nav-brand">DHB-XR</a>
-    <div class="nav-links">
-      <a href="assets/dhb_xr_corl2026.pdf" target="_blank">Paper</a>
-      <a href="https://github.com/robodreamer/dhb-xr" target="_blank">Code</a>
-      <a href="#why-dhb">Why DHB?</a>
-      <a href="#method">Method</a>
-      <a href="#results">Results</a>
-      <a href="#demos">Videos</a>
-      <a href="#augmentation">Augmentation</a>
-      <a href="#libero-pro">LIBERO-PRO</a>
-      <a href="tutorial.html">Tutorial</a>
-      <a href="math.html">Math Deep-Dive</a>
-      <a href="details.html">Details &amp; Appendix</a>
+    <div class="nav-inner">
+      <a href="#" class="nav-brand">DHB-XR</a>
+      <div class="nav-links">
+        <a href="assets/dhb_xr_corl2026.pdf" target="_blank">Paper</a>
+        <a href="https://github.com/robodreamer/dhb-xr" target="_blank">Code</a>
+        <a href="#why-dhb">Why DHB?</a>
+        <a href="#method">Method</a>
+        <a href="#results">Results</a>
+        <a href="#demos">Videos</a>
+        <a href="#libero-pro">LIBERO-PRO</a>
+        <a href="archive.html">Archive</a>
+        <a href="tutorial.html">Tutorial</a>
+        <a href="math.html">Math Deep-Dive</a>
+        <a href="details.html">Details &amp; Appendix</a>
+      </div>
     </div>
-  </div>
 </nav>
 
 
@@ -557,20 +557,14 @@
           </div>
           <div class="column">
             <div class="stat-hero">
-              <div class="stat-number green">0.0 mm</div>
-              <div class="stat-label">Geometric reconstruction error<br/>at 0&ndash;20 cm offsets</div>
-            </div>
+              <div class="stat-number green">2 / 3</div>
+              <div class="stat-label">SmolVLA + DHB head<br/>smoke success at 0 cm</div>
+          </div>
           </div>
           <div class="column">
             <div class="stat-hero">
-              <div class="stat-number amber">0.023</div>
-              <div class="stat-label">Multi-task inv. MSE<br/>10 tasks, single model</div>
-            </div>
-          </div>
-          <div class="column">
-            <div class="stat-hero" style="border-color:rgba(52,211,153,0.4); background:rgba(5,150,105,0.15);">
-              <div class="stat-number green">90%</div>
-              <div class="stat-label">LIBERO-PRO P2 success<br/>(all VLAs: 0%, p=1.68&times;10<sup>&minus;9</sup>)</div>
+              <div class="stat-number amber">18 / 20</div>
+              <div class="stat-label">P2 open-loop replay<br/>after DHB adaptation</div>
             </div>
           </div>
         </div>
@@ -598,28 +592,19 @@
       <div class="column is-10">
         <h2 class="section-title">Abstract</h2>
         <p style="font-size:1.02rem; line-height:1.7; color:#374151;">
-          State-of-the-art VLA action tokenizers (FAST, OAT, ActionCodec) operate on raw end-effector
-          coordinates. Even relative-action representations (delta-EEF) show <strong>18.2%</strong> token change
-          under workspace perturbation — because the sequence of deltas encoding a task shape changes
-          when objects move, even if each delta is locally frame-invariant. DHB-XR fixes this: tokenizing
-          in SE(3)-<em>invariant</em> space simultaneously
-          improves compression and adds geometric stability. DHB-XR encodes trajectories via
-          Double-Reflection Householder frames; applying FAST to the resulting magnitude invariants
-          yields higher compression than FAST on raw coordinates, with 0.0% token change under
-          arbitrary rigid-body transforms. Arc-length invariant gripper encoding extends the guarantee
-          to the full 7-DOF action space. For RL-scale deployment, a GPU-accelerated batch decoder
-          (CuSADi) provides up to 387&times; speedup. DHB-XR is not an alternative to existing
-          tokenizers &mdash; it is a composable layer that makes them spatially robust by construction.
+          Current VLA action tokens are spatially unstable: move the workspace and the token targets change,
+          even when the underlying skill is the same. DHB-XR addresses this at the representation level by
+          encoding <em>trajectory shape</em> rather than absolute pose. On the current repo evidence, that yields
+          exact SE(3) token stability, better compression than FAST on raw coordinates, and reliable open-loop
+          geometric adaptation. The newer DHB action-head results are best read as a <em>technical validation</em>
+          of a state-aware decoder, not yet as a final robust closed-loop VLA result.
         </p>
 
         <h4 class="subtitle is-5 mt-4 mb-2" style="font-family:'Google Sans',sans-serif;">Contributions</h4>
         <ol style="font-size:0.95rem; line-height:1.8; color:#374151; padding-left:1.5rem;">
-          <li><strong>SE(3)-invariant tokenization layer</strong> &mdash; any existing tokenizer inherits 0.0% token change under rigid-body transforms by operating on DHB magnitude invariants.</li>
-          <li><strong>Full 7-DOF action invariance</strong> &mdash; arc-length invariant gripper encoding extends the SE(3) guarantee to discrete manipulation signals.</li>
-          <li><strong>Improved compression</strong> &mdash; FAST+DHB achieves higher compression than FAST on raw coordinates, because invariants are smoother.</li>
-          <li><strong>Geometric adaptation with CasADi NLP</strong> &mdash; 0.0 mm endpoint error at offsets up to 20 cm with start+goal boundary enforcement.</li>
-          <li><strong>GPU-batched adaptation (CuSADi)</strong> &mdash; up to 387&times; speedup for RL training across thousands of parallel environments.</li>
-          <li><strong>Cross-embodiment execution</strong> &mdash; embodik IK maps adapted SE(3) trajectories to any robot's joint space at 60 &mu;s per step.</li>
+          <li><strong>Invariant action tokenization</strong> &mdash; DHB magnitude invariants make downstream tokenizers SE(3)-stable by construction.</li>
+          <li><strong>Better compression on smoother targets</strong> &mdash; FAST+DHB out-compresses FAST on raw coordinates while preserving geometric identity.</li>
+          <li><strong>Representation-backed adaptation</strong> &mdash; the same invariant trajectory can be replayed from new spatial configurations, and the current DHB action head shows this idea can be learned in a state-aware decoder.</li>
         </ol>
       </div>
     </div>
@@ -674,49 +659,6 @@
           </div>
         </div>
 
-      </div>
-    </div>
-  </div>
-</section>
-
-
-<!-- ═══════════════════════════════════════════════════════════ RELATED WORK -->
-<section class="section" style="padding:1.5rem 0;">
-  <div class="container">
-    <div class="columns is-centered">
-      <div class="column is-10">
-        <h2 class="section-title">Positioning</h2>
-        <div class="columns">
-          <div class="column">
-            <p style="font-size:0.92rem; line-height:1.7;">
-              <strong>vs relative actions (delta-EEF):</strong> Per-step relative actions are locally
-              frame-invariant, but the <em>sequence</em> is not. Our experiment: FAST on delta-EEF
-              shows 18.2% token change under SE(3) workspace shifts (vs 0.0% for DHB). LIBERO-PRO P2
-              confirms this — tool-frame-relative replay achieves 0/20 (same as raw replay).
-              DHB encodes the <em>global trajectory shape</em>, not just per-step deltas.<br><br>
-              <strong>vs FAST / OAT / ActionCodec:</strong> These tokenizers compress raw coordinates efficiently
-              but inherit coordinate-frame sensitivity. DHB-XR is not a replacement &mdash; it is a
-              <em>pre-processing layer</em> that makes any of them SE(3)-invariant. FAST+DHB achieves
-              49.8× compression with 0.0% instability.
-            </p>
-          </div>
-          <div class="column">
-            <p style="font-size:0.92rem; line-height:1.7;">
-              <strong>vs equivariant networks (EquivAct, RISE):</strong>
-              These learn equivariant features inside the policy network.
-              DHB-XR is orthogonal: it makes the <em>action representation itself</em> invariant,
-              so any architecture (equivariant or not) benefits. No architectural changes required.
-            </p>
-          </div>
-          <div class="column">
-            <p style="font-size:0.92rem; line-height:1.7;">
-              <strong>vs SpatialVLA / 3D-VLA:</strong>
-              These use 3D visual features for spatial reasoning.
-              DHB-XR operates on the <em>action side</em>, not the perception side.
-              Combining 3D-aware perception with invariant action tokenization is complementary.
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -780,41 +722,17 @@
           </div>
         </div>
 
-        <!-- Supplementary method figures -->
-        <div class="columns mt-4">
-          <div class="column is-6">
-            <div class="result-figure">
-              <img src="assets/fig6_3d_trajectory_adaptation.png" alt="3D trajectory adaptation: invariant shape preserved across different start poses" />
-              <p class="fig-caption">
-                The same invariant shape is decoded from four different start poses. The trajectory's intrinsic geometry is preserved exactly regardless of workspace placement.
-              </p>
-            </div>
-          </div>
-          <div class="column is-6">
-            <div class="result-figure">
-              <img src="assets/fig7_6d_adaptation_vs_affine.png" alt="6D adaptation comparison: DHB-XR vs affine rotation" />
-              <p class="fig-caption">
-                DHB-XR adapts around an obstacle with zero collisions. Affine rotation (the naive geometric baseline) clips the obstacle because it cannot reshape the trajectory.
-              </p>
-            </div>
-          </div>
-        </div>
-
         <div class="insight-box">
           <strong>Key insight:</strong> DHB-XR is not an alternative to FAST or OAT &mdash; it is a
           <em>composable representation layer</em>. Any existing tokenizer inherits perfect geometric
           stability simply by operating on DHB invariant input rather than raw coordinates.
-          The invariance extends to the full <strong>7-DOF action space</strong>: discrete gripper
-          events are mapped to normalized arc-length fractions along the trajectory,
-          making both continuous 6-DOF pose and discrete manipulation signals SE(3)-invariant
-          (see <a href="details.html#action-head">invariant action head architecture</a>).
+          The same representation can then be decoded from a new spatial configuration without changing
+          the underlying motion geometry (see <a href="details.html#action-head">the action-head details</a>).
         </div>
 
         <p class="has-text-grey is-size-7 mt-3">
-          End-to-end pipeline timing: encode ~60 ms (one-time), decode ~5&ndash;10 ms (SE(3) reconstruct), Fatrop NLP &lt;1 s, IK ~60 &mu;s/step
-          (see <a href="details.html#timing">pipeline timing</a>).
-          Motion database retrieval and geometric deduplication enabled by the same invariant representation
-          (see <a href="details.html#motion-db">detailed retrieval analysis</a>).
+          Secondary system details such as obstacle-aware adaptation, timing, motion-database retrieval, and OAT-specific comparisons are collected on the
+          <a href="archive.html">archive page</a> and in the <a href="details.html">details appendix</a>.
         </p>
 
       </div>
@@ -1065,20 +983,6 @@
 
         <!-- 3D TRAJECTORY DEMOS (hero video shown in hero section; start with SE(3) proof) -->
         <div class="demo-task-title">
-          <span class="perturb-pill is-purple">SE(3)</span>
-          <span class="perturb-pill is-green">invariance proof</span>
-          Same trajectory, 8 random rigid-body transforms &mdash; trajectories differ, tokens identical
-        </div>
-        <div class="video-card mb-4">
-          <video autoplay muted loop playsinline>
-            <source src="assets/demo_3d_se3_invariance.mp4" type="video/mp4" />
-          </video>
-          <div class="video-label comparison">
-            Left: 8 random SE(3)-transformed versions of the same motion &mdash; they look completely different. Right: DHB magnitude tokens for all 8 &mdash; perfectly overlapping (0.0% change). Mathematical guarantee, not learned.
-          </div>
-        </div>
-
-        <div class="demo-task-title">
           <span class="perturb-pill is-blue">6-DOF</span>
           <span class="perturb-pill is-green">adaptation</span>
           Full pose adaptation: DHB preserves shape, naive distorts
@@ -1129,7 +1033,7 @@
               <source src="assets/smolvla_fail_Y3cm.mp4" type="video/mp4" />
             </video>
             <div class="video-label naive">
-              SmolVLA closed-loop VLA at +3 cm Y &mdash; <strong>TASK FAILED</strong> (out-of-distribution actions)
+              Base SmolVLA closed-loop VLA at +3 cm Y &mdash; <strong>TASK FAILED</strong> (out-of-distribution actions)
             </div>
           </div>
         </div>
@@ -1161,76 +1065,117 @@
           that a VLA can learn from.
         </div>
 
+        <div class="box mb-4" style="background:#f8fafc; border:1px solid #dbeafe;">
+          <h4 class="subtitle is-6 mb-3" style="font-family:'Google Sans',sans-serif; color:#1d4ed8;">
+            Current SmolVLA + DHB Action Head Status
+          </h4>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:1rem; margin-bottom:1rem;">
+            <div style="background:#fff; border:1px solid #dbeafe; border-radius:10px; padding:1rem;">
+              <div style="font-weight:700; color:#6b7280; margin-bottom:0.5rem;">Plain Action Head</div>
+              <div style="display:flex; flex-direction:column; gap:0.5rem; font-size:0.88rem;">
+                <div style="background:#f8fafc; border:1px solid #e5e7eb; border-radius:8px; padding:0.6rem; text-align:center;">VLM features</div>
+                <div style="text-align:center; color:#94a3b8;">↓</div>
+                <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:0.6rem; text-align:center;">direct action regression</div>
+                <div style="text-align:center; color:#94a3b8;">↓</div>
+                <div style="background:#f8fafc; border:1px solid #e5e7eb; border-radius:8px; padding:0.6rem; text-align:center;">future action chunk</div>
+              </div>
+            </div>
+            <div style="background:#fff; border:1px solid #a7f3d0; border-radius:10px; padding:1rem;">
+              <div style="font-weight:700; color:#065f46; margin-bottom:0.5rem;">DHB Action Head</div>
+              <div style="display:flex; flex-direction:column; gap:0.5rem; font-size:0.88rem;">
+                <div style="background:#f8fafc; border:1px solid #e5e7eb; border-radius:8px; padding:0.6rem; text-align:center;">VLM features + current EE state</div>
+                <div style="text-align:center; color:#94a3b8;">↓</div>
+                <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:8px; padding:0.6rem; text-align:center;">predict DHB motion pattern</div>
+                <div style="text-align:center; color:#94a3b8;">↓</div>
+                <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:0.6rem; text-align:center;">decode from current state</div>
+                <div style="text-align:center; color:#94a3b8;">↓</div>
+                <div style="background:#f8fafc; border:1px solid #e5e7eb; border-radius:8px; padding:0.6rem; text-align:center;">future action chunk</div>
+              </div>
+            </div>
+          </div>
+          <p style="font-size:0.9rem; line-height:1.7; color:#374151;">
+            <strong>Intuition:</strong> a plain action head tries to regress the next action chunk directly from VLM features.
+            The DHB action head inserts a geometric bottleneck instead: it first predicts a compact
+            <strong>motion pattern</strong> in DHB invariant space, then decodes that pattern relative to the
+            robot's <strong>current state</strong>. In practice, it is trying to answer two questions:
+            what motion should happen next, and how should that motion be instantiated from where the arm actually is now?
+          </p>
+          <p style="font-size:0.9rem; line-height:1.7; color:#374151;">
+            The failure video above is the <strong>base SmolVLA baseline</strong>, not the current DHB action-head path.
+            In the latest SmolVLA validation, the state-aware <code>DHBActionHead</code> reaches
+            <strong>2 / 3 (66.7%)</strong> success at <code>0 cm</code> and <strong>1 / 3 (33.3%)</strong> at <code>+3 cm</code>
+            on the smoke checkpoint. That phase should be read as <strong>integration validation</strong>, not a final benchmark:
+            the state-drop bug is fixed, rotation runaway is gone, and the <code>embodik</code> execution path is stable,
+            but robustness is still limited by demo-specific placement error.
+          </p>
+          <p style="font-size:0.82rem; line-height:1.6; color:#6b7280; margin-bottom:0;">
+            Longer SmolVLA training improved supervised loss but not closed-loop success:
+            smoke <code>2/3, 1/3</code>; 50-epoch <code>1/3, 1/3</code>; 200-epoch <code>1/3, 1/3</code> at
+            <code>0 cm</code> and <code>+3 cm</code>, respectively. See
+            <a href="details.html#action-head">Details &amp; Appendix</a> for the current DHB action-head interpretation.
+          </p>
+        </div>
+
+        <div class="result-figure mb-4">
+          <img src="assets/action_head_checkpoint_comparison.png"
+               alt="SmolVLA DHB action head checkpoint comparison across smoke, full, and 200 epoch checkpoints" />
+          <p class="fig-caption">
+            Current checkpoint comparison for the state-aware DHB action head. The smoke checkpoint is still the best executable baseline:
+            <strong>2/3 at 0 cm, 1/3 at +3 cm</strong>. Longer training lowers supervised loss but does not improve closed-loop robustness.
+          </p>
+        </div>
+
+        <div class="demo-task-title">
+          <span class="perturb-pill is-blue">current DHB head</span>
+          <span class="perturb-pill is-green">smoke checkpoint</span>
+          Current state-aware SmolVLA + DHBActionHead rollouts
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:1rem; margin-bottom:1.25rem;">
+          <div class="video-card">
+            <video autoplay muted loop playsinline>
+              <source src="assets/smolvla_dhb_smoke_success_0cm.mp4" type="video/mp4" />
+            </video>
+            <div class="video-label dhb">
+              Current DHB head at 0 cm, <code>demo_0</code> &mdash; <strong>SUCCESS</strong>
+            </div>
+          </div>
+          <div class="video-card">
+            <video autoplay muted loop playsinline>
+              <source src="assets/smolvla_dhb_smoke_success_3cm.mp4" type="video/mp4" />
+            </video>
+            <div class="video-label dhb">
+              Current DHB head at +3 cm, <code>demo_0</code> &mdash; <strong>SUCCESS</strong>
+            </div>
+          </div>
+          <div class="video-card">
+            <video autoplay muted loop playsinline>
+              <source src="assets/smolvla_dhb_smoke_fail_0cm.mp4" type="video/mp4" />
+            </video>
+            <div class="video-label naive">
+              Current DHB head at 0 cm, <code>demo_1</code> &mdash; <strong>FAIL</strong> due to final placement miss
+            </div>
+          </div>
+        </div>
+
+        <p class="has-text-grey is-size-7 mb-4">
+          These are the newer smoke-diagnostic rollouts used for the current DHB action-head readout.
+          The main pattern is not random instability: <code>demo_0</code> is consistently recoverable, while the harder
+          demos fail late with a structured under-reach in <code>Y</code> and a smaller <code>Z</code> bias near placement.
+        </p>
+
         <p class="has-text-grey is-size-7 mb-4">
           Pipeline: DHB encode &rarr; CasADi NLP (goal-enforced) &rarr; embodik IK (0.47 mm mean error,
           <code>panda_hand_tcp</code> frame) &rarr; robosuite JOINT_POSITION PD (kp=150) &rarr; MuJoCo physics.
           Left: agentview. Right: eye-in-hand.
           DHB-XR videos are <strong>open-loop geometric adaptation</strong>, not closed-loop VLA inference.
-          SmolVLA runs closed-loop but receives out-of-distribution action tokens at the shifted position.
+          Base SmolVLA receives out-of-distribution action tokens at the shifted position; the newer
+          SmolVLA + DHB action-head path partially recovers but is not yet robust across all demos.
         </p>
-
-        <div class="demo-task-title">
-          <span class="perturb-pill is-blue">LIBERO-Spatial</span>
-          <span class="perturb-pill is-green">3 tasks</span>
-          Expert demonstrations — agentview + wrist camera
-        </div>
-        <div class="video-card mb-5">
-          <video autoplay muted loop playsinline>
-            <source src="assets/libero_task_gallery.mp4" type="video/mp4" />
-          </video>
-          <div class="video-label comparison">
-            Three LIBERO-Spatial manipulation tasks rendered at 256&times;256 via MuJoCo.
-            Left: scene overview. Right: eye-in-hand view.
-            DHB-XR is evaluated across all 10 tasks &times; 8 offset directions.
-          </div>
-        </div>
-
-        <!-- PRIMARY TECHNICAL COMPARISON -->
-        <div class="insight-box" style="margin-bottom:1.5rem;">
-          <strong>How to read the comparisons below:</strong>
-          Both panels start from the <em>same recorded expert demonstration</em>.
-          <span style="color:#2563eb;font-weight:600;">DHB-XR</span> encodes the trajectory as invariants
-          and decodes from the shifted start — endpoint error: <strong>0.0 mm</strong>.
-          <span style="color:#f97316;font-weight:600;">Naive Replay</span> re-executes the original actions
-          unchanged — endpoint error: <strong>= offset distance</strong>.
-        </div>
-
-        <!-- At 10 cm (5cm removed — 10cm is more visually decisive) -->
-        <p class="demo-task-title">
-          <span class="perturb-pill is-blue">10&thinsp;cm offset</span>
-          Trajectory adaptation &mdash; larger perturbation
-        </p>
-        <div class="video-card mb-5">
-          <video autoplay muted loop playsinline>
-            <source src="assets/demo_side_by_side_10cm.mp4" type="video/mp4" />
-          </video>
-          <div class="video-label comparison">
-            Left: DHB-XR &mdash; 0.0&thinsp;mm error
-            &nbsp;&nbsp;|&nbsp;&nbsp;
-            Right: Naive Replay &mdash; 100&thinsp;mm miss (error grows linearly with offset)
-          </div>
-        </div>
-
-        <!-- Error sweep -->
-        <p class="demo-task-title">
-          <span class="perturb-pill is-amber">0&ndash;20&thinsp;cm sweep</span>
-          Error grows with offset &mdash; DHB stays at zero
-        </p>
-        <div class="video-card mb-5">
-          <video autoplay muted loop playsinline>
-            <source src="assets/demo_offset_sweep.mp4" type="video/mp4" />
-          </video>
-          <div class="video-label comparison">
-            Naive Replay error scales linearly: 50&ndash;200&thinsp;mm across offsets.
-            DHB-XR: 0.0&thinsp;mm at all offsets. Averaged over 10 LIBERO-Spatial tasks &times; 8 directions.
-          </div>
-        </div>
-
 
         <p class="has-text-grey is-size-7 mt-3">
           Animations rendered at 1680&times;720 @ 30 fps from the DHB-XR geometric encoder.
-          Naive Replay = original trajectory replayed without adaptation.
-          DHB-XR = encode invariants from demo, decode from new start point.
+          Additional demos, task galleries, and extended sweep videos were moved to the
+          <a href="archive.html">archive page</a> to keep the main project page focused on the current core story.
         </p>
 
       </div>
@@ -1239,113 +1184,7 @@
 </section>
 
 
-<!-- ═══════════════════════════════════════════════════════════ DATA AUGMENTATION -->
-<section class="section" id="augmentation">
-  <div class="container">
-    <div class="columns is-centered">
-      <div class="column is-10">
-        <h2 class="section-title">Data Augmentation</h2>
-        <p class="section-subtitle">From 50 demonstrations to 450 in 18.8 seconds</p>
-
-        <div class="columns is-variable is-6 mt-4">
-          <div class="column is-6">
-            <h4 class="subtitle is-6" style="font-family:'Google Sans',sans-serif; font-weight:600;">
-              The bottleneck: collecting demonstrations is expensive
-            </h4>
-            <p style="font-size:0.92rem; line-height:1.7;">
-              VLA fine-tuning requires demonstrations at every workspace configuration the robot
-              will encounter. Collecting 50 demos takes an expert operator ~25 minutes.
-              Covering 9 spatial offsets would require 450 demos &mdash; nearly 4 hours of teleoperation
-              for a single task.
-            </p>
-          </div>
-          <div class="column is-6">
-            <h4 class="subtitle is-6" style="font-family:'Google Sans',sans-serif; font-weight:600;">
-              The solution: geometric augmentation at ~10 ms per trajectory
-            </h4>
-            <p style="font-size:0.92rem; line-height:1.7;">
-              DHB-XR encodes each demonstration once, then decodes adapted versions
-              at arbitrary offsets. 50 original demos become 450 augmented demos
-              (50 &times; 9 offsets) in <strong>18.8 seconds</strong> on a single CPU core.
-              Every augmented trajectory has <strong>0.0 mm geometric error</strong>
-              and produces identical DHB invariant tokens as the original.
-            </p>
-          </div>
-        </div>
-
-        <!-- Augmentation stats -->
-        <div class="columns mt-3 mb-4">
-          <div class="column has-text-centered">
-            <div style="font-size:2.5rem; font-weight:700; color:#7c3aed;">9&times;</div>
-            <div style="font-size:0.85rem; color:#6b7280;">augmentation factor<br/>(per demonstration)</div>
-          </div>
-          <div class="column has-text-centered">
-            <div style="font-size:2.5rem; font-weight:700; color:#059669;">18.8 s</div>
-            <div style="font-size:0.85rem; color:#6b7280;">total time for 450 demos<br/>(single CPU core)</div>
-          </div>
-          <div class="column has-text-centered">
-            <div style="font-size:2.5rem; font-weight:700; color:#2563eb;">0.0 mm</div>
-            <div style="font-size:0.85rem; color:#6b7280;">geometric error<br/>(all augmented trajectories)</div>
-          </div>
-          <div class="column has-text-centered">
-            <div style="font-size:2.5rem; font-weight:700; color:#dc2626;">0%</div>
-            <div style="font-size:0.85rem; color:#6b7280;">token change<br/>(DHB magnitude invariants)</div>
-          </div>
-        </div>
-
-        <!-- Augmentation LoRA results table (n=50, authoritative) -->
-        <div class="table-container mt-4 mb-2">
-          <table class="table is-bordered is-striped is-fullwidth" style="font-size:0.9rem;">
-            <thead>
-              <tr style="background:#f0f4ff;">
-                <th style="font-family:'Google Sans',sans-serif;">Model</th>
-                <th style="text-align:center; font-family:'Google Sans',sans-serif;">0 cm (baseline)</th>
-                <th style="text-align:center; font-family:'Google Sans',sans-serif;">1 cm offset</th>
-                <th style="text-align:center; font-family:'Google Sans',sans-serif;">3 cm offset</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong>Base SmolVLA</strong> <span style="font-size:0.78rem; color:#6b7280;">(no FT)</span></td>
-                <td style="text-align:center; font-weight:700; color:#059669;">70%</td>
-                <td style="text-align:center; font-weight:700; color:#d97706;">22%</td>
-                <td style="text-align:center; font-weight:700; color:#dc2626;">0%</td>
-              </tr>
-              <tr>
-                <td><strong>Original FT</strong> <span style="font-size:0.78rem; color:#6b7280;">(50 demos, no aug)</span></td>
-                <td style="text-align:center; font-weight:700; color:#d97706;">34%</td>
-                <td style="text-align:center; font-weight:700; color:#d97706;">22%</td>
-                <td style="text-align:center; font-weight:700; color:#dc2626;">0%</td>
-              </tr>
-              <tr style="background:#f0fdf4;">
-                <td><strong>DHB-aug FT</strong> <span style="font-size:0.78rem; color:#2563eb;">(ours)</span></td>
-                <td style="text-align:center; font-weight:700; color:#059669;">42%</td>
-                <td style="text-align:center; font-weight:700; color:#059669;">20%</td>
-                <td style="text-align:center; font-weight:700; color:#059669; " class="best">20%</td>
-              </tr>
-              <tr>
-                <td><strong>Naive-aug FT</strong> <span style="font-size:0.78rem; color:#6b7280;">(random jitter)</span></td>
-                <td style="text-align:center; font-weight:700; color:#059669;">46%</td>
-                <td style="text-align:center; font-weight:700; color:#d97706;">8%</td>
-                <td style="text-align:center; font-weight:700; color:#dc2626;">0%</td>
-              </tr>
-            </tbody>
-          </table>
-          <p style="font-size:0.78rem; color:#6b7280; margin-top:0.4rem;">
-            Success rate at Y-axis translational offsets. n=50 per condition (authoritative). Y+3 cm = 5.8 cm actual robot offset.
-          </p>
-        </div>
-
-        <div class="insight-box" style="border-left-color:#7c3aed;">
-          <strong>Results (n=50): geometric shape preservation matters at the 3 cm boundary.</strong>
-          DHB-aug FT achieves <strong>20% at 3 cm vs 8% for naive-aug</strong>, demonstrating that
-          geometric shape preservation matters — the geometry-aware augmentation produces 2.5&times;
-          more successful recoveries at the hardest offset tested. All fine-tuned models without
-          DHB augmentation reach 0% at 3 cm. Difference is in the right direction (p=0.15, approaching significance).
-          Full comparison: <a href="details.html#augmentation-lora">Details &amp; Appendix</a>.
-        </div>
-
-        <!-- ═══ LIBERO-PRO ROBUSTNESS ════════════════════════════════════ -->
+<!-- ═══ LIBERO-PRO ROBUSTNESS ════════════════════════════════════ -->
         <div id="libero-pro" style="margin-top:3rem; padding-top:2rem; border-top:2px solid #e5e7eb;">
           <h3 class="section-title" style="font-size:1.4rem; margin-bottom:0.4rem;">LIBERO-PRO Robustness</h3>
           <p class="section-subtitle" style="margin-bottom:1.5rem;">
@@ -1430,56 +1269,26 @@
           </div>
 
           <div class="insight-box" style="border-left-color:#059669;">
-            <strong>What this comparison reveals:</strong> LIBERO-PRO P2 swaps the plate position by +17&nbsp;cm
-            — a workspace layout change, not a subtle perturbation. Every VLA evaluated in the
-            LIBERO-PRO paper (OpenVLA, &#960;&#8320;, &#960;&#8320;.&#x35;) achieves <strong>0% success</strong>: their learned
-            visuomotor policies do not generalize to novel spatial configurations, even when the task
-            semantics are unchanged.
-
-            DHB-XR is not a VLA — it is a <em>geometric adaptation layer</em> that transforms a recorded
-            demonstration to a new workspace layout by solving for shape-preserving trajectories
-            (Fatrop NLP, ~750&nbsp;ms one-shot pre-computation before execution). The result —
-            <strong>90% success (18/20, p&nbsp;=&nbsp;1.68&times;10<sup>&minus;9</sup>)</strong> — quantifies the
-            <em>spatial generalization gap</em> in current VLAs: the gap between semantic understanding
-            (which VLAs have) and spatial robustness (which they lack). DHB-XR is designed to bridge
-            this gap as a composable spatial adaptation module sitting downstream of any VLA's
-            trajectory output, providing geometric robustness at near-zero additional data cost.
-
-            Notably, both tool-frame relative replay (0% — 0/20) and rigid translation of all waypoints
-            (0% — 0/20) also fail — demonstrating that the challenge is not coordinate frame choice but
-            <em>geometric shape preservation</em> under large workspace reconfiguration. Even tool-frame
-            replay, which should handle pure translations by expressing waypoints relative to the
-            end-effector, still fails when the plate moves 17&nbsp;cm because the spatial relationships
-            within the trajectory no longer match the new object geometry. Moving every waypoint by the
-            same offset vector likewise shifts the trajectory in space but destroys the relative geometry
-            that makes the grasp physically feasible. DHB-XR solves the full shape-preservation problem.
+            <strong>How to read this result:</strong> LIBERO-PRO P2 is a spatial-gap diagnostic, not a claim that
+            DHB-XR is already a drop-in closed-loop VLA replacement. The comparison shows that when the workspace
+            layout changes by +17&nbsp;cm, learned VLA action outputs and simple replay baselines collapse,
+            while <strong>open-loop DHB adaptation</strong> still preserves the required motion geometry.
+            That is evidence that spatial robustness is missing in current action representations.
           </div>
           <p class="has-text-grey is-size-7 mt-2">
             DHB-XR is open-loop geometric adaptation, not closed-loop VLA inference.
             VLA baselines from the LIBERO-PRO benchmark paper. p-value computed via Fisher exact test
             (DHB-XR 18/20 vs. all-zeros baselines).
           </p>
+        </div>
 
-          <!-- P2 video subsection -->
-          <div style="margin-top:2rem;">
-            <h4 style="font-size:1.1rem; font-weight:700; color:#1e293b; margin-bottom:0.5rem;">
-              P2 Trial Footage
-            </h4>
-            <p style="font-size:0.9rem; color:#6b7280; margin-bottom:1.25rem;">
-              LIBERO-PRO P2 environment: plate displaced +17&nbsp;cm in Y. DHB-XR solves the adapted trajectory in ~750&nbsp;ms before execution begins.
-            </p>
-
-            <!-- Side-by-side comparison video (most impactful) -->
-            <div style="margin-bottom:1.5rem;">
-              <video autoplay loop muted playsinline style="width:100%; max-width:640px; border-radius:10px; display:block; margin:0 auto; box-shadow:0 4px 16px rgba(0,0,0,0.12);">
-                <source src="assets/dhb_p2_comparison.mp4" type="video/mp4">
-              </video>
-              <p style="text-align:center; font-size:0.85rem; color:#6b7280; margin-top:0.6rem;">
-                <strong>Side-by-side:</strong> Raw replay (left) fails every trial — the grasper reaches for the original plate position. DHB-XR adapted replay (right) succeeds 90% of the time (18/20, p&nbsp;=&nbsp;1.68&times;10<sup>&minus;9</sup>).
-              </p>
-            </div>
-
-          </div>
+        <div class="box mt-5" style="background:#f8fafc; border:1px dashed #cbd5e1;">
+          <h4 class="subtitle is-6 mb-2" style="font-family:'Google Sans',sans-serif;">Archived Secondary Material</h4>
+          <p style="font-size:0.9rem; color:#475569; line-height:1.7; margin-bottom:0;">
+            Related-work positioning, extended demo galleries, preliminary augmentation evidence, obstacle-adaptation figures,
+            and other secondary plots were moved to <a href="archive.html">archive.html</a> so this main page stays focused on the
+            current central story.
+          </p>
         </div>
 
       </div>

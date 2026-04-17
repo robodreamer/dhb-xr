@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DHB-XR Archive</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Noto+Sans:wght@400;700&family=Source+Serif+Pro:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --primary: #2563eb;
+      --dark: #111827;
+      --gray: #6b7280;
+    }
+    body {
+      font-family: 'Noto Sans', sans-serif;
+      color: var(--dark);
+      background: #fff;
+    }
+    .hero-archive {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #1e3a5f 100%);
+      color: white;
+      padding: 3rem 0 2.5rem;
+    }
+    .title-main {
+      font-family: 'Google Sans', 'Source Serif Pro', serif;
+      font-weight: 700;
+      color: white;
+    }
+    .section-title {
+      font-family: 'Google Sans', 'Source Serif Pro', serif;
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      border-bottom: 3px solid var(--primary);
+      display: inline-block;
+      padding-bottom: 0.35rem;
+    }
+    .result-figure, .video-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      background: #fff;
+    }
+    .result-figure img, .video-card video {
+      width: 100%;
+      display: block;
+    }
+    .fig-caption, .video-label {
+      padding: 0.7rem 0.9rem;
+      font-size: 0.84rem;
+      color: var(--gray);
+      background: #f8fafc;
+      border-top: 1px solid #e5e7eb;
+    }
+    .pill {
+      display: inline-block;
+      background: #dbeafe;
+      color: #1d4ed8;
+      border-radius: 999px;
+      padding: 0.15rem 0.7rem;
+      font-size: 0.78rem;
+      font-weight: 700;
+      margin-right: 0.35rem;
+    }
+    .note-box {
+      background: linear-gradient(135deg, #eff6ff, #f8fafc);
+      border-left: 4px solid var(--primary);
+      border-radius: 0 8px 8px 0;
+      padding: 1rem 1.25rem;
+      margin: 1rem 0 1.5rem;
+    }
+  </style>
+</head>
+<body>
+<section class="hero-archive">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-10">
+        <p class="mb-3">
+          <a href="index.html" style="color:#93c5fd; font-weight:600;">&larr; Back to Main Project Page</a>
+          &nbsp;&nbsp;
+          <a href="details.html" style="color:#93c5fd; font-weight:600;">Details &amp; Appendix</a>
+        </p>
+        <h1 class="title title-main is-2">DHB-XR Archive</h1>
+        <p style="max-width:760px; color:rgba(255,255,255,0.8); line-height:1.7;">
+          Secondary material moved off the main page to reduce clutter. These assets are still useful, but they are not the
+          shortest path through the current story: invariant mechanism, open-loop geometric adaptation, and the present
+          status of the state-aware DHB action head.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-10">
+        <h2 class="section-title">Positioning</h2>
+        <div class="note-box">
+          DHB-XR is best understood as an <strong>action-side representation layer</strong>. It composes with tokenizers and
+          policies rather than replacing them, and its main value is making trajectory identity stable under workspace changes.
+        </div>
+        <div class="columns">
+          <div class="column">
+            <p><strong>vs relative actions:</strong> Per-step deltas are locally frame-invariant, but the whole sequence still changes when the scene moves. DHB preserves the global motion pattern.</p>
+          </div>
+          <div class="column">
+            <p><strong>vs FAST / OAT / ActionCodec:</strong> These compress raw coordinates efficiently but inherit frame sensitivity. DHB-XR makes those action targets spatially stable before tokenization.</p>
+          </div>
+          <div class="column">
+            <p><strong>vs equivariant or 3D-aware policies:</strong> Those approaches act on the network/perception side. DHB-XR is orthogonal because it changes the action representation itself.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:#f8fafc;">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-10">
+        <h2 class="section-title">Extended Videos</h2>
+        <p class="mb-4" style="color:#475569;">Useful supporting media that was removed from the landing page to keep the demo narrative tighter.</p>
+
+        <div class="columns">
+          <div class="column is-4">
+            <div class="video-card">
+              <video autoplay muted loop playsinline>
+                <source src="assets/libero_task_gallery.mp4" type="video/mp4" />
+              </video>
+              <div class="video-label">Task gallery across multiple LIBERO-Spatial scenes.</div>
+            </div>
+          </div>
+          <div class="column is-4">
+            <div class="video-card">
+              <video autoplay muted loop playsinline>
+                <source src="assets/demo_side_by_side_10cm.mp4" type="video/mp4" />
+              </video>
+              <div class="video-label">10 cm side-by-side geometric replay comparison.</div>
+            </div>
+          </div>
+          <div class="column is-4">
+            <div class="video-card">
+              <video autoplay muted loop playsinline>
+                <source src="assets/demo_offset_sweep.mp4" type="video/mp4" />
+              </video>
+              <div class="video-label">Offset sweep showing DHB replay staying locked while naive replay drifts linearly.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="columns mt-4">
+          <div class="column is-6">
+            <div class="video-card">
+              <video autoplay muted loop playsinline>
+                <source src="assets/demo_3d_se3_invariance.mp4" type="video/mp4" />
+              </video>
+              <div class="video-label">SE(3) invariance proof: trajectories differ in space, DHB tokens stay identical.</div>
+            </div>
+          </div>
+          <div class="column is-6">
+            <div class="result-figure">
+              <img src="assets/fig7_6d_adaptation_vs_affine.png" alt="Obstacle adaptation comparison" />
+              <div class="fig-caption">Obstacle-aware adaptation comparison that is informative but secondary to the current main-page story.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-10">
+        <h2 class="section-title">Preliminary Augmentation Evidence</h2>
+        <p class="mb-3" style="color:#475569;">
+          This section was demoted because the augmentation evidence is still preliminary relative to the stronger current stories.
+          It is still useful as a directional result.
+        </p>
+        <div class="result-figure">
+          <img src="assets/augmentation_comparison.png" alt="Preliminary augmentation comparison" />
+          <div class="fig-caption">
+            Geometry-aware augmentation appears to help at the offset boundary, but this is not yet the headline result.
+            Treat it as supporting evidence, not the central claim.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:#f8fafc;">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-10">
+        <h2 class="section-title">Older P2 Story</h2>
+        <div class="note-box">
+          The original LIBERO-PRO P2 open-loop replay comparison is still informative as a spatial-gap diagnostic, but it is no longer the best headline for the current project page because it does not reflect the latest embodied action-head status.
+        </div>
+        <div class="columns">
+          <div class="column is-7">
+            <div class="video-card">
+              <video autoplay muted loop playsinline>
+                <source src="assets/dhb_p2_comparison.mp4" type="video/mp4" />
+              </video>
+              <div class="video-label">Archived P2 open-loop comparison: raw replay fails, DHB-adapted replay succeeds.</div>
+            </div>
+          </div>
+          <div class="column is-5">
+            <p><span class="pill">archived</span><span class="pill">open-loop</span></p>
+            <p style="line-height:1.7; color:#475569;">
+              Keep this as supporting context, not as the current “winning result.” It is still useful for explaining the
+              spatial generalization gap, but the landing page is better when centered on the invariant mechanism and the
+              current DHB action-head validation story.
+            </p>
+          </div>
+        </div>
+
+        <div style="margin-top:2rem;">
+          <p style="font-size:1rem; font-weight:700; color:#1e293b; margin-bottom:0.5rem;">P2 Trial Footage</p>
+          <p style="font-size:0.9rem; color:#6b7280; margin-bottom:1.25rem;">
+            LIBERO-PRO P2 environment: plate displaced +17&nbsp;cm in Y. DHB-XR solves the adapted trajectory once before execution begins.
+          </p>
+          <div class="video-card" style="max-width:760px;">
+            <video autoplay muted loop playsinline>
+              <source src="assets/dhb_p2_comparison.mp4" type="video/mp4" />
+            </video>
+            <div class="video-label">
+              Raw replay (left) reaches for the original plate position, while DHB-adapted replay (right) preserves the required placement geometry under the P2 swap.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+</body>
+</html>

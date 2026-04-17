@@ -753,7 +753,7 @@
     <div class="columns is-centered">
       <div class="column is-10">
         <h2 class="section-title">Invariant Action Head</h2>
-        <p class="section-subtitle">Replace the action expert — predict SE(3)-invariant tokens directly</p>
+        <p class="section-subtitle">SmolVLA-based validation of a state-aware DHB action decoder</p>
 
         <!-- Architecture pipeline -->
         <div class="pipeline-steps">
@@ -798,14 +798,14 @@
           </div>
           <div class="column">
             <div class="box" style="border-top:3px solid var(--success); text-align:center;">
-              <div style="font-size:1.8rem; font-weight:800; color:var(--success);">0.205 &rarr; 0.024</div>
-              <div style="font-size:0.85rem; color:var(--gray); margin-top:0.25rem;">Training loss<br/>(200 epochs)</div>
+              <div style="font-size:1.8rem; font-weight:800; color:var(--success);">2 / 3</div>
+              <div style="font-size:0.85rem; color:var(--gray); margin-top:0.25rem;">Smoke checkpoint success<br/>at 0 cm</div>
             </div>
           </div>
           <div class="column">
             <div class="box" style="border-top:3px solid #d97706; text-align:center;">
-              <div style="font-size:1.8rem; font-weight:800; color:#d97706;">0.97</div>
-              <div style="font-size:0.85rem; color:var(--gray); margin-top:0.25rem;">Avg correlation<br/>(pred vs GT, normalized)</div>
+              <div style="font-size:1.8rem; font-weight:800; color:#d97706;">0.47 mm</div>
+              <div style="font-size:0.85rem; color:var(--gray); margin-top:0.25rem;">Mean IK / FK error<br/>across validated checkpoints</div>
             </div>
           </div>
         </div>
@@ -813,10 +813,70 @@
         <!-- Insight box -->
         <div class="insight-box mt-4">
           <i class="fas fa-lightbulb" style="color:var(--primary); margin-right:0.5rem;"></i>
-          Conventional VLA action heads predict Cartesian deltas &mdash; coordinates that change entirely
-          under workspace shift. The DHBActionHead predicts geometric invariants that are identical
-          regardless of where the robot is positioned. If this approach succeeds, it would eliminate
-          the need for spatial data augmentation entirely.
+          <strong>Core intuition:</strong> the DHB action head is not trying to directly guess the next absolute action chunk.
+          It predicts a structured motion description first, then decodes that description relative to the
+          <strong>current end-effector state</strong>. Conceptually, it answers:
+          <em>what motion pattern should happen next?</em> and <em>how should that pattern be realized from where the robot is now?</em>
+        </div>
+
+        <div class="insight-box mt-4">
+          <i class="fas fa-lightbulb" style="color:var(--primary); margin-right:0.5rem;"></i>
+          The important result from the SmolVLA phase is not that the action head solved spatial
+          generalization outright. It is that the <code>DHBActionHead</code> is now <strong>wired correctly</strong>:
+          the current robot state is forwarded, the old rotation-runaway failure is gone, and the
+          decoded trajectory executes cleanly through <code>embodik</code>. The remaining limitation is
+          demo-specific placement robustness, not a broken DHB representation or IK layer.
+        </div>
+
+        <div class="table-container mt-4 mb-2">
+          <table class="table is-bordered is-striped is-fullwidth" style="font-size:0.9rem;">
+            <thead>
+              <tr style="background:#f0f4ff;">
+                <th style="font-family:'Google Sans',sans-serif;">Checkpoint</th>
+                <th style="text-align:center; font-family:'Google Sans',sans-serif;">Best loss</th>
+                <th style="text-align:center; font-family:'Google Sans',sans-serif;">0 cm</th>
+                <th style="text-align:center; font-family:'Google Sans',sans-serif;">+3 cm</th>
+                <th style="font-family:'Google Sans',sans-serif;">Interpretation</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="background:#eff6ff;">
+                <td><strong>Smoke</strong> <span style="font-size:0.78rem; color:#6b7280;">(10 ep)</span></td>
+                <td style="text-align:center;"><strong>0.94095</strong></td>
+                <td style="text-align:center; font-weight:700; color:#059669;">2 / 3</td>
+                <td style="text-align:center; font-weight:700; color:#d97706;">1 / 3</td>
+                <td style="font-size:0.82rem; color:#2563eb;">Best executable baseline for the current SmolVLA path</td>
+              </tr>
+              <tr>
+                <td><strong>Full</strong> <span style="font-size:0.78rem; color:#6b7280;">(50 ep)</span></td>
+                <td style="text-align:center;">0.69913</td>
+                <td style="text-align:center;">1 / 3</td>
+                <td style="text-align:center;">1 / 3</td>
+                <td style="font-size:0.82rem; color:#6b7280;">Lower train loss, no closed-loop improvement</td>
+              </tr>
+              <tr>
+                <td><strong>Longer</strong> <span style="font-size:0.78rem; color:#6b7280;">(200 ep)</span></td>
+                <td style="text-align:center;">0.06337</td>
+                <td style="text-align:center;">1 / 3</td>
+                <td style="text-align:center;">1 / 3</td>
+                <td style="font-size:0.82rem; color:#6b7280;">Training fit improved sharply, robustness did not</td>
+              </tr>
+            </tbody>
+          </table>
+          <p style="font-size:0.78rem; color:#6b7280; margin-top:0.4rem;">
+            Three-seed evaluation corresponds to three underlying demos: <code>demo_0</code>, <code>demo_1</code>, and <code>demo_10</code>.
+            The apparent seed effect is really a per-demo robustness effect.
+          </p>
+        </div>
+
+        <div class="result-figure mb-4">
+          <img src="assets/action_head_placement_diagnostics.png"
+               alt="Smoke diagnostic placement bias for the current DHB action head" />
+          <p class="fig-caption">
+            The current failure mode is structured. Successful <code>demo_0</code> runs finish closer to the plate center in <code>Y</code>,
+            while the harder demos cluster further behind the target with a smaller positive <code>Z</code> bias. IK stays near <strong>0.47 mm</strong>,
+            so the dominant remaining error is placement robustness rather than solver instability.
+          </p>
         </div>
 
         <!-- Status callout -->
@@ -827,10 +887,10 @@
                 <i class="fas fa-flask"></i>&nbsp; Current Status (honest)
               </p>
               <ul style="font-size:0.9rem; color:#78350f; line-height:1.7; padding-left:1.2rem; margin:0;">
-                <li><strong>Training:</strong> loss&nbsp;=&nbsp;0.024, r&nbsp;=&nbsp;0.97 correlation (200&nbsp;epochs, per-channel normalized, horizon&nbsp;=&nbsp;100)</li>
-                <li><strong>Single-demo proof-of-concept:</strong> 100% at 0&nbsp;cm, 100% at 3&nbsp;cm via embodik IK pipeline</li>
-                <li><strong>Multi-demo generalization:</strong> limited by prediction error (~40&nbsp;mm) and OSC controller non-determinism</li>
-                <li><strong>DHB invariants are the correct target</strong> (SE(3)-invariant) — the limitation is the execution pipeline, not the representation</li>
+                <li><strong>The integration bug is fixed:</strong> the SmolVLA path now forwards the current state through the adapter instead of silently dropping it.</li>
+                <li><strong>The smoke checkpoint is the best current baseline:</strong> <code>2 / 3</code> at <code>0 cm</code>, <code>1 / 3</code> at <code>+3 cm</code>.</li>
+                <li><strong>Longer training did not help:</strong> 50-epoch and 200-epoch checkpoints stayed at <code>1 / 3</code>, <code>1 / 3</code> despite much lower supervised loss.</li>
+                <li><strong>The remaining error is structured:</strong> hard demos under-reach in <code>Y</code> and stay slightly high in <code>Z</code> during final placement.</li>
               </ul>
             </div>
           </div>
@@ -840,14 +900,22 @@
                 <i class="fas fa-check-circle"></i>&nbsp; Architecture Contribution
               </p>
               <ul style="font-size:0.9rem; color:#065f46; line-height:1.7; padding-left:1.2rem; margin:0;">
-                <li>DHBActionHead demonstrates <strong>VLM&rarr;invariant learnability</strong> (r&nbsp;=&nbsp;0.97): a frozen VLM backbone can be steered to predict SE(3)-invariant tokens</li>
-                <li>The embodik IK execution path works when prediction quality is sufficient</li>
-                <li><strong>Path to generalization:</strong> more training data (diverse spatial configurations) and joint-space action prediction instead of OSC deltas</li>
-                <li><strong>Long-term vision:</strong> DHB&nbsp;+&nbsp;VLA hybrid where the VLA provides a semantic goal and DHB provides spatial trajectory adaptation</li>
+                <li><strong>DHBActionHead is functionally validated</strong> as a structured, state-aware decoder rather than a plain open-loop action regressor.</li>
+                <li><strong>The execution stack is sound:</strong> <code>embodik</code> stays near <code>0.47 mm</code> mean FK error across smoke, 50-epoch, and 200-epoch checkpoints.</li>
+                <li><strong>The bottleneck is upstream policy quality, not IK:</strong> failure cases are demo-specific placement-margin misses, not decoding collapse.</li>
+                <li><strong>Recommended next step:</strong> carry the validated DHB action-head design into stronger backbones such as StarVLA rather than simply training SmolVLA longer.</li>
               </ul>
             </div>
           </div>
         </div>
+
+        <p class="has-text-grey is-size-7 mt-3">
+          Representative final placement offsets from the smoke diagnostic run at <code>0 cm</code>:
+          successful <code>demo_0</code> finished near <code>[0.018, -0.020, 0.072]</code> m relative to the plate,
+          while failing <code>demo_1</code> and <code>demo_10</code> finished near
+          <code>[0.001, -0.047, 0.075]</code> and <code>[-0.006, -0.055, 0.073]</code> m. This matches the
+          current read that the remaining problem is final-placement margin in <code>Y</code>, with a smaller bias in <code>Z</code>.
+        </p>
 
       </div>
     </div>
