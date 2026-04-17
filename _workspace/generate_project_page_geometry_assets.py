@@ -539,8 +539,8 @@ def save_fig7(payload: dict[str, np.ndarray | dict], task: TaskSpec) -> None:
     max_vertical_gap_cm = float(np.max(np.abs(fatrop_pos[:, 2] - affine_pos[:, 2])) * 100.0)
     mid_gap_cm = float(np.linalg.norm(fatrop_pos[mid_idx] - affine_pos[mid_idx]) * 100.0)
 
-    fig = plt.figure(figsize=(13.8, 7.0), facecolor="white")
-    gs = fig.add_gridspec(2, 2, width_ratios=[1.8, 0.9], height_ratios=[1.0, 0.78], wspace=0.12, hspace=0.20)
+    fig = plt.figure(figsize=(14.0, 7.1), facecolor="white")
+    gs = fig.add_gridspec(2, 2, width_ratios=[1.7, 1.0], height_ratios=[1.0, 1.0], wspace=0.16, hspace=0.20)
 
     ax_main = fig.add_subplot(gs[:, 0], projection="3d")
     set_light_3d(ax_main)
@@ -576,13 +576,17 @@ def save_fig7(payload: dict[str, np.ndarray | dict], task: TaskSpec) -> None:
     )
     ax_main.scatter(*fatrop_pos[0], c="#2563eb", s=52, marker="o", depthshade=False)
     ax_main.scatter(*fatrop_pos[-1], c="#16a34a", s=80, marker="*", depthshade=False)
-    start_rot = Rotation.from_quat([case["fatrop_quat"][0, 1], case["fatrop_quat"][0, 2], case["fatrop_quat"][0, 3], case["fatrop_quat"][0, 0]]).as_matrix()
-    goal_rot = Rotation.from_quat([case["fatrop_quat"][-1, 1], case["fatrop_quat"][-1, 2], case["fatrop_quat"][-1, 3], case["fatrop_quat"][-1, 0]]).as_matrix()
+    start_rot = Rotation.from_quat(
+        [case["fatrop_quat"][0, 1], case["fatrop_quat"][0, 2], case["fatrop_quat"][0, 3], case["fatrop_quat"][0, 0]]
+    ).as_matrix()
+    goal_rot = Rotation.from_quat(
+        [case["fatrop_quat"][-1, 1], case["fatrop_quat"][-1, 2], case["fatrop_quat"][-1, 3], case["fatrop_quat"][-1, 0]]
+    ).as_matrix()
     draw_frame(ax_main, fatrop_pos[0], start_rot, length=0.03, linewidth=1.4)
     draw_frame(ax_main, fatrop_pos[-1], goal_rot, length=0.03, linewidth=1.4)
     equalize(ax_main, all_pos)
     ax_main.view_init(elev=28, azim=-54)
-    ax_main.set_title("3D trajectory comparison", pad=12, fontsize=14, fontweight="bold")
+    ax_main.set_title("3D comparison", pad=12, fontsize=14, fontweight="bold")
     ax_main.set_xlabel("x (m)")
     ax_main.set_ylabel("y (m)")
     ax_main.set_zlabel("z (m)")
@@ -604,65 +608,78 @@ def save_fig7(payload: dict[str, np.ndarray | dict], task: TaskSpec) -> None:
         color="#334155",
     )
 
-    ax_zoom = fig.add_subplot(gs[0, 1], projection="3d")
-    set_light_3d(ax_zoom)
-    draw_reference_plane(ax_zoom, all_pos, color="#e2e8f0", alpha=0.28)
-    sl = slice(max(0, mid_idx - 8), min(len(fatrop_pos_s), mid_idx + 50))
-    ax_zoom.plot(demo_pos_s[sl, 0], demo_pos_s[sl, 1], demo_pos_s[sl, 2], color="#94a3b8", linewidth=1.9, linestyle="--", alpha=0.9)
-    ax_zoom.plot(affine_pos_s[sl, 0], affine_pos_s[sl, 1], affine_pos_s[sl, 2], color="#f59e0b", linewidth=2.2, linestyle=(0, (5, 2)), alpha=0.98)
-    ax_zoom.plot(fatrop_pos_s[sl, 0], fatrop_pos_s[sl, 1], fatrop_pos_s[sl, 2], color="#2563eb", linewidth=2.8, alpha=0.98)
-    ax_zoom.scatter(*fatrop_pos[mid_idx], c="#2563eb", s=34, depthshade=False)
-    ax_zoom.scatter(*affine_pos[mid_idx], c="#f59e0b", s=30, depthshade=False)
-    zoom_stack = np.vstack([demo_pos_s[sl], fatrop_pos_s[sl], affine_pos_s[sl]])
-    equalize(ax_zoom, zoom_stack)
-    center = (fatrop_pos[mid_idx] + affine_pos[mid_idx]) / 2.0
-    ax_zoom.set_xlim(center[0] - 0.09, center[0] + 0.09)
-    ax_zoom.set_ylim(center[1] - 0.09, center[1] + 0.09)
-    ax_zoom.set_zlim(center[2] - 0.05, center[2] + 0.08)
-    ax_zoom.view_init(elev=28, azim=-54)
-    ax_zoom.set_title("mid-arc zoom", pad=10, fontsize=12.5, fontweight="bold")
-    ax_zoom.set_xlabel("x")
-    ax_zoom.set_ylabel("y")
-    ax_zoom.set_zlabel("z")
-    ax_zoom.text2D(
-        0.05,
-        0.87,
-        "Blue keeps the side-sweep and lift.\nOrange cuts inward through the middle.",
-        transform=ax_zoom.transAxes,
+    ax_side = fig.add_subplot(gs[0, 1])
+    ax_side.plot(demo_pos_s[:, 1], demo_pos_s[:, 2], color="#94a3b8", linewidth=2.0, linestyle="--", alpha=0.95, label="demo")
+    ax_side.plot(
+        affine_pos_s[:, 1],
+        affine_pos_s[:, 2],
+        color="#f59e0b",
+        linewidth=2.4,
+        linestyle=(0, (5, 2)),
+        alpha=0.98,
+        label="endpoint-only warp",
+    )
+    ax_side.plot(fatrop_pos_s[:, 1], fatrop_pos_s[:, 2], color="#2563eb", linewidth=2.9, alpha=0.98, label="DHB retarget")
+    ax_side.scatter(fatrop_pos[mid_idx, 1], fatrop_pos[mid_idx, 2], c="#2563eb", s=28, zorder=5)
+    ax_side.scatter(affine_pos[mid_idx, 1], affine_pos[mid_idx, 2], c="#f59e0b", s=28, zorder=5)
+    ax_side.annotate(
+        "lift and side-sweep preserved",
+        xy=(fatrop_pos[mid_idx, 1], fatrop_pos[mid_idx, 2]),
+        xytext=(fatrop_pos[mid_idx, 1] - 0.11, fatrop_pos[mid_idx, 2] + 0.04),
+        arrowprops=dict(arrowstyle="->", color="#2563eb", lw=1.4),
+        fontsize=8.8,
+        color="#1d4ed8",
+        bbox=dict(boxstyle="round,pad=0.25", facecolor="#eff6ff", edgecolor="#93c5fd"),
+    )
+    ax_side.annotate(
+        "interior path collapses",
+        xy=(affine_pos[mid_idx, 1], affine_pos[mid_idx, 2]),
+        xytext=(affine_pos[mid_idx, 1] + 0.02, affine_pos[mid_idx, 2] - 0.05),
+        arrowprops=dict(arrowstyle="->", color="#b45309", lw=1.4),
         fontsize=8.6,
-        color="#334155",
+        color="#92400e",
+        bbox=dict(boxstyle="round,pad=0.25", facecolor="#fffbeb", edgecolor="#fcd34d"),
+    )
+    ax_side.set_title("side view (y-z)", fontsize=12.5, fontweight="bold", pad=8)
+    ax_side.set_xlabel("y (m)")
+    ax_side.set_ylabel("z (m)")
+    ax_side.grid(alpha=0.18)
+
+    ax_top = fig.add_subplot(gs[1, 1])
+    ax_top.plot(demo_pos_s[:, 0], demo_pos_s[:, 1], color="#94a3b8", linewidth=2.0, linestyle="--", alpha=0.95)
+    ax_top.plot(affine_pos_s[:, 0], affine_pos_s[:, 1], color="#f59e0b", linewidth=2.4, linestyle=(0, (5, 2)), alpha=0.98)
+    ax_top.plot(fatrop_pos_s[:, 0], fatrop_pos_s[:, 1], color="#2563eb", linewidth=2.9, alpha=0.98)
+    ax_top.scatter(fatrop_pos[0, 0], fatrop_pos[0, 1], c="#2563eb", s=28, zorder=5)
+    ax_top.scatter(fatrop_pos[-1, 0], fatrop_pos[-1, 1], c="#16a34a", s=48, marker="*", zorder=5)
+    ax_top.set_title("top view (x-y)", fontsize=12.5, fontweight="bold", pad=8)
+    ax_top.set_xlabel("x (m)")
+    ax_top.set_ylabel("y (m)")
+    ax_top.grid(alpha=0.18)
+    ax_top.text(0.08, 0.88, "same new start", transform=ax_top.transAxes, ha="left", va="center", fontsize=8.7, color="#1d4ed8", fontweight="bold", bbox=dict(boxstyle="round,pad=0.28", facecolor="#eff6ff", edgecolor="#bfdbfe"))
+    ax_top.text(0.40, 0.88, "same new goal", transform=ax_top.transAxes, ha="left", va="center", fontsize=8.7, color="#166534", fontweight="bold", bbox=dict(boxstyle="round,pad=0.28", facecolor="#f0fdf4", edgecolor="#86efac"))
+    ax_top.text(0.69, 0.88, f"{mid_gap_cm:.1f} cm interior gap", transform=ax_top.transAxes, ha="left", va="center", fontsize=8.6, color="#9a3412", fontweight="bold", bbox=dict(boxstyle="round,pad=0.28", facecolor="#fff7ed", edgecolor="#fdba74"))
+    ax_top.text(
+        0.03,
+        0.05,
+        f"goal orientation error {case['goal_quat_error']:.1e}   |   max lateral gap {max_lateral_gap_cm:.1f} cm   |   max vertical gap {max_vertical_gap_cm:.1f} cm",
+        transform=ax_top.transAxes,
+        ha="left",
+        va="bottom",
+        fontsize=8.6,
+        color="#475569",
     )
 
-    ax_m = fig.add_subplot(gs[1, 1])
-    ax_m.axis("off")
-    ax_m.set_title("What changes, what stays fixed", fontsize=13, fontweight="bold", pad=8)
-    metric_lines = [
-        ("new start pose", "matched"),
-        ("new goal pose", "matched"),
-        ("goal orientation error", f"{case['goal_quat_error']:.1e}"),
-        ("max lateral gap", f"{max_lateral_gap_cm:.1f} cm"),
-        ("max vertical gap", f"{max_vertical_gap_cm:.1f} cm"),
-        ("mid-arc separation", f"{mid_gap_cm:.1f} cm"),
-        ("mean interior gap", f"{case['mean_deviation_cm']:.1f} cm"),
-    ]
-    y = 0.93
-    for label, value in metric_lines:
-        draw_round_box(ax_m, (0.04, y - 0.11), (0.92, 0.12), "#f8fafc", ec="#cbd5e1")
-        ax_m.text(0.08, y - 0.045, label, transform=ax_m.transAxes, ha="left", va="center", fontsize=8.8, color="#475569")
-        ax_m.text(0.92, y - 0.045, value, transform=ax_m.transAxes, ha="right", va="center", fontsize=10.6, color="#0f172a", fontweight="bold")
-        y -= 0.145
-
-    fig.suptitle("Controlled 6D DHB Retargeting", fontsize=18, fontweight="bold", y=0.985)
+    fig.suptitle("Controlled 6D DHB Retargeting", fontsize=17, fontweight="bold", y=0.955)
     fig.text(
         0.5,
-        0.945,
+        0.91,
         "Both methods satisfy the new boundary poses. DHB retargeting preserves the interior lifted arc and lateral geometry instead of collapsing toward an endpoint-only warp.",
         ha="center",
         va="center",
-        fontsize=10,
+        fontsize=9.6,
         color="#475569",
     )
-    fig.subplots_adjust(top=0.89, left=0.06, right=0.98, bottom=0.08)
+    fig.subplots_adjust(top=0.86, left=0.06, right=0.98, bottom=0.08)
     fig.savefig(FIG7_PATH, facecolor="white", bbox_inches="tight")
     plt.close(fig)
 
@@ -848,109 +865,127 @@ def save_teaser(payload: dict[str, np.ndarray | dict], task: TaskSpec) -> None:
     raw_replay = payload["raw_replay"]
     demo_shifted = payload["demo_shifted"]
     regions = payload["regions"]
+    case = build_controlled_6d_case()
+    _, demo_pos_s = smooth_curve(case["demo_pos"])
+    _, fatrop_pos_s = smooth_curve(case["fatrop_pos"])
+    _, affine_pos_s = smooth_curve(case["affine_pos"])
 
-    fig = plt.figure(figsize=(14.5, 5.1), facecolor="white")
-    outer = fig.add_gridspec(1, 3, width_ratios=[1.25, 0.95, 1.05], wspace=0.22)
+    fig = plt.figure(figsize=(14.6, 5.6), facecolor="white")
+    outer = fig.add_gridspec(1, 3, width_ratios=[1.1, 0.95, 1.15], wspace=0.20)
 
     axA = fig.add_subplot(outer[0, 0])
-    axA.set_title("(a) Scene-grounded geometric retargeting", fontsize=16, fontweight="bold", pad=10)
+    axA.set_title("1. Standard tokens drift", fontsize=15, fontweight="bold", pad=10)
     for name, color, label, alpha in [
-        (task.context_region, CONTEXT, "context", 0.14),
-        (task.source_region, SOURCE, "source bowl", 0.16),
-        (task.target_region, TARGET, "target plate", 0.16),
+        (task.context_region, CONTEXT, "context", 0.12),
+        (task.source_region, SOURCE, "source", 0.15),
+        (task.target_region, TARGET, "target", 0.15),
     ]:
         if not name or name not in regions:
             continue
         x0, y0, x1, y1 = regions[name]["bounds"]
-        rect = plt.Rectangle((x0, y0), x1 - x0, y1 - y0, facecolor=color, edgecolor=color, alpha=alpha, linewidth=1.6)
-        axA.add_patch(rect)
-        axA.text((x0 + x1) / 2, y1 + 0.014, label, color=color, fontsize=9, ha="center")
-    axA.plot(raw_replay[:, 0], raw_replay[:, 1], color="#cbd5e1", linewidth=2.5, linestyle="--", label="raw replay")
-    axA.plot(adapted_pos[:, 0], adapted_pos[:, 1], color=DHB, linewidth=3.2, label="DHB adapted")
-    axA.plot(demo_shifted[:, 0], demo_shifted[:, 1], color="#16a34a", linewidth=2.2, linestyle=":", label="translated demo")
-    axA.scatter(*adapted_pos[0, :2], c=SOURCE, s=70, zorder=5)
-    axA.scatter(*adapted_pos[-1, :2], c=TARGET, s=110, marker="*", zorder=5)
-    axA.annotate(
-        "new scene placement",
-        xy=adapted_pos[0, :2],
-        xytext=(adapted_pos[0, 0] - 0.02, adapted_pos[0, 1] - 0.035),
-        arrowprops=dict(arrowstyle="->", color="#334155", lw=1.5),
-        fontsize=9,
-        color="#334155",
-    )
-    axA.text(
-        0.02,
-        0.04,
-        "Real LIBERO bowl-to-plate demo,\nused here as an exact translation diagnostic",
-        transform=axA.transAxes,
-        fontsize=9,
-        color="#334155",
-        ha="left",
-        va="bottom",
-        bbox=dict(boxstyle="round,pad=0.25", facecolor="#f8fafc", edgecolor="#cbd5e1"),
-    )
+        axA.add_patch(plt.Rectangle((x0, y0), x1 - x0, y1 - y0, facecolor=color, edgecolor=color, alpha=alpha, linewidth=1.4))
+        axA.text((x0 + x1) / 2, y1 + 0.012, label, color=color, fontsize=8.5, ha="center")
+    axA.plot(raw_replay[:, 0], raw_replay[:, 1], color="#94a3b8", linewidth=2.2, linestyle="--", alpha=0.9, label="original workspace")
+    axA.plot(demo_shifted[:, 0], demo_shifted[:, 1], color="#ef4444", linewidth=2.4, alpha=0.9, label="shifted workspace")
+    axA.scatter(*raw_replay[0, :2], c="#94a3b8", s=28, zorder=5)
+    axA.scatter(*demo_shifted[0, :2], c="#ef4444", s=28, zorder=5)
     axA.set_xlabel("x (m)")
     axA.set_ylabel("y (m)")
     axA.grid(alpha=0.18)
-    axA.legend(loc="lower left", fontsize=8, framealpha=0.95)
     axA.set_aspect("equal", adjustable="box")
+    axA.legend(loc="lower left", fontsize=7.2, framealpha=0.95)
+    axA.text(0.30, 0.885, "18–94% token change", transform=axA.transAxes, ha="center", va="center", fontsize=10.2, color="#b91c1c", fontweight="bold", bbox=dict(boxstyle="round,pad=0.35", facecolor="#fef2f2", edgecolor="#fecaca"))
+    axA.text(0.30, 0.835, "raw coords and delta-EEF drift", transform=axA.transAxes, ha="center", va="center", fontsize=8.3, color="#7f1d1d")
+    axA.text(
+        0.03,
+        0.04,
+        "Moving the workspace changes the action targets\nunless the representation is invariant.",
+        transform=axA.transAxes,
+        fontsize=8.8,
+        color="#334155",
+        ha="left",
+        va="bottom",
+    )
 
-    innerB = outer[0, 1].subgridspec(2, 1, hspace=0.34)
-    axB1 = fig.add_subplot(innerB[0, 0])
-    axB1.set_title("(b) Stable tokens, better compression", fontsize=16, fontweight="bold", pad=10)
-    labels = ["FAST raw", "delta-EEF", "DHB + FAST"]
-    instability = [93.9, 18.2, 0.0]
-    colors = ["#ef4444", "#f59e0b", "#22c55e"]
-    bars = axB1.bar(labels, instability, color=colors, width=0.62)
-    axB1.set_ylabel("% token IDs changed")
-    axB1.set_ylim(0, 100)
-    axB1.axhline(0, color="#64748b", linewidth=0.8)
-    axB1.grid(axis="y", alpha=0.2)
-    for bar, val in zip(bars, instability):
-        axB1.text(bar.get_x() + bar.get_width() / 2, val + 3, f"{val:.1f}%", ha="center", va="bottom", fontsize=9, fontweight="bold")
-    axB1.text(0.98, 0.92, "40 random SE(3) transforms", transform=axB1.transAxes, ha="right", va="top", fontsize=8, color="#475569")
+    innerB = outer[0, 1].subgridspec(3, 1, height_ratios=[0.9, 0.9, 1.1], hspace=0.22)
+    axB0 = fig.add_subplot(innerB[0, 0])
+    axB0.axis("off")
+    axB0.set_title("2. DHB encodes motion shape", fontsize=15, fontweight="bold", pad=10)
+    draw_round_box(axB0, (0.06, 0.50), (0.30, 0.24), "#e2e8f0", text="demo trajectory", text_color="#0f172a", fontsize=11)
+    draw_round_box(axB0, (0.42, 0.46), (0.20, 0.32), "#dbeafe", text="DHB\nframes", text_color="#1d4ed8", fontsize=12)
+    draw_round_box(axB0, (0.69, 0.50), (0.24, 0.24), "#dcfce7", text="tokens", text_color="#166534", fontsize=11)
+    arrow_kw = dict(arrowstyle="-|>", lw=1.6, color="#64748b")
+    axB0.annotate("", xy=(0.42, 0.62), xytext=(0.36, 0.62), arrowprops=arrow_kw)
+    axB0.annotate("", xy=(0.69, 0.62), xytext=(0.62, 0.62), arrowprops=arrow_kw)
 
-    axB2 = fig.add_subplot(innerB[1, 0])
-    comp_labels = ["FAST raw", "DHB + FAST", "DHB + OAT"]
-    compression = [20.4, 49.8, 10.0]
-    comp_colors = ["#94a3b8", "#2563eb", "#7c3aed"]
-    bars2 = axB2.bar(comp_labels, compression, color=comp_colors, width=0.62)
-    axB2.set_ylabel("compression ratio")
-    axB2.grid(axis="y", alpha=0.2)
-    axB2.set_ylim(0, 56)
-    for bar, val in zip(bars2, compression):
-        axB2.text(bar.get_x() + bar.get_width() / 2, val + 1.1, f"{val:.1f}x", ha="center", va="bottom", fontsize=9, fontweight="bold")
-    axB2.text(0.03, 0.93, "Same skill, fewer tokens", transform=axB2.transAxes, ha="left", va="top", fontsize=8, color="#475569")
+    axB1 = fig.add_subplot(innerB[1, 0])
+    axB1.set_facecolor("#f8fafc")
+    lin = np.asarray([0.18, 0.30, 0.44, 0.56, 0.51, 0.39, 0.28, 0.22])
+    ang = np.asarray([0.12, 0.18, 0.27, 0.34, 0.36, 0.31, 0.24, 0.17])
+    axB1.imshow(lin[None, :], cmap="Blues", aspect="auto", extent=[0, 8, 0.55, 0.90], vmin=0.0, vmax=0.60)
+    axB1.imshow(ang[None, :], cmap="Greens", aspect="auto", extent=[0, 8, 0.10, 0.45], vmin=0.0, vmax=0.45)
+    for x in range(9):
+        axB1.axvline(x, color="white", linewidth=1.0, alpha=0.9)
+    axB1.text(0.15, 0.73, "linear speed invariants", color="#1d4ed8", fontsize=9.2, fontweight="bold")
+    axB1.text(0.15, 0.27, "angular speed invariants", color="#166534", fontsize=9.2, fontweight="bold")
+    axB1.set_xlim(0, 8)
+    axB1.set_ylim(0, 1)
+    axB1.set_xticks([])
+    axB1.set_yticks([])
+    for spine in axB1.spines.values():
+        spine.set_visible(False)
 
-    axC = fig.add_subplot(outer[0, 2])
-    axC.set_title("(c) State-aware DHB action decoding", fontsize=16, fontweight="bold", pad=10)
-    axC.set_xlim(0, 1)
-    axC.set_ylim(0, 1)
-    axC.axis("off")
-    axC.text(0.03, 0.92, "Instead of regressing delta actions directly,", fontsize=10, color="#334155", ha="left")
-    axC.text(0.03, 0.87, "predict invariant motion then decode relative to the current EE state.", fontsize=10, color="#334155", ha="left")
+    axB2 = fig.add_subplot(innerB[2, 0])
+    axB2.axis("off")
+    draw_round_box(axB2, (0.06, 0.54), (0.38, 0.25), "#ecfdf5", ec="#86efac")
+    axB2.text(0.25, 0.67, "0.0% token change", ha="center", va="center", fontsize=13, color="#166534", fontweight="bold")
+    axB2.text(0.25, 0.58, "stable under SE(3)", ha="center", va="center", fontsize=8.8, color="#166534")
+    draw_round_box(axB2, (0.54, 0.54), (0.34, 0.25), "#eff6ff", ec="#bfdbfe")
+    axB2.text(0.71, 0.67, "49.8×", ha="center", va="center", fontsize=13, color="#1d4ed8", fontweight="bold")
+    axB2.text(0.71, 0.58, "compression with FAST", ha="center", va="center", fontsize=8.8, color="#1d4ed8")
+    axB2.text(
+        0.06,
+        0.18,
+        "DHB removes workspace pose from the token target,\nso the same skill stays token-identical after rigid transforms.",
+        ha="left",
+        va="bottom",
+        fontsize=8.8,
+        color="#334155",
+    )
 
-    draw_round_box(axC, (0.05, 0.68), (0.27, 0.12), "#e2e8f0", text="obs + language", text_color="#0f172a")
-    draw_round_box(axC, (0.37, 0.68), (0.22, 0.12), "#dbeafe", text="DHB tokens", text_color="#1d4ed8")
-    draw_round_box(axC, (0.64, 0.68), (0.27, 0.12), "#dcfce7", text="current EE state", text_color="#166534")
-    draw_round_box(axC, (0.21, 0.46), (0.56, 0.12), "#ede9fe", text="DHBActionHead predicts invariant motion pattern", text_color="#5b21b6", fontsize=10)
-    draw_round_box(axC, (0.25, 0.23), (0.48, 0.12), "#eff6ff", text="decode relative to present robot pose", text_color="#1d4ed8", fontsize=10)
-    draw_round_box(axC, (0.33, 0.05), (0.34, 0.10), "#f8fafc", ec="#cbd5e1", text="robot action", text_color="#0f172a", fontsize=11)
+    axC = fig.add_subplot(outer[0, 2], projection="3d")
+    set_light_3d(axC)
+    draw_reference_plane(axC, np.vstack([demo_pos_s, fatrop_pos_s, affine_pos_s]), color="#e2e8f0", alpha=0.35)
+    axC.set_title("3. Decode from a new state", fontsize=15, fontweight="bold", pad=10)
+    axC.plot(demo_pos_s[:, 0], demo_pos_s[:, 1], demo_pos_s[:, 2], color="#94a3b8", linewidth=2.0, linestyle="--", alpha=0.9)
+    axC.plot(affine_pos_s[:, 0], affine_pos_s[:, 1], affine_pos_s[:, 2], color="#f59e0b", linewidth=2.3, linestyle=(0, (5, 2)), alpha=0.96)
+    axC.plot(fatrop_pos_s[:, 0], fatrop_pos_s[:, 1], fatrop_pos_s[:, 2], color="#2563eb", linewidth=3.0, alpha=0.98)
+    axC.scatter(*case["fatrop_pos"][0], c="#2563eb", s=38, depthshade=False)
+    axC.scatter(*case["fatrop_pos"][-1], c="#16a34a", s=62, marker="*", depthshade=False)
+    equalize(axC, np.vstack([demo_pos_s, fatrop_pos_s, affine_pos_s]))
+    axC.view_init(elev=28, azim=-54)
+    axC.set_xlabel("")
+    axC.set_ylabel("")
+    axC.set_zlabel("")
+    axC.set_xticks([])
+    axC.set_yticks([])
+    axC.set_zticks([])
+    axC.text2D(0.05, 0.88, "same endpoints", transform=axC.transAxes, fontsize=9.6, color="#334155")
+    axC.text2D(0.05, 0.82, "different interior path", transform=axC.transAxes, fontsize=9.6, color="#334155")
+    axC.text2D(0.05, 0.12, "DHB preserves interior geometry", transform=axC.transAxes, fontsize=9.0, color="#1d4ed8", fontweight="bold")
+    axC.text2D(0.05, 0.07, "endpoint-only warping collapses the middle", transform=axC.transAxes, fontsize=8.4, color="#92400e")
 
-    arrow_kw = dict(arrowstyle="-|>", lw=1.7, color="#64748b")
-    axC.annotate("", xy=(0.49, 0.58), xytext=(0.19, 0.68), arrowprops=arrow_kw)
-    axC.annotate("", xy=(0.49, 0.58), xytext=(0.48, 0.68), arrowprops=arrow_kw)
-    axC.annotate("", xy=(0.49, 0.58), xytext=(0.78, 0.68), arrowprops=arrow_kw)
-    axC.annotate("", xy=(0.49, 0.35), xytext=(0.49, 0.46), arrowprops=arrow_kw)
-    axC.annotate("", xy=(0.50, 0.15), xytext=(0.49, 0.23), arrowprops=arrow_kw)
-
-    draw_round_box(axC, (0.69, 0.25), (0.24, 0.15), "#f8fafc", ec="#bfdbfe")
-    axC.text(0.81, 0.355, "Current readout", ha="center", va="center", fontsize=9, color="#1e3a8a", fontweight="bold")
-    axC.text(0.81, 0.315, "SmolVLA + DHB head", ha="center", va="center", fontsize=8, color="#334155")
-    axC.text(0.81, 0.272, "2/3 @ 0 cm", ha="center", va="center", fontsize=12, color="#059669", fontweight="bold")
-    axC.text(0.81, 0.235, "1/3 @ +3 cm", ha="center", va="center", fontsize=9, color="#475569")
-
-    fig.suptitle("DHB-XR: learn and tokenize motion shape without tying it to one workspace pose", fontsize=20, fontweight="bold", y=0.985)
+    fig.suptitle("DHB-XR separates motion shape from workspace pose", fontsize=18, fontweight="bold", y=0.95)
+    fig.text(
+        0.5,
+        0.90,
+        "Standard token targets drift under rigid transforms. DHB invariants stay fixed and decode into the same 6-DOF motion pattern from a new state.",
+        ha="center",
+        va="center",
+        fontsize=9.5,
+        color="#475569",
+    )
+    fig.subplots_adjust(top=0.82, bottom=0.12, left=0.05, right=0.98)
     fig.savefig(TEASER_PATH, facecolor="white", bbox_inches="tight")
     plt.close(fig)
 
