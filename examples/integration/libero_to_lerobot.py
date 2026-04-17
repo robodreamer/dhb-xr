@@ -104,6 +104,7 @@ DEFAULT_VIDEO_RES = (512, 384)  # (width, height)
 
 # Action mode configuration
 ACTION_MODE = "delta"
+LIBERO_GRIPPER_OPEN_QPOS_THRESHOLD = 0.015
 
 
 # ============================================================================
@@ -167,7 +168,9 @@ def load_libero_demo(h5_path: Path, demo_id: int) -> Dict:
             # Delta in the current EE frame: current * delta = next.
             delta_rot[:-1] = (q_curr.inv() * q_next).as_rotvec().astype(np.float32)
 
-        gripper_open = (gripper_state[:, 0] > 0.5).astype(np.float32).reshape(-1, 1)
+        # LIBERO gripper qpos is small-valued (~0.0-0.04), not binary 0/1.
+        # Use the same open/close threshold as the validated SmolVLA/embodik pipeline.
+        gripper_open = (gripper_state[:, 0] > LIBERO_GRIPPER_OPEN_QPOS_THRESHOLD).astype(np.float32).reshape(-1, 1)
         next_gripper_open = np.concatenate([gripper_open[1:], gripper_open[-1:]], axis=0)
         delta_actions = np.concatenate([delta_pos, delta_rot, next_gripper_open], axis=1).astype(np.float32)
         

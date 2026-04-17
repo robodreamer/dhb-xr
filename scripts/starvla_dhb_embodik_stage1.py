@@ -6,6 +6,7 @@ import json
 from contextlib import contextmanager
 from pathlib import Path
 
+import h5py
 import numpy as np
 import torch
 from libero.libero import benchmark, get_libero_path
@@ -20,6 +21,8 @@ from starVLA.training.trainer_utils.trainer_tools import normalize_dotlist_args
 
 LIBERO_DUMMY_ACTION = [0.0] * 6 + [-1.0]
 LIBERO_ENV_RESOLUTION = 256
+LIBERO_DATA_ROOT = Path("/home/andypark/Projects/data/libero")
+LIBERO_GRIPPER_OPEN_QPOS_THRESHOLD = 0.015
 
 
 @contextmanager
@@ -73,6 +76,19 @@ def _binarize_gripper(open_val: float) -> float:
     return float(1.0 - 2.0 * (open_val > 0.5))
 
 
+def _demo_hdf5_path(task_suite_name: str, task_name: str) -> Path:
+    return LIBERO_DATA_ROOT / task_suite_name / f"{task_name}_demo.hdf5"
+
+
+def _load_demo_gripper(task_suite_name: str, task_name: str, episode_idx: int) -> np.ndarray:
+    hdf5_path = _demo_hdf5_path(task_suite_name, task_name)
+    with h5py.File(hdf5_path, "r") as f:
+        demo = f["data"][f"demo_{episode_idx}"]
+        robot_states = np.asarray(demo["robot_states"], dtype=np.float32)
+    grip_qpos = robot_states[:, 0]
+    return np.where(grip_qpos > LIBERO_GRIPPER_OPEN_QPOS_THRESHOLD, -1.0, 1.0).astype(np.float32)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config_yaml", required=True)
@@ -81,6 +97,7 @@ def main() -> None:
     parser.add_argument("--episode_idx", type=int, default=0)
     parser.add_argument("--num_steps_wait", type=int, default=10)
     parser.add_argument("--checkpoint", default=None)
+    parser.add_argument("--gripper-source", choices=("demo", "model"), default="demo")
     parser.add_argument("--save_npz", default=None)
     parser.add_argument("--save_json", default=None)
     args, unknown = parser.parse_known_args()
@@ -142,10 +159,13 @@ def main() -> None:
 
     positions = np.asarray(result["positions"][0], dtype=np.float32)
     quaternions = np.asarray(result["quaternions"][0], dtype=np.float32)  # wxyz
-    normalized_actions = np.asarray(result.get("normalized_actions", []), dtype=np.float32)
-    gripper = None
-    if normalized_actions.size:
-        gripper = np.array([_binarize_gripper(v) for v in normalized_actions[0, :, 6]], dtype=np.float32)
+    if args.gripper_source == "demo":
+        gripper = _load_demo_gripper(args.task_suite_name, task.name, args.episode_idx)
+    else:
+        normalized_actions = np.asarray(result.get("normalized_actions", []), dtype=np.float32)
+        gripper = None
+        if normalized_actions.size:
+            gripper = np.array([_binarize_gripper(v) for v in normalized_actions[0, :, 6]], dtype=np.float32)
 
     save_npz = Path(args.save_npz) if args.save_npz else output_dir / "embodik_stage1_chunk.npz"
     np.savez(
@@ -168,8 +188,11 @@ def main() -> None:
         "task_id": args.task_id,
         "episode_idx": args.episode_idx,
         "task_language": task.language,
+        "gripper_source": args.gripper_source,
         "positions_shape": list(positions.shape),
         "quaternions_shape": list(quaternions.shape),
+        "gripper_shape": list(gripper.shape) if gripper is not None else None,
+        "gripper_preview": gripper[: min(len(gripper), 12)].tolist() if gripper is not None else None,
         "first_position": positions[0].tolist(),
         "first_quaternion_wxyz": quaternions[0].tolist(),
         "save_npz": str(save_npz),

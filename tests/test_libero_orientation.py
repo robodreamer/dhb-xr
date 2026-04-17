@@ -1,7 +1,9 @@
 import numpy as np
 from scipy.spatial.transform import Rotation
 
-from dhb_xr.integration.vla.libero import libero_obs_quat_to_axis_angle, libero_obs_quat_wxyz_to_xyzw
+import h5py
+
+from dhb_xr.integration.vla.libero import LiberoAdapter, libero_obs_quat_to_axis_angle, libero_obs_quat_wxyz_to_xyzw
 
 
 def test_libero_obs_quat_conversion_matches_hdf5_convention():
@@ -25,3 +27,28 @@ def test_libero_obs_quat_conversion_matches_hdf5_convention():
         Rotation.from_quat(target_xyzw).as_euler("xyz", degrees=False),
         atol=1e-2,
     )
+
+
+def test_libero_adapter_loads_binary_gripper_from_small_qpos_values(tmp_path):
+    h5_path = tmp_path / "demo.hdf5"
+    with h5py.File(h5_path, "w") as f:
+        data = f.create_group("data")
+        demo = data.create_group("demo_0")
+
+        robot_states = np.zeros((3, 9), dtype=np.float32)
+        robot_states[:, 0] = np.array([0.0, 0.02, 0.01], dtype=np.float32)
+        robot_states[:, 2:5] = np.array(
+            [[0.1, 0.2, 0.3], [0.11, 0.21, 0.31], [0.12, 0.22, 0.32]],
+            dtype=np.float32,
+        )
+
+        quat_xyzw = Rotation.from_euler("xyz", [0.0, 0.0, 0.0]).as_quat()
+        robot_states[:, 5:9] = quat_xyzw[[3, 0, 1, 2]]
+
+        demo.create_dataset("robot_states", data=robot_states)
+        obs = demo.create_group("obs")
+        obs.create_dataset("ee_pos", data=robot_states[:, 2:5])
+
+    sample = next(LiberoAdapter().load_dataset(str(h5_path)))
+    np.testing.assert_allclose(sample["gripper_qpos"], [0.0, 0.02, 0.01], atol=1e-6)
+    np.testing.assert_allclose(sample["gripper"], [0.0, 1.0, 0.0], atol=1e-6)

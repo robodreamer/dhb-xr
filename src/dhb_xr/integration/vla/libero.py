@@ -32,6 +32,7 @@ DEFAULT_QUAT_KEYS = (
     "eef_quat",
     "ee_quat",
 )
+LIBERO_GRIPPER_OPEN_QPOS_THRESHOLD = 0.015
 
 
 def libero_obs_quat_wxyz_to_xyzw(quat: np.ndarray) -> np.ndarray:
@@ -133,6 +134,13 @@ class LiberoAdapter:
                 if quaternions is None:
                     continue
 
+                gripper = None
+                gripper_qpos = None
+                if self.robot_states_key in demo:
+                    robot_states = np.asarray(demo[self.robot_states_key], dtype=np.float64)
+                    gripper_qpos = robot_states[:, 0].astype(np.float32)
+                    gripper = (gripper_qpos > LIBERO_GRIPPER_OPEN_QPOS_THRESHOLD).astype(np.float32)
+
                 metadata = {
                     "demo_id": demo_id,
                     "pos_key": pos_key,
@@ -148,5 +156,7 @@ class LiberoAdapter:
                 yield {
                     "positions": positions,
                     "quaternions": quaternions,
+                    "gripper": gripper,
+                    "gripper_qpos": gripper_qpos,
                     "metadata": metadata,
                 }

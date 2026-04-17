@@ -14,7 +14,9 @@ def test_create_episode_dataframe_uses_axis_angle_state_and_delta_actions(tmp_pa
         demo = data.create_group("demo_0")
 
         robot_states = np.zeros((2, 9), dtype=np.float32)
-        robot_states[:, 0] = np.array([0.0, 1.0], dtype=np.float32)
+        # LIBERO gripper qpos is small-valued (~0.0-0.04), so the converter
+        # must not assume a 0/1 threshold.
+        robot_states[:, 0] = np.array([0.0, 0.02], dtype=np.float32)
         robot_states[:, 2:5] = np.array([[0.1, 0.2, 0.3], [0.15, 0.18, 0.32]], dtype=np.float32)
 
         quat0_xyzw = Rotation.from_euler("xyz", [0.0, 0.0, 0.0]).as_quat()
