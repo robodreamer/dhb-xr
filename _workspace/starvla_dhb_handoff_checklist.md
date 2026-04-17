@@ -52,44 +52,56 @@ Do not treat lower train loss alone as progress. SmolVLA already showed that tra
 
 ## First StarVLA Experiments
 
-1. Reproduce the SmolVLA smoke validation protocol unchanged.
-2. Compare `demo_0`, `demo_1`, and `demo_10` side by side.
-3. Check whether final `ee_minus_plate[1]` improves on the failing demos.
-4. Only then broaden to larger sweeps or longer training.
+1. Use the lightweight `Qwen2.5-VL-3B` + DHB path as the development baseline on the laptop GPU.
+2. Reproduce the SmolVLA smoke validation protocol as closely as possible, starting with single-episode LIBERO rollout smoke checks.
+3. Compare `demo_0`, `demo_1`, and `demo_10` side by side once rollout videos exist.
+4. Check whether final `ee_minus_plate[1]` improves on the failing demos.
+5. Only then broaden to larger sweeps or longer training.
 
 ## Current StarVLA Readiness
 
 - Vendor patch present:
   - `vendor/starVLA/starVLA/model/framework/WM4A/WM4A_DHB.py`
   - `vendor/starVLA/starVLA/model/modules/action_model/DHBActionHeader.py`
+- Lightweight laptop path present:
+  - `vendor/starVLA/starVLA/model/framework/VLM4A/QwenDHB.py`
+  - `configs/libero_dhbxr_qwen.yaml`
 - Local LeRobot converter is patched for the current LIBERO HDF5 layout.
 - StarVLA dataloader smoke passes on both:
   - single-demo export
   - multi-task smoke export
 - Active dataset rebuild target:
   - `/home/andypark/Projects/data/libero_lerobot`
+- Qwen+DHB laptop smokes now pass:
+  - forward smoke
+  - predict smoke
+  - one-step training smoke
 
 ## Current Blocking Issues
 
-1. StarVLA training does not yet launch on this machine.
-   - `accelerate launch ... train_starvla.py` currently fails inside DeepSpeed before model loading.
-   - Observed error: `MissingCUDAException: CUDA_HOME does not exist`.
-2. This environment also does not currently expose a working NVIDIA driver.
-   - `nvidia-smi` fails with driver communication error.
-   - `nvcc` is not on `PATH`.
-3. No local StarVLA world-model checkpoint was found under the repo or user caches.
-   - `WM4A_DHB` defaults to `./playground/Pretrained_models/Wan-AI/Wan2.2-TI2V-5B`.
-   - That path does not exist locally right now.
+1. The heavy Cosmos/WM4A path is still too expensive for iterative laptop debugging.
+2. Harness-side StarVLA integration is not yet wired to the Qwen+DHB local path.
+3. The first direct rollout smoke now works, but it still needs qualitative comparison against the SmolVLA failure signature.
 
 ## Immediate Next Steps
 
-1. Finish the full `libero_lerobot` dataset rebuild.
-2. Re-run a dataloader smoke check against the real dataset path.
-3. Restore GPU training prerequisites:
-   - working NVIDIA driver
-   - visible CUDA toolkit / `CUDA_HOME`
-   - local StarVLA base world-model checkpoint or an approved download path
-4. Only after that, launch the first StarVLA smoke train:
-   - `max_train_steps=1`
-   - `per_device_batch_size=1`
-   - offline `wandb`
+1. Review the first direct local LIBERO rollout smoke video for `Qwen+DHB`.
+2. Compare that failure mode against the SmolVLA smoke baseline on the same task family.
+3. Then decide whether to:
+   - wire `Qwen+DHB` into `vla-evaluation-harness`, or
+   - add a slightly broader StarVLA rollout sweep first.
+
+## First Direct Rollout Baseline
+
+- Script: `scripts/starvla_dhb_libero_rollout_smoke.py`
+- Config: `configs/libero_dhbxr_qwen.yaml`
+- Task: `libero_spatial/task_id=0/episode_idx=0`
+- Outcome: failure after `220` steps
+- Runtime: about `66.1 s`
+- Peak GPU memory: about `4286.9 MB`
+- Artifact:
+  - `_workspace/starvla_runs/dhb_starvla_qwen/rollout_pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate_episode0_failure.mp4`
+
+Interpretation:
+- The direct StarVLA+DHB rollout stack is now executable end to end on the laptop GPU.
+- The next question is no longer “can it run?” but “does its failure mode match the known SmolVLA placement-margin signature?”

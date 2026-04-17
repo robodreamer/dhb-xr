@@ -56,3 +56,34 @@ Carry forward:
 - [x] Keep `_workspace/dhb_head_e2e_fix_smoke.pt` as the best SmolVLA executable baseline
 
 Do not continue SmolVLA training with `500+` or `1000` epochs unless there is a specific architecture or supervision change to test.
+
+## StarVLA Qwen+DHB Laptop Baseline
+
+- [x] Add a lightweight `Qwen2.5-VL-3B` + DHB StarVLA config for laptop-class GPUs
+- [x] Add forward-only smoke validation for custom StarVLA+DHB
+- [x] Add one-step training smoke validation for custom StarVLA+DHB
+- [x] Add prediction-side smoke validation with chunk-level action error
+- [x] Fix mixed-dtype OAT nested-dropout failure exposed by StarVLA training
+- [x] Track vendor-side StarVLA changes on a dedicated local branch
+- [x] Add a minimal direct LIBERO rollout smoke with recorded video for the Qwen+DHB path
+- [ ] Compare the first StarVLA rollout smoke qualitatively against the SmolVLA smoke baseline
+- [ ] Decide whether to wire the Qwen+DHB path into `vla-evaluation-harness` as the main StarVLA-side evaluation path
+
+## First Direct StarVLA Rollout Result
+
+- [x] Run a direct local LIBERO rollout smoke on `libero_spatial/task_id=0/episode_idx=0`
+- [x] Save the first rollout video and JSON summary
+- [x] Confirm the direct rollout path is executable on the laptop GPU without a policy server
+- [ ] Review the first rollout video against the SmolVLA baseline and identify whether the failure mode is already the same `Y` / `Z` placement-margin signature
+
+Current result:
+- rollout path: `scripts/starvla_dhb_libero_rollout_smoke.py`
+- config: `configs/libero_dhbxr_qwen.yaml`
+- outcome: `failure` after `220` steps
+- runtime: about `66.1 s`
+- peak GPU memory: about `4286.9 MB`
+- video: `_workspace/starvla_runs/dhb_starvla_qwen/rollout_pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate_episode0_failure.mp4`
+
+Interpretation:
+- This is the first behavior-level StarVLA+DHB baseline, not a trained result worth judging on task success yet.
+- The main milestone is that the direct rollout stack now works end to end with recorded video on the laptop path.
