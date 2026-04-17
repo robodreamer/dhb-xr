@@ -772,13 +772,14 @@ def save_hero_video(payloads: dict[str, dict[str, np.ndarray | dict]]) -> None:
 
     frames = []
     steps = 96
-    fig = plt.figure(figsize=(14.4, 5.6), facecolor="#0b1220")
+    fig = plt.figure(figsize=(14.4, 7.2), facecolor="#0b1220")
     for frame_idx in range(steps):
         fig.clf()
         progress = frame_idx / max(1, steps - 1)
         idx = max(2, int((frame_idx + 1) / steps * len(fatrop_pos_s)))
         raw_idx = max(2, int((frame_idx + 1) / steps * len(adapted_pos)))
-        ax = fig.add_subplot(1, 1, 1, projection="3d")
+        gs = fig.add_gridspec(1, 2, width_ratios=[1.58, 0.72], wspace=0.02)
+        ax = fig.add_subplot(gs[0, 0], projection="3d")
         set_dark_3d(ax)
         draw_reference_plane(ax, all_pos, color="#1e293b", alpha=0.68)
         demo_line = ax.plot(
@@ -829,7 +830,7 @@ def save_hero_video(payloads: dict[str, dict[str, np.ndarray | dict]]) -> None:
                 alpha=float(alpha),
             )
         equalize(ax, all_pos)
-        ax.set_box_aspect((1.55, 1.0, 0.9))
+        ax.set_box_aspect((1.58, 1.0, 0.95))
         ax.view_init(elev=27.5 + 1.5 * np.sin(progress * np.pi), azim=-58 + 9.0 * progress)
         ax.set_xlabel("")
         ax.set_ylabel("")
@@ -837,29 +838,53 @@ def save_hero_video(payloads: dict[str, dict[str, np.ndarray | dict]]) -> None:
         ax.set_xticks([])
         ax.set_yticks([])
         ax.set_zticks([])
-        ax.text2D(0.05, 0.91, "Fatrop retarget", transform=ax.transAxes, color=DHB, fontsize=13.5, fontweight="bold")
-        ax.text2D(0.05, 0.85, "3D position + rotation adaptation", transform=ax.transAxes, color=TEXT, fontsize=10.8)
-        ax.text2D(0.05, 0.79, "demo trajectory", transform=ax.transAxes, color=DEMO, fontsize=10.0)
+        ax.text2D(0.03, 0.94, "Fatrop retarget", transform=ax.transAxes, color=DHB, fontsize=16, fontweight="bold")
+        ax.text2D(0.03, 0.885, "3D position + rotation adaptation", transform=ax.transAxes, color=TEXT, fontsize=12.0)
+        ax.text2D(0.03, 0.83, "demo trajectory", transform=ax.transAxes, color=DEMO, fontsize=10.8)
         if baseline_alpha > 0.10:
-            ax.text2D(0.05, 0.73, "endpoint-only warp", transform=ax.transAxes, color="#f59e0b", fontsize=10.0)
-        ax.text2D(0.05, 0.14, "same boundary pose", transform=ax.transAxes, color=TEXT, fontsize=9.5)
-        ax.text2D(0.05, 0.09, "larger orientation cubes", transform=ax.transAxes, color=MUTED, fontsize=8.8)
+            ax.text2D(0.03, 0.775, "endpoint-only warp", transform=ax.transAxes, color="#f59e0b", fontsize=10.6)
+        ax.text2D(0.03, 0.105, "same boundary pose", transform=ax.transAxes, color=TEXT, fontsize=10.2)
+        ax.text2D(0.03, 0.06, "larger orientation cubes", transform=ax.transAxes, color=MUTED, fontsize=9.4)
 
-        fig.suptitle(
-            "Fatrop 6D retargeting showcase",
-            color="#f8fafc",
-            fontsize=18.5,
-            fontweight="bold",
-            y=0.955,
+        ax_strip = fig.add_subplot(gs[0, 1], projection="3d")
+        set_dark_3d(ax_strip)
+        strip_centers = np.column_stack(
+            [
+                np.linspace(0.0, 0.9, len(cube_idxs)),
+                np.zeros(len(cube_idxs)),
+                np.zeros(len(cube_idxs)),
+            ]
         )
-        fig.text(
-            0.5,
-            0.04,
-            "A large offset plus boundary rotation change is retargeted while preserving the motion's spatial arc and orientation flow.",
-            ha="center",
-            color="#94a3b8",
-            fontsize=10.4,
-        )
+        for i, cube_idx in enumerate(cube_idxs):
+            if cube_idx >= raw_idx:
+                continue
+            alpha = min(0.82, 0.26 + 0.10 * i)
+            size = 0.19 - 0.012 * abs(i - (len(cube_idxs) - 1) / 2.0)
+            draw_box(
+                ax_strip,
+                strip_centers[i],
+                geom.quat_to_rot(adapted_quat[cube_idx]),
+                size=(size, size * 0.68, size * 0.52),
+                color="#60a5fa",
+                alpha=float(alpha),
+            )
+        ax_strip.set_xlim(-0.12, 1.02)
+        ax_strip.set_ylim(-0.44, 0.44)
+        ax_strip.set_zlim(-0.44, 0.44)
+        ax_strip.set_box_aspect((1.95, 1.0, 1.0))
+        ax_strip.view_init(elev=20, azim=-66 + 3.0 * np.sin(progress * np.pi))
+        ax_strip.set_xticks([])
+        ax_strip.set_yticks([])
+        ax_strip.set_zticks([])
+        ax_strip.set_xlabel("")
+        ax_strip.set_ylabel("")
+        ax_strip.set_zlabel("")
+        ax_strip.text2D(0.12, 0.94, "orientation cubes", transform=ax_strip.transAxes, color=TEXT, fontsize=13.0, fontweight="bold")
+        ax_strip.text2D(0.12, 0.885, "rotation flow along the retarget", transform=ax_strip.transAxes, color=MUTED, fontsize=9.6)
+        ax_strip.text2D(0.12, 0.08, "start", transform=ax_strip.transAxes, color=MUTED, fontsize=9.4)
+        ax_strip.text2D(0.80, 0.08, "goal", transform=ax_strip.transAxes, color=MUTED, fontsize=9.4)
+
+        fig.subplots_adjust(left=0.015, right=0.985, top=0.99, bottom=0.03)
         frames.append(render_canvas(fig))
     plt.close(fig)
     imageio.mimwrite(HERO_PATH, frames, fps=18, codec="libx264", quality=7)
