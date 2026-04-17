@@ -9,19 +9,21 @@ is_debug: false
 framework:
   name: WM4A_DHB
   world_model:
-    base_wm: ./playground/Pretrained_models/nvidia/Cosmos-Predict2-2B-Video2World
+    base_wm: /home/andypark/Projects/repos/dhb-xr/vendor/starVLA/playground/Pretrained_models/nvidia/Cosmos-Predict2-2B-Video2World
     extract_layers: [-1]
   qwenvl:
-    base_vlm: ./playground/Pretrained_models/nvidia/Cosmos-Predict2-2B-Video2World
+    base_vlm: /home/andypark/Projects/repos/dhb-xr/vendor/starVLA/playground/Pretrained_models/nvidia/Cosmos-Predict2-2B-Video2World
   action_model:
     action_model_type: DHB
     action_hidden_dim: 2048
     hidden_dim: 1024
     action_dim: 7
+    state_dim: 8
     invariant_dim: 8
     num_oat_tokens: 8
     future_action_window_size: 7
     past_action_window_size: 0
+    action_horizon: 8
     use_oat_quantizer: true
     lambda_invariant: 1.0
     lambda_action: 1.0
