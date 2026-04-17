@@ -751,56 +751,114 @@ def render_canvas(fig) -> np.ndarray:
 
 def save_hero_video(payloads: dict[str, dict[str, np.ndarray | dict]]) -> None:
     del payloads
-    case = build_controlled_6d_case()
-    _, demo_pos_s = smooth_curve(case["demo_pos"], n=220)
-    _, fatrop_pos_s = smooth_curve(case["fatrop_pos"], n=220)
-    _, affine_pos_s = smooth_curve(case["affine_pos"], n=220)
+    case = build_fatrop_showcase_case()
+    demo_pos = case["demo_pos"]
+    demo_quat = case["demo_quat"]
+    adapted_pos = case["adapted_pos"]
+    adapted_quat = case["adapted_quat"]
+    pose_init = case["pose_init"]
+    pose_goal = case["pose_goal"]
+    affine_pos = endpoint_warp_positions(
+        demo_pos,
+        pose_init["position"],
+        pose_goal["position"],
+        len(adapted_pos),
+    )
+    _, demo_pos_s = smooth_curve(demo_pos, n=260)
+    _, fatrop_pos_s = smooth_curve(adapted_pos, n=260)
+    _, affine_pos_s = smooth_curve(affine_pos, n=260)
     all_pos = np.vstack([demo_pos_s, fatrop_pos_s, affine_pos_s])
+    cube_idxs = np.linspace(0, len(adapted_pos) - 1, 6, dtype=int)
 
     frames = []
-    steps = 84
-    fig = plt.figure(figsize=(12.8, 4.8), facecolor="#0b1220")
+    steps = 96
+    fig = plt.figure(figsize=(14.4, 5.6), facecolor="#0b1220")
     for frame_idx in range(steps):
         fig.clf()
+        progress = frame_idx / max(1, steps - 1)
         idx = max(2, int((frame_idx + 1) / steps * len(fatrop_pos_s)))
+        raw_idx = max(2, int((frame_idx + 1) / steps * len(adapted_pos)))
         ax = fig.add_subplot(1, 1, 1, projection="3d")
         set_dark_3d(ax)
-        draw_reference_plane(ax, all_pos, color="#1e293b", alpha=0.62)
-        ax.plot(demo_pos_s[:, 0], demo_pos_s[:, 1], demo_pos_s[:, 2], color=DEMO, linewidth=1.8, linestyle="--", alpha=0.42)
-        ax.plot(affine_pos_s[:, 0], affine_pos_s[:, 1], affine_pos_s[:, 2], color="#f59e0b", linewidth=2.1, linestyle=(0, (5, 2)), alpha=0.92)
-        ax.plot(fatrop_pos_s[:, 0], fatrop_pos_s[:, 1], fatrop_pos_s[:, 2], color=DHB, linewidth=2.3, alpha=0.16)
-        ax.plot(fatrop_pos_s[:idx, 0], fatrop_pos_s[:idx, 1], fatrop_pos_s[:idx, 2], color=DHB, linewidth=3.2, alpha=0.98)
-        ax.scatter(*fatrop_pos_s[idx - 1], s=38, c="#f8fafc", depthshade=False)
-        ax.scatter(*fatrop_pos_s[0], s=34, c=DHB, depthshade=False)
-        ax.scatter(*fatrop_pos_s[-1], s=62, c=TARGET, marker="*", depthshade=False)
+        draw_reference_plane(ax, all_pos, color="#1e293b", alpha=0.68)
+        demo_line = ax.plot(
+            demo_pos_s[:, 0],
+            demo_pos_s[:, 1],
+            demo_pos_s[:, 2],
+            color=DEMO,
+            linewidth=1.8,
+            linestyle="--",
+            alpha=0.34,
+        )[0]
+        demo_line.set_path_effects([patheffects.Stroke(linewidth=4.0, foreground=(0.75, 0.82, 0.92, 0.06)), patheffects.Normal()])
+        baseline_alpha = 0.0
+        if 0.58 <= progress <= 0.72:
+            baseline_alpha = 0.95 * (progress - 0.58) / 0.14
+        elif 0.72 < progress <= 0.88:
+            baseline_alpha = 0.95 * (0.88 - progress) / 0.16
+        if baseline_alpha > 0:
+            baseline_line = ax.plot(
+                affine_pos_s[:, 0],
+                affine_pos_s[:, 1],
+                affine_pos_s[:, 2],
+                color="#f59e0b",
+                linewidth=2.6,
+                linestyle=(0, (5, 2)),
+                alpha=float(baseline_alpha),
+            )[0]
+            baseline_line.set_path_effects([patheffects.Stroke(linewidth=5.0, foreground=(0.96, 0.62, 0.04, 0.08)), patheffects.Normal()])
+        ax.plot(fatrop_pos_s[:, 0], fatrop_pos_s[:, 1], fatrop_pos_s[:, 2], color=DHB, linewidth=2.7, alpha=0.16)
+        hero_line = ax.plot(fatrop_pos_s[:idx, 0], fatrop_pos_s[:idx, 1], fatrop_pos_s[:idx, 2], color=DHB, linewidth=4.2, alpha=0.98)[0]
+        hero_line.set_path_effects([patheffects.Stroke(linewidth=9.4, foreground=(0.38, 0.65, 0.98, 0.17)), patheffects.Normal()])
+        ax.scatter(*fatrop_pos_s[idx - 1], s=46, c="#f8fafc", depthshade=False)
+        ax.scatter(*pose_init["position"], s=60, c="#38bdf8", depthshade=False)
+        ax.scatter(*pose_goal["position"], s=92, c=TARGET, marker="*", depthshade=False)
+        draw_frame(ax, pose_init["position"], geom.quat_to_rot(pose_init["quaternion"]), length=0.082, linewidth=2.2)
+        draw_frame(ax, pose_goal["position"], geom.quat_to_rot(pose_goal["quaternion"]), length=0.082, linewidth=2.2)
+        for j, cube_idx in enumerate(cube_idxs):
+            if cube_idx >= raw_idx:
+                continue
+            alpha = min(0.62, 0.22 + 0.075 * j)
+            size = 0.086 + 0.007 * j
+            draw_box(
+                ax,
+                adapted_pos[cube_idx],
+                geom.quat_to_rot(adapted_quat[cube_idx]),
+                size=(size, size * 0.68, size * 0.52),
+                color="#60a5fa",
+                alpha=float(alpha),
+            )
         equalize(ax, all_pos)
-        ax.view_init(elev=28, azim=-60 + frame_idx * 0.33)
+        ax.set_box_aspect((1.55, 1.0, 0.9))
+        ax.view_init(elev=27.5 + 1.5 * np.sin(progress * np.pi), azim=-58 + 9.0 * progress)
         ax.set_xlabel("")
         ax.set_ylabel("")
         ax.set_zlabel("")
         ax.set_xticks([])
         ax.set_yticks([])
         ax.set_zticks([])
-        ax.text2D(0.05, 0.90, "DHB retarget", transform=ax.transAxes, color=DHB, fontsize=11, fontweight="bold")
-        ax.text2D(0.05, 0.84, "endpoint-only warp", transform=ax.transAxes, color="#f59e0b", fontsize=10)
-        ax.text2D(0.05, 0.78, "demo trajectory", transform=ax.transAxes, color=DEMO, fontsize=10)
-        ax.text2D(0.05, 0.14, "same boundary poses", transform=ax.transAxes, color=TEXT, fontsize=9)
-        ax.text2D(0.05, 0.09, "different interior geometry", transform=ax.transAxes, color=MUTED, fontsize=8.5)
+        ax.text2D(0.05, 0.91, "Fatrop retarget", transform=ax.transAxes, color=DHB, fontsize=13.5, fontweight="bold")
+        ax.text2D(0.05, 0.85, "3D position + rotation adaptation", transform=ax.transAxes, color=TEXT, fontsize=10.8)
+        ax.text2D(0.05, 0.79, "demo trajectory", transform=ax.transAxes, color=DEMO, fontsize=10.0)
+        if baseline_alpha > 0.10:
+            ax.text2D(0.05, 0.73, "endpoint-only warp", transform=ax.transAxes, color="#f59e0b", fontsize=10.0)
+        ax.text2D(0.05, 0.14, "same boundary pose", transform=ax.transAxes, color=TEXT, fontsize=9.5)
+        ax.text2D(0.05, 0.09, "larger orientation cubes", transform=ax.transAxes, color=MUTED, fontsize=8.8)
 
         fig.suptitle(
-            "Controlled 6D geometric retargeting",
+            "Fatrop 6D retargeting showcase",
             color="#f8fafc",
-            fontsize=17,
+            fontsize=18.5,
             fontweight="bold",
             y=0.955,
         )
         fig.text(
             0.5,
             0.04,
-            "DHB preserves the interior 6D motion pattern while endpoint-only warping collapses the middle of the trajectory.",
+            "A large offset plus boundary rotation change is retargeted while preserving the motion's spatial arc and orientation flow.",
             ha="center",
             color="#94a3b8",
-            fontsize=10,
+            fontsize=10.4,
         )
         frames.append(render_canvas(fig))
     plt.close(fig)
@@ -817,8 +875,8 @@ def save_fatrop_cube_showcase() -> None:
     pose_goal = case["pose_goal"]
     all_pos = np.vstack([demo_pos, adapted_pos])
 
-    fig = plt.figure(figsize=(14.0, 7.8), facecolor=BG)
-    gs = fig.add_gridspec(1, 2, width_ratios=[1.95, 0.95], wspace=0.10)
+    fig = plt.figure(figsize=(16.2, 9.1), facecolor=BG)
+    gs = fig.add_gridspec(1, 2, width_ratios=[2.45, 0.82], wspace=0.06)
 
     ax_main = fig.add_subplot(gs[0, 0], projection="3d")
     set_dark_3d(ax_main)
@@ -838,10 +896,10 @@ def save_fatrop_cube_showcase() -> None:
         adapted_pos[:, 1],
         adapted_pos[:, 2],
         color="#60a5fa",
-        linewidth=3.4,
+        linewidth=3.8,
         alpha=0.98,
     )[0]
-    fatrop_line.set_path_effects([patheffects.Stroke(linewidth=7.5, foreground=(0.38, 0.65, 0.98, 0.18)), patheffects.Normal()])
+    fatrop_line.set_path_effects([patheffects.Stroke(linewidth=8.8, foreground=(0.38, 0.65, 0.98, 0.18)), patheffects.Normal()])
 
     demo_idxs = np.linspace(0, len(demo_pos) - 1, 4, dtype=int)
     for idx in demo_idxs:
@@ -849,14 +907,14 @@ def save_fatrop_cube_showcase() -> None:
             ax_main,
             demo_pos[idx],
             geom.quat_to_rot(demo_quat[idx]),
-            size=(0.05, 0.035, 0.028),
+            size=(0.058, 0.041, 0.032),
             color="#cbd5e1",
-            alpha=0.10,
+            alpha=0.09,
         )
 
     cube_idxs = np.linspace(0, len(adapted_pos) - 1, 6, dtype=int)
-    cube_alphas = np.linspace(0.18, 0.52, len(cube_idxs))
-    cube_sizes = np.linspace(0.055, 0.072, len(cube_idxs))
+    cube_alphas = np.linspace(0.27, 0.70, len(cube_idxs))
+    cube_sizes = np.linspace(0.094, 0.128, len(cube_idxs))
     for alpha, size, idx in zip(cube_alphas, cube_sizes, cube_idxs):
         draw_box(
             ax_main,
@@ -867,23 +925,24 @@ def save_fatrop_cube_showcase() -> None:
             alpha=float(alpha),
         )
 
-    ax_main.scatter(*pose_init["position"], s=85, c="#38bdf8", marker="o", depthshade=False)
-    ax_main.scatter(*pose_goal["position"], s=120, c="#22c55e", marker="*", depthshade=False)
-    draw_frame(ax_main, pose_init["position"], geom.quat_to_rot(pose_init["quaternion"]), length=0.07, linewidth=2.0)
-    draw_frame(ax_main, pose_goal["position"], geom.quat_to_rot(pose_goal["quaternion"]), length=0.07, linewidth=2.0)
+    ax_main.scatter(*pose_init["position"], s=105, c="#38bdf8", marker="o", depthshade=False)
+    ax_main.scatter(*pose_goal["position"], s=145, c="#22c55e", marker="*", depthshade=False)
+    draw_frame(ax_main, pose_init["position"], geom.quat_to_rot(pose_init["quaternion"]), length=0.085, linewidth=2.3)
+    draw_frame(ax_main, pose_goal["position"], geom.quat_to_rot(pose_goal["quaternion"]), length=0.085, linewidth=2.3)
     equalize(ax_main, all_pos)
+    ax_main.set_box_aspect((1.55, 1.0, 0.90))
     ax_main.view_init(elev=28, azim=-54)
-    ax_main.set_title("3D position + rotation retarget", color=TEXT, fontsize=15, fontweight="bold", pad=12)
+    ax_main.set_title("3D position + rotation retarget", color=TEXT, fontsize=17, fontweight="bold", pad=14)
     ax_main.set_xlabel("x", color=MUTED)
     ax_main.set_ylabel("y", color=MUTED)
     ax_main.set_zlabel("z", color=MUTED)
-    ax_main.text2D(0.05, 0.92, "Fatrop retarget", transform=ax_main.transAxes, color="#60a5fa", fontsize=12, fontweight="bold")
-    ax_main.text2D(0.05, 0.86, "demo trajectory", transform=ax_main.transAxes, color="#cbd5e1", fontsize=10)
-    ax_main.text2D(0.05, 0.80, "notebook-style cube visualization", transform=ax_main.transAxes, color=MUTED, fontsize=9)
-    ax_main.text2D(0.05, 0.12, "large multi-axis offset", transform=ax_main.transAxes, color="#fbbf24", fontsize=10, fontweight="bold")
-    ax_main.text2D(0.05, 0.07, f"+{case['rotation_deg']:.0f}° boundary pitch change", transform=ax_main.transAxes, color="#fbbf24", fontsize=9)
+    ax_main.text2D(0.05, 0.93, "Fatrop retarget", transform=ax_main.transAxes, color="#60a5fa", fontsize=13.5, fontweight="bold")
+    ax_main.text2D(0.05, 0.87, "demo trajectory ghost", transform=ax_main.transAxes, color="#cbd5e1", fontsize=10.8)
+    ax_main.text2D(0.05, 0.81, "larger pose cubes show the rotation flow", transform=ax_main.transAxes, color=MUTED, fontsize=9.6)
+    ax_main.text2D(0.05, 0.12, "large multi-axis offset", transform=ax_main.transAxes, color="#fbbf24", fontsize=11, fontweight="bold")
+    ax_main.text2D(0.05, 0.07, f"+{case['rotation_deg']:.0f}° boundary pitch change", transform=ax_main.transAxes, color="#fbbf24", fontsize=9.8)
 
-    right = gs[0, 1].subgridspec(2, 1, height_ratios=[1.0, 0.82], hspace=0.20)
+    right = gs[0, 1].subgridspec(2, 1, height_ratios=[1.15, 0.72], hspace=0.16)
     ax_strip = fig.add_subplot(right[0, 0], projection="3d")
     set_dark_3d(ax_strip)
     strip_centers = np.column_stack(
@@ -894,8 +953,8 @@ def save_fatrop_cube_showcase() -> None:
         ]
     )
     for i, idx in enumerate(cube_idxs):
-        alpha = 0.16 + 0.08 * i
-        size = 0.11 - 0.007 * abs(i - (len(cube_idxs) - 1) / 2.0)
+        alpha = 0.23 + 0.09 * i
+        size = 0.165 - 0.012 * abs(i - (len(cube_idxs) - 1) / 2.0)
         draw_box(
             ax_strip,
             strip_centers[i],
@@ -905,23 +964,24 @@ def save_fatrop_cube_showcase() -> None:
             alpha=float(alpha),
         )
     ax_strip.set_xlim(-0.12, 1.02)
-    ax_strip.set_ylim(-0.35, 0.35)
-    ax_strip.set_zlim(-0.35, 0.35)
+    ax_strip.set_ylim(-0.42, 0.42)
+    ax_strip.set_zlim(-0.42, 0.42)
     ax_strip.view_init(elev=20, azim=-65)
-    ax_strip.set_title("orientation cubes along the retarget", color=TEXT, fontsize=12, fontweight="bold", pad=10)
+    ax_strip.set_box_aspect((1.95, 1.0, 1.0))
+    ax_strip.set_title("orientation cubes along the retarget", color=TEXT, fontsize=13.5, fontweight="bold", pad=12)
     ax_strip.set_xticks([])
     ax_strip.set_yticks([])
     ax_strip.set_zticks([])
     ax_strip.set_xlabel("")
     ax_strip.set_ylabel("")
     ax_strip.set_zlabel("")
-    ax_strip.text2D(0.06, 0.08, "start", transform=ax_strip.transAxes, color=MUTED, fontsize=8.5)
-    ax_strip.text2D(0.82, 0.08, "goal", transform=ax_strip.transAxes, color=MUTED, fontsize=8.5)
+    ax_strip.text2D(0.06, 0.08, "start", transform=ax_strip.transAxes, color=MUTED, fontsize=9.2)
+    ax_strip.text2D(0.81, 0.08, "goal", transform=ax_strip.transAxes, color=MUTED, fontsize=9.2)
 
     ax_info = fig.add_subplot(right[1, 0])
     ax_info.axis("off")
     ax_info.set_facecolor(PANEL_BG)
-    ax_info.set_title("Boundary checks", color=TEXT, fontsize=12.5, fontweight="bold", pad=10)
+    ax_info.set_title("Boundary checks", color=TEXT, fontsize=13.0, fontweight="bold", pad=12)
     metric_lines = [
         ("solver", str(case["solver"])),
         ("start position error", f"{case['start_err']:.1e} m"),
@@ -931,8 +991,8 @@ def save_fatrop_cube_showcase() -> None:
     y = 0.88
     for label, value in metric_lines:
         draw_round_box(ax_info, (0.05, y - 0.11), (0.90, 0.12), "#16233c", ec="#334155")
-        ax_info.text(0.09, y - 0.045, label, transform=ax_info.transAxes, ha="left", va="center", fontsize=9.1, color="#94a3b8")
-        ax_info.text(0.92, y - 0.045, value, transform=ax_info.transAxes, ha="right", va="center", fontsize=10.2, color="#f8fafc", fontweight="bold")
+        ax_info.text(0.09, y - 0.045, label, transform=ax_info.transAxes, ha="left", va="center", fontsize=9.6, color="#94a3b8")
+        ax_info.text(0.92, y - 0.045, value, transform=ax_info.transAxes, ha="right", va="center", fontsize=10.6, color="#f8fafc", fontweight="bold")
         y -= 0.145
     ax_info.text(
         0.05,
@@ -941,7 +1001,7 @@ def save_fatrop_cube_showcase() -> None:
         transform=ax_info.transAxes,
         ha="left",
         va="bottom",
-        fontsize=9.0,
+        fontsize=9.5,
         color="#fbbf24",
         fontweight="bold",
     )
@@ -952,20 +1012,20 @@ def save_fatrop_cube_showcase() -> None:
         transform=ax_info.transAxes,
         ha="left",
         va="bottom",
-        fontsize=8.7,
+        fontsize=8.9,
         color="#94a3b8",
     )
 
-    fig.suptitle("Fatrop 6D Retargeting Showcase", color="#f8fafc", fontsize=18, fontweight="bold", y=0.943)
+    fig.suptitle("Fatrop 6D Retargeting Showcase", color="#f8fafc", fontsize=20, fontweight="bold", y=0.948)
     fig.text(
         0.5,
-        0.905,
+        0.912,
         "A single trajectory is retargeted to a new 3D position and orientation boundary condition while preserving the motion's spatial arc and rotation structure.",
         ha="center",
         color="#cbd5e1",
-        fontsize=9.6,
+        fontsize=10.2,
     )
-    fig.subplots_adjust(top=0.85, left=0.04, right=0.98, bottom=0.06)
+    fig.subplots_adjust(top=0.87, left=0.03, right=0.985, bottom=0.055)
     fig.savefig(SHOWCASE_PATH, facecolor=BG, bbox_inches="tight")
     plt.close(fig)
 

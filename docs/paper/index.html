@@ -140,6 +140,11 @@
       overflow: hidden;
       box-shadow: 0 8px 40px rgba(0,0,0,0.4);
       border: 1px solid rgba(255,255,255,0.1);
+      width: min(1120px, calc(100vw - 2rem));
+      max-width: none;
+      position: relative;
+      left: 50%;
+      transform: translateX(-50%);
     }
     .hero-teaser video,
     .hero-teaser img {
@@ -152,6 +157,13 @@
       font-size: 0.8rem;
       text-align: center;
       padding: 0.4rem 0.75rem;
+    }
+    @media (max-width: 1023px) {
+      .hero-teaser {
+        width: 100%;
+        left: auto;
+        transform: none;
+      }
     }
 
     /* ── Resource buttons ───────────────────────────────────── */
@@ -295,6 +307,13 @@
       overflow: hidden;
       box-shadow: 0 2px 12px rgba(0,0,0,0.06);
     }
+    .result-figure.showcase-figure {
+      width: min(1180px, calc(100vw - 2rem));
+      max-width: none;
+      position: relative;
+      left: 50%;
+      transform: translateX(-50%);
+    }
     .result-figure img {
       width: 100%;
       display: block;
@@ -305,6 +324,13 @@
       font-size: 0.82rem;
       color: var(--gray);
       border-top: 1px solid #e5e7eb;
+    }
+    @media (max-width: 1023px) {
+      .result-figure.showcase-figure {
+        width: 100%;
+        left: auto;
+        transform: none;
+      }
     }
 
     /* ── Video grid ─────────────────────────────────────────── */
@@ -576,7 +602,7 @@
             <source src="assets/hero_3d_adaptation.mp4" type="video/mp4" />
           </video>
           <div class="hero-teaser-caption">
-            Controlled 6-DOF benchmark with matched boundary poses. The comparison is now shown directly in 3D: DHB preserves the interior lifted motion pattern, while endpoint-only warping visibly collapses the middle of the trajectory.
+            Hero animation from the new Fatrop 6-DOF showcase: a large multi-axis offset and boundary rotation change retargeted in 3D, with progressive orientation-cube reveal and a brief endpoint-warp contrast pass.
           </div>
         </div>
 
@@ -988,7 +1014,7 @@
           <span class="perturb-pill is-green">3D position + rotation</span>
           Notebook-style 6-DOF retargeting showcase with orientation cubes
         </div>
-        <div class="result-figure mb-5">
+        <div class="result-figure showcase-figure mb-5">
           <img src="assets/fatrop_cube_showcase.png"
                alt="Fatrop 6D retargeting showcase with notebook-style orientation cubes under large offset and rotation change" />
           <p class="fig-caption">
