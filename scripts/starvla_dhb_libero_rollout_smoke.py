@@ -6,6 +6,7 @@ import json
 import math
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Any
 
 import imageio
 import numpy as np
@@ -13,6 +14,7 @@ import torch
 from libero.libero import benchmark, get_libero_path
 from libero.libero.envs import OffScreenRenderEnv
 from omegaconf import OmegaConf
+from scipy.spatial.transform import Rotation
 
 from starVLA.model.framework.base_framework import build_framework
 from starVLA.training.trainer_utils.config_tracker import wrap_config
@@ -47,6 +49,38 @@ def _default_output_dir(cfg) -> Path:
     return run_root_dir / run_id
 
 
+def _load_action_norm_stats(cfg, output_dir: Path) -> dict[str, Any]:
+    stats_path = output_dir / "dataset_statistics.json"
+    if not stats_path.exists():
+        raise FileNotFoundError(
+            f"Missing dataset statistics at {stats_path}. Run a StarVLA dataloader smoke first to materialize stats."
+        )
+    payload = json.loads(stats_path.read_text())
+    if not payload:
+        raise ValueError(f"Dataset statistics file is empty: {stats_path}")
+    first_key = next(iter(payload.keys()))
+    action_stats = payload[first_key]["action"]
+    required = {"min", "max"}
+    missing = required - set(action_stats.keys())
+    if missing:
+        raise KeyError(f"Dataset action stats missing required keys {sorted(missing)} in {stats_path}")
+    return action_stats
+
+
+def _unnormalize_actions(normalized_actions: np.ndarray, action_norm_stats: dict[str, Any]) -> np.ndarray:
+    normalized_actions = np.asarray(normalized_actions, dtype=np.float32).copy()
+    mask = np.asarray(action_norm_stats.get("mask", np.ones_like(action_norm_stats["min"], dtype=bool)), dtype=bool)
+    action_high = np.asarray(action_norm_stats["max"], dtype=np.float32)
+    action_low = np.asarray(action_norm_stats["min"], dtype=np.float32)
+    normalized_actions = np.clip(normalized_actions, -1.0, 1.0)
+    normalized_actions[:, 6] = np.where(normalized_actions[:, 6] < 0.5, 0.0, 1.0)
+    return np.where(
+        mask,
+        0.5 * (normalized_actions + 1.0) * (action_high - action_low) + action_low,
+        normalized_actions,
+    )
+
+
 def _uses_quantized_vlm(model) -> bool:
     qwen = getattr(model, "qwen_vl_interface", None)
     if qwen is None:
@@ -71,6 +105,12 @@ def _quat2axisangle(quat: np.ndarray) -> np.ndarray:
 
 def _binarize_gripper(open_val: float) -> float:
     return float(1.0 - 2.0 * (open_val > 0.5))
+
+
+def _euler_to_axisangle(euler_xyz: np.ndarray) -> np.ndarray:
+    return Rotation.from_euler("xyz", np.asarray(euler_xyz, dtype=np.float32), degrees=False).as_rotvec().astype(
+        np.float32
+    )
 
 
 def _max_steps_for_suite(name: str) -> int:
@@ -101,6 +141,7 @@ def main() -> None:
     cfg.output_dir = str(_default_output_dir(cfg))
     output_dir = Path(cfg.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    action_norm_stats = _load_action_norm_stats(cfg, output_dir)
 
     benchmark_dict = benchmark.get_benchmark_dict()
     task_suite = benchmark_dict[args.task_suite_name]()
@@ -129,10 +170,13 @@ def main() -> None:
     obs = env.set_init_state(initial_states[args.episode_idx])
     for _ in range(args.num_steps_wait):
         obs, _, _, _ = env.step(LIBERO_DUMMY_ACTION)
+    for robot in env.robots:
+        robot.controller.use_delta = False
 
     max_steps = _max_steps_for_suite(args.task_suite_name)
     replay_images = []
     actions = []
+    raw_actions_chunk = None
     done = False
 
     torch.cuda.empty_cache()
@@ -162,15 +206,17 @@ def main() -> None:
             "state": np.expand_dims(state, axis=0),
         }
 
-        with torch.inference_mode():
-            pred = model.predict_action([example])
+        if raw_actions_chunk is None or _step % len(raw_actions_chunk) == 0:
+            with torch.inference_mode():
+                pred = model.predict_action([example])
+            normalized_chunk = pred["normalized_actions"][0]
+            raw_actions_chunk = _unnormalize_actions(normalized_chunk, action_norm_stats=action_norm_stats)
 
-        chunk = pred["normalized_actions"][0]
-        raw_action = chunk[0]
+        raw_action = raw_actions_chunk[_step % len(raw_actions_chunk)]
         delta_action = np.concatenate(
             [
                 np.asarray(raw_action[:3], dtype=np.float32),
-                np.asarray(raw_action[3:6], dtype=np.float32),
+                _euler_to_axisangle(np.asarray(raw_action[3:6], dtype=np.float32)),
                 np.asarray([_binarize_gripper(float(raw_action[6]))], dtype=np.float32),
             ]
         )
