@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import functools
 import json
-import math
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
@@ -16,6 +15,7 @@ from libero.libero.envs import OffScreenRenderEnv
 from omegaconf import OmegaConf
 from scipy.spatial.transform import Rotation
 
+from dhb_xr.integration.vla.libero import libero_obs_quat_to_axis_angle
 from starVLA.model.framework.base_framework import build_framework
 from starVLA.training.trainer_utils.config_tracker import wrap_config
 from starVLA.training.trainer_utils.trainer_tools import normalize_dotlist_args
@@ -99,16 +99,25 @@ def _uses_quantized_vlm(model) -> bool:
     )
 
 
-def _quat2axisangle(quat: np.ndarray) -> np.ndarray:
-    q = quat.copy()
-    if q[3] > 1.0:
-        q[3] = 1.0
-    elif q[3] < -1.0:
-        q[3] = -1.0
-    den = np.sqrt(1.0 - q[3] * q[3])
-    if math.isclose(den, 0.0):
-        return np.zeros(3, dtype=np.float32)
-    return (q[:3] * 2.0 * math.acos(q[3]) / den).astype(np.float32)
+def _load_rollout_checkpoint(model, checkpoint_path: str) -> None:
+    state_dict = torch.load(checkpoint_path, map_location="cpu")
+
+    # Quantized Qwen backbones carry bitsandbytes-specific buffers (e.g. SCB)
+    # that do not round-trip cleanly through a plain state_dict reload here.
+    # During these laptop smokes the Qwen backbone is frozen, so we only need
+    # to restore the trained DHB-side modules.
+    if _uses_quantized_vlm(model):
+        state_dict = {k: v for k, v in state_dict.items() if not k.startswith("qwen_vl_interface.")}
+        missing, unexpected = model.load_state_dict(state_dict, strict=False)
+        missing = [k for k in missing if not k.startswith("qwen_vl_interface.")]
+        if missing or unexpected:
+            raise RuntimeError(
+                "Quantized rollout checkpoint load mismatch: "
+                f"missing={missing[:10]}, unexpected={unexpected[:10]}"
+            )
+        return
+
+    model.load_state_dict(state_dict, strict=True)
 
 
 def _binarize_gripper(open_val: float) -> float:
@@ -172,8 +181,7 @@ def main() -> None:
     device = torch.device("cuda")
     model = build_framework(cfg)
     if args.checkpoint:
-        state_dict = torch.load(args.checkpoint, map_location="cpu")
-        model.load_state_dict(state_dict, strict=True)
+        _load_rollout_checkpoint(model, args.checkpoint)
     model.eval()
     if not _uses_quantized_vlm(model):
         model = model.to(device)
@@ -206,7 +214,7 @@ def main() -> None:
         state = np.concatenate(
             (
                 obs["robot0_eef_pos"],
-                _quat2axisangle(obs["robot0_eef_quat"]),
+                libero_obs_quat_to_axis_angle(obs["robot0_eef_quat"]),
                 np.array([0.0], dtype=np.float32),  # pad channel to match 8D training state
                 obs["robot0_gripper_qpos"][:1],
             )

@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Iterator, Optional, Tuple
 
 import numpy as np
+from scipy.spatial.transform import Rotation
 
 try:
     import h5py
@@ -31,6 +32,25 @@ DEFAULT_QUAT_KEYS = (
     "eef_quat",
     "ee_quat",
 )
+
+
+def libero_obs_quat_wxyz_to_xyzw(quat: np.ndarray) -> np.ndarray:
+    """Convert raw LIBERO env observation quaternions from wxyz to xyzw.
+
+    The robomimic-style HDF5 files store EE quaternions as wxyz in
+    ``robot_states[:, 5:9]``. On this machine, the direct LIBERO env
+    observations under ``robot0_eef_quat`` match that same scalar-first
+    convention. Most downstream libraries here expect scipy-style xyzw.
+    """
+    q = np.asarray(quat, dtype=np.float64).reshape(4)
+    return q[[1, 2, 3, 0]]
+
+
+def libero_obs_quat_to_axis_angle(quat: np.ndarray) -> np.ndarray:
+    """Convert a raw LIBERO env observation quaternion (wxyz) to axis-angle."""
+    quat_xyzw = libero_obs_quat_wxyz_to_xyzw(quat)
+    quat_xyzw = quat_xyzw / np.linalg.norm(quat_xyzw)
+    return Rotation.from_quat(quat_xyzw).as_rotvec().astype(np.float32)
 
 
 @dataclass
