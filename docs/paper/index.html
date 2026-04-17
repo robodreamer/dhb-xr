@@ -141,7 +141,8 @@
       box-shadow: 0 8px 40px rgba(0,0,0,0.4);
       border: 1px solid rgba(255,255,255,0.1);
     }
-    .hero-teaser video {
+    .hero-teaser video,
+    .hero-teaser img {
       width: 100%;
       display: block;
     }
@@ -569,13 +570,11 @@
           </div>
         </div>
 
-        <!-- Teaser Video -->
+        <!-- Teaser Summary -->
         <div class="hero-teaser">
-          <video autoplay muted loop playsinline>
-            <source src="assets/hero_3d_adaptation.mp4" type="video/mp4" />
-          </video>
+          <img src="assets/teaser.png" alt="DHB-XR teaser: geometric retargeting, stable tokens, and state-aware DHB action decoding" />
           <div class="hero-teaser-caption">
-            One 6-DOF demonstration (blue, thick) adapted to 8 different workspaces in 3D. DHB-XR preserves the exact arc shape and orientation profile — only the workspace position changes.
+            The main story is now centered on the strongest current evidence: invariant token stability, better compression on smoother geometric targets, and a state-aware DHB action head that decodes motion relative to the current robot pose. The geometric panel is shown as an exact translation diagnostic, not as a general 6-DOF solver claim.
           </div>
         </div>
 
@@ -595,8 +594,8 @@
           Current VLA action tokens are spatially unstable: move the workspace and the token targets change,
           even when the underlying skill is the same. DHB-XR addresses this at the representation level by
           encoding <em>trajectory shape</em> rather than absolute pose. On the current repo evidence, that yields
-          exact SE(3) token stability, better compression than FAST on raw coordinates, and reliable open-loop
-          geometric adaptation. The newer DHB action-head results are best read as a <em>technical validation</em>
+          exact SE(3) token stability, better compression than FAST on raw coordinates, and strong open-loop
+          geometric replay under the tested offsets. The newer DHB action-head results are best read as a <em>technical validation</em>
           of a state-aware decoder, not yet as a final robust closed-loop VLA result.
         </p>
 
@@ -604,7 +603,7 @@
         <ol style="font-size:0.95rem; line-height:1.8; color:#374151; padding-left:1.5rem;">
           <li><strong>Invariant action tokenization</strong> &mdash; DHB magnitude invariants make downstream tokenizers SE(3)-stable by construction.</li>
           <li><strong>Better compression on smoother targets</strong> &mdash; FAST+DHB out-compresses FAST on raw coordinates while preserving geometric identity.</li>
-          <li><strong>Representation-backed adaptation</strong> &mdash; the same invariant trajectory can be replayed from new spatial configurations, and the current DHB action head shows this idea can be learned in a state-aware decoder.</li>
+          <li><strong>Representation-backed re-grounding</strong> &mdash; invariant trajectories stay stable under exact SE(3) transforms, and the current DHB action head shows this idea can be learned in a state-aware decoder.</li>
         </ol>
       </div>
     </div>
@@ -983,16 +982,16 @@
 
         <!-- 3D TRAJECTORY DEMOS (hero video shown in hero section; start with SE(3) proof) -->
         <div class="demo-task-title">
-          <span class="perturb-pill is-blue">6-DOF</span>
-          <span class="perturb-pill is-green">adaptation</span>
-          Full pose adaptation: DHB preserves shape, naive distorts
+          <span class="perturb-pill is-blue">diagnostic</span>
+          <span class="perturb-pill is-green">exact translation</span>
+          Geometric re-grounding sanity check on a real LIBERO demonstration
         </div>
         <div class="video-card mb-5">
           <video autoplay muted loop playsinline>
             <source src="assets/demo_3d_adaptation_detail.mp4" type="video/mp4" />
           </video>
           <div class="video-label comparison">
-            Left: original demo with orientation frames. Center: DHB-XR adapted &mdash; shape and orientation profile preserved exactly. Right: naive replay at offset &mdash; shape distorted, collides with obstacle.
+            Left: raw replay in the original workspace frame. Center: DHB-XR decoded from the shifted initial pose. Right: translated demo reference. This is a verified translation-only diagnostic and is not presented as a full 6-DOF solver comparison.
           </div>
         </div>
 
