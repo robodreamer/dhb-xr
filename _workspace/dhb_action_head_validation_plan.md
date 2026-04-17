@@ -217,3 +217,37 @@ Interpretation:
 - The remaining failure split is now credible: `seed 0` is workable, `seed 1` fails IK from the first waypoint, and `seed 2` is partly feasible but not task-correct.
 - The old orientation and gripper pipeline bugs were real, but they are no longer the dominant issue here.
 - The next bottleneck is Stage-1 trajectory quality, especially the large first-waypoint translational overshoot seen across seeds and worst on `seed 1`.
+
+## Stage-1 Feasibility Clamp Pass
+
+- [x] Add a lightweight Stage-1 feasibility pass to clamp the first waypoint and per-step motion
+- [x] Rerun the same `replan6` multiseed StarVLA→`embodik` sweep with recorded videos
+- [x] Compare IK feasibility before vs after the clamp
+- [ ] Decide whether the next change should target grasp / placement quality rather than generic feasibility
+
+Current clamp settings:
+- `max_first_offset_mm = 40`
+- `max_step_mm = 20`
+- `smooth_window = 3`
+
+Artifacts:
+- stage1 summaries:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/embodik_stage1_step200_seed{0,1,2}_replan6_clamp40_step20_sw3.json`
+- IK summary:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/embodik_step200_replan6_clamp40_step20_sw3_debug_ik.json`
+- sim summary:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/embodik_step200_replan6_clamp40_step20_sw3_debug_sim.json`
+- videos:
+  - `_workspace/validation_videos/starvla_embodik_invsup_step200_replan6_clamp40_step20_sw3_sweep`
+
+Key outcome:
+- IK feasibility improved strongly, especially for `seed 1`
+  - `0 cm seed 1`: `84/84 -> 19/84` failures
+  - `3 cm seed 1`: `84/84 -> 20/84` failures
+- Closed-loop success did **not** improve
+  - still `1/3` at `0 cm`
+  - still `1/3` at `3 cm`
+
+Interpretation:
+- The clamp confirms that early translational overshoot was a real bottleneck.
+- But once that is reduced, the main remaining problem becomes trajectory quality around grasp / placement, not just immediate IK feasibility.

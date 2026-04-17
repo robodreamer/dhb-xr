@@ -100,3 +100,61 @@ The next high-value change should target **Stage-1 feasibility**, not the execut
 - retrain / re-evaluate with the same replanned `embodik` sweep
 
 Separately, the harness server now fails fast if `use_embodik_ik=true`, because that path still advertises EEF-delta actions while returning joint targets.
+
+## Clamp follow-up
+
+A lightweight feasibility pass was added in `scripts/starvla_dhb_embodik_stage1.py`:
+
+- `max-first-offset-mm = 40`
+- `max-step-mm = 20`
+- `smooth-window = 3`
+
+Artifacts:
+
+- Stage 1 summaries:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/embodik_stage1_step200_seed0_replan6_clamp40_step20_sw3.json`
+  - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/embodik_stage1_step200_seed1_replan6_clamp40_step20_sw3.json`
+  - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/embodik_stage1_step200_seed2_replan6_clamp40_step20_sw3.json`
+- IK debug:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/embodik_step200_replan6_clamp40_step20_sw3_debug_ik.json`
+- Sim debug:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/embodik_step200_replan6_clamp40_step20_sw3_debug_sim.json`
+- Videos:
+  - `_workspace/validation_videos/starvla_embodik_invsup_step200_replan6_clamp40_step20_sw3_sweep`
+
+### What improved
+
+IK feasibility improved substantially:
+
+- `offset 0cm`
+  - `seed 0`: `25/98 -> 21/98` IK failures
+  - `seed 1`: `84/84 -> 19/84` IK failures
+  - `seed 2`: `16/90 -> 8/90` IK failures
+- `offset 3cm`
+  - `seed 0`: `28/98 -> 26/98`
+  - `seed 1`: `84/84 -> 20/84`
+  - `seed 2`: `18/90 -> 11/90`
+
+This confirms the earlier diagnosis: a large part of the seed split was caused by oversized early translational jumps, especially on `seed 1`.
+
+### What did not improve
+
+Closed-loop task success did **not** increase:
+
+- still `1/3` at `0 cm`
+- still `1/3` at `3 cm`
+
+The successful cases are unchanged:
+
+- `seed 0`, `0 cm` succeeds in the default controller run
+- `seed 0`, `3 cm` succeeds in the high-gain retry
+
+### Updated interpretation
+
+The clamp removes the worst gross infeasibility, but it does not solve the downstream manipulation error. So the current bottleneck has shifted again:
+
+1. first-waypoint feasibility is now much better
+2. execution is now meaningful for all seeds, especially `seed 1`
+3. the remaining failure is task quality, not just immediate IK collapse
+
+That means the next useful work should focus on trajectory quality near grasp / placement, not only on generic feasibility smoothing.

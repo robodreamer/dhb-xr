@@ -125,6 +125,69 @@ def _demo_state_vector(ee_pos: np.ndarray, ee_quat_wxyz: np.ndarray, grip_qpos: 
     ).astype(np.float32)
 
 
+def _clip_vector_norm(vec: np.ndarray, max_norm: float) -> np.ndarray:
+    norm = float(np.linalg.norm(vec))
+    if max_norm <= 0.0 or norm <= max_norm or norm <= 1e-9:
+        return vec
+    return vec * (max_norm / norm)
+
+
+def _stabilize_chunk_positions(
+    chunk_pos: np.ndarray,
+    *,
+    anchor_pos: np.ndarray,
+    max_first_offset_m: float,
+    max_step_m: float,
+    smooth_window: int,
+) -> tuple[np.ndarray, dict[str, float]]:
+    """Clamp obviously infeasible translational jumps while preserving chunk shape."""
+    stabilized = np.asarray(chunk_pos, dtype=np.float32).copy()
+    debug = {
+        "raw_first_offset_mm": 0.0,
+        "stabilized_first_offset_mm": 0.0,
+        "raw_mean_step_mm": 0.0,
+        "stabilized_mean_step_mm": 0.0,
+    }
+    if len(stabilized) == 0:
+        return stabilized, debug
+
+    anchor = np.asarray(anchor_pos, dtype=np.float32).reshape(3)
+    debug["raw_first_offset_mm"] = float(np.linalg.norm(stabilized[0] - anchor) * 1000.0)
+    if len(stabilized) > 1:
+        debug["raw_mean_step_mm"] = float(
+            np.linalg.norm(np.diff(stabilized, axis=0), axis=1).mean() * 1000.0
+        )
+
+    if max_first_offset_m > 0.0:
+        stabilized[0] = anchor + _clip_vector_norm(stabilized[0] - anchor, max_first_offset_m)
+
+    if max_step_m > 0.0:
+        for i in range(1, len(stabilized)):
+            step = stabilized[i] - stabilized[i - 1]
+            stabilized[i] = stabilized[i - 1] + _clip_vector_norm(step, max_step_m)
+
+    if smooth_window > 1 and len(stabilized) > 2:
+        smoothed = stabilized.copy()
+        radius = smooth_window // 2
+        for i in range(len(stabilized)):
+            lo = max(0, i - radius)
+            hi = min(len(stabilized), i + radius + 1)
+            smoothed[i] = stabilized[lo:hi].mean(axis=0)
+        stabilized = smoothed
+        stabilized[0] = anchor + _clip_vector_norm(stabilized[0] - anchor, max_first_offset_m)
+        if max_step_m > 0.0:
+            for i in range(1, len(stabilized)):
+                step = stabilized[i] - stabilized[i - 1]
+                stabilized[i] = stabilized[i - 1] + _clip_vector_norm(step, max_step_m)
+
+    debug["stabilized_first_offset_mm"] = float(np.linalg.norm(stabilized[0] - anchor) * 1000.0)
+    if len(stabilized) > 1:
+        debug["stabilized_mean_step_mm"] = float(
+            np.linalg.norm(np.diff(stabilized, axis=0), axis=1).mean() * 1000.0
+        )
+    return stabilized.astype(np.float32), debug
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config_yaml", required=True)
@@ -134,6 +197,9 @@ def main() -> None:
     parser.add_argument("--replan_every", type=int, default=6)
     parser.add_argument("--checkpoint", default=None)
     parser.add_argument("--gripper-source", choices=("demo", "model"), default="demo")
+    parser.add_argument("--max-first-offset-mm", type=float, default=0.0)
+    parser.add_argument("--max-step-mm", type=float, default=0.0)
+    parser.add_argument("--smooth-window", type=int, default=0)
     parser.add_argument("--save_npz", default=None)
     parser.add_argument("--save_json", default=None)
     args, unknown = parser.parse_known_args()
@@ -185,9 +251,16 @@ def main() -> None:
 
         chunk_pos = np.asarray(result["positions"][0], dtype=np.float32)
         chunk_quat = np.asarray(result["quaternions"][0], dtype=np.float32)  # wxyz
+        chunk_pos_stable, stability = _stabilize_chunk_positions(
+            chunk_pos,
+            anchor_pos=demo["ee_pos"][t],
+            max_first_offset_m=max(0.0, args.max_first_offset_mm) / 1000.0,
+            max_step_m=max(0.0, args.max_step_mm) / 1000.0,
+            smooth_window=max(0, args.smooth_window),
+        )
         n_use = min(args.replan_every, len(chunk_pos), num_demo_steps - t)
 
-        all_positions.append(chunk_pos[:n_use])
+        all_positions.append(chunk_pos_stable[:n_use])
         all_quaternions.append(chunk_quat[:n_use])
 
         if args.gripper_source == "demo":
@@ -204,7 +277,7 @@ def main() -> None:
             all_gripper.append(chunk_gripper)
 
         gt_chunk = demo["ee_pos"][t : t + n_use]
-        pos_err_mm = np.linalg.norm(chunk_pos[:n_use] - gt_chunk, axis=1) * 1000.0
+        pos_err_mm = np.linalg.norm(chunk_pos_stable[:n_use] - gt_chunk, axis=1) * 1000.0
         debug_chunks.append(
             {
                 "t_start": int(t),
@@ -212,7 +285,9 @@ def main() -> None:
                 "chunk_mean_err_mm": float(np.mean(pos_err_mm)),
                 "chunk_max_err_mm": float(np.max(pos_err_mm)),
                 "first_pred_pos": chunk_pos[0].tolist(),
+                "first_stabilized_pos": chunk_pos_stable[0].tolist(),
                 "first_gt_pos": gt_chunk[0].tolist(),
+                **stability,
             }
         )
         t += n_use
@@ -245,6 +320,9 @@ def main() -> None:
         "episode_idx": args.episode_idx,
         "task_language": task.language,
         "replan_every": args.replan_every,
+        "max_first_offset_mm": float(args.max_first_offset_mm),
+        "max_step_mm": float(args.max_step_mm),
+        "smooth_window": int(args.smooth_window),
         "num_demo_steps": num_demo_steps,
         "num_chunks": len(debug_chunks),
         "gripper_source": args.gripper_source,
