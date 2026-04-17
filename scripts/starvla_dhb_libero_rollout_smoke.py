@@ -7,6 +7,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
+import h5py
 import imageio
 import numpy as np
 import torch
@@ -140,6 +141,20 @@ def _max_steps_for_suite(name: str) -> int:
     }[name]
 
 
+def _load_libero_demo_absolute_actions(hdf5_path: str, demo_id: int) -> np.ndarray:
+    demo_key = f"demo_{demo_id}"
+    with h5py.File(hdf5_path, "r") as f:
+        demo = f["data"][demo_key]
+        robot_states = np.asarray(demo["robot_states"], dtype=np.float64)
+        ee_pos = robot_states[:, 2:5].astype(np.float32)
+        ee_quat_wxyz = robot_states[:, 5:9].astype(np.float64)
+        ee_quat_xyzw = ee_quat_wxyz[:, [1, 2, 3, 0]]
+        ee_quat_xyzw = ee_quat_xyzw / np.linalg.norm(ee_quat_xyzw, axis=1, keepdims=True)
+        ee_euler = Rotation.from_quat(ee_quat_xyzw).as_euler("xyz", degrees=False).astype(np.float32)
+        gripper = robot_states[:, 0:1].astype(np.float32)
+    return np.concatenate([ee_pos, ee_euler, gripper], axis=1).astype(np.float32)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config_yaml", required=True)
@@ -148,6 +163,8 @@ def main() -> None:
     parser.add_argument("--episode_idx", type=int, default=0)
     parser.add_argument("--num_steps_wait", type=int, default=10)
     parser.add_argument("--checkpoint", default=None)
+    parser.add_argument("--gt_hdf5", default=None)
+    parser.add_argument("--gt_demo_id", type=int, default=0)
     parser.add_argument("--save_json", default=None)
     args, unknown = parser.parse_known_args()
 
@@ -159,7 +176,7 @@ def main() -> None:
     cfg.output_dir = str(_default_output_dir(cfg))
     output_dir = Path(cfg.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    action_norm_stats = _load_action_norm_stats(cfg, output_dir)
+    action_norm_stats = None if args.gt_hdf5 else _load_action_norm_stats(cfg, output_dir)
 
     benchmark_dict = benchmark.get_benchmark_dict()
     task_suite = benchmark_dict[args.task_suite_name]()
@@ -175,16 +192,19 @@ def main() -> None:
     )
     env.seed(cfg.seed)
 
-    if not torch.cuda.is_available():
-        raise RuntimeError("CUDA is required for StarVLA LIBERO rollout smoke.")
-
-    device = torch.device("cuda")
-    model = build_framework(cfg)
-    if args.checkpoint:
-        _load_rollout_checkpoint(model, args.checkpoint)
-    model.eval()
-    if not _uses_quantized_vlm(model):
-        model = model.to(device)
+    model = None
+    device = None
+    raw_actions_gt = _load_libero_demo_absolute_actions(args.gt_hdf5, args.gt_demo_id) if args.gt_hdf5 else None
+    if raw_actions_gt is None:
+        if not torch.cuda.is_available():
+            raise RuntimeError("CUDA is required for StarVLA LIBERO rollout smoke.")
+        device = torch.device("cuda")
+        model = build_framework(cfg)
+        if args.checkpoint:
+            _load_rollout_checkpoint(model, args.checkpoint)
+        model.eval()
+        if not _uses_quantized_vlm(model):
+            model = model.to(device)
 
     obs = env.reset()
     obs = env.set_init_state(initial_states[args.episode_idx])
@@ -199,12 +219,12 @@ def main() -> None:
     raw_actions_chunk = None
     done = False
 
-    torch.cuda.empty_cache()
-    torch.cuda.reset_peak_memory_stats(device)
-
-    start = torch.cuda.Event(enable_timing=True)
-    end = torch.cuda.Event(enable_timing=True)
-    start.record()
+    if device is not None:
+        torch.cuda.empty_cache()
+        torch.cuda.reset_peak_memory_stats(device)
+        start = torch.cuda.Event(enable_timing=True)
+        end = torch.cuda.Event(enable_timing=True)
+        start.record()
 
     for _step in range(max_steps):
         img = np.ascontiguousarray(obs["agentview_image"][::-1, ::-1])
@@ -220,19 +240,24 @@ def main() -> None:
             )
         ).astype(np.float32)
 
-        example = {
-            "image": [img, wrist_img],
-            "lang": task.language,
-            "state": np.expand_dims(state, axis=0),
-        }
+        if raw_actions_gt is None:
+            example = {
+                "image": [img, wrist_img],
+                "lang": task.language,
+                "state": np.expand_dims(state, axis=0),
+            }
 
-        if raw_actions_chunk is None or _step % len(raw_actions_chunk) == 0:
-            with torch.inference_mode():
-                pred = model.predict_action([example])
-            normalized_chunk = pred["normalized_actions"][0]
-            raw_actions_chunk = _unnormalize_actions(normalized_chunk, action_norm_stats=action_norm_stats)
+            if raw_actions_chunk is None or _step % len(raw_actions_chunk) == 0:
+                with torch.inference_mode():
+                    pred = model.predict_action([example])
+                normalized_chunk = pred["normalized_actions"][0]
+                raw_actions_chunk = _unnormalize_actions(normalized_chunk, action_norm_stats=action_norm_stats)
+            raw_action = raw_actions_chunk[_step % len(raw_actions_chunk)]
+        else:
+            if _step >= len(raw_actions_gt):
+                break
+            raw_action = raw_actions_gt[_step]
 
-        raw_action = raw_actions_chunk[_step % len(raw_actions_chunk)]
         delta_action = np.concatenate(
             [
                 np.asarray(raw_action[:3], dtype=np.float32),
@@ -246,11 +271,12 @@ def main() -> None:
         if done:
             break
 
-    end.record()
-    torch.cuda.synchronize(device)
+    if device is not None:
+        end.record()
+        torch.cuda.synchronize(device)
 
     task_segment = task.language.replace(" ", "_")
-    checkpoint_tag = _checkpoint_tag(args.checkpoint)
+    checkpoint_tag = f"gt_demo{args.gt_demo_id}" if args.gt_hdf5 else _checkpoint_tag(args.checkpoint)
     suffix = "success" if done else "failure"
     video_path = output_dir / f"rollout_{checkpoint_tag}_{task_segment}_episode{args.episode_idx}_{suffix}.mp4"
     imageio.mimwrite(video_path, [np.asarray(x) for x in replay_images], fps=10)
@@ -258,6 +284,8 @@ def main() -> None:
     summary = {
         "config_yaml": args.config_yaml,
         "checkpoint": args.checkpoint,
+        "gt_hdf5": args.gt_hdf5,
+        "gt_demo_id": args.gt_demo_id if args.gt_hdf5 else None,
         "overrides": dotlist,
         "output_dir": str(output_dir),
         "task_suite_name": args.task_suite_name,
@@ -266,9 +294,9 @@ def main() -> None:
         "task_language": task.language,
         "success": bool(done),
         "num_steps": len(actions),
-        "rollout_time_ms": round(start.elapsed_time(end), 2),
-        "gpu_name": torch.cuda.get_device_name(device),
-        "peak_memory_mb": round(torch.cuda.max_memory_allocated(device) / (1024**2), 2),
+        "rollout_time_ms": round(start.elapsed_time(end), 2) if device is not None else None,
+        "gpu_name": torch.cuda.get_device_name(device) if device is not None else None,
+        "peak_memory_mb": round(torch.cuda.max_memory_allocated(device) / (1024**2), 2) if device is not None else None,
         "video_path": str(video_path),
         "first_action": actions[0] if actions else None,
         "last_action": actions[-1] if actions else None,
