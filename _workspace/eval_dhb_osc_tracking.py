@@ -88,8 +88,12 @@ def get_decoded_positions(mode, demo_key, checkpoint_path=None, inv_mean=None, i
 
     else:  # predicted
         from eval_dhb_head_e2e import load_model, get_vlm_features
+        from dhb_xr.integration.vla.smolvla_adapter import SmolVLADHBAdapter
 
         policy, dhb_head, config, _, _, _, _ = load_model(checkpoint_path, device)
+        adapter = SmolVLADHBAdapter.from_dhb_head(
+            dhb_head, vlm_dim=config["vlm_dim"], action_horizon=config["action_horizon"]
+        )
         task_name = "pick up the black bowl between the plate and the ramekin and place it on the plate\n"
 
         all_pos = []
@@ -104,8 +108,7 @@ def get_decoded_positions(mode, demo_key, checkpoint_path=None, inv_mean=None, i
             }
             vlm_feat = get_vlm_features(policy, obs_dict, task_name, device)
             with torch.no_grad():
-                result = dhb_head.predict(vlm_feat)
-            pred_inv = result["pred_invariants"][0].cpu().numpy()
+                pred_inv = adapter.predict_invariants_from_observation(vlm_feat, obs_dict)[0].cpu().numpy()
 
             if inv_mean is not None:
                 pred_inv = pred_inv * inv_std + inv_mean

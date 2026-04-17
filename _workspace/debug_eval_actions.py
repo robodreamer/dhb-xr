@@ -54,6 +54,7 @@ def print_invariant_stats(inv, label="Invariants"):
 
 def main():
     import torch
+    from dhb_xr.integration.vla.smolvla_adapter import SmolVLADHBAdapter
     import h5py
     from scipy.spatial.transform import Rotation
     from libero.libero import benchmark, get_libero_path
@@ -278,18 +279,18 @@ def main():
     # Load model (reuse eval script's load_model)
     from eval_dhb_head_e2e import load_model, get_vlm_features
 
-    policy, dhb_head, config = load_model(ckpt_path, device)
+    policy, dhb_head, config, _, _, _, _ = load_model(ckpt_path, device)
     T_model = config["action_horizon"]
     print(f"  Action horizon: {T_model}")
 
     # Get VLM features for demo_0's initial observation
     vlm_feat = get_vlm_features(policy, obs, task_name, device)
     print(f"  VLM features shape: {vlm_feat.shape}")
+    adapter = SmolVLADHBAdapter.from_dhb_head(dhb_head, vlm_dim=config["vlm_dim"], action_horizon=T_model)
 
     # Predict invariants
     with torch.no_grad():
-        result = dhb_head.predict(vlm_feat)
-        pred_inv = result["pred_invariants"][0].cpu().numpy()  # (T, 8)
+        pred_inv = adapter.predict_invariants_from_observation(vlm_feat, obs)[0].cpu().numpy()  # (T, 8)
 
     print_invariant_stats(pred_inv, "Model-predicted invariants")
     print_invariant_stats(gt_inv_trunc, "Ground-truth invariants (truncated to T)")

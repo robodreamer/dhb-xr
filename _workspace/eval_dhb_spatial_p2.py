@@ -154,6 +154,7 @@ def stage_predict(args):
     import h5py
     from dhb_xr.decoder.dhb_dr import decode_dhb_dr
     from dhb_xr.core.types import EncodingMethod, DHBMethod
+    from dhb_xr.integration.vla.smolvla_adapter import SmolVLADHBAdapter
     from scipy.spatial.transform import Rotation
 
     print("=" * 70)
@@ -170,6 +171,9 @@ def stage_predict(args):
     ckpt_path = args.checkpoint or CHECKPOINT_SPATIAL
     policy, dhb_head, config, inv_mean, inv_std, act_mean, act_std = \
         load_model(ckpt_path, device)
+    adapter = SmolVLADHBAdapter.from_dhb_head(
+        dhb_head, vlm_dim=config["vlm_dim"], action_horizon=config["action_horizon"]
+    )
 
     training_type = config.get("training", "unknown")
     T_horizon = config["action_horizon"]
@@ -212,9 +216,9 @@ def stage_predict(args):
 
         # Predict invariants
         with torch.no_grad():
-            result = dhb_head.predict(vlm_feat)
+            pred_inv_t = adapter.predict_invariants_from_observation(vlm_feat, p2_obs)
 
-        pred_inv = result["pred_invariants"][0].cpu().numpy()  # (T, 8)
+        pred_inv = pred_inv_t[0].cpu().numpy()  # (T, 8)
 
         # Denormalize
         if inv_mean is not None and inv_std is not None:

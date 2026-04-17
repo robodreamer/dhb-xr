@@ -1,6 +1,7 @@
 """Tests for DHBActionHead."""
 import pytest
 import numpy as np
+import torch.nn as nn
 
 torch = pytest.importorskip("torch")
 
@@ -34,6 +35,69 @@ class TestDHBActionHead:
         state = torch.randn(self.B, 8)
         result = self.head(vlm_hidden, state=state)
         assert result["pred_invariants"].shape == (self.B, 20, 8)
+
+    def test_state_conditioning_changes_predictions(self):
+        """Regression test for SmolVLA closed-loop usage: state must affect predictions.
+
+        The earlier SmolVLA evaluation scripts often called ``predict(vlm_feat)``
+        without forwarding the current 8D EE state, even though the head exposes
+        a dedicated state-conditioning path. This test makes that path
+        deterministic and verifies that changing ``state`` changes the predicted
+        invariants.
+        """
+
+        class RepeatFirstMemoryToken(nn.Module):
+            def forward(self, queries, memory):
+                return memory[:, :1, :].expand(-1, queries.shape[1], -1)
+
+        head = DHBActionHead(
+            vlm_dim=16,
+            action_horizon=4,
+            invariant_dim=8,
+            hidden_dim=16,
+            num_heads=4,
+            num_layers=1,
+            dropout=0.0,
+        )
+        head.decoder = RepeatFirstMemoryToken()
+
+        with torch.no_grad():
+            # Zero out the visual path so only explicit state conditioning remains.
+            head.vlm_proj.weight.zero_()
+            head.vlm_proj.bias.zero_()
+            head.query_embed.weight.zero_()
+
+            # Route state[:8] -> hidden[:8] exactly.
+            head.state_proj.weight.zero_()
+            head.state_proj.bias.zero_()
+            head.state_proj.weight[:8, :8] = torch.eye(8)
+
+            # Route hidden[:8] -> invariant[:8] exactly.
+            head.invariant_head.weight.zero_()
+            head.invariant_head.bias.zero_()
+            head.invariant_head.weight[:, :8] = torch.eye(8)
+
+        vlm_hidden = torch.randn(2, 3, 16)
+        state_a = torch.tensor(
+            [[1.0, 2.0, 3.0, 0.1, 0.2, 0.3, 0.4, 0.5],
+             [1.0, 2.0, 3.0, 0.1, 0.2, 0.3, 0.4, 0.5]]
+        )
+        state_b = torch.tensor(
+            [[9.0, 8.0, 7.0, 0.9, 0.8, 0.7, 0.6, 0.5],
+             [9.0, 8.0, 7.0, 0.9, 0.8, 0.7, 0.6, 0.5]]
+        )
+
+        pred_no_state = head(vlm_hidden)["pred_invariants"]
+        pred_a = head(vlm_hidden, state=state_a)["pred_invariants"]
+        pred_b = head(vlm_hidden, state=state_b)["pred_invariants"]
+
+        assert torch.allclose(pred_no_state, torch.zeros_like(pred_no_state))
+        assert torch.allclose(pred_a[:, 0, :], state_a, atol=1e-6)
+        assert torch.allclose(pred_b[:, 0, :], state_b, atol=1e-6)
+        assert not torch.allclose(pred_a, pred_b), (
+            "Changing the current EE state must change predicted invariants; "
+            "otherwise the state-conditioning path is effectively unused."
+        )
 
     def test_training_loss(self):
         """Training loss is computed when targets provided."""

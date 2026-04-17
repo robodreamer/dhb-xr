@@ -26,25 +26,95 @@ Usage:
 import sys
 import os
 import argparse
+import json
+import re
 import numpy as np
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+LIBERO_IMPORT_CANDIDATES = [
+    "/home/andypark/Projects/repos/LIBERO",
+    "/home/andypark/Projects/repos/LIBERO-PRO",
+]
+LIBERO_BDDL_ROOT_CANDIDATES = [
+    "/home/andypark/Projects/repos/LIBERO/libero/libero/bddl_files",
+    "/home/andypark/Projects/repos/LIBERO-PRO/libero/libero/bddl_files",
+]
+for _candidate in LIBERO_IMPORT_CANDIDATES:
+    if Path(_candidate).exists():
+        sys.path.insert(0, _candidate)
+        break
 
 # File paths
 DEMO_HDF5 = (
     "/home/andypark/Projects/data/libero/libero_spatial/"
     "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate_demo.hdf5"
 )
-BDDL_FILE = (
-    "/home/andypark/Projects/repos/LIBERO/libero/libero/bddl_files/libero_spatial/"
-    "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate.bddl"
+for _candidate in LIBERO_BDDL_ROOT_CANDIDATES:
+    if Path(_candidate).exists():
+        _bddl_root = _candidate
+        break
+else:
+    _bddl_root = LIBERO_BDDL_ROOT_CANDIDATES[0]
+
+BDDL_FILE = str(
+    Path(_bddl_root)
+    / "libero_spatial"
+    / "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate.bddl"
 )
-CHECKPOINT = "/home/andypark/Projects/repos/dhb_xr/_workspace/dhb_head_e2e_norm.pt"
+DEFAULT_CHECKPOINT = str(Path(__file__).with_name("dhb_head_e2e_fix_smoke.pt"))
 
 # Inter-stage data files
 POSES_NPZ = "/tmp/dhb_embodik_poses.npz"
 JOINTS_NPZ = "/tmp/dhb_embodik_joints.npz"
+
+
+def build_stage_summary_path(args, stage_name):
+    if not args.debug_json:
+        return None
+
+    base = Path(args.debug_json)
+    if base.suffix:
+        return str(base.with_name(f"{base.stem}_{stage_name}{base.suffix}"))
+    return str(base / f"{stage_name}.json")
+
+
+def write_debug_summary(path, payload):
+    if not path:
+        return
+
+    def _to_jsonable(value):
+        if isinstance(value, dict):
+            return {k: _to_jsonable(v) for k, v in value.items()}
+        if isinstance(value, (list, tuple)):
+            return [_to_jsonable(v) for v in value]
+        if isinstance(value, np.ndarray):
+            return value.tolist()
+        if isinstance(value, np.generic):
+            return value.item()
+        return value
+
+    out_path = Path(path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with out_path.open("w") as f:
+        json.dump(_to_jsonable(payload), f, indent=2)
+    print(f"Debug summary: {out_path}")
+
+
+def make_video_path(video_dir, label, suffix="mp4"):
+    safe = re.sub(r"[^A-Za-z0-9._-]+", "_", label).strip("_")
+    return str(Path(video_dir) / f"{safe}.{suffix}")
+
+
+def quaternion_step_angles_deg(quaternions_wxyz):
+    if len(quaternions_wxyz) < 2:
+        return np.zeros((0,), dtype=np.float32)
+
+    quats = np.asarray(quaternions_wxyz, dtype=np.float64)
+    step_dots = np.sum(quats[:-1] * quats[1:], axis=1)
+    step_dots = np.clip(np.abs(step_dots), -1.0, 1.0)
+    return np.degrees(2.0 * np.arccos(step_dots)).astype(np.float32)
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -168,6 +238,7 @@ def stage_predict(args):
     import torch
     from dhb_xr.decoder.dhb_dr import decode_dhb_dr
     from dhb_xr.core.types import EncodingMethod, DHBMethod
+    from dhb_xr.integration.vla.smolvla_adapter import SmolVLADHBAdapter
     from scipy.spatial.transform import Rotation
 
     print("=" * 70)
@@ -181,8 +252,14 @@ def stage_predict(args):
     sys.path.insert(0, "/home/andypark/Projects/repos/LIBERO")
     from eval_dhb_head_e2e import load_model, get_vlm_features
 
+    if not args.checkpoint:
+        raise ValueError("--checkpoint is required for --stage predict")
+
     policy, dhb_head, config, inv_mean, inv_std, act_mean, act_std = \
-        load_model(CHECKPOINT, device)
+        load_model(args.checkpoint, device)
+    adapter = SmolVLADHBAdapter.from_dhb_head(
+        dhb_head, vlm_dim=config["vlm_dim"], action_horizon=config["action_horizon"]
+    )
     T_horizon = config["action_horizon"]  # 30
 
     # Load ALL demos for multi-seed evaluation
@@ -199,6 +276,7 @@ def stage_predict(args):
     all_trajectories = {}
     all_grippers = {}
     all_init_states = {}
+    debug_rows = []
 
     for seed in range(seeds):
         demo_idx = seed % n_available
@@ -243,7 +321,9 @@ def stage_predict(args):
             vlm_feat = get_vlm_features(policy, obs_dict, task_name, device)
 
             with torch.no_grad():
-                result = dhb_head.predict(vlm_feat)
+                result = {
+                    "pred_invariants": adapter.predict_invariants_from_observation(vlm_feat, obs_dict)
+                }
 
             pred_inv = result["pred_invariants"][0].cpu().numpy()
 
@@ -276,7 +356,24 @@ def stage_predict(args):
             gt_chunk = demo_ee_pos[t:t+n_use]
             pred_chunk = dec_pos[:n_use]
             chunk_err = np.linalg.norm(pred_chunk - gt_chunk, axis=1) * 1000
+            rot_step_deg = quaternion_step_angles_deg(dec_quat[:n_use])
             total_err.extend(chunk_err.tolist())
+            debug_rows.append({
+                "seed": seed,
+                "demo_key": demo_key,
+                "t_start": int(t),
+                "n_use": int(n_use),
+                "chunk_mean_err_mm": float(np.mean(chunk_err)),
+                "chunk_max_err_mm": float(np.max(chunk_err)),
+                "decoded_y_min": float(np.min(dec_pos[:n_use, 1])),
+                "decoded_y_max": float(np.max(dec_pos[:n_use, 1])),
+                "invariant_norm": float(np.linalg.norm(pred_inv)),
+                "current_ee_pos": demo_ee_pos[t].tolist(),
+                "first_decoded_pos": dec_pos[0].tolist(),
+                "mean_step_rot_deg": float(rot_step_deg.mean()) if len(rot_step_deg) else 0.0,
+                "max_step_rot_deg": float(rot_step_deg.max()) if len(rot_step_deg) else 0.0,
+                "total_rot_deg": float(rot_step_deg.sum()) if len(rot_step_deg) else 0.0,
+            })
 
             all_decoded_pos.append(dec_pos[:n_use])
             all_decoded_quat.append(dec_quat[:n_use])
@@ -340,6 +437,15 @@ def stage_predict(args):
         source="predicted_multidemo",
     )
     print(f"\nSaved {len(all_trajectories)//2} trajectories to {POSES_NPZ}")
+    write_debug_summary(build_stage_summary_path(args, "predict"), {
+        "stage": "predict",
+        "checkpoint": args.checkpoint,
+        "offsets_cm": list(map(float, offsets_cm)),
+        "seeds": int(seeds),
+        "replan_every": int(replan_every),
+        "source": "predicted_multidemo",
+        "chunks": debug_rows,
+    })
     print("Next: run --stage ik in pixi env")
 
 
@@ -436,6 +542,7 @@ def stage_ik(args):
     # Solve IK for all trajectories
     all_joints = {}
     all_errors = {}
+    debug_rows = []
 
     # Precompute per-seed IK initialization (q0, base_offset)
     seed_ik_configs = {}
@@ -464,6 +571,14 @@ def stage_ik(args):
             q_traj, errors = solve_trajectory(ee_pos, q0_seed, base_offset_seed, label)
             all_joints[f"{key}_joints"] = q_traj
             all_errors[f"{key}_ik_errors"] = errors
+            debug_rows.append({
+                "offset_cm": float(offset_cm),
+                "seed": seed,
+                "steps": int(len(ee_pos)),
+                "ik_mean_err_mm": float(np.nanmean(errors)),
+                "ik_max_err_mm": float(np.nanmax(errors)),
+                "ik_failures": int(np.sum(np.isnan(errors))),
+            })
 
     # Pass through per-seed grippers and init states
     extra = {}
@@ -485,6 +600,13 @@ def stage_ik(args):
         source=source,
     )
     print(f"\nSaved joint trajectories to {JOINTS_NPZ}")
+    write_debug_summary(build_stage_summary_path(args, "ik"), {
+        "stage": "ik",
+        "offsets_cm": list(map(float, offsets_cm)),
+        "seeds": int(seeds),
+        "source": source,
+        "runs": debug_rows,
+    })
     print("Next: run --stage sim in libero env")
 
 
@@ -498,6 +620,7 @@ def stage_sim(args):
     sys.path.insert(0, "/home/andypark/Projects/repos/LIBERO")
 
     import h5py
+    import imageio.v2 as imageio
     from libero.libero.envs.env_wrapper import OffScreenRenderEnv
 
     print("=" * 70)
@@ -521,6 +644,9 @@ def stage_sim(args):
     with h5py.File(dpath) as f:
         all_init_states = [np.array(f["data"][k]["states"][0])
                           for k in sorted(f["data"].keys())]
+
+    video_dir = Path(args.video_dir)
+    video_dir.mkdir(parents=True, exist_ok=True)
 
     def run_trajectory(q_traj, gripper_cmds, init_state, label="",
                        output_max=0.5, kp=150, substeps=3, offset_m=0.0):
@@ -549,10 +675,20 @@ def stage_sim(args):
         ctrl.action_scale = None
 
         print(f"\n--- {label} (output_max={output_max}, kp={kp}, substeps={substeps}) ---")
+        video_path = make_video_path(video_dir, label)
+        writer = imageio.get_writer(video_path, fps=10)
+
+        def append_frame(observation):
+            frame = observation.get("agentview_image")
+            if frame is None:
+                return
+            frame = np.flipud(np.asarray(frame, dtype=np.uint8))
+            writer.append_data(frame)
 
         n_steps = len(q_traj)
         success_at = None
         reward = 0.0
+        append_frame(obs)
 
         for t in range(n_steps):
             # Clamp gripper index to valid range
@@ -568,6 +704,7 @@ def stage_sim(args):
                 obs, r, done, info = env.step(full_action)
                 if r > reward:
                     reward = r
+                append_frame(obs)
 
             success = env.check_success()
             if success and success_at is None:
@@ -596,6 +733,7 @@ def stage_sim(args):
             success = env.check_success()
             if success and success_at is None:
                 success_at = n_steps + i
+            append_frame(obs)
 
         final_success = env.check_success()
         ee_final = np.array(robot.controller.ee_pos)
@@ -603,11 +741,18 @@ def stage_sim(args):
         if success_at is not None:
             print(f"  First success at step {success_at}")
 
+        writer.close()
         env.close()
-        return {"success": final_success, "reward": float(reward), "success_at": success_at}
+        return {
+            "success": final_success,
+            "reward": float(reward),
+            "success_at": success_at,
+            "video_path": video_path,
+        }
 
     # Run all trajectories
     results_summary = {}
+    sim_rows = []
     for offset_cm in offsets_cm:
         offset_m = offset_cm / 100.0
         successes = 0
@@ -638,6 +783,12 @@ def stage_sim(args):
                 q_traj, gripper, init_state, label,
                 offset_m=offset_m,
             )
+            sim_rows.append({
+                "offset_cm": float(offset_cm),
+                "seed": seed,
+                "attempt": "default",
+                **result,
+            })
 
             if result["success"]:
                 successes += 1
@@ -651,6 +802,12 @@ def stage_sim(args):
                     output_max=1.0, kp=250, substeps=5,
                     offset_m=offset_m,
                 )
+                sim_rows.append({
+                    "offset_cm": float(offset_cm),
+                    "seed": seed,
+                    "attempt": "high_gains",
+                    **result2,
+                })
                 if result2["success"]:
                     successes += 1  # Count the retry success
                     # Undo the failure count
@@ -667,6 +824,12 @@ def stage_sim(args):
     print(f"Source: {source}")
     for k, v in results_summary.items():
         print(f"  {k}: {v['successes']}/{v['total']} = {v['rate']:.0f}%")
+    write_debug_summary(build_stage_summary_path(args, "sim"), {
+        "stage": "sim",
+        "source": source,
+        "summary": results_summary,
+        "runs": sim_rows,
+    })
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -684,6 +847,12 @@ if __name__ == "__main__":
                         help="Number of seeds per offset")
     parser.add_argument("--replan_every", type=int, default=10,
                         help="Re-predict every N steps (for predict stage)")
+    parser.add_argument("--checkpoint", default=DEFAULT_CHECKPOINT,
+                        help="Checkpoint produced by train_dhb_head_e2e.py (required for predict stage)")
+    parser.add_argument("--debug-json", default=None,
+                        help="Base path for per-stage debug JSON summaries")
+    parser.add_argument("--video-dir", default="_workspace/validation_videos",
+                        help="Directory for saved sim-stage videos")
     args = parser.parse_args()
 
     if args.stage == "encode_gt":

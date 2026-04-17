@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 sys.path.insert(0, "/home/andypark/Projects/repos/LIBERO")
 
 import torch
+from dhb_xr.integration.vla.smolvla_adapter import SmolVLADHBAdapter
 
 
 def load_model(checkpoint_path, device="cuda"):
@@ -238,6 +239,11 @@ def main():
 
     # Load model
     policy, dhb_head, config, inv_mean, inv_std, act_mean, act_std = load_model(args.checkpoint, device)
+    adapter = SmolVLADHBAdapter.from_dhb_head(
+        dhb_head,
+        vlm_dim=config["vlm_dim"],
+        action_horizon=config["action_horizon"],
+    )
     T = config["action_horizon"]
     has_action_head = config.get("action_dim") is not None
 
@@ -306,7 +312,8 @@ def main():
                 # Predict from current observation
                 vlm_feat = get_vlm_features(policy, obs, task_name, device)
                 with torch.no_grad():
-                    result = dhb_head.predict(vlm_feat)
+                    state_t = adapter.observation_to_state(obs, device=vlm_feat.device)
+                    result = adapter.dhb_head.predict(vlm_feat, state=state_t)
 
                 if has_action_head and "pred_actions" in result:
                     # ── Dual-head mode: direct action prediction ──

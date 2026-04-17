@@ -22,6 +22,7 @@ wheels/
 
 # Pixi
 .pixi/
+.pixi-home/
 pixi.lock
 
 # Virtual environments
@@ -87,3 +88,8 @@ _workspace/*.pt
 _workspace/*.npz
 _workspace/*.mp4
 _workspace/*.log
+_workspace/validation_videos/
+_workspace/*_debug*.json
+_workspace/*_sweep*.json
+.codex
+.codex/

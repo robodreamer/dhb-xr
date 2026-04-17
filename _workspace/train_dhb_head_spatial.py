@@ -46,7 +46,7 @@ class SpatialDHBDataset(Dataset):
     This forces the VLM to learn: "regardless of where the bowl is in the
     image, produce the same geometric invariants."
     """
-    def __init__(self, dataset_dir: str, action_horizon: int = 30, max_episodes: int = None):
+    def __init__(self, dataset_dir: str, action_horizon: int = 100, max_episodes: int = None):
         import pandas as pd
         import glob
         from io import BytesIO
@@ -174,7 +174,7 @@ def main():
     parser.add_argument("--lr", type=float, default=3e-4)
     parser.add_argument("--lr_vlm", type=float, default=1e-5)
     parser.add_argument("--batch_size", type=int, default=4)
-    parser.add_argument("--action_horizon", type=int, default=30)
+    parser.add_argument("--action_horizon", type=int, default=100)
     parser.add_argument("--lora_rank", type=int, default=8)
     parser.add_argument("--max_episodes", type=int, default=None)
     parser.add_argument("--out", default="_workspace/dhb_head_spatial.pt")

@@ -132,21 +132,23 @@ def predict_and_decode(policy, head, obs_dict, task_name, device, inv_mean, inv_
     import torch
     from dhb_xr.decoder.dhb_dr import decode_dhb_dr
     from dhb_xr.core.types import EncodingMethod, DHBMethod
-    from scipy.spatial.transform import Rotation
+    from dhb_xr.integration.vla.smolvla_adapter import SmolVLADHBAdapter
 
     vlm_feat = get_vlm_features(policy, obs_dict, task_name, device)
+    adapter = SmolVLADHBAdapter.from_dhb_head(head)
     with torch.no_grad():
-        pred_inv = head.predict(vlm_feat)["pred_invariants"][0].cpu().numpy()
+        pred_inv = adapter.predict_invariants_from_observation(vlm_feat, obs_dict)[0].cpu().numpy()
 
     if inv_mean is not None:
         pred_inv = pred_inv * inv_std + inv_mean
     pred_inv[:, 0] = np.abs(pred_inv[:, 0])
     pred_inv[:, 4] = np.abs(pred_inv[:, 4])
 
-    eef_pos = obs_dict["robot0_eef_pos"]
-    eef_quat = obs_dict["robot0_eef_quat"]
-    q_wxyz = np.array([eef_quat[3], eef_quat[0], eef_quat[1], eef_quat[2]])
-    init_pose = {"position": eef_pos.copy(), "quaternion": q_wxyz}
+    init_pose_t = adapter.observation_to_initial_pose(obs_dict)
+    init_pose = {
+        "position": init_pose_t["position"][0].cpu().numpy(),
+        "quaternion": init_pose_t["quaternion"][0].cpu().numpy(),
+    }
 
     try:
         result = decode_dhb_dr(pred_inv[:,:4], pred_inv[:,4:], initial_pose=init_pose,

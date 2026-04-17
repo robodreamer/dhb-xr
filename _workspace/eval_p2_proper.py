@@ -163,26 +163,33 @@ def predict_positions(policy, head, obs_dict, task_name, device, inv_mean, inv_s
     import torch
     from dhb_xr.decoder.dhb_dr import decode_dhb_dr
     from dhb_xr.core.types import EncodingMethod, DHBMethod
-    from scipy.spatial.transform import Rotation
+    from dhb_xr.integration.vla.smolvla_adapter import SmolVLADHBAdapter
 
     vlm_feat = get_vlm_features(policy, obs_dict, task_name, device)
+    adapter = SmolVLADHBAdapter.from_dhb_head(head)
     with torch.no_grad():
-        pred_inv = head.predict(vlm_feat)["pred_invariants"][0].cpu().numpy()
+        pred_inv = adapter.predict_invariants_from_observation(vlm_feat, obs_dict)[0].cpu().numpy()
 
     pred_inv = pred_inv * inv_std + inv_mean
     pred_inv[:, 0] = np.abs(pred_inv[:, 0])
     pred_inv[:, 4] = np.abs(pred_inv[:, 4])
 
-    eef_pos = obs_dict["robot0_eef_pos"]
-    eef_quat = obs_dict["robot0_eef_quat"]
-    q_wxyz = np.array([eef_quat[3], eef_quat[0], eef_quat[1], eef_quat[2]])
-    init_pose = {"position": eef_pos.copy(), "quaternion": q_wxyz}
+    init_pose_t = adapter.observation_to_initial_pose(obs_dict)
+    init_pose = {
+        "position": init_pose_t["position"][0].cpu().numpy(),
+        "quaternion": init_pose_t["quaternion"][0].cpu().numpy(),
+    }
 
     try:
         result = decode_dhb_dr(pred_inv[:,:4], pred_inv[:,4:], initial_pose=init_pose,
                                method=EncodingMethod.POSITION,
                                dhb_method=DHBMethod.DOUBLE_REFLECTION, drop_padded=False)
-        return result["positions"]  # (T, 3) SE(3) positions
+        return {
+            "positions": result["positions"],  # (T, 3) SE(3) positions
+            "pred_invariants": pred_inv,
+            "eef_pos": np.asarray(obs_dict["robot0_eef_pos"]).copy(),
+            "eef_quat_xyzw": np.asarray(obs_dict["robot0_eef_quat"]).copy(),
+        }
     except Exception:
         return None
 
@@ -198,7 +205,7 @@ def positions_to_osc_actions(positions, osc_scale=80.0):
 
 
 def run_episode(env, policy, head, inv_mean, inv_std, device,
-                task_name, demo_gripper, seed):
+                task_name, demo_gripper, seed, *, max_steps=None, debug_log=False):
     """
     Run one closed-loop episode.
     - Re-plans every REPLAN_EVERY steps
@@ -208,17 +215,44 @@ def run_episode(env, policy, head, inv_mean, inv_std, device,
     reward = 0.0
     total_steps = 0
     n_demo = len(demo_gripper)
+    done = False
 
-    while total_steps < MAX_STEPS:
+    run_max_steps = max_steps or MAX_STEPS
+    debug = {
+        "seed": seed,
+        "replans": [],
+        "close_events": [],
+    } if debug_log else None
+
+    while total_steps < run_max_steps:
         # 1. Get current observation
         current_obs = env.env._get_observations()
 
         # 2. Predict SE(3) positions from current EE pose
-        predicted_pos = predict_positions(policy, head, current_obs, task_name, device,
-                                          inv_mean, inv_std)
+        pred = predict_positions(policy, head, current_obs, task_name, device, inv_mean, inv_std)
+        predicted_pos = None if pred is None else pred["positions"]
 
         # 3. Convert to OSC position actions
         pos_actions = positions_to_osc_actions(predicted_pos)
+        if debug is not None:
+            if predicted_pos is None:
+                decoded_summary = None
+                invariant_norm = None
+                y_min = None
+                y_max = None
+            else:
+                decoded_summary = predicted_pos[: min(5, len(predicted_pos))].tolist()
+                invariant_norm = float(np.linalg.norm(pred["pred_invariants"]))
+                y_min = float(predicted_pos[:, 1].min())
+                y_max = float(predicted_pos[:, 1].max())
+            debug["replans"].append({
+                "step": total_steps,
+                "current_eef_pos": np.asarray(current_obs["robot0_eef_pos"]).tolist(),
+                "decoded_head_positions": decoded_summary,
+                "decoded_y_min": y_min,
+                "decoded_y_max": y_max,
+                "invariant_norm": invariant_norm,
+            })
 
         # 4. Execute REPLAN_EVERY steps
         for step_i in range(min(REPLAN_EVERY, len(pos_actions))):
@@ -232,11 +266,17 @@ def run_episode(env, policy, head, inv_mean, inv_std, device,
             obs, r, done, _ = env.step(action)
             if r > reward:
                 reward = r
+            if debug is not None and gripper > 0:
+                debug["close_events"].append({
+                    "global_step": global_step,
+                    "action_step": step_i,
+                    "eef_pos_after_step": np.asarray(obs["robot0_eef_pos"]).tolist(),
+                })
             total_steps += 1
-            if done or total_steps >= MAX_STEPS:
+            if done or total_steps >= run_max_steps:
                 break
 
-        if done or total_steps >= MAX_STEPS:
+        if done or total_steps >= run_max_steps:
             break
 
     # Settling
@@ -246,12 +286,16 @@ def run_episode(env, policy, head, inv_mean, inv_std, device,
             reward = r
 
     success = bool(env.check_success())
-    return success, float(reward), total_steps
+    return success, float(reward), total_steps, debug
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seeds", type=int, default=10)
+    parser.add_argument("--max-steps", type=int, default=MAX_STEPS)
+    parser.add_argument("--debug-log", action="store_true",
+                        help="Write per-replan decoded trajectory diagnostics.")
+    parser.add_argument("--debug-log-path", default="_workspace/eval_p2_proper_debug.json")
     args = parser.parse_args()
 
     policy, head, inv_mean, inv_std, device, demo_grippers = setup()
@@ -273,15 +317,17 @@ def main():
         env.seed(seed)
         env.reset()
 
-        success, reward, steps = run_episode(
+        success, reward, steps, debug = run_episode(
             env, policy, head, inv_mean, inv_std, device,
-            TASK_NAME, demo_grip, seed
+            TASK_NAME, demo_grip, seed, max_steps=args.max_steps, debug_log=args.debug_log
         )
         env.close()
         successes += int(success)
         print(f"  Seed {seed}: {'SUCCESS' if success else 'FAIL'} (reward={reward:.2f}, steps={steps})")
-        results["trials"].append({"seed": seed, "success": success,
-                                   "reward": reward, "steps": steps})
+        trial = {"seed": seed, "success": success, "reward": reward, "steps": steps}
+        if args.debug_log:
+            trial["debug"] = debug
+        results["trials"].append(trial)
 
     rate = successes / args.seeds * 100
     results["summary"] = {"successes": successes, "total": args.seeds, "rate": rate}
@@ -291,6 +337,10 @@ def main():
     with open(RESULTS_JSON, "w") as f:
         json.dump(results, f, indent=2)
     print(f"Saved: {RESULTS_JSON}")
+    if args.debug_log:
+        with open(args.debug_log_path, "w") as f:
+            json.dump(results, f, indent=2)
+        print(f"Saved debug log: {args.debug_log_path}")
 
 
 if __name__ == "__main__":

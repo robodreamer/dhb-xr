@@ -24,7 +24,15 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-sys.path.insert(0, "/home/andypark/Projects/repos/LIBERO")
+
+LIBERO_IMPORT_CANDIDATES = [
+    "/home/andypark/Projects/repos/LIBERO",
+    "/home/andypark/Projects/repos/LIBERO-PRO",
+]
+for _candidate in LIBERO_IMPORT_CANDIDATES:
+    if Path(_candidate).exists():
+        sys.path.insert(0, _candidate)
+        break
 
 import torch
 import torch.nn.functional as F
@@ -39,7 +47,7 @@ class LiberoDHBDataset(Dataset):
     obs_dict contains images + state needed for SmolVLA prefix embedding.
     dhb_invariants are the ground-truth targets.
     """
-    def __init__(self, task_id=0, max_demos=50, action_horizon=30):
+    def __init__(self, task_id=0, max_demos=50, action_horizon=100):
         from libero.libero import benchmark, get_libero_path
         from libero.libero.envs import OffScreenRenderEnv
         from dhb_xr.encoder.dhb_dr import encode_dhb_dr
@@ -254,7 +262,7 @@ def main():
     parser.add_argument("--lr_vlm", type=float, default=1e-5,
                         help="Learning rate for VLM LoRA adapters")
     parser.add_argument("--batch_size", type=int, default=2)
-    parser.add_argument("--action_horizon", type=int, default=30)
+    parser.add_argument("--action_horizon", type=int, default=100)
     parser.add_argument("--lora_rank", type=int, default=8)
     parser.add_argument("--max_demos", type=int, default=50)
     parser.add_argument("--out", default="_workspace/dhb_head_e2e_dual.pt")
