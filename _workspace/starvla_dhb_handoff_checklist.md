@@ -81,7 +81,7 @@ Do not treat lower train loss alone as progress. SmolVLA already showed that tra
 
 1. The heavy Cosmos/WM4A path is still too expensive for iterative laptop debugging.
 2. Harness-side StarVLA integration is not yet wired to the Qwen+DHB local path.
-3. The first direct rollout smoke now works, but it still needs qualitative comparison against the SmolVLA failure signature.
+3. The first direct rollout smoke now works, but it still uses the LIBERO controller directly and shows control / nullspace issues that should be compared against an `embodik` execution path.
 
 ## Immediate Next Steps
 
@@ -105,6 +105,20 @@ Do not treat lower train loss alone as progress. SmolVLA already showed that tra
 Interpretation:
 - The direct StarVLA+DHB rollout stack is now executable end to end on the laptop GPU.
 - The next question is no longer “can it run?” but “does its failure mode match the known SmolVLA placement-margin signature?”
+
+## EmbodiK Bridge Status
+
+- New Stage-1 export script:
+  - `scripts/starvla_dhb_embodik_stage1.py`
+- New capability:
+  - `QwenDHB.predict_trajectory(...)` now returns DHB-decoded positions and quaternions, not only normalized actions
+- Latest Stage-1 artifact from the `steps_200` checkpoint:
+  - `_workspace/starvla_runs/dhb_starvla_qwen/embodik_stage1_step200.npz`
+  - `_workspace/starvla_runs/dhb_starvla_qwen/embodik_stage1_step200_summary.json`
+
+Interpretation:
+- The Qwen+DHB StarVLA path can now emit SE(3) chunks directly from a live LIBERO observation.
+- That is the correct handoff point for `embodik`, and should reduce the nullspace sensitivity seen in the direct LIBERO controller rollout.
 
 ## First Trained Checkpoint Comparison
 

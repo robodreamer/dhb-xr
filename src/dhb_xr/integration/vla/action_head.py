@@ -270,12 +270,12 @@ if HAS_TORCH:
                 quaternions_list = []
 
                 for b in range(B):
-                    inv_np = pred_inv[b].cpu().numpy()
+                    inv_np = pred_inv[b].to(dtype=torch.float32).cpu().numpy()
                     lin_inv = inv_np[:, :4]  # linear invariants
                     ang_inv = inv_np[:, 4:]  # angular invariants
 
-                    pos = initial_pose["position"][b].cpu().numpy()
-                    quat = initial_pose["quaternion"][b].cpu().numpy()
+                    pos = initial_pose["position"][b].to(dtype=torch.float32).cpu().numpy()
+                    quat = initial_pose["quaternion"][b].to(dtype=torch.float32).cpu().numpy()
 
                     from dhb_xr.decoder.dhb_dr import decode_dhb_dr
                     from dhb_xr.core.types import EncodingMethod

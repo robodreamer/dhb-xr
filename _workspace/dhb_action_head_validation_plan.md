@@ -69,6 +69,30 @@ Do not continue SmolVLA training with `500+` or `1000` epochs unless there is a 
 - [ ] Compare the first StarVLA rollout smoke qualitatively against the SmolVLA smoke baseline
 - [ ] Decide whether to wire the Qwen+DHB path into `vla-evaluation-harness` as the main StarVLA-side evaluation path
 
+## StarVLA To EmbodiK Bridge
+
+- [x] Confirm the direct LIBERO rollout path still suffers from controller / nullspace effects even after fixing quaternion convention bugs
+- [x] Verify that direct GT replay is a control-path issue, not only a DHB model-quality issue
+- [x] Add a Stage-1 StarVLA→DHB trajectory export path that emits decoded SE(3) chunks from live LIBERO observations
+- [x] Expose DHB trajectory prediction from the `QwenDHB` framework instead of only normalized controller actions
+- [x] Fix missing state-conditioning in the StarVLA `QwenDHB` path when examples provide live `state`
+- [x] Validate one saved StarVLA Stage-1 artifact for the `steps_200` checkpoint
+- [ ] Reuse the working SmolVLA `embodik` Stage-2 IK path on the saved StarVLA Stage-1 chunk
+- [ ] Run one full StarVLA→`embodik`→JOINT_POSITION rollout with recorded video
+- [ ] Compare StarVLA→`embodik` nullspace behavior against the direct LIBERO controller rollout
+
+Current Stage-1 artifact:
+- script: `scripts/starvla_dhb_embodik_stage1.py`
+- checkpoint: `_workspace/starvla_runs/dhb_starvla_qwen_longtrain1/checkpoints/steps_200_pytorch_model.pt`
+- summary:
+  - `_workspace/starvla_runs/dhb_starvla_qwen/embodik_stage1_step200_summary.json`
+- saved chunk:
+  - `_workspace/starvla_runs/dhb_starvla_qwen/embodik_stage1_step200.npz`
+
+Interpretation:
+- StarVLA can now produce DHB-decoded EE pose chunks directly from live LIBERO observations on the laptop GPU.
+- The next step is no longer DHB decoding itself; it is handing those chunks into the already-working `embodik` IK / JOINT_POSITION execution stack.
+
 ## First Direct StarVLA Rollout Result
 
 - [x] Run a direct local LIBERO rollout smoke on `libero_spatial/task_id=0/episode_idx=0`
