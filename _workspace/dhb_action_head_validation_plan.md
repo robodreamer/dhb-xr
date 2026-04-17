@@ -118,6 +118,24 @@ Interpretation:
   - Stage-3 videos show essentially no meaningful arm motion
 - So the next improvement target is not nullspace control first; it is producing an IK-feasible Stage-1 EE trajectory chunk.
 
+## StarVLA Training-Data Parity With SmolVLA
+
+- [x] Trace why StarVLA Qwen+DHB training batches were missing live `state`
+- [x] Enable `include_state: true` in the Qwen+DHB StarVLA config
+- [x] Verify StarVLA batches now contain `state` with shape `(T, 8)`
+- [x] Trace why StarVLA batches were missing DHB invariant supervision
+- [x] Patch the LIBERO→LeRobot converter to export `dhb.linear_invariants` and `dhb.angular_invariants`
+- [x] Patch the StarVLA LeRobot dataset loader to pass `dhb.*` supervision fields through to training samples
+- [x] Verify a real StarVLA sample now contains `state`, `dhb.linear_invariants`, and `dhb.angular_invariants`
+- [x] Verify `QwenDHB._extract_gt_invariants(...)` now returns a valid `(1, 8, 8)` target tensor on a real sample
+- [ ] Regenerate the full `/home/andypark/Projects/data/libero_lerobot` dataset with inline DHB invariants
+- [ ] Restart Qwen+DHB training on the regenerated full dataset before judging Stage-1 / `embodik` quality again
+
+Interpretation:
+- The earlier StarVLA→`embodik` failure was not comparable to SmolVLA yet.
+- StarVLA had been training with the action branch only; the invariant decoder path used for `predict_trajectory()` was effectively unsupervised.
+- That mismatch is now fixed in code and validated on a one-demo smoke export.
+
 ## First Direct StarVLA Rollout Result
 
 - [x] Run a direct local LIBERO rollout smoke on `libero_spatial/task_id=0/episode_idx=0`

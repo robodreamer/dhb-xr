@@ -82,6 +82,7 @@ Do not treat lower train loss alone as progress. SmolVLA already showed that tra
 1. The heavy Cosmos/WM4A path is still too expensive for iterative laptop debugging.
 2. Harness-side StarVLA integration is not yet wired to the Qwen+DHB local path.
 3. The first direct rollout smoke now works, but it still uses the LIBERO controller directly and shows control / nullspace issues that should be compared against an `embodik` execution path.
+4. The current full training dataset at `/home/andypark/Projects/data/libero_lerobot` still needs regeneration with inline `dhb.*` invariant supervision before new StarVLA checkpoints are meaningful.
 
 ## Immediate Next Steps
 
@@ -119,6 +120,12 @@ Interpretation:
 Interpretation:
 - The Qwen+DHB StarVLA path can now emit SE(3) chunks directly from a live LIBERO observation.
 - That is the correct handoff point for `embodik`, and should reduce the nullspace sensitivity seen in the direct LIBERO controller rollout.
+- However, the first Stage-1 results were produced before StarVLA training had parity with the working SmolVLA supervision path.
+- We have now fixed the code path so a real StarVLA sample contains:
+  - `state`
+  - `dhb.linear_invariants`
+  - `dhb.angular_invariants`
+- The next Stage-1 / `embodik` judgment should only happen after retraining on a regenerated dataset with those DHB targets present.
 
 ## First StarVLA→EmbodiK Result
 

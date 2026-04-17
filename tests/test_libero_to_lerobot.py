@@ -45,3 +45,12 @@ def test_create_episode_dataframe_uses_axis_angle_state_and_delta_actions(tmp_pa
 
     np.testing.assert_allclose(action1[:6], np.zeros(6, dtype=np.float32), atol=1e-6)
     np.testing.assert_allclose(action1[6], 1.0, atol=1e-6)
+
+    assert "dhb.linear_invariants" in df.columns
+    assert "dhb.angular_invariants" in df.columns
+    lin0 = np.asarray(df.iloc[0]["dhb.linear_invariants"], dtype=np.float32)
+    ang0 = np.asarray(df.iloc[0]["dhb.angular_invariants"], dtype=np.float32)
+    assert lin0.shape == (4,)
+    assert ang0.shape == (4,)
+    assert np.isfinite(lin0).all()
+    assert np.isfinite(ang0).all()

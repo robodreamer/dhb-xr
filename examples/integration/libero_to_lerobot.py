@@ -73,6 +73,7 @@ import numpy as np
 import pandas as pd
 from scipy.spatial.transform import Rotation
 
+from dhb_xr.encoder.dhb_dr import encode_dhb_dr
 
 # Configure logging
 logging.basicConfig(
@@ -222,9 +223,9 @@ def create_modality_metadata() -> Dict:
             "x": {"start": 0, "end": 1},
             "y": {"start": 1, "end": 2},
             "z": {"start": 2, "end": 3},
-            "rot_x": {"start": 3, "end": 4},
-            "rot_y": {"start": 4, "end": 5},
-            "rot_z": {"start": 5, "end": 6},
+            "roll": {"start": 3, "end": 4},
+            "pitch": {"start": 4, "end": 5},
+            "yaw": {"start": 5, "end": 6},
             "pad": {"start": 6, "end": 7},
             "gripper": {"start": 7, "end": 8},
         },
@@ -232,10 +233,10 @@ def create_modality_metadata() -> Dict:
             "x": {"start": 0, "end": 1},
             "y": {"start": 1, "end": 2},
             "z": {"start": 2, "end": 3},
-            "rot_x": {"start": 3, "end": 4},
-            "rot_y": {"start": 4, "end": 5},
-            "rot_z": {"start": 5, "end": 6},
-            "open_gripper": {"start": 6, "end": 7},
+            "roll": {"start": 3, "end": 4},
+            "pitch": {"start": 4, "end": 5},
+            "yaw": {"start": 5, "end": 6},
+            "gripper": {"start": 6, "end": 7},
         },
         "video": {
             "primary_image": {"original_key": "observation.images.image"},
@@ -365,18 +366,42 @@ def create_episode_dataframe(
         "timestamp": timestamps.astype(np.float32),
         "task_index": np.full(length, task_index, dtype=np.int32),
     }
-    
-    # Add DHB invariants if available
+
+    dhb_feats = None
     if dhb_invariants and episode_index in dhb_invariants:
         dhb_feats = dhb_invariants[episode_index]
-        for key, values in dhb_feats.items():
-            arr = np.array(values, dtype=np.float32)
-            if len(arr) != length:
-                raise ValueError(
-                    f"DHB invariant '{key}' length mismatch for episode {episode_index}: "
-                    f"{len(arr)} != {length}"
-                )
-            data_dict[f"dhb.{key}"] = list(arr)
+    else:
+        if length < 3:
+            lin = np.zeros((length, 4), dtype=np.float32)
+            ang = np.zeros((length, 4), dtype=np.float32)
+        else:
+            enc = encode_dhb_dr(
+                demo_data["ee_pos"].astype(np.float64),
+                demo_data["ee_quat"][:, [3, 0, 1, 2]].astype(np.float64),
+            )
+            lin = np.asarray(enc["linear_motion_invariants"], dtype=np.float32)
+            ang = np.asarray(enc["angular_motion_invariants"], dtype=np.float32)
+            if lin.shape[0] > length:
+                lin = lin[-length:]
+            if ang.shape[0] > length:
+                ang = ang[-length:]
+            if lin.shape[0] == length - 1:
+                lin = np.concatenate([lin, lin[-1:]], axis=0)
+            if ang.shape[0] == length - 1:
+                ang = np.concatenate([ang, ang[-1:]], axis=0)
+        dhb_feats = {
+            "linear_invariants": lin,
+            "angular_invariants": ang,
+        }
+
+    for key, values in dhb_feats.items():
+        arr = np.array(values, dtype=np.float32)
+        if len(arr) != length:
+            raise ValueError(
+                f"DHB invariant '{key}' length mismatch for episode {episode_index}: "
+                f"{len(arr)} != {length}"
+            )
+        data_dict[f"dhb.{key}"] = list(arr)
     
     df = pd.DataFrame(data_dict)
     return df
@@ -666,6 +691,8 @@ Examples:
         logger.info(f"Loading DHB invariants from {args.dhb_invariants}")
         with open(args.dhb_invariants, "rb") as f:
             dhb_invariants = pickle.load(f)
+    else:
+        logger.info("No DHB invariant pickle provided; computing invariants inline from EE trajectories.")
     
     # Determine which tasks to convert
     libero_root = Path(args.libero_root)
