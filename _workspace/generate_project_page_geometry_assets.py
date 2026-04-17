@@ -33,7 +33,7 @@ from dhb_xr.decoder.dhb_dr import decode_dhb_dr
 from dhb_xr.core import geometry as geom
 from dhb_xr.core.types import DHBMethod, EncodingMethod
 from dhb_xr.optimization.fatrop_solver import generate_trajectory_fatrop
-from dhb_xr.visualization.plot import draw_frame
+from dhb_xr.visualization.plot import draw_frame, draw_box
 
 
 matplotlib.rcParams.update(
@@ -58,6 +58,7 @@ FIG7_PATH = ASSET_DIR / "fig7_6d_adaptation_vs_affine.png"
 HERO_PATH = ASSET_DIR / "hero_3d_adaptation.mp4"
 DETAIL_PATH = ASSET_DIR / "demo_3d_adaptation_detail.mp4"
 TEASER_PATH = ASSET_DIR / "teaser.png"
+SHOWCASE_PATH = ASSET_DIR / "fatrop_cube_showcase.png"
 META_PATH = ROOT / "_workspace" / "project_page_geometry_assets.json"
 
 BG = "#0f172a"
@@ -389,6 +390,63 @@ def build_controlled_6d_case() -> dict[str, np.ndarray | float | str]:
     pose_init = {
         "position": demo_pos[0] + np.array([0.08, -0.06, 0.03]),
         "quaternion": geom.quat_multiply(q_init_rot, demo_quat[0]),
+    }
+
+
+def build_notebook_demo_trajectory(n: int = 80, dt: float = 0.05) -> tuple[np.ndarray, np.ndarray]:
+    """Notebook-style 6D demo trajectory used in the cube adaptation examples."""
+    t = np.linspace(0, (n - 1) * dt, n)
+    x = 0.1 * np.exp(t * 0.3)
+    y = 0.5 + 0.3 * np.sin(t * 2.0)
+    z = 0.2 * np.cos(t)
+    positions = np.column_stack([x, y, z])
+    roll = 0.3 * np.sin(t)
+    pitch = 0.2 * np.cos(t * 1.5)
+    yaw = 0.1 * t
+    quaternions = np.array(
+        [geom.rot_to_quat(geom.euler_to_rot(np.array([roll[i], pitch[i], yaw[i]]))) for i in range(n)]
+    )
+    return positions, quaternions
+
+
+def build_fatrop_showcase_case() -> dict[str, np.ndarray | float | str]:
+    """Stylized notebook-inspired showcase for the fixed Fatrop 6D retargeting path."""
+    demo_pos, demo_quat = build_notebook_demo_trajectory(n=80)
+    offset = np.array([1.0, -0.5, 0.3])
+    angle_y = np.pi / 6.0
+    quat_rot = np.array([np.cos(angle_y / 2.0), 0.0, np.sin(angle_y / 2.0), 0.0])
+    pose_init = {
+        "position": demo_pos[0].copy() + offset,
+        "quaternion": geom.quat_multiply(quat_rot, demo_quat[0]),
+    }
+    pose_goal = {
+        "position": demo_pos[-1].copy() + offset + np.array([0.2, 0.2, 0.1]),
+        "quaternion": geom.quat_multiply(quat_rot, demo_quat[-1]),
+    }
+    result = generate_trajectory_fatrop(
+        demo_pos,
+        demo_quat,
+        pose_init,
+        pose_goal,
+        traj_length=60,
+        use_fatrop=True,
+        verbose=False,
+    )
+    adapted_pos = np.asarray(result["positions"], dtype=np.float64)
+    adapted_quat = np.asarray(result["quaternions"], dtype=np.float64)
+    return {
+        "demo_pos": demo_pos,
+        "demo_quat": demo_quat,
+        "adapted_pos": adapted_pos,
+        "adapted_quat": adapted_quat,
+        "pose_init": pose_init,
+        "pose_goal": pose_goal,
+        "offset": offset,
+        "rotation_deg": float(np.degrees(angle_y)),
+        "start_err": float(np.linalg.norm(adapted_pos[0] - pose_init["position"])),
+        "goal_err": float(np.linalg.norm(adapted_pos[-1] - pose_goal["position"])),
+        "goal_quat_error": float(1.0 - abs(np.dot(adapted_quat[-1], pose_goal["quaternion"]))),
+        "solver": str(result["solver"]),
     }
     pose_goal = {
         "position": demo_pos[-1] + np.array([0.16, 0.07, 0.07]),
@@ -749,6 +807,169 @@ def save_hero_video(payloads: dict[str, dict[str, np.ndarray | dict]]) -> None:
     imageio.mimwrite(HERO_PATH, frames, fps=18, codec="libx264", quality=7)
 
 
+def save_fatrop_cube_showcase() -> None:
+    case = build_fatrop_showcase_case()
+    demo_pos = case["demo_pos"]
+    demo_quat = case["demo_quat"]
+    adapted_pos = case["adapted_pos"]
+    adapted_quat = case["adapted_quat"]
+    pose_init = case["pose_init"]
+    pose_goal = case["pose_goal"]
+    all_pos = np.vstack([demo_pos, adapted_pos])
+
+    fig = plt.figure(figsize=(14.0, 7.8), facecolor=BG)
+    gs = fig.add_gridspec(1, 2, width_ratios=[1.95, 0.95], wspace=0.10)
+
+    ax_main = fig.add_subplot(gs[0, 0], projection="3d")
+    set_dark_3d(ax_main)
+    draw_reference_plane(ax_main, all_pos, color="#1e293b", alpha=0.70)
+    demo_line = ax_main.plot(
+        demo_pos[:, 0],
+        demo_pos[:, 1],
+        demo_pos[:, 2],
+        color="#94a3b8",
+        linewidth=2.1,
+        linestyle="--",
+        alpha=0.42,
+    )[0]
+    demo_line.set_path_effects([patheffects.Stroke(linewidth=4.2, foreground=(0.58, 0.65, 0.77, 0.08)), patheffects.Normal()])
+    fatrop_line = ax_main.plot(
+        adapted_pos[:, 0],
+        adapted_pos[:, 1],
+        adapted_pos[:, 2],
+        color="#60a5fa",
+        linewidth=3.4,
+        alpha=0.98,
+    )[0]
+    fatrop_line.set_path_effects([patheffects.Stroke(linewidth=7.5, foreground=(0.38, 0.65, 0.98, 0.18)), patheffects.Normal()])
+
+    demo_idxs = np.linspace(0, len(demo_pos) - 1, 4, dtype=int)
+    for idx in demo_idxs:
+        draw_box(
+            ax_main,
+            demo_pos[idx],
+            geom.quat_to_rot(demo_quat[idx]),
+            size=(0.05, 0.035, 0.028),
+            color="#cbd5e1",
+            alpha=0.10,
+        )
+
+    cube_idxs = np.linspace(0, len(adapted_pos) - 1, 6, dtype=int)
+    cube_alphas = np.linspace(0.18, 0.52, len(cube_idxs))
+    cube_sizes = np.linspace(0.055, 0.072, len(cube_idxs))
+    for alpha, size, idx in zip(cube_alphas, cube_sizes, cube_idxs):
+        draw_box(
+            ax_main,
+            adapted_pos[idx],
+            geom.quat_to_rot(adapted_quat[idx]),
+            size=(size, size * 0.68, size * 0.52),
+            color="#60a5fa",
+            alpha=float(alpha),
+        )
+
+    ax_main.scatter(*pose_init["position"], s=85, c="#38bdf8", marker="o", depthshade=False)
+    ax_main.scatter(*pose_goal["position"], s=120, c="#22c55e", marker="*", depthshade=False)
+    draw_frame(ax_main, pose_init["position"], geom.quat_to_rot(pose_init["quaternion"]), length=0.07, linewidth=2.0)
+    draw_frame(ax_main, pose_goal["position"], geom.quat_to_rot(pose_goal["quaternion"]), length=0.07, linewidth=2.0)
+    equalize(ax_main, all_pos)
+    ax_main.view_init(elev=28, azim=-54)
+    ax_main.set_title("3D position + rotation retarget", color=TEXT, fontsize=15, fontweight="bold", pad=12)
+    ax_main.set_xlabel("x", color=MUTED)
+    ax_main.set_ylabel("y", color=MUTED)
+    ax_main.set_zlabel("z", color=MUTED)
+    ax_main.text2D(0.05, 0.92, "Fatrop retarget", transform=ax_main.transAxes, color="#60a5fa", fontsize=12, fontweight="bold")
+    ax_main.text2D(0.05, 0.86, "demo trajectory", transform=ax_main.transAxes, color="#cbd5e1", fontsize=10)
+    ax_main.text2D(0.05, 0.80, "notebook-style cube visualization", transform=ax_main.transAxes, color=MUTED, fontsize=9)
+    ax_main.text2D(0.05, 0.12, "large multi-axis offset", transform=ax_main.transAxes, color="#fbbf24", fontsize=10, fontweight="bold")
+    ax_main.text2D(0.05, 0.07, f"+{case['rotation_deg']:.0f}° boundary pitch change", transform=ax_main.transAxes, color="#fbbf24", fontsize=9)
+
+    right = gs[0, 1].subgridspec(2, 1, height_ratios=[1.0, 0.82], hspace=0.20)
+    ax_strip = fig.add_subplot(right[0, 0], projection="3d")
+    set_dark_3d(ax_strip)
+    strip_centers = np.column_stack(
+        [
+            np.linspace(0.0, 0.9, len(cube_idxs)),
+            np.zeros(len(cube_idxs)),
+            np.zeros(len(cube_idxs)),
+        ]
+    )
+    for i, idx in enumerate(cube_idxs):
+        alpha = 0.16 + 0.08 * i
+        size = 0.11 - 0.007 * abs(i - (len(cube_idxs) - 1) / 2.0)
+        draw_box(
+            ax_strip,
+            strip_centers[i],
+            geom.quat_to_rot(adapted_quat[idx]),
+            size=(size, size * 0.68, size * 0.52),
+            color="#60a5fa",
+            alpha=float(alpha),
+        )
+    ax_strip.set_xlim(-0.12, 1.02)
+    ax_strip.set_ylim(-0.35, 0.35)
+    ax_strip.set_zlim(-0.35, 0.35)
+    ax_strip.view_init(elev=20, azim=-65)
+    ax_strip.set_title("orientation cubes along the retarget", color=TEXT, fontsize=12, fontweight="bold", pad=10)
+    ax_strip.set_xticks([])
+    ax_strip.set_yticks([])
+    ax_strip.set_zticks([])
+    ax_strip.set_xlabel("")
+    ax_strip.set_ylabel("")
+    ax_strip.set_zlabel("")
+    ax_strip.text2D(0.06, 0.08, "start", transform=ax_strip.transAxes, color=MUTED, fontsize=8.5)
+    ax_strip.text2D(0.82, 0.08, "goal", transform=ax_strip.transAxes, color=MUTED, fontsize=8.5)
+
+    ax_info = fig.add_subplot(right[1, 0])
+    ax_info.axis("off")
+    ax_info.set_facecolor(PANEL_BG)
+    ax_info.set_title("Boundary checks", color=TEXT, fontsize=12.5, fontweight="bold", pad=10)
+    metric_lines = [
+        ("solver", str(case["solver"])),
+        ("start position error", f"{case['start_err']:.1e} m"),
+        ("goal position error", f"{case['goal_err']:.1e} m"),
+        ("goal orientation error", f"{case['goal_quat_error']:.1e}"),
+    ]
+    y = 0.88
+    for label, value in metric_lines:
+        draw_round_box(ax_info, (0.05, y - 0.11), (0.90, 0.12), "#16233c", ec="#334155")
+        ax_info.text(0.09, y - 0.045, label, transform=ax_info.transAxes, ha="left", va="center", fontsize=9.1, color="#94a3b8")
+        ax_info.text(0.92, y - 0.045, value, transform=ax_info.transAxes, ha="right", va="center", fontsize=10.2, color="#f8fafc", fontweight="bold")
+        y -= 0.145
+    ax_info.text(
+        0.05,
+        0.11,
+        f"challenge: offset [+1.0, -0.5, +0.3] m  |  +{case['rotation_deg']:.0f}° pitch",
+        transform=ax_info.transAxes,
+        ha="left",
+        va="bottom",
+        fontsize=9.0,
+        color="#fbbf24",
+        fontweight="bold",
+    )
+    ax_info.text(
+        0.05,
+        0.02,
+        "Notebook Example F reinterpreted with the fixed Fatrop solver.\nThe figure emphasizes both boundary-pose satisfaction and orientation flow.",
+        transform=ax_info.transAxes,
+        ha="left",
+        va="bottom",
+        fontsize=8.7,
+        color="#94a3b8",
+    )
+
+    fig.suptitle("Fatrop 6D Retargeting Showcase", color="#f8fafc", fontsize=18, fontweight="bold", y=0.943)
+    fig.text(
+        0.5,
+        0.905,
+        "A single trajectory is retargeted to a new 3D position and orientation boundary condition while preserving the motion's spatial arc and rotation structure.",
+        ha="center",
+        color="#cbd5e1",
+        fontsize=9.6,
+    )
+    fig.subplots_adjust(top=0.85, left=0.04, right=0.98, bottom=0.06)
+    fig.savefig(SHOWCASE_PATH, facecolor=BG, bbox_inches="tight")
+    plt.close(fig)
+
+
 def save_detail_video(payload: dict[str, np.ndarray | dict], task: TaskSpec) -> None:
     demo_pos = payload["demo_pos"]
     adapted_pos = payload["adapted_pos"]
@@ -994,6 +1215,7 @@ def main() -> None:
     payloads = {task.name: build_task_payload(task) for task in TASKS}
     save_fig6(payloads)
     save_fig7(payloads[TASKS[0].name], TASKS[0])
+    save_fatrop_cube_showcase()
     save_hero_video(payloads)
     save_detail_video(payloads[TASKS[0].name], TASKS[0])
     save_teaser(payloads[TASKS[0].name], TASKS[0])
@@ -1005,6 +1227,7 @@ def main() -> None:
                     str(TEASER_PATH.relative_to(ROOT)),
                     str(FIG6_PATH.relative_to(ROOT)),
                     str(FIG7_PATH.relative_to(ROOT)),
+                    str(SHOWCASE_PATH.relative_to(ROOT)),
                     str(HERO_PATH.relative_to(ROOT)),
                     str(DETAIL_PATH.relative_to(ROOT)),
                 ],

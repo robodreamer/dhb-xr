@@ -984,24 +984,26 @@
 
         <!-- 3D TRAJECTORY DEMOS (hero video shown in hero section; start with SE(3) proof) -->
         <div class="demo-task-title">
-          <span class="perturb-pill is-blue">diagnostic</span>
-          <span class="perturb-pill is-green">exact translation</span>
-          Geometric re-grounding sanity check on a real LIBERO demonstration
+          <span class="perturb-pill is-blue">fatrop</span>
+          <span class="perturb-pill is-green">3D position + rotation</span>
+          Notebook-style 6-DOF retargeting showcase with orientation cubes
         </div>
-        <div class="video-card mb-5">
-          <video autoplay muted loop playsinline>
-            <source src="assets/demo_3d_adaptation_detail.mp4" type="video/mp4" />
-          </video>
-          <div class="video-label comparison">
-            Left: raw replay in the original workspace frame. Center: DHB-XR decoded from the shifted initial pose. Right: translated demo reference. This is a verified translation-only diagnostic and is not presented as a full 6-DOF solver comparison.
-          </div>
+        <div class="result-figure mb-5">
+          <img src="assets/fatrop_cube_showcase.png"
+               alt="Fatrop 6D retargeting showcase with notebook-style orientation cubes under large offset and rotation change" />
+          <p class="fig-caption">
+            Showcase figure for the fixed Fatrop solver on a notebook-style adaptation scenario: a large multi-axis workspace offset
+            together with a <strong>30&deg; boundary pitch change</strong>. The adapted trajectory satisfies the new boundary pose exactly
+            while preserving both the spatial arc and the orientation flow, visualized with sampled pose cubes along the retargeted path.
+          </p>
         </div>
 
         <div class="result-figure mb-5">
           <img src="assets/fig7_6d_adaptation_vs_affine.png"
                alt="Controlled 6D retargeting benchmark comparing DHB retargeting against endpoint-only warping in 3D" />
           <p class="fig-caption">
-            Controlled 6-DOF retargeting benchmark with the same new start pose, goal pose, and goal orientation for both methods. The DHB retarget keeps the interior 6D motion geometry, while endpoint-only warping compresses the lifted mid-trajectory structure.
+            Analytical comparison on the same controlled 6-DOF benchmark. With identical boundary poses, the DHB retarget keeps the interior
+            6D motion geometry, while endpoint-only warping compresses the lifted mid-trajectory structure.
           </p>
         </div>
 

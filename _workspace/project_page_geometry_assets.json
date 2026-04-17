@@ -5,8 +5,10 @@
     "pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate"
   ],
   "outputs": [
+    "docs/paper/assets/teaser.png",
     "docs/paper/assets/fig6_3d_trajectory_adaptation.png",
     "docs/paper/assets/fig7_6d_adaptation_vs_affine.png",
+    "docs/paper/assets/fatrop_cube_showcase.png",
     "docs/paper/assets/hero_3d_adaptation.mp4",
     "docs/paper/assets/demo_3d_adaptation_detail.mp4"
   ]
