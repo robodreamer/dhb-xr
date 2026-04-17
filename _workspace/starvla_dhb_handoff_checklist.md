@@ -105,3 +105,19 @@ Do not treat lower train loss alone as progress. SmolVLA already showed that tra
 Interpretation:
 - The direct StarVLA+DHB rollout stack is now executable end to end on the laptop GPU.
 - The next question is no longer “can it run?” but “does its failure mode match the known SmolVLA placement-margin signature?”
+
+## First Trained Checkpoint Comparison
+
+- Short training run:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_shorttrain2`
+- Intermediate checkpoint:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_shorttrain2/checkpoints/steps_50_pytorch_model.pt`
+- Same-task rollout summary:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_shorttrain2/libero_rollout_smoke_summary_step50.json`
+
+Current reading:
+- Short training is enough to prove the checkpoint-save / reload loop works on the laptop path.
+- It is not enough to fix task success or clean up EE orientation behavior.
+- The remaining issue is no longer the original normalized-action rollout bug; it is now either:
+  - insufficient training, or
+  - remaining mismatch in dataset / action conventions that should be cleaned up before broader sweeps.

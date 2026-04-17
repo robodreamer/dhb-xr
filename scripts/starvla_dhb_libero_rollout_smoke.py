@@ -130,6 +130,7 @@ def main() -> None:
     parser.add_argument("--task_id", type=int, default=0)
     parser.add_argument("--episode_idx", type=int, default=0)
     parser.add_argument("--num_steps_wait", type=int, default=10)
+    parser.add_argument("--checkpoint", default=None)
     parser.add_argument("--save_json", default=None)
     args, unknown = parser.parse_known_args()
 
@@ -162,6 +163,9 @@ def main() -> None:
 
     device = torch.device("cuda")
     model = build_framework(cfg)
+    if args.checkpoint:
+        state_dict = torch.load(args.checkpoint, map_location="cpu")
+        model.load_state_dict(state_dict, strict=True)
     model.eval()
     if not _uses_quantized_vlm(model):
         model = model.to(device)
@@ -236,6 +240,7 @@ def main() -> None:
 
     summary = {
         "config_yaml": args.config_yaml,
+        "checkpoint": args.checkpoint,
         "overrides": dotlist,
         "output_dir": str(output_dir),
         "task_suite_name": args.task_suite_name,

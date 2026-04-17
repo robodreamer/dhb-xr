@@ -87,3 +87,22 @@ Current result:
 Interpretation:
 - This is the first behavior-level StarVLA+DHB baseline, not a trained result worth judging on task success yet.
 - The main milestone is that the direct rollout stack now works end to end with recorded video on the laptop path.
+
+## Short Qwen+DHB Training Check
+
+- [x] Run a short frozen-Qwen StarVLA training job on the laptop path
+- [x] Save at least one intermediate checkpoint from that run
+- [x] Re-run the same direct LIBERO rollout from the intermediate checkpoint
+- [ ] Decide whether orientation issues now look like model quality or remaining action/dataset semantics mismatch
+
+Current result:
+- training run: `_workspace/starvla_runs/dhb_starvla_qwen_shorttrain2`
+- checkpoint: `_workspace/starvla_runs/dhb_starvla_qwen_shorttrain2/checkpoints/steps_50_pytorch_model.pt`
+- comparison rollout summary:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_shorttrain2/libero_rollout_smoke_summary_step50.json`
+- outcome after `50` steps: still `failure` on the same `libero_spatial/task_id=0/episode_idx=0` rollout
+
+Interpretation:
+- A short run is enough to verify the checkpointing / reload path.
+- It is not enough to make the Qwen+DHB policy behavior credible yet.
+- Remaining orientation problems are no longer obviously caused by the original rollout bug; they now look more like model quality and/or residual dataset-action convention issues.
