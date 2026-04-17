@@ -120,6 +120,22 @@ Interpretation:
 - The Qwen+DHB StarVLA path can now emit SE(3) chunks directly from a live LIBERO observation.
 - That is the correct handoff point for `embodik`, and should reduce the nullspace sensitivity seen in the direct LIBERO controller rollout.
 
+## First StarVLA→EmbodiK Result
+
+- Prepare script:
+  - `scripts/starvla_dhb_embodik_prepare.py`
+- Stage-2 / Stage-3 pipeline reused:
+  - `_workspace/eval_dhb_head_embodik.py`
+- Recorded videos:
+  - `_workspace/validation_videos/starvla_embodik_step200/offset_0.0cm_seed_0.mp4`
+  - `_workspace/validation_videos/starvla_embodik_step200/offset_0.0cm_seed_0_high_gains.mp4`
+
+Interpretation:
+- The `embodik` bridge itself is no longer the blocker.
+- The current `steps_200` StarVLA Stage-1 trajectory is not IK-feasible yet:
+  - Stage-2 returned `NO_PROGRESS` on all `6/6` waypoints.
+- That means the next improvement target is the predicted EE chunk quality / scale / feasibility, not nullspace control tuning alone.
+
 ## First Trained Checkpoint Comparison
 
 - Short training run:

@@ -77,8 +77,8 @@ Do not continue SmolVLA training with `500+` or `1000` epochs unless there is a 
 - [x] Expose DHB trajectory prediction from the `QwenDHB` framework instead of only normalized controller actions
 - [x] Fix missing state-conditioning in the StarVLA `QwenDHB` path when examples provide live `state`
 - [x] Validate one saved StarVLA Stage-1 artifact for the `steps_200` checkpoint
-- [ ] Reuse the working SmolVLA `embodik` Stage-2 IK path on the saved StarVLA Stage-1 chunk
-- [ ] Run one full StarVLA→`embodik`→JOINT_POSITION rollout with recorded video
+- [x] Reuse the working SmolVLA `embodik` Stage-2 IK path on the saved StarVLA Stage-1 chunk
+- [x] Run one full StarVLA→`embodik`→JOINT_POSITION rollout with recorded video
 - [ ] Compare StarVLA→`embodik` nullspace behavior against the direct LIBERO controller rollout
 
 Current Stage-1 artifact:
@@ -92,6 +92,31 @@ Current Stage-1 artifact:
 Interpretation:
 - StarVLA can now produce DHB-decoded EE pose chunks directly from live LIBERO observations on the laptop GPU.
 - The next step is no longer DHB decoding itself; it is handing those chunks into the already-working `embodik` IK / JOINT_POSITION execution stack.
+
+## First StarVLA→EmbodiK End-To-End Result
+
+- [x] Convert the Stage-1 StarVLA chunk into the existing `POSES_NPZ` contract expected by `_workspace/eval_dhb_head_embodik.py`
+- [x] Run Stage-2 `embodik` IK on that converted chunk
+- [x] Run Stage-3 `JOINT_POSITION` sim execution with recorded videos
+- [ ] Improve Stage-1 trajectory feasibility so `embodik` no longer returns `NO_PROGRESS` on all waypoints
+
+Current result:
+- prepare summary:
+  - `_workspace/starvla_runs/dhb_starvla_qwen/embodik_prepare_step200_summary.json`
+- IK debug:
+  - `_workspace/starvla_runs/dhb_starvla_qwen/embodik_step200_debug_ik.json`
+- sim debug:
+  - `_workspace/starvla_runs/dhb_starvla_qwen/embodik_step200_debug_sim.json`
+- videos:
+  - `_workspace/validation_videos/starvla_embodik_step200/offset_0.0cm_seed_0.mp4`
+  - `_workspace/validation_videos/starvla_embodik_step200/offset_0.0cm_seed_0_high_gains.mp4`
+
+Interpretation:
+- The `embodik` bridge is structurally working end to end.
+- The current bottleneck is now the Stage-1 StarVLA trajectory itself:
+  - `embodik` returned `NO_PROGRESS` on all `6/6` waypoints
+  - Stage-3 videos show essentially no meaningful arm motion
+- So the next improvement target is not nullspace control first; it is producing an IK-feasible Stage-1 EE trajectory chunk.
 
 ## First Direct StarVLA Rollout Result
 
