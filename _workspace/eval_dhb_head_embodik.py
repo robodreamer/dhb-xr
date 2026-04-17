@@ -714,7 +714,8 @@ def stage_sim(args):
         return snap
 
     def run_trajectory(q_traj, gripper_cmds, init_state, label="",
-                       output_max=0.5, kp=150, substeps=3, offset_m=0.0):
+                       output_max=0.5, kp=150, substeps=3, offset_m=0.0,
+                       release_gate_xy_m=0.04, release_gate_z_m=0.06):
         env = OffScreenRenderEnv(
             bddl_file_name=BDDL_FILE,
             controller="JOINT_POSITION",
@@ -758,26 +759,42 @@ def stage_sim(args):
         reopen_step = None
         close_snapshot = None
         reopen_snapshot = None
+        last_effective_grip = gripper_cmds[0] if len(gripper_cmds) else -1.0
         append_frame(obs)
 
         for t in range(n_steps):
             # Clamp gripper index to valid range
             grip_idx = min(t, len(gripper_cmds) - 1)
+            desired_grip = gripper_cmds[grip_idx]
+            ee_pos_pre = np.array(robot.controller.ee_pos)
+            effective_grip = desired_grip
+
+            # Preserve the planned close timing, but only reopen when the TCP
+            # is actually over the plate and low enough to release.
+            if desired_grip <= 0 and np.any(gripper_cmds[: grip_idx + 1] > 0):
+                ee_minus_plate = np.array(relative_snapshot(ee_pos_pre, scene_refs)["ee_minus_plate"])
+                release_ready = (
+                    abs(float(ee_minus_plate[0])) <= release_gate_xy_m
+                    and abs(float(ee_minus_plate[1])) <= release_gate_xy_m
+                    and float(ee_minus_plate[2]) <= release_gate_z_m
+                )
+                if not release_ready:
+                    effective_grip = 1.0
 
             for sub in range(substeps):
                 q_target = q_traj[t, :7]
                 q_current = np.array(robot._joint_positions)
                 delta = q_target - q_current
                 action = np.clip(delta / output_max, -1.0, 1.0)
-                grip = gripper_cmds[grip_idx]
-                full_action = np.concatenate([action, [grip]])
+                full_action = np.concatenate([action, [effective_grip]])
                 obs, r, done, info = env.step(full_action)
                 if r > reward:
                     reward = r
                 append_frame(obs)
 
-            prev_grip = gripper_cmds[max(grip_idx - 1, 0)] if grip_idx > 0 else gripper_cmds[0]
-            cur_grip = gripper_cmds[grip_idx]
+            prev_grip = last_effective_grip
+            cur_grip = effective_grip
+            last_effective_grip = effective_grip
             ee_pos = np.array(robot.controller.ee_pos)
             if close_step is None and cur_grip > 0 and prev_grip <= 0:
                 close_step = t
@@ -794,17 +811,20 @@ def stage_sim(args):
                 q_now = np.array(robot._joint_positions)
                 q_err = np.max(np.abs(q_now - q_traj[t, :7]))
                 print(f"  t={t:3d}: EE=[{ee_pos[0]:.3f},{ee_pos[1]:.3f},{ee_pos[2]:.3f}] "
-                      f"q_err={q_err:.4f} grip={gripper_cmds[grip_idx]:.0f} "
+                      f"q_err={q_err:.4f} grip={effective_grip:.0f} "
                       f"{'SUCCESS' if success else ''}")
 
-        # Settling steps (100 steps, gripper forced closed)
-        # Fix: demo_14 needs ~40 settling steps; demo_16's gripper reopens at end
+        # Settling steps: hold the final commanded gripper state instead of
+        # forcibly reclosing. For placement tasks, force-closing here can undo
+        # a late release and masks whether the rollout actually executed the
+        # intended open/close sequence.
+        settle_grip = last_effective_grip if len(gripper_cmds) else 1.0
         for i in range(100):
             q_target = q_traj[-1, :7]
             q_current = np.array(robot._joint_positions)
             delta = q_target - q_current
             action = np.clip(delta / output_max, -1.0, 1.0)
-            grip = 1.0  # force closed during settling (prevents bowl drop)
+            grip = settle_grip
             full_action = np.concatenate([action, [grip]])
             obs, r, done, info = env.step(full_action)
             if r > reward:
