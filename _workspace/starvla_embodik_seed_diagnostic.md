@@ -208,3 +208,81 @@ The apparent `go-stop-go-stop` pattern was not just controller noise. It was lar
 - repeated hold segments after IK failures
 
 Using shorter replanning plus overlap blending makes the closed-loop behavior more VLA-like and can materially improve execution.
+
+## Non-zero offset follow-up
+
+The next round focused specifically on getting better `3 cm` videos while
+keeping the loop behavior continuous and conceptually consistent with a VLA
+chunked closed loop.
+
+### Shared settings that were tested
+
+Two main families were compared:
+
+1. `replan_every = 4`, `max_first_offset_mm = 35`, `max_step_mm = 20`,
+   `smooth_window = 3`, `blend_overlap_alpha = 0.6`
+2. `replan_every = 6`, `max_first_offset_mm = 35`, `max_step_mm = 20`,
+   `smooth_window = 3`, `blend_overlap_alpha = 0.6`
+
+In parallel, the sim-side gripper semantics were cleaned up:
+
+- settling no longer force-recloses the gripper after the planned rollout
+- reopen can be delayed until the TCP is actually over the plate and low enough
+  to release
+
+This was important for interpretation even when the success rate itself did not
+increase.
+
+### Best current `3 cm` videos
+
+- `seed 1` success under the smoother `replan4` setting:
+  - `_workspace/validation_videos/starvla_embodik_invsup_step200_replan4_clamp35_step20_sw3_blend06_offset3_sweep/offset_3.0cm_seed_1.mp4`
+- `seed 0` success under the `replan6` compromise with high gains:
+  - `_workspace/validation_videos/starvla_embodik_invsup_step200_replan6_clamp35_step20_sw3_blend06_offset3_releasegate_sweep/offset_3.0cm_seed_0_high_gains.mp4`
+
+### Quantitative result
+
+No shared configuration exceeded `1/3` at `3 cm`:
+
+- `replan4 + clamp35 + blend06`
+  - `3 cm: 1/3`
+  - sim summary:
+    - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/embodik_step200_replan4_clamp35_step20_sw3_blend06_offset3_debug_sim.json`
+- `replan6 + clamp35 + blend06 + release gate`
+  - `3 cm: 1/3`
+  - sim summary:
+    - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/embodik_step200_replan6_clamp35_step20_sw3_blend06_offset3_releasegate_debug_sim.json`
+
+### Seed-level interpretation
+
+- `seed 0`
+  - prefers the longer `replan6` cadence
+  - at `3 cm`, it can succeed in the high-gain retry under the `replan6`
+    compromise
+  - under `replan4`, it tends to place too high late in the episode
+
+- `seed 1`
+  - prefers the shorter `replan4` cadence
+  - this is currently the cleanest default `3 cm` success case
+
+- `seed 2`
+  - improved substantially in IK under `replan6 + clamp35 + blend06`
+  - still fails task completion, so it is now the clearest “almost there” case
+
+### Current conclusion
+
+The main remaining issue is no longer gross feasibility, orientation, or stale
+gripper semantics. It is seed-dependent phase quality:
+
+1. some seeds want shorter replanning during approach and pickup
+2. some seeds want a slightly longer committed horizon during transport /
+   placement
+3. there is still no single common execution policy that raises the shared
+   `3 cm` benchmark above `1/3`
+
+So the next high-value improvement should target phase logic directly:
+
+- bowl-relative close gating
+- a short explicit placement tail (`descend -> release -> small lift`)
+- or a phase-dependent replanning cadence instead of one fixed `replan_every`
+  for the whole rollout

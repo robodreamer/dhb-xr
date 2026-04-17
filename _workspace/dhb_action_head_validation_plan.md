@@ -251,3 +251,37 @@ Key outcome:
 Interpretation:
 - The clamp confirms that early translational overshoot was a real bottleneck.
 - But once that is reduced, the main remaining problem becomes trajectory quality around grasp / placement, not just immediate IK feasibility.
+
+## Non-zero Offset Follow-up
+
+- [x] Test a tighter first-offset cap (`35 mm`) on the smoother `replan4 + blend`
+  execution path
+- [x] Fix sim-stage gripper semantics so settling no longer force-recloses the
+  hand
+- [x] Add a release gate so reopen can be delayed until the TCP is actually
+  over the plate and low enough to release
+- [x] Test a `replan6 + clamp35 + blend06` compromise to see whether longer
+  commit horizons help the failing `3 cm` seeds
+- [ ] Add phase-specific close / release logic and an explicit placement tail
+
+Current best `3 cm` artifacts:
+- `seed 1` success under the smoother `replan4` setting:
+  - `_workspace/validation_videos/starvla_embodik_invsup_step200_replan4_clamp35_step20_sw3_blend06_offset3_sweep/offset_3.0cm_seed_1.mp4`
+- `seed 0` success under the `replan6` compromise with high gains:
+  - `_workspace/validation_videos/starvla_embodik_invsup_step200_replan6_clamp35_step20_sw3_blend06_offset3_releasegate_sweep/offset_3.0cm_seed_0_high_gains.mp4`
+
+Current summaries:
+- `replan4 + clamp35 + blend06`
+  - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/embodik_step200_replan4_clamp35_step20_sw3_blend06_offset3_debug_sim.json`
+- `replan6 + clamp35 + blend06 + release gate`
+  - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/embodik_step200_replan6_clamp35_step20_sw3_blend06_offset3_releasegate_debug_sim.json`
+
+Interpretation:
+- The loop semantics are now substantially cleaner:
+  - no more forced gripper re-close during settling
+  - reopen can be held until the TCP is actually over the plate
+- But there is still no single shared configuration above `1/3` at `3 cm`
+- Different seeds prefer different replanning cadences:
+  - `seed 1` is best under `replan4`
+  - `seed 0` is best under `replan6`
+  - `seed 2` now looks like the best remaining target for a phase-logic fix
