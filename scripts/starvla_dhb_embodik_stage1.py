@@ -10,8 +10,8 @@ import h5py
 import numpy as np
 import torch
 from libero.libero import benchmark, get_libero_path
-from libero.libero.envs import OffScreenRenderEnv
 from omegaconf import OmegaConf
+from scipy.spatial.transform import Rotation
 
 from dhb_xr.integration.vla.libero import libero_obs_quat_to_axis_angle
 from starVLA.model.framework.base_framework import build_framework
@@ -19,8 +19,6 @@ from starVLA.training.trainer_utils.config_tracker import wrap_config
 from starVLA.training.trainer_utils.trainer_tools import normalize_dotlist_args
 
 
-LIBERO_DUMMY_ACTION = [0.0] * 6 + [-1.0]
-LIBERO_ENV_RESOLUTION = 256
 LIBERO_DATA_ROOT = Path("/home/andypark/Projects/data/libero")
 LIBERO_GRIPPER_OPEN_QPOS_THRESHOLD = 0.015
 
@@ -89,13 +87,51 @@ def _load_demo_gripper(task_suite_name: str, task_name: str, episode_idx: int) -
     return np.where(grip_qpos > LIBERO_GRIPPER_OPEN_QPOS_THRESHOLD, -1.0, 1.0).astype(np.float32)
 
 
+def _load_demo_episode(task_suite_name: str, task_name: str, episode_idx: int) -> dict:
+    hdf5_path = _demo_hdf5_path(task_suite_name, task_name)
+    with h5py.File(hdf5_path, "r") as f:
+        demo = f["data"][f"demo_{episode_idx}"]
+        robot_states = np.asarray(demo["robot_states"], dtype=np.float32)
+        agentview = np.asarray(demo["obs"]["agentview_rgb"], dtype=np.uint8)
+        wrist = np.asarray(demo["obs"]["eye_in_hand_rgb"], dtype=np.uint8)
+        init_state = np.asarray(demo["states"][0], dtype=np.float32)
+
+    ee_pos = robot_states[:, 2:5].astype(np.float32)
+    ee_quat_wxyz = robot_states[:, 5:9].astype(np.float32)
+    ee_quat_wxyz = ee_quat_wxyz / np.linalg.norm(ee_quat_wxyz, axis=1, keepdims=True)
+    grip_qpos = robot_states[:, 0].astype(np.float32)
+    gripper_cmd = np.where(grip_qpos > LIBERO_GRIPPER_OPEN_QPOS_THRESHOLD, -1.0, 1.0).astype(np.float32)
+
+    return {
+        "agentview_rgb": agentview,
+        "wrist_rgb": wrist,
+        "ee_pos": ee_pos,
+        "ee_quat_wxyz": ee_quat_wxyz,
+        "gripper_qpos": grip_qpos,
+        "gripper_cmd": gripper_cmd,
+        "init_state": init_state,
+    }
+
+
+def _demo_state_vector(ee_pos: np.ndarray, ee_quat_wxyz: np.ndarray, grip_qpos: float) -> np.ndarray:
+    axis_angle = libero_obs_quat_to_axis_angle(ee_quat_wxyz)
+    return np.concatenate(
+        (
+            np.asarray(ee_pos, dtype=np.float32),
+            axis_angle.astype(np.float32),
+            np.array([0.0], dtype=np.float32),
+            np.array([grip_qpos], dtype=np.float32),
+        )
+    ).astype(np.float32)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config_yaml", required=True)
     parser.add_argument("--task_suite_name", default="libero_spatial")
     parser.add_argument("--task_id", type=int, default=0)
     parser.add_argument("--episode_idx", type=int, default=0)
-    parser.add_argument("--num_steps_wait", type=int, default=10)
+    parser.add_argument("--replan_every", type=int, default=6)
     parser.add_argument("--checkpoint", default=None)
     parser.add_argument("--gripper-source", choices=("demo", "model"), default="demo")
     parser.add_argument("--save_npz", default=None)
@@ -113,16 +149,8 @@ def main() -> None:
     benchmark_dict = benchmark.get_benchmark_dict()
     task_suite = benchmark_dict[args.task_suite_name]()
     task = task_suite.get_task(args.task_id)
-    with _libero_torch_load_compat():
-        initial_states = task_suite.get_task_init_states(args.task_id)
-
-    task_bddl_file = Path(get_libero_path("bddl_files")) / task.problem_folder / task.bddl_file
-    env = OffScreenRenderEnv(
-        bddl_file_name=task_bddl_file,
-        camera_heights=LIBERO_ENV_RESOLUTION,
-        camera_widths=LIBERO_ENV_RESOLUTION,
-    )
-    env.seed(cfg.seed)
+    demo = _load_demo_episode(args.task_suite_name, task.name, args.episode_idx)
+    num_demo_steps = len(demo["ee_pos"])
 
     if not torch.cuda.is_available():
         raise RuntimeError("CUDA is required for StarVLA DHB embodik stage-1 smoke.")
@@ -132,40 +160,68 @@ def main() -> None:
         _load_rollout_checkpoint(model, args.checkpoint)
     model.eval()
 
-    obs = env.reset()
-    obs = env.set_init_state(initial_states[args.episode_idx])
-    for _ in range(args.num_steps_wait):
-        obs, _, _, _ = env.step(LIBERO_DUMMY_ACTION)
-
-    state = np.concatenate(
-        (
-            obs["robot0_eef_pos"],
-            libero_obs_quat_to_axis_angle(obs["robot0_eef_quat"]),
-            np.array([0.0], dtype=np.float32),
-            obs["robot0_gripper_qpos"][:1],
+    all_positions = []
+    all_quaternions = []
+    all_gripper = []
+    debug_chunks = []
+    t = 0
+    while t < num_demo_steps:
+        state = _demo_state_vector(
+            demo["ee_pos"][t],
+            demo["ee_quat_wxyz"][t],
+            float(demo["gripper_qpos"][t]),
         )
-    ).astype(np.float32)
-    example = {
-        "image": [
-            np.ascontiguousarray(obs["agentview_image"][::-1, ::-1]),
-            np.ascontiguousarray(obs["robot0_eye_in_hand_image"][::-1, ::-1]),
-        ],
-        "lang": task.language,
-        "state": np.expand_dims(state, axis=0),
-    }
+        example = {
+            "image": [
+                np.ascontiguousarray(demo["agentview_rgb"][t]),
+                np.ascontiguousarray(demo["wrist_rgb"][t]),
+            ],
+            "lang": task.language,
+            "state": np.expand_dims(state, axis=0),
+        }
 
-    with torch.inference_mode():
-        result = model.predict_trajectory([example])
+        with torch.inference_mode():
+            result = model.predict_trajectory([example])
 
-    positions = np.asarray(result["positions"][0], dtype=np.float32)
-    quaternions = np.asarray(result["quaternions"][0], dtype=np.float32)  # wxyz
+        chunk_pos = np.asarray(result["positions"][0], dtype=np.float32)
+        chunk_quat = np.asarray(result["quaternions"][0], dtype=np.float32)  # wxyz
+        n_use = min(args.replan_every, len(chunk_pos), num_demo_steps - t)
+
+        all_positions.append(chunk_pos[:n_use])
+        all_quaternions.append(chunk_quat[:n_use])
+
+        if args.gripper_source == "demo":
+            all_gripper.append(demo["gripper_cmd"][t : t + n_use])
+        else:
+            normalized_actions = np.asarray(result.get("normalized_actions", []), dtype=np.float32)
+            if normalized_actions.size:
+                chunk_gripper = np.array(
+                    [_binarize_gripper(v) for v in normalized_actions[0, :n_use, 6]],
+                    dtype=np.float32,
+                )
+            else:
+                chunk_gripper = np.full(n_use, -1.0, dtype=np.float32)
+            all_gripper.append(chunk_gripper)
+
+        gt_chunk = demo["ee_pos"][t : t + n_use]
+        pos_err_mm = np.linalg.norm(chunk_pos[:n_use] - gt_chunk, axis=1) * 1000.0
+        debug_chunks.append(
+            {
+                "t_start": int(t),
+                "n_use": int(n_use),
+                "chunk_mean_err_mm": float(np.mean(pos_err_mm)),
+                "chunk_max_err_mm": float(np.max(pos_err_mm)),
+                "first_pred_pos": chunk_pos[0].tolist(),
+                "first_gt_pos": gt_chunk[0].tolist(),
+            }
+        )
+        t += n_use
+
+    positions = np.concatenate(all_positions, axis=0)
+    quaternions = np.concatenate(all_quaternions, axis=0)
+    gripper = np.concatenate(all_gripper, axis=0)
     if args.gripper_source == "demo":
-        gripper = _load_demo_gripper(args.task_suite_name, task.name, args.episode_idx)
-    else:
-        normalized_actions = np.asarray(result.get("normalized_actions", []), dtype=np.float32)
-        gripper = None
-        if normalized_actions.size:
-            gripper = np.array([_binarize_gripper(v) for v in normalized_actions[0, :, 6]], dtype=np.float32)
+        assert len(gripper) == len(positions)
 
     save_npz = Path(args.save_npz) if args.save_npz else output_dir / "embodik_stage1_chunk.npz"
     np.savez(
@@ -173,7 +229,7 @@ def main() -> None:
         positions=positions,
         quaternions=quaternions,
         gripper=gripper if gripper is not None else np.full(len(positions), -1.0, dtype=np.float32),
-        init_state=initial_states[args.episode_idx],
+        init_state=demo["init_state"],
         task_language=task.language,
         task_suite_name=args.task_suite_name,
         task_id=args.task_id,
@@ -188,6 +244,9 @@ def main() -> None:
         "task_id": args.task_id,
         "episode_idx": args.episode_idx,
         "task_language": task.language,
+        "replan_every": args.replan_every,
+        "num_demo_steps": num_demo_steps,
+        "num_chunks": len(debug_chunks),
         "gripper_source": args.gripper_source,
         "positions_shape": list(positions.shape),
         "quaternions_shape": list(quaternions.shape),
@@ -195,6 +254,9 @@ def main() -> None:
         "gripper_preview": gripper[: min(len(gripper), 12)].tolist() if gripper is not None else None,
         "first_position": positions[0].tolist(),
         "first_quaternion_wxyz": quaternions[0].tolist(),
+        "last_position": positions[-1].tolist(),
+        "mean_step_pos_mm": float(np.linalg.norm(np.diff(positions, axis=0), axis=1).mean() * 1000.0) if len(positions) > 1 else 0.0,
+        "chunks": debug_chunks,
         "save_npz": str(save_npz),
     }
     save_json = Path(args.save_json) if args.save_json else output_dir / "embodik_stage1_summary.json"
