@@ -121,3 +121,20 @@ Current reading:
 - The remaining issue is no longer the original normalized-action rollout bug; it is now either:
   - insufficient training, or
   - remaining mismatch in dataset / action conventions that should be cleaned up before broader sweeps.
+
+## Longer Checkpoint Status
+
+- Longer run:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_longtrain1`
+- Intermediate checkpoints:
+  - `steps_100_pytorch_model.pt`
+  - `steps_200_pytorch_model.pt`
+- Latest same-task rollout summary:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_longtrain1/libero_rollout_smoke_summary_step200.json`
+- Latest video:
+  - `_workspace/starvla_runs/dhb_starvla_qwen/rollout_steps_200_pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate_episode0_failure.mp4`
+
+Current reading:
+- `200` steps are still not enough for success on the reference LIBERO rollout.
+- The checkpoint-specific rollout path now works, but reloading quantized checkpoints needed `llm_int8_enable_fp32_cpu_offload=true`.
+- That reload path emitted meta-parameter warnings, so benchmark-scale evaluation should wait until checkpoint reload semantics are cleaned up or moved to a non-fragile loading path.

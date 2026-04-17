@@ -49,6 +49,14 @@ def _default_output_dir(cfg) -> Path:
     return run_root_dir / run_id
 
 
+def _checkpoint_tag(checkpoint: str | None) -> str:
+    if not checkpoint:
+        return "current"
+    ckpt = Path(checkpoint)
+    tag = ckpt.stem.replace("_pytorch_model", "")
+    return tag.replace(" ", "_")
+
+
 def _load_action_norm_stats(cfg, output_dir: Path) -> dict[str, Any]:
     stats_path = output_dir / "dataset_statistics.json"
     if not stats_path.exists():
@@ -234,8 +242,9 @@ def main() -> None:
     torch.cuda.synchronize(device)
 
     task_segment = task.language.replace(" ", "_")
+    checkpoint_tag = _checkpoint_tag(args.checkpoint)
     suffix = "success" if done else "failure"
-    video_path = output_dir / f"rollout_{task_segment}_episode{args.episode_idx}_{suffix}.mp4"
+    video_path = output_dir / f"rollout_{checkpoint_tag}_{task_segment}_episode{args.episode_idx}_{suffix}.mp4"
     imageio.mimwrite(video_path, [np.asarray(x) for x in replay_images], fps=10)
 
     summary = {

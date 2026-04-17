@@ -106,3 +106,25 @@ Interpretation:
 - A short run is enough to verify the checkpointing / reload path.
 - It is not enough to make the Qwen+DHB policy behavior credible yet.
 - Remaining orientation problems are no longer obviously caused by the original rollout bug; they now look more like model quality and/or residual dataset-action convention issues.
+
+## Longer Qwen+DHB Checkpoint Comparison
+
+- [x] Fix the StarVLA trainer checkpoint-save path for single-process laptop runs
+- [x] Run a longer frozen-Qwen training job and keep intermediate checkpoints
+- [x] Add checkpoint-specific rollout video naming to avoid overwriting artifacts
+- [x] Re-run the same rollout from a later checkpoint (`steps_200`)
+- [ ] Decide whether the remaining orientation issue is dominated by model quality or by quantized-checkpoint reload semantics
+
+Current result:
+- training run: `_workspace/starvla_runs/dhb_starvla_qwen_longtrain1`
+- checkpoints reached: `steps_100_pytorch_model.pt`, `steps_200_pytorch_model.pt`
+- rollout summary from `steps_200`:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_longtrain1/libero_rollout_smoke_summary_step200.json`
+- video from `steps_200`:
+  - `_workspace/starvla_runs/dhb_starvla_qwen/rollout_steps_200_pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate_episode0_failure.mp4`
+- outcome after `200` steps: still `failure`
+
+Interpretation:
+- Longer training changes the action outputs and makes the checkpoint comparison more meaningful than the `50`-step smoke.
+- It still does not produce task success on the reference rollout.
+- The run required `llm_int8_enable_fp32_cpu_offload=true` for reload, which produced meta-parameter warnings during `load_state_dict()`. That means the next cleanup target is the quantized checkpoint reload path itself, not just more training time.
