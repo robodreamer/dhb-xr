@@ -413,5 +413,82 @@ class TestFatropOrientationSmooth:
         )
 
 
+class TestFatropTranslationRegression:
+    """Regression coverage for pure-translation adaptation quality."""
+
+    def test_pure_translation_stays_close_to_translated_demo(self):
+        """Pure translation should preserve the demo path up to a small residual.
+
+        Under a rigid translation, the DHB invariants are unchanged, so the adapted
+        trajectory should remain close to the translated demo while still satisfying
+        the translated start and goal constraints exactly.
+        """
+        from scipy.interpolate import interp1d
+        from dhb_xr.optimization.fatrop_solver import generate_trajectory_fatrop
+
+        n_demo = 100
+        t = np.linspace(0.0, 2.0 * np.pi, n_demo)
+        positions = np.column_stack([
+            0.30 * np.cos(t),
+            0.30 * np.sin(t),
+            0.10 * t / (2.0 * np.pi),
+        ])
+        quaternions = np.tile(np.array([1.0, 0.0, 0.0, 0.0]), (n_demo, 1))
+
+        offset = np.array([0.12, -0.08, 0.05])
+        translated_demo = positions + offset
+        target_start = {
+            "position": translated_demo[0],
+            "quaternion": quaternions[0],
+        }
+        target_goal = {
+            "position": translated_demo[-1],
+            "quaternion": quaternions[-1],
+        }
+
+        result = generate_trajectory_fatrop(
+            positions,
+            quaternions,
+            target_start,
+            target_goal,
+            traj_length=40,
+            use_fatrop=False,  # IPOPT is more reliable in CI than the Fatrop binary
+            verbose=False,
+        )
+
+        adapted_positions = result["positions"]
+        resampled_demo = interp1d(
+            np.linspace(0.0, 1.0, len(translated_demo)),
+            translated_demo,
+            axis=0,
+            fill_value="extrapolate",
+        )(np.linspace(0.0, 1.0, len(adapted_positions)))
+
+        pointwise_error = np.linalg.norm(adapted_positions - resampled_demo, axis=1)
+        rms_error = np.sqrt(np.mean(pointwise_error**2))
+        max_error = np.max(pointwise_error)
+
+        np.testing.assert_allclose(
+            adapted_positions[0],
+            target_start["position"],
+            atol=1e-8,
+            err_msg="Pure-translation adaptation must satisfy the translated start pose.",
+        )
+        np.testing.assert_allclose(
+            adapted_positions[-1],
+            target_goal["position"],
+            atol=1e-8,
+            err_msg="Pure-translation adaptation must satisfy the translated goal pose.",
+        )
+        assert rms_error < 0.05, (
+            f"Pure-translation adaptation drifted too far from the translated demo path: "
+            f"RMS error {rms_error:.3f} m."
+        )
+        assert max_error < 0.12, (
+            f"Pure-translation adaptation deviated too far from the translated demo path: "
+            f"max error {max_error:.3f} m."
+        )
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
