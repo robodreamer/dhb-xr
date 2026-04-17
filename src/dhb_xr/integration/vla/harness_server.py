@@ -123,7 +123,8 @@ class DHBModelServer(PredictModelServer):
         super().__init__(chunk_size=chunk_size, **kwargs)
         self.demo_dataset = Path(demo_dataset) if demo_dataset else None
         self.solver = solver
-        self.use_embodik_ik = use_embodik_ik and HAS_EMBODIK
+        requested_embodik_ik = bool(use_embodik_ik)
+        self.use_embodik_ik = requested_embodik_ik and HAS_EMBODIK
         self.action_dim = action_dim
         self.verbose = verbose
 
@@ -141,6 +142,14 @@ class DHBModelServer(PredictModelServer):
 
         # Demo cache: task_name → {positions, quaternions}
         self._demo_cache: dict[str, dict] = {}
+
+        if requested_embodik_ik and self.use_embodik_ik:
+            raise ValueError(
+                "DHBModelServer.use_embodik_ik is not yet compatible with the harness action "
+                "contract. The server advertises EEF delta actions, but the current "
+                "embodik path returns joint targets. Keep use_embodik_ik=false until the "
+                "action spec and returned action space are aligned."
+            )
 
         solver_info = "fatrop" if HAS_FATROP else ("casadi" if HAS_CASADI else "encode-decode")
         logger.info(

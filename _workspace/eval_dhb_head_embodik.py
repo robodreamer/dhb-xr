@@ -547,7 +547,11 @@ def stage_ik(args):
     # Precompute per-seed IK initialization (q0, base_offset)
     seed_ik_configs = {}
     for seed in range(seeds):
-        demo_idx = seed % len(demo_keys)
+        episode_key = f"episode_idx_seed{seed}"
+        if episode_key in data:
+            demo_idx = int(np.asarray(data[episode_key]).reshape(-1)[0]) % len(demo_keys)
+        else:
+            demo_idx = seed % len(demo_keys)
         demo_key = demo_keys[demo_idx]
         demo_joint = all_demo_joints[demo_key]
         demo_ee = all_demo_ee_pos[demo_key]
@@ -558,7 +562,10 @@ def stage_ik(args):
         fk_tcp_t0 = np.array(robot.get_frame_pose("panda_hand_tcp").translation, dtype=float)
         base_offset_seed = demo_ee[0] - fk_tcp_t0
         seed_ik_configs[seed] = (q0_seed, base_offset_seed)
-        print(f"  Seed {seed} ({demo_key}): base_offset_Z={base_offset_seed[2]:.3f}")
+        print(
+            f"  Seed {seed} ({demo_key}, episode_idx={demo_idx}): "
+            f"base_offset_Z={base_offset_seed[2]:.3f}"
+        )
 
     for offset_cm in offsets_cm:
         for seed in range(seeds):

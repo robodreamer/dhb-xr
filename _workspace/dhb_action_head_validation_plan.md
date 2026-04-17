@@ -195,3 +195,25 @@ Interpretation:
 - Longer training changes the action outputs and makes the checkpoint comparison more meaningful than the `50`-step smoke.
 - It still does not produce task success on the reference rollout.
 - The run required `llm_int8_enable_fp32_cpu_offload=true` for reload, which produced meta-parameter warnings during `load_state_dict()`. That means the next cleanup target is the quantized checkpoint reload path itself, not just more training time.
+
+## StarVLA Embodik Seed Robustness Follow-up
+
+- [x] Compare replanned StarVLA→`embodik` behavior across seeds `0`, `1`, and `2`
+- [x] Confirm the current `1/3` success is real and not another rollout-orientation bug
+- [x] Add a diagnostic note for the seed split
+- [x] Fix the seed-identity handoff so pack/IK preserve the originating `episode_idx`
+- [x] Add a fail-fast guard for the harness `use_embodik_ik=true` contract mismatch
+- [ ] Improve Stage-1 trajectory feasibility for the failing seeds before scaling training or benchmarks again
+
+Current result:
+- diagnostic note:
+  - `_workspace/starvla_embodik_seed_diagnostic.md`
+- repacked multiseed bundle:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/embodik_pack_step200_replan6_sweep_after_seedfix.json`
+- IK rerun after seed-fix:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/embodik_step200_replan6_after_seedfix_debug_ik.json`
+
+Interpretation:
+- The remaining failure split is now credible: `seed 0` is workable, `seed 1` fails IK from the first waypoint, and `seed 2` is partly feasible but not task-correct.
+- The old orientation and gripper pipeline bugs were real, but they are no longer the dominant issue here.
+- The next bottleneck is Stage-1 trajectory quality, especially the large first-waypoint translational overshoot seen across seeds and worst on `seed 1`.

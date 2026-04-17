@@ -30,9 +30,11 @@ def main() -> None:
         quaternions = np.asarray(data["quaternions"], dtype=np.float32)
         gripper = np.asarray(data["gripper"], dtype=np.float32)
         init_state = np.asarray(data["init_state"])
+        episode_idx = int(np.asarray(data["episode_idx"]).item()) if "episode_idx" in data else seed
 
         payload[f"gripper_seed{seed}"] = gripper
         payload[f"init_state_seed{seed}"] = init_state
+        payload[f"episode_idx_seed{seed}"] = np.asarray([episode_idx], dtype=np.int32)
         if seed == 0:
             payload["demo_ee_pos"] = positions.copy()
 
@@ -50,6 +52,7 @@ def main() -> None:
                 "stage1_npz": str(path),
                 "positions_shape": list(positions.shape),
                 "quaternions_shape": list(quaternions.shape),
+                "episode_idx": episode_idx,
                 "first_position": positions[0].tolist(),
                 "last_position": positions[-1].tolist(),
             }
