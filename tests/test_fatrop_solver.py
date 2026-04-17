@@ -138,6 +138,65 @@ class TestFatropTrajectoryGenerator:
 class TestGenerateTrajectoryFatrop:
     """Tests for the high-level generate_trajectory_fatrop function."""
 
+    def test_uses_trajectory_derived_initial_frames_for_encoding(self, demo_trajectory, boundary_poses, monkeypatch):
+        """High-level Fatrop path should encode with trajectory-derived initial frames.
+
+        The CasADi path already relies on `use_default_initial_frames=False` for
+        invariance-consistent adaptation. Fatrop should match that contract.
+        """
+        from dhb_xr.optimization import fatrop_solver
+
+        positions, quaternions = demo_trajectory
+        start_pose, goal_pose = boundary_poses
+        calls = {}
+
+        def fake_encode(pos, quat, **kwargs):
+            calls.update(kwargs)
+            n = 30
+            return {
+                "linear_motion_invariants": np.tile(np.array([[0.01, 0.0, 0.0, 0.0]]), (n, 1)),
+                "angular_motion_invariants": np.tile(np.array([[0.0, 0.0, 0.0, 0.0]]), (n, 1)),
+                "initial_pose": kwargs["init_pose"],
+            }
+
+        class DummyGenerator:
+            def __init__(self, N, use_fatrop, verbose):
+                self.N = N
+
+            def generate(self, **kwargs):
+                n = self.N
+                return {
+                    "positions": np.linspace(start_pose["position"], goal_pose["position"], n),
+                    "linear_invariants": np.tile(np.array([[0.01, 0.0, 0.0, 0.0]]), (n - 1, 1)),
+                    "angular_invariants": np.tile(np.array([[0.0, 0.0, 0.0, 0.0]]), (n - 1, 1)),
+                    "solve_time": 0.0,
+                    "success": True,
+                }
+
+        def fake_decode(*args, **kwargs):
+            n = 29
+            return {
+                "positions": np.tile(start_pose["position"], (n, 1)),
+                "quaternions": np.tile(start_pose["quaternion"], (n, 1)),
+            }
+
+        monkeypatch.setattr(fatrop_solver, "encode_dhb_dr", fake_encode)
+        monkeypatch.setattr(fatrop_solver, "FatropTrajectoryGenerator", DummyGenerator)
+        monkeypatch.setattr(fatrop_solver, "decode_dhb_dr", fake_decode)
+
+        fatrop_solver.generate_trajectory_fatrop(
+            positions,
+            quaternions,
+            start_pose,
+            goal_pose,
+            traj_length=30,
+            use_fatrop=False,
+            verbose=False,
+        )
+
+        assert calls["use_default_initial_frames"] is False
+        assert calls["dhb_method"] == fatrop_solver.DHBMethod.DOUBLE_REFLECTION
+
     def test_basic_generation(self, demo_trajectory, boundary_poses):
         """Test basic trajectory generation."""
         from dhb_xr.optimization.fatrop_solver import generate_trajectory_fatrop

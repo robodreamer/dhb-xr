@@ -431,7 +431,14 @@ def generate_trajectory_fatrop(
 
     # Encode demo to invariants
     init_pose = {'position': pos_data[0], 'quaternion': quat_data[0]}
-    result = encode_dhb_dr(pos_data, quat_data, init_pose=init_pose, method=EncodingMethod.POSITION)
+    result = encode_dhb_dr(
+        pos_data,
+        quat_data,
+        init_pose=init_pose,
+        method=EncodingMethod.POSITION,
+        use_default_initial_frames=False,
+        dhb_method=DHBMethod.DOUBLE_REFLECTION,
+    )
     demo_lin = result['linear_motion_invariants']
     demo_ang = result['angular_motion_invariants']
 
