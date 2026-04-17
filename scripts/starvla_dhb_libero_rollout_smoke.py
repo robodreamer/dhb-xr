@@ -141,7 +141,7 @@ def _max_steps_for_suite(name: str) -> int:
     }[name]
 
 
-def _load_libero_demo_absolute_actions(hdf5_path: str, demo_id: int) -> np.ndarray:
+def _load_libero_demo_actions(hdf5_path: str, demo_id: int, action_mode: str) -> np.ndarray:
     demo_key = f"demo_{demo_id}"
     with h5py.File(hdf5_path, "r") as f:
         demo = f["data"][demo_key]
@@ -152,7 +152,26 @@ def _load_libero_demo_absolute_actions(hdf5_path: str, demo_id: int) -> np.ndarr
         ee_quat_xyzw = ee_quat_xyzw / np.linalg.norm(ee_quat_xyzw, axis=1, keepdims=True)
         ee_euler = Rotation.from_quat(ee_quat_xyzw).as_euler("xyz", degrees=False).astype(np.float32)
         gripper = robot_states[:, 0:1].astype(np.float32)
-    return np.concatenate([ee_pos, ee_euler, gripper], axis=1).astype(np.float32)
+
+    if action_mode == "absolute":
+        return np.concatenate([ee_pos, ee_euler, gripper], axis=1).astype(np.float32)
+
+    if action_mode == "delta":
+        delta_pos = np.zeros_like(ee_pos, dtype=np.float32)
+        if len(ee_pos) > 1:
+            delta_pos[:-1] = ee_pos[1:] - ee_pos[:-1]
+
+        delta_rot = np.zeros((len(ee_pos), 3), dtype=np.float32)
+        if len(ee_quat_xyzw) > 1:
+            q_curr = Rotation.from_quat(ee_quat_xyzw[:-1])
+            q_next = Rotation.from_quat(ee_quat_xyzw[1:])
+            delta_rot[:-1] = (q_curr.inv() * q_next).as_rotvec().astype(np.float32)
+
+        gripper_open = (gripper[:, 0] > 0.5).astype(np.float32).reshape(-1, 1)
+        next_gripper_open = np.concatenate([gripper_open[1:], gripper_open[-1:]], axis=0)
+        return np.concatenate([delta_pos, delta_rot, next_gripper_open], axis=1).astype(np.float32)
+
+    raise ValueError(f"Unsupported gt action mode: {action_mode}")
 
 
 def main() -> None:
@@ -165,6 +184,7 @@ def main() -> None:
     parser.add_argument("--checkpoint", default=None)
     parser.add_argument("--gt_hdf5", default=None)
     parser.add_argument("--gt_demo_id", type=int, default=0)
+    parser.add_argument("--gt_action_mode", choices=("absolute", "delta"), default="delta")
     parser.add_argument("--save_json", default=None)
     args, unknown = parser.parse_known_args()
 
@@ -194,7 +214,9 @@ def main() -> None:
 
     model = None
     device = None
-    raw_actions_gt = _load_libero_demo_absolute_actions(args.gt_hdf5, args.gt_demo_id) if args.gt_hdf5 else None
+    raw_actions_gt = (
+        _load_libero_demo_actions(args.gt_hdf5, args.gt_demo_id, args.gt_action_mode) if args.gt_hdf5 else None
+    )
     if raw_actions_gt is None:
         if not torch.cuda.is_available():
             raise RuntimeError("CUDA is required for StarVLA LIBERO rollout smoke.")
@@ -258,13 +280,22 @@ def main() -> None:
                 break
             raw_action = raw_actions_gt[_step]
 
-        delta_action = np.concatenate(
-            [
-                np.asarray(raw_action[:3], dtype=np.float32),
-                _euler_to_axisangle(np.asarray(raw_action[3:6], dtype=np.float32)),
-                np.asarray([_binarize_gripper(float(raw_action[6]))], dtype=np.float32),
-            ]
-        )
+        if args.gt_hdf5 and args.gt_action_mode == "delta":
+            delta_action = np.concatenate(
+                [
+                    np.asarray(raw_action[:3], dtype=np.float32),
+                    np.asarray(raw_action[3:6], dtype=np.float32),
+                    np.asarray([_binarize_gripper(float(raw_action[6]))], dtype=np.float32),
+                ]
+            )
+        else:
+            delta_action = np.concatenate(
+                [
+                    np.asarray(raw_action[:3], dtype=np.float32),
+                    _euler_to_axisangle(np.asarray(raw_action[3:6], dtype=np.float32)),
+                    np.asarray([_binarize_gripper(float(raw_action[6]))], dtype=np.float32),
+                ]
+            )
         actions.append(delta_action.tolist())
 
         obs, _, done, _info = env.step(delta_action.tolist())
@@ -276,7 +307,9 @@ def main() -> None:
         torch.cuda.synchronize(device)
 
     task_segment = task.language.replace(" ", "_")
-    checkpoint_tag = f"gt_demo{args.gt_demo_id}" if args.gt_hdf5 else _checkpoint_tag(args.checkpoint)
+    checkpoint_tag = (
+        f"gt_{args.gt_action_mode}_demo{args.gt_demo_id}" if args.gt_hdf5 else _checkpoint_tag(args.checkpoint)
+    )
     suffix = "success" if done else "failure"
     video_path = output_dir / f"rollout_{checkpoint_tag}_{task_segment}_episode{args.episode_idx}_{suffix}.mp4"
     imageio.mimwrite(video_path, [np.asarray(x) for x in replay_images], fps=10)
@@ -286,6 +319,7 @@ def main() -> None:
         "checkpoint": args.checkpoint,
         "gt_hdf5": args.gt_hdf5,
         "gt_demo_id": args.gt_demo_id if args.gt_hdf5 else None,
+        "gt_action_mode": args.gt_action_mode if args.gt_hdf5 else None,
         "overrides": dotlist,
         "output_dir": str(output_dir),
         "task_suite_name": args.task_suite_name,

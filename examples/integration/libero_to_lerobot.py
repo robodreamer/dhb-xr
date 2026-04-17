@@ -102,7 +102,7 @@ LIBERO_WRIST_KEY = "eye_in_hand_rgb"
 DEFAULT_VIDEO_RES = (512, 384)  # (width, height)
 
 # Action mode configuration
-ACTION_MODE = "abs"  # "abs" for absolute, "delta" for delta, "rel" for relative
+ACTION_MODE = "delta"
 
 
 # ============================================================================
@@ -152,6 +152,23 @@ def load_libero_demo(h5_path: Path, demo_id: int) -> Dict:
         # Convert quaternion to Euler angles (roll, pitch, yaw) in radians
         rotations = Rotation.from_quat(ee_quat)
         euler_angles = rotations.as_euler("xyz", degrees=False).astype(np.float32)  # [T, 3]
+        ee_axis_angle = rotations.as_rotvec().astype(np.float32)  # [T, 3]
+
+        # Derived StarVLA-compatible delta action targets.
+        delta_pos = np.zeros_like(ee_pos, dtype=np.float32)
+        if len(ee_pos) > 1:
+            delta_pos[:-1] = ee_pos[1:] - ee_pos[:-1]
+
+        delta_rot = np.zeros_like(ee_axis_angle, dtype=np.float32)
+        if len(ee_quat) > 1:
+            q_curr = Rotation.from_quat(ee_quat[:-1])
+            q_next = Rotation.from_quat(ee_quat[1:])
+            # Delta in the current EE frame: current * delta = next.
+            delta_rot[:-1] = (q_curr.inv() * q_next).as_rotvec().astype(np.float32)
+
+        gripper_open = (gripper_state[:, 0] > 0.5).astype(np.float32).reshape(-1, 1)
+        next_gripper_open = np.concatenate([gripper_open[1:], gripper_open[-1:]], axis=0)
+        delta_actions = np.concatenate([delta_pos, delta_rot, next_gripper_open], axis=1).astype(np.float32)
         
         # Extract images. Current LIBERO spatial demos store image streams under
         # demo["obs"], not at the demo root.
@@ -171,6 +188,8 @@ def load_libero_demo(h5_path: Path, demo_id: int) -> Dict:
             "ee_pos": ee_pos,  # [T, 3]
             "ee_quat": ee_quat,  # [T, 4] in (x, y, z, w)
             "euler_angles": euler_angles,  # [T, 3] roll, pitch, yaw
+            "ee_axis_angle": ee_axis_angle,  # [T, 3] axis-angle / rotvec
+            "delta_actions": delta_actions,  # [T, 7] delta_pos + delta_rotvec + next_gripper_open
             "agentview_rgb": agentview_rgb,  # [T, H, W, 3]
             "wrist_rgb": wrist_rgb,  # [T, H, W, 3]
             "length": len(actions),
@@ -203,9 +222,9 @@ def create_modality_metadata() -> Dict:
             "x": {"start": 0, "end": 1},
             "y": {"start": 1, "end": 2},
             "z": {"start": 2, "end": 3},
-            "roll": {"start": 3, "end": 4},
-            "pitch": {"start": 4, "end": 5},
-            "yaw": {"start": 5, "end": 6},
+            "rot_x": {"start": 3, "end": 4},
+            "rot_y": {"start": 4, "end": 5},
+            "rot_z": {"start": 5, "end": 6},
             "pad": {"start": 6, "end": 7},
             "gripper": {"start": 7, "end": 8},
         },
@@ -213,10 +232,10 @@ def create_modality_metadata() -> Dict:
             "x": {"start": 0, "end": 1},
             "y": {"start": 1, "end": 2},
             "z": {"start": 2, "end": 3},
-            "roll": {"start": 3, "end": 4},
-            "pitch": {"start": 4, "end": 5},
-            "yaw": {"start": 5, "end": 6},
-            "gripper": {"start": 6, "end": 7},
+            "rot_x": {"start": 3, "end": 4},
+            "rot_y": {"start": 4, "end": 5},
+            "rot_z": {"start": 5, "end": 6},
+            "open_gripper": {"start": 6, "end": 7},
         },
         "video": {
             "primary_image": {"original_key": "observation.images.image"},
@@ -261,11 +280,11 @@ def create_info_metadata(num_tasks: int = 1) -> Dict:
                 },
             },
             "observation.state": {
-                "shape": [8],  # x, y, z, roll, pitch, yaw, pad, gripper
+                "shape": [8],  # x, y, z, axis_angle_x, axis_angle_y, axis_angle_z, pad, gripper
                 "dtype": "float32",
             },
             "action": {
-                "shape": [7],  # x, y, z, roll, pitch, yaw, gripper
+                "shape": [7],  # delta_x, delta_y, delta_z, delta_rx, delta_ry, delta_rz, open_gripper
                 "dtype": "float32",
             },
             "timestamp": {
@@ -324,21 +343,17 @@ def create_episode_dataframe(
     # Create timestamp (assuming 30 FPS)
     timestamps = np.arange(length, dtype=np.float32) / LEROBOT_VIDEO_FPS
     
-    # Prepare state vector: [x, y, z, roll, pitch, yaw, pad, gripper]
+    # Prepare state vector: [x, y, z, axis_angle_x, axis_angle_y, axis_angle_z, pad, gripper]
     state_vector = np.column_stack([
         demo_data["ee_pos"],  # x, y, z
-        demo_data["euler_angles"],  # roll, pitch, yaw
+        demo_data["ee_axis_angle"],  # axis-angle / rotvec
         np.zeros((length, 1), dtype=np.float32),  # pad dimension for libero_franka config
         demo_data["gripper_state"][:, 0:1],  # gripper (take first component)
     ]).astype(np.float32)
-    
-    # Prepare action vector (absolute positions): [x, y, z, roll, pitch, yaw, gripper]
-    # For actions, we use the same as state (absolute control)
-    action_vector = np.column_stack([
-        demo_data["ee_pos"],  # x, y, z
-        demo_data["euler_angles"],  # roll, pitch, yaw
-        demo_data["gripper_state"][:, 0:1],  # gripper
-    ]).astype(np.float32)
+
+    # Prepare action vector (StarVLA LIBERO-style deltas):
+    # [delta_x, delta_y, delta_z, delta_rx, delta_ry, delta_rz, next_open_gripper]
+    action_vector = demo_data["delta_actions"].astype(np.float32)
     
     # Build one parquet row per environment step. The StarVLA LeRobot loader
     # expects trajectory data to be indexed by timestep inside each episode
