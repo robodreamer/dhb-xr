@@ -570,11 +570,13 @@
           </div>
         </div>
 
-        <!-- Teaser Summary -->
+        <!-- Hero Animation -->
         <div class="hero-teaser">
-          <img src="assets/teaser.png" alt="DHB-XR teaser: geometric retargeting, stable tokens, and state-aware DHB action decoding" />
+          <video autoplay muted loop playsinline>
+            <source src="assets/hero_3d_adaptation.mp4" type="video/mp4" />
+          </video>
           <div class="hero-teaser-caption">
-            The main story is now centered on the strongest current evidence: invariant token stability, better compression on smoother geometric targets, and a state-aware DHB action head that decodes motion relative to the current robot pose. The geometric panel is shown as an exact translation diagnostic, not as a general 6-DOF solver claim.
+            Controlled 6-DOF benchmark with matched boundary poses. The comparison is now shown directly in 3D: DHB preserves the interior lifted motion pattern, while endpoint-only warping visibly collapses the middle of the trajectory.
           </div>
         </div>
 
@@ -997,9 +999,9 @@
 
         <div class="result-figure mb-5">
           <img src="assets/fig7_6d_adaptation_vs_affine.png"
-               alt="Controlled 6D retargeting benchmark comparing repaired Fatrop retargeting against endpoint-only warping" />
+               alt="Controlled 6D retargeting benchmark comparing DHB retargeting against endpoint-only warping in 3D" />
           <p class="fig-caption">
-            Controlled 6-DOF retargeting benchmark using the repaired Fatrop path. Compared with endpoint-only warping, the optimized DHB retargeted trajectory preserves a richer geometric arc while still matching the requested final pose and orientation exactly.
+            Controlled 6-DOF retargeting benchmark with the same new start pose, goal pose, and goal orientation for both methods. The DHB retarget keeps the interior 6D motion geometry, while endpoint-only warping compresses the lifted mid-trajectory structure.
           </p>
         </div>
 
