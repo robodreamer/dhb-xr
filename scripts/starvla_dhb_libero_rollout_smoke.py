@@ -58,22 +58,43 @@ def _checkpoint_tag(checkpoint: str | None) -> str:
     return tag.replace(" ", "_")
 
 
-def _load_action_norm_stats(cfg, output_dir: Path) -> dict[str, Any]:
-    stats_path = output_dir / "dataset_statistics.json"
-    if not stats_path.exists():
-        raise FileNotFoundError(
-            f"Missing dataset statistics at {stats_path}. Run a StarVLA dataloader smoke first to materialize stats."
-        )
-    payload = json.loads(stats_path.read_text())
+def _extract_action_stats(payload: dict[str, Any], stats_path: Path) -> dict[str, Any]:
     if not payload:
         raise ValueError(f"Dataset statistics file is empty: {stats_path}")
-    first_key = next(iter(payload.keys()))
-    action_stats = payload[first_key]["action"]
+
+    if "action" in payload:
+        action_stats = payload["action"]
+    else:
+        first_key = next(iter(payload.keys()))
+        action_stats = payload[first_key]["action"]
+
     required = {"min", "max"}
     missing = required - set(action_stats.keys())
     if missing:
         raise KeyError(f"Dataset action stats missing required keys {sorted(missing)} in {stats_path}")
     return action_stats
+
+
+def _load_action_norm_stats(cfg, output_dir: Path, checkpoint: str | None = None) -> dict[str, Any]:
+    candidate_paths = []
+    if checkpoint:
+        checkpoint_path = Path(checkpoint)
+        candidate_paths.append(checkpoint_path.parent.parent / "dataset_statistics.json")
+    candidate_paths.append(output_dir / "dataset_statistics.json")
+
+    seen = set()
+    for stats_path in candidate_paths:
+        if stats_path in seen:
+            continue
+        seen.add(stats_path)
+        if stats_path.exists():
+            payload = json.loads(stats_path.read_text())
+            return _extract_action_stats(payload, stats_path)
+
+    raise FileNotFoundError(
+        "Missing dataset statistics. Looked in: "
+        + ", ".join(str(path) for path in candidate_paths)
+    )
 
 
 def _unnormalize_actions(normalized_actions: np.ndarray, action_norm_stats: dict[str, Any]) -> np.ndarray:
@@ -196,7 +217,7 @@ def main() -> None:
     cfg.output_dir = str(_default_output_dir(cfg))
     output_dir = Path(cfg.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    action_norm_stats = None if args.gt_hdf5 else _load_action_norm_stats(cfg, output_dir)
+    action_norm_stats = None if args.gt_hdf5 else _load_action_norm_stats(cfg, output_dir, checkpoint=args.checkpoint)
 
     benchmark_dict = benchmark.get_benchmark_dict()
     task_suite = benchmark_dict[args.task_suite_name]()
@@ -232,8 +253,9 @@ def main() -> None:
     obs = env.set_init_state(initial_states[args.episode_idx])
     for _ in range(args.num_steps_wait):
         obs, _, _, _ = env.step(LIBERO_DUMMY_ACTION)
+    use_delta_actions = raw_actions_gt is None or args.gt_action_mode == "delta"
     for robot in env.robots:
-        robot.controller.use_delta = False
+        robot.controller.use_delta = use_delta_actions
 
     max_steps = _max_steps_for_suite(args.task_suite_name)
     replay_images = []
@@ -280,7 +302,15 @@ def main() -> None:
                 break
             raw_action = raw_actions_gt[_step]
 
-        if args.gt_hdf5 and args.gt_action_mode == "delta":
+        if raw_actions_gt is None:
+            delta_action = np.concatenate(
+                [
+                    np.asarray(raw_action[:3], dtype=np.float32),
+                    np.asarray(raw_action[3:6], dtype=np.float32),
+                    np.asarray([_binarize_gripper(float(raw_action[6]))], dtype=np.float32),
+                ]
+            )
+        elif args.gt_action_mode == "delta":
             delta_action = np.concatenate(
                 [
                     np.asarray(raw_action[:3], dtype=np.float32),
