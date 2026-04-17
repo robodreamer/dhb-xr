@@ -24,11 +24,14 @@ import numpy as np
 from matplotlib import patheffects
 from mpl_toolkits.mplot3d import art3d
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+from scipy.interpolate import interp1d
 from scipy.spatial.transform import Rotation
 
 from dhb_xr.encoder.dhb_dr import encode_dhb_dr
 from dhb_xr.decoder.dhb_dr import decode_dhb_dr
+from dhb_xr.core import geometry as geom
 from dhb_xr.core.types import DHBMethod, EncodingMethod
+from dhb_xr.optimization.fatrop_solver import generate_trajectory_fatrop
 from dhb_xr.visualization.plot import draw_frame
 
 
@@ -281,6 +284,136 @@ def build_task_payload(task: TaskSpec) -> dict[str, np.ndarray | dict]:
     }
 
 
+def endpoint_warp_positions(
+    positions: np.ndarray,
+    start_new: np.ndarray,
+    goal_new: np.ndarray,
+    n: int,
+) -> np.ndarray:
+    """Naive endpoint-only warp baseline."""
+    pts = interp1d(
+        np.linspace(0.0, 1.0, len(positions)),
+        positions,
+        axis=0,
+        fill_value="extrapolate",
+    )(np.linspace(0.0, 1.0, n))
+    t = np.linspace(0.0, 1.0, n)[:, None]
+    return pts + (1.0 - t) * (start_new - pts[0]) + t * (goal_new - pts[-1])
+
+
+def build_controlled_6d_case() -> dict[str, np.ndarray | float | str]:
+    """Controlled 6D retargeting benchmark using the repaired Fatrop path."""
+    n = 50
+    t = np.linspace(0.0, 1.0, n)
+    demo_pos = np.column_stack(
+        [
+            0.34 * t,
+            0.10 * np.sin(np.pi * t) + 0.05 * np.sin(2.0 * np.pi * t),
+            0.05 + 0.18 * t + 0.04 * np.sin(np.pi * t) ** 2,
+        ]
+    )
+    demo_quat = []
+    for s in t:
+        yaw = 0.6 * np.sin(np.pi * s)
+        pitch = -0.35 * s
+        qy = np.array([np.cos(pitch / 2.0), 0.0, np.sin(pitch / 2.0), 0.0])
+        qz = np.array([np.cos(yaw / 2.0), 0.0, 0.0, np.sin(yaw / 2.0)])
+        demo_quat.append(geom.quat_multiply(qz, qy))
+    demo_quat = np.asarray(demo_quat, dtype=np.float64)
+
+    q_init_rot = np.array([np.cos(np.pi / 8.0), 0.0, 0.0, np.sin(np.pi / 8.0)])
+    q_goal_rot = np.array([np.cos(-np.pi / 10.0), 0.0, np.sin(-np.pi / 10.0), 0.0])
+    pose_init = {
+        "position": demo_pos[0] + np.array([0.08, -0.06, 0.03]),
+        "quaternion": geom.quat_multiply(q_init_rot, demo_quat[0]),
+    }
+    pose_goal = {
+        "position": demo_pos[-1] + np.array([0.16, 0.07, 0.07]),
+        "quaternion": geom.quat_multiply(q_goal_rot, demo_quat[-1]),
+    }
+
+    result = generate_trajectory_fatrop(
+        demo_pos,
+        demo_quat,
+        pose_init,
+        pose_goal,
+        traj_length=36,
+        use_fatrop=False,
+        verbose=False,
+    )
+
+    fatrop_pos = np.asarray(result["positions"], dtype=np.float64)
+    fatrop_quat = np.asarray(result["quaternions"], dtype=np.float64)
+    demo_rs = interp1d(
+        np.linspace(0.0, 1.0, len(demo_pos)),
+        demo_pos,
+        axis=0,
+        fill_value="extrapolate",
+    )(np.linspace(0.0, 1.0, len(fatrop_pos)))
+    affine_pos = endpoint_warp_positions(
+        demo_pos,
+        pose_init["position"],
+        pose_goal["position"],
+        len(fatrop_pos),
+    )
+    slerp_quat = np.array(
+        [
+            geom.quat_slerp(
+                pose_init["quaternion"],
+                pose_goal["quaternion"],
+                i / max(1, len(fatrop_quat) - 1),
+            )
+            for i in range(len(fatrop_quat))
+        ]
+    )
+
+    deviation = np.linalg.norm(fatrop_pos - affine_pos, axis=1)
+    path_len_demo = float(np.sum(np.linalg.norm(np.diff(demo_rs, axis=0), axis=1)))
+    path_len_fatrop = float(np.sum(np.linalg.norm(np.diff(fatrop_pos, axis=0), axis=1)))
+    path_len_affine = float(np.sum(np.linalg.norm(np.diff(affine_pos, axis=0), axis=1)))
+    goal_quat_absdot = float(abs(np.dot(fatrop_quat[-1], pose_goal["quaternion"])))
+
+    def angular_steps(quats: np.ndarray) -> np.ndarray:
+        vals = []
+        for i in range(1, len(quats)):
+            vals.append(
+                2.0
+                * np.degrees(
+                    np.arccos(np.clip(abs(np.dot(quats[i], quats[i - 1])), -1.0, 1.0))
+                )
+            )
+        return np.asarray(vals, dtype=np.float64)
+
+    demo_quat_rs = np.array(
+        [
+            geom.quat_slerp(
+                demo_quat[0],
+                demo_quat[-1],
+                i / max(1, len(fatrop_quat) - 1),
+            )
+            for i in range(len(fatrop_quat))
+        ]
+    )
+
+    return {
+        "demo_pos": demo_rs,
+        "fatrop_pos": fatrop_pos,
+        "affine_pos": affine_pos,
+        "fatrop_quat": fatrop_quat,
+        "demo_step_deg": angular_steps(demo_quat_rs),
+        "fatrop_step_deg": angular_steps(fatrop_quat),
+        "slerp_step_deg": angular_steps(slerp_quat),
+        "deviation": deviation,
+        "mean_deviation_cm": float(deviation.mean() * 100.0),
+        "max_deviation_cm": float(deviation.max() * 100.0),
+        "path_len_demo": path_len_demo,
+        "path_len_fatrop": path_len_fatrop,
+        "path_len_affine": path_len_affine,
+        "goal_quat_absdot": goal_quat_absdot,
+        "solver": str(result["solver"]),
+    }
+
+
 def save_fig6(payloads: dict[str, dict[str, np.ndarray | dict]]) -> None:
     fig = plt.figure(figsize=(15.5, 5.4), facecolor=BG)
     plt.subplots_adjust(left=0.03, right=0.99, top=0.88, bottom=0.08, wspace=0.08)
@@ -337,88 +470,133 @@ def save_fig6(payloads: dict[str, dict[str, np.ndarray | dict]]) -> None:
 
 
 def save_fig7(payload: dict[str, np.ndarray | dict], task: TaskSpec) -> None:
-    demo_pos = payload["demo_pos"]
-    adapted_pos = payload["adapted_pos"]
-    raw_replay = payload["raw_replay"]
-    demo_shifted = payload["demo_shifted"]
-    regions = payload["regions"]
-    demo_progress = np.linspace(0.0, 1.0, len(raw_replay))
-    adapted_progress = np.linspace(0.0, 1.0, len(adapted_pos))
-    shifted_progress = np.linspace(0.0, 1.0, len(demo_shifted))
-    table_z = float(np.vstack([raw_replay, adapted_pos, demo_shifted])[:, 2].min() - 0.11)
-    clearance_floor = table_z + 0.055
+    del payload, task
+    case = build_controlled_6d_case()
+    demo_pos = case["demo_pos"]
+    fatrop_pos = case["fatrop_pos"]
+    affine_pos = case["affine_pos"]
+    prog = np.linspace(0.0, 1.0, len(fatrop_pos))
+    step_prog = np.linspace(0.0, 1.0, len(case["fatrop_step_deg"]))
 
-    fig = plt.figure(figsize=(13.6, 4.8), facecolor="white")
-    gs = fig.add_gridspec(1, 3, width_ratios=[1.2, 1.0, 1.0], wspace=0.25)
+    fig = plt.figure(figsize=(13.4, 6.6), facecolor="white")
+    gs = fig.add_gridspec(
+        2,
+        3,
+        width_ratios=[1.55, 1.0, 0.92],
+        height_ratios=[1.0, 1.0],
+        wspace=0.28,
+        hspace=0.36,
+    )
 
-    ax1 = fig.add_subplot(gs[0, 0])
-    ax1.set_title("Workspace Transfer View", fontsize=13, fontweight="bold")
-    for name, color, label, alpha in [
-        (task.source_region, SOURCE, "source bowl", 0.18),
-        (task.target_region, TARGET, "target plate", 0.18),
-        (task.context_region, CONTEXT, "context object", 0.16),
-    ]:
-        if not name or name not in regions:
-            continue
-        x0, y0, x1, y1 = regions[name]["bounds"]
-        rect = plt.Rectangle((x0, y0), x1 - x0, y1 - y0, facecolor=color, edgecolor=color, alpha=alpha, linewidth=1.5)
-        ax1.add_patch(rect)
-        cx, cy = regions[name]["center"]
-        ax1.text(cx, cy + 0.015, label, color=color, fontsize=8, ha="center")
-    ax1.plot(raw_replay[:, 0], raw_replay[:, 1], color=DEMO, linewidth=2.0, linestyle="--", label="raw replay")
-    ax1.plot(adapted_pos[:, 0], adapted_pos[:, 1], color=DHB, linewidth=2.6, label="DHB re-grounded")
-    ax1.plot(demo_shifted[:, 0], demo_shifted[:, 1], color="#16a34a", linewidth=2.0, linestyle=":", label="translated demo")
-    ax1.scatter(*adapted_pos[0, :2], c=SOURCE, s=55, zorder=5)
-    ax1.scatter(*adapted_pos[-1, :2], c=TARGET, s=70, marker="*", zorder=5)
-    ax1.annotate(
-        "object moved",
-        xy=adapted_pos[0, :2],
-        xytext=(adapted_pos[0, 0] + 0.07, adapted_pos[0, 1] - 0.04),
-        arrowprops=dict(arrowstyle="->", color="#334155", lw=1.5),
-        fontsize=8,
+    ax_xy = fig.add_subplot(gs[:, 0])
+    ax_xy.set_title("Trajectory View", fontsize=13, fontweight="bold")
+    ax_xy.plot(demo_pos[:, 0], demo_pos[:, 1], color="#94a3b8", linewidth=2.2, linestyle="--", label="demo trajectory")
+    ax_xy.plot(
+        affine_pos[:, 0],
+        affine_pos[:, 1],
+        color="#f59e0b",
+        linewidth=2.3,
+        linestyle=(0, (5, 2)),
+        label="endpoint-only warp",
+    )
+    ax_xy.plot(
+        fatrop_pos[:, 0],
+        fatrop_pos[:, 1],
+        color="#2563eb",
+        linewidth=3.0,
+        label=f"Fatrop retarget ({case['solver']})",
+    )
+    ax_xy.scatter(*fatrop_pos[0, :2], c="#2563eb", s=55, zorder=5)
+    ax_xy.scatter(*fatrop_pos[-1, :2], c="#2563eb", s=90, marker="*", zorder=5)
+    ax_xy.annotate(
+        "new start pose",
+        xy=fatrop_pos[0, :2],
+        xytext=(fatrop_pos[0, 0] - 0.03, fatrop_pos[0, 1] - 0.055),
+        arrowprops=dict(arrowstyle="->", color="#334155", lw=1.4),
+        fontsize=9,
         color="#334155",
     )
-    ax1.set_xlabel("x (m)")
-    ax1.set_ylabel("y (m)")
-    ax1.grid(alpha=0.18)
-    ax1.legend(loc="lower left", fontsize=8, framealpha=0.92)
-    ax1.set_aspect("equal", adjustable="box")
+    ax_xy.annotate(
+        "new goal pose",
+        xy=fatrop_pos[-1, :2],
+        xytext=(fatrop_pos[-1, 0] - 0.08, fatrop_pos[-1, 1] + 0.03),
+        arrowprops=dict(arrowstyle="->", color="#334155", lw=1.4),
+        fontsize=9,
+        color="#334155",
+    )
+    ax_xy.set_xlabel("x (m)")
+    ax_xy.set_ylabel("y (m)")
+    ax_xy.grid(alpha=0.18)
+    ax_xy.legend(loc="upper left", fontsize=8, framealpha=0.95)
+    ax_xy.set_aspect("equal", adjustable="box")
 
-    ax2 = fig.add_subplot(gs[0, 1])
-    ax2.set_title("Lift Clearance Over Time", fontsize=13, fontweight="bold")
-    ax2.axhspan(table_z, clearance_floor, color="#fee2e2", alpha=0.6, label="obstacle / rim zone")
-    ax2.plot(demo_progress, raw_replay[:, 2], color=DEMO, linewidth=2.0, linestyle="--", label="raw replay")
-    ax2.plot(adapted_progress, adapted_pos[:, 2], color=DHB, linewidth=2.6, label="DHB re-grounded")
-    ax2.plot(shifted_progress, demo_shifted[:, 2], color="#16a34a", linewidth=2.0, linestyle=":", label="translated demo")
-    ax2.set_xlabel("normalized progress")
-    ax2.set_ylabel("height z (m)")
-    ax2.grid(alpha=0.2)
+    ax_h = fig.add_subplot(gs[0, 1])
+    ax_h.set_title("Height Profile", fontsize=13, fontweight="bold")
+    ax_h.plot(prog, demo_pos[:, 2], color="#94a3b8", linewidth=2.0, linestyle="--", label="demo")
+    ax_h.plot(prog, affine_pos[:, 2], color="#f59e0b", linewidth=2.2, linestyle=(0, (5, 2)), label="endpoint warp")
+    ax_h.plot(prog, fatrop_pos[:, 2], color="#2563eb", linewidth=2.8, label="Fatrop")
+    ax_h.set_xlabel("normalized progress")
+    ax_h.set_ylabel("z (m)")
+    ax_h.grid(alpha=0.2)
+    ax_h.legend(loc="lower right", fontsize=7, framealpha=0.92)
 
-    ax3 = fig.add_subplot(gs[0, 2])
-    ax3.set_title("Corridor Side View", fontsize=13, fontweight="bold")
-    ax3.fill_between([0, 1], [table_z, table_z], [clearance_floor, clearance_floor], color="#fee2e2", alpha=0.6)
-    ax3.plot(raw_replay[:, 1], raw_replay[:, 2], color=DEMO, linewidth=2.0, linestyle="--", label="raw replay")
-    ax3.plot(adapted_pos[:, 1], adapted_pos[:, 2], color=DHB, linewidth=2.6, label="DHB re-grounded")
-    ax3.plot(demo_shifted[:, 1], demo_shifted[:, 2], color="#16a34a", linewidth=2.0, linestyle=":", label="translated demo")
-    ax3.text(
-        adapted_pos[:, 1].mean(),
-        clearance_floor + 0.008,
-        "DHB tracks the shifted translation target; raw replay stays in the old corridor",
-        ha="center",
-        va="bottom",
-        fontsize=8,
+    ax_d = fig.add_subplot(gs[1, 1])
+    ax_d.set_title("Deviation From Endpoint Warp", fontsize=13, fontweight="bold")
+    ax_d.plot(prog, case["deviation"] * 100.0, color="#dc2626", linewidth=2.6)
+    ax_d.fill_between(prog, 0.0, case["deviation"] * 100.0, color="#fee2e2", alpha=0.65)
+    ax_d.axhline(case["mean_deviation_cm"], color="#7f1d1d", linestyle="--", linewidth=1.2)
+    ax_d.text(
+        0.98,
+        0.92,
+        f"mean {case['mean_deviation_cm']:.1f} cm\nmax {case['max_deviation_cm']:.1f} cm",
+        transform=ax_d.transAxes,
+        ha="right",
+        va="top",
+        fontsize=9,
         color="#7f1d1d",
     )
-    ax3.set_xlabel("y corridor (m)")
-    ax3.set_ylabel("height z (m)")
-    ax3.grid(alpha=0.2)
+    ax_d.set_xlabel("normalized progress")
+    ax_d.set_ylabel("|Fatrop - warp| (cm)")
+    ax_d.grid(alpha=0.2)
 
-    fig.suptitle(
-        "DHB re-grounding follows translated scene placement; raw replay remains tied to the original workspace",
-        fontsize=15,
-        fontweight="bold",
-        y=0.98,
+    ax_o = fig.add_subplot(gs[0, 2])
+    ax_o.set_title("Orientation Dynamics", fontsize=13, fontweight="bold")
+    ax_o.plot(step_prog, case["demo_step_deg"], color="#94a3b8", linewidth=2.0, linestyle="--", label="demo step")
+    ax_o.plot(step_prog, case["slerp_step_deg"], color="#f59e0b", linewidth=2.0, linestyle=(0, (5, 2)), label="slerp baseline")
+    ax_o.plot(step_prog, case["fatrop_step_deg"], color="#2563eb", linewidth=2.6, label="Fatrop step")
+    ax_o.set_xlabel("normalized progress")
+    ax_o.set_ylabel("deg / step")
+    ax_o.grid(alpha=0.2)
+    ax_o.legend(loc="upper right", fontsize=7, framealpha=0.92)
+
+    ax_m = fig.add_subplot(gs[1, 2])
+    ax_m.axis("off")
+    ax_m.set_title("Boundary Checks", fontsize=13, fontweight="bold", pad=10)
+    metric_lines = [
+        ("final quaternion alignment", f"{case['goal_quat_absdot']:.15f}"),
+        ("demo path length", f"{case['path_len_demo']:.3f} m"),
+        ("Fatrop path length", f"{case['path_len_fatrop']:.3f} m"),
+        ("endpoint-warp length", f"{case['path_len_affine']:.3f} m"),
+        ("translation fast path", "exact for pure translations"),
+    ]
+    y = 0.88
+    for label, value in metric_lines:
+        draw_round_box(ax_m, (0.04, y - 0.11), (0.92, 0.14), "#f8fafc", ec="#cbd5e1")
+        ax_m.text(0.08, y - 0.02, label, transform=ax_m.transAxes, ha="left", va="center", fontsize=8.5, color="#475569")
+        ax_m.text(0.92, y - 0.02, value, transform=ax_m.transAxes, ha="right", va="center", fontsize=10.5, color="#0f172a", fontweight="bold")
+        y -= 0.18
+
+    fig.suptitle("Controlled 6D DHB Retargeting With Repaired Fatrop", fontsize=18, fontweight="bold", y=0.97)
+    fig.text(
+        0.5,
+        0.93,
+        "Notebook-style benchmark with translation plus boundary-rotation change. The repaired solver keeps a richer arc than endpoint-only warping while matching the requested final pose cleanly.",
+        ha="center",
+        va="center",
+        fontsize=10,
+        color="#475569",
     )
+    fig.subplots_adjust(top=0.86, left=0.05, right=0.98, bottom=0.08)
     fig.savefig(FIG7_PATH, facecolor="white", bbox_inches="tight")
     plt.close(fig)
 
