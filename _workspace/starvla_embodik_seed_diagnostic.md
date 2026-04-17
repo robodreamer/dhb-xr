@@ -158,3 +158,53 @@ The clamp removes the worst gross infeasibility, but it does not solve the downs
 3. the remaining failure is task quality, not just immediate IK collapse
 
 That means the next useful work should focus on trajectory quality near grasp / placement, not only on generic feasibility smoothing.
+
+## Receding-horizon overlap blend check
+
+A more VLA-like receding-horizon test was run for the previously problematic `seed 1`:
+
+- `replan_every = 4`
+- `max_first_offset_mm = 40`
+- `max_step_mm = 20`
+- `smooth_window = 3`
+- `blend_overlap_alpha = 0.6`
+
+Artifacts:
+
+- Stage 1:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/embodik_stage1_step200_seed1_replan4_clamp40_step20_sw3_blend06.json`
+- IK:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/embodik_step200_seed1_replan4_clamp40_step20_sw3_blend06_offset0_debug_ik.json`
+- Sim:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/embodik_step200_seed1_replan4_clamp40_step20_sw3_blend06_offset0_debug_sim.json`
+- Video:
+  - `_workspace/validation_videos/starvla_embodik_seed1_replan4_clamp40_step20_sw3_blend06_offset0/offset_0.0cm_seed_0.mp4`
+
+### Why this is conceptually better
+
+This matches the expected VLA chunk loop more closely:
+
+1. predict a future chunk
+2. execute only a short prefix
+3. replan from the new observation
+4. blend the overlapping future steps instead of hard-switching at chunk boundaries
+
+This is analogous to action-chunk ensembling used in StarVLA's BEHAVIOR interface.
+
+### Result
+
+For this targeted run, the behavior improved enough to succeed:
+
+- `seed 1`, `0 cm`
+  - IK failures: `19/84 -> 17/84`
+  - sim result: `1/1 = 100%`
+  - first success at step `74`
+
+### Updated interpretation
+
+The apparent `go-stop-go-stop` pattern was not just controller noise. It was largely caused by:
+
+- hard chunk-boundary switching
+- repeated hold segments after IK failures
+
+Using shorter replanning plus overlap blending makes the closed-loop behavior more VLA-like and can materially improve execution.

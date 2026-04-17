@@ -188,6 +188,37 @@ def _stabilize_chunk_positions(
     return stabilized.astype(np.float32), debug
 
 
+def _blend_overlap_positions(
+    current_chunk: np.ndarray,
+    *,
+    current_start: int,
+    prev_chunk: np.ndarray | None,
+    prev_start: int | None,
+    blend_alpha: float,
+) -> tuple[np.ndarray, int]:
+    """Blend overlapping future steps between consecutive replans.
+
+    This keeps the receding-horizon VLA pattern (predict chunk, execute prefix,
+    replan), but avoids hard switching when adjacent chunks overlap in time.
+    """
+    if prev_chunk is None or prev_start is None:
+        return current_chunk, 0
+
+    prev_end = prev_start + len(prev_chunk)
+    overlap = min(max(prev_end - current_start, 0), len(current_chunk))
+    if overlap <= 0:
+        return current_chunk, 0
+
+    alpha = float(np.clip(blend_alpha, 0.0, 1.0))
+    if alpha <= 0.0:
+        return current_chunk, 0
+
+    blended = np.asarray(current_chunk, dtype=np.float32).copy()
+    prev_tail = np.asarray(prev_chunk[-overlap:], dtype=np.float32)
+    blended[:overlap] = (1.0 - alpha) * prev_tail + alpha * blended[:overlap]
+    return blended, int(overlap)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config_yaml", required=True)
@@ -200,6 +231,7 @@ def main() -> None:
     parser.add_argument("--max-first-offset-mm", type=float, default=0.0)
     parser.add_argument("--max-step-mm", type=float, default=0.0)
     parser.add_argument("--smooth-window", type=int, default=0)
+    parser.add_argument("--blend-overlap-alpha", type=float, default=0.0)
     parser.add_argument("--save_npz", default=None)
     parser.add_argument("--save_json", default=None)
     args, unknown = parser.parse_known_args()
@@ -230,6 +262,8 @@ def main() -> None:
     all_quaternions = []
     all_gripper = []
     debug_chunks = []
+    prev_chunk_pos_stable = None
+    prev_chunk_start = None
     t = 0
     while t < num_demo_steps:
         state = _demo_state_vector(
@@ -257,6 +291,13 @@ def main() -> None:
             max_first_offset_m=max(0.0, args.max_first_offset_mm) / 1000.0,
             max_step_m=max(0.0, args.max_step_mm) / 1000.0,
             smooth_window=max(0, args.smooth_window),
+        )
+        chunk_pos_stable, overlap_steps = _blend_overlap_positions(
+            chunk_pos_stable,
+            current_start=t,
+            prev_chunk=prev_chunk_pos_stable,
+            prev_start=prev_chunk_start,
+            blend_alpha=args.blend_overlap_alpha,
         )
         n_use = min(args.replan_every, len(chunk_pos), num_demo_steps - t)
 
@@ -287,9 +328,12 @@ def main() -> None:
                 "first_pred_pos": chunk_pos[0].tolist(),
                 "first_stabilized_pos": chunk_pos_stable[0].tolist(),
                 "first_gt_pos": gt_chunk[0].tolist(),
+                "overlap_steps": int(overlap_steps),
                 **stability,
             }
         )
+        prev_chunk_pos_stable = chunk_pos_stable.copy()
+        prev_chunk_start = int(t)
         t += n_use
 
     positions = np.concatenate(all_positions, axis=0)
@@ -323,6 +367,7 @@ def main() -> None:
         "max_first_offset_mm": float(args.max_first_offset_mm),
         "max_step_mm": float(args.max_step_mm),
         "smooth_window": int(args.smooth_window),
+        "blend_overlap_alpha": float(args.blend_overlap_alpha),
         "num_demo_steps": num_demo_steps,
         "num_chunks": len(debug_chunks),
         "gripper_source": args.gripper_source,
