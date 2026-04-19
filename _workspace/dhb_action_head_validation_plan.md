@@ -218,6 +218,31 @@ Interpretation:
 - The old orientation and gripper pipeline bugs were real, but they are no longer the dominant issue here.
 - The next bottleneck is Stage-1 trajectory quality, especially the large first-waypoint translational overshoot seen across seeds and worst on `seed 1`.
 
+## True Live-Observation Replanning Check
+
+- [x] Add a true live-observation StarVLA→DHB→`embodik` rollout script that replans from the current env observation instead of demo frames
+- [x] Verify the live rollout uses the same JOINT_POSITION execution contract as the older stage-3 `embodik` evaluator
+- [x] Run the canonical live test on `episode_idx=1`, `offset=3 cm`
+- [x] Run an easier live test on `episode_idx=0`, `offset=0 cm`
+- [x] Run a more conservative live test (`replan_every=1`, tighter clamp) to check whether the online failure is just a chunk-tuning issue
+- [ ] Decide whether the current model is strong enough for true live replanning, or whether the offline-style canonical baseline must remain the main progress metric for now
+
+Current result:
+- live rollout note:
+  - `_workspace/starvla_live_rollout_findings.md`
+- canonical live `episode 1 / 3 cm` summary:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/live_rollout_ep1_offset3_summary.json`
+- canonical live `episode 0 / 0 cm` summary:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/live_rollout_ep0_offset0_summary.json`
+- conservative live `episode 0 / 0 cm` summary:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/live_rollout_ep0_offset0_replan1_clamp25_step10_summary.json`
+
+Interpretation:
+- True live replanning is now implemented and executable on the laptop GPU.
+- The current `QwenDHB` checkpoint fails under that stricter online setting, even on the easier zero-offset case.
+- Tighter receding-horizon control reduces the earliest chunk errors but does not recover task success.
+- The remaining gap is therefore better explained by online model / data robustness than by another obvious rollout-plumbing bug.
+
 ## 2026-04-19 Gap-Closure Execution Plan
 
 Reference note:
