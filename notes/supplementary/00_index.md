@@ -27,6 +27,7 @@ No page limit. Meant for internal use, future extensions, and journal version.
 | [14_dhb_action_head_internal_note.md](14_dhb_action_head_internal_note.md) | Internal explainer note for the DHB action head itself |
 | [15_qwen_dhb_integration_internal_note.md](15_qwen_dhb_integration_internal_note.md) | Internal Q&A note: how Qwen and DHB-XR are combined, what is validated now, and what is not yet proven |
 | [16_starvla_dhb_gap_closure_plan.md](16_starvla_dhb_gap_closure_plan.md) | Phased plan for closing the remaining StarVLA+DHB execution, comparison, and benchmark gaps |
+| [17_dhbxr_scaling_story_note.md](17_dhbxr_scaling_story_note.md) | Internal framing note for the larger DHB-XR low-data scaling, augmentation, and cross-embodiment story |
 
 ---
 

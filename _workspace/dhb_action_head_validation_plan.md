@@ -260,6 +260,23 @@ Reference note:
 - [ ] Re-run LIBERO harness smoke with the canonical path
 - [ ] Only then broaden to VLA-Arena / RoboCasa smoke validation
 
+### Phase 5: Prepare the stronger DHB-XR scaling story
+
+Reference note:
+- `notes/supplementary/17_dhbxr_scaling_story_note.md`
+
+- [ ] Define the matched action-space comparison plan:
+  - `DHB-XR`
+  - `relative`
+  - `delta`
+  - `absolute`
+- [ ] Add a small-seed-data study plan for `N in {1, 3, 5, 10}`
+- [ ] Define the simulator / world-model augmentation study contract:
+  - diverse observations
+  - DHB-XR-adapted trajectories
+  - matched non-DHB baselines
+- [ ] Define the cross-embodiment reuse study once the canonical StarVLA baseline is stable
+
 ## Stage-1 Feasibility Clamp Pass
 
 - [x] Add a lightweight Stage-1 feasibility pass to clamp the first waypoint and per-step motion

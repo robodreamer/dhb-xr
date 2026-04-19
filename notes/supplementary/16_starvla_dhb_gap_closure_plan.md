@@ -301,6 +301,86 @@ and the paper.
   - embodied gains are promising
   - matched head-to-head evidence is explicit
 
+## Phase 6: Realize The Stronger Scaling Story
+
+Reference note:
+- `notes/supplementary/17_dhbxr_scaling_story_note.md`
+
+### Goal
+
+Move from:
+
+- "DHB-XR works as a better structured action head"
+
+to:
+
+- "DHB-XR is the right interface for scaling VLAs from small real datasets via
+  simulator or world-model augmentation."
+
+### Why this is a separate phase
+
+This is the larger intended story, but it should only be attempted after the
+canonical StarVLA baseline and matched regular-head comparison are already
+stable.
+
+### Program A: Matched action-space ordering study
+
+Explicitly test the intended ordering:
+
+- `DHB-XR`
+- `relative`
+- `delta`
+- `absolute`
+
+using:
+
+- representation consistency
+- compression
+- matched embodied evaluation
+
+### Program B: Small-seed-data study
+
+Train from very small teleop seed sets, for example:
+
+- `N = 1`
+- `N = 3`
+- `N = 5`
+- `N = 10`
+
+and compare:
+
+- DHB-XR action head
+- regular action head
+
+to test whether DHB-XR is more data-efficient.
+
+### Program C: Augmentation study
+
+Use a hybrid data strategy:
+
+1. small real seed dataset
+2. simulator or world-model-generated observation diversity
+3. DHB-XR-adapted trajectories paired to those observations
+
+Compare against non-DHB augmentation baselines.
+
+### Program D: Cross-embodiment study
+
+Test whether the same invariant representation supports better reuse across:
+
+- embodiment shifts
+- initial pose shifts
+- scene-layout changes
+
+### Exit criteria
+
+The full stronger story is ready only if we can support at least one of these
+with clear evidence:
+
+- less real data for equal performance
+- better performance with the same small real dataset
+- stronger offset / embodiment robustness after augmentation
+
 ## Things Not To Spend Time On Right Now
 
 - Do not switch back to the heavy Cosmos/WM4A path for iterative debugging.
