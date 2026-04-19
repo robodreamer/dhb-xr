@@ -29,9 +29,27 @@ def _uses_quantized_vlm(model) -> bool:
     )
 
 
+def _load_rollout_checkpoint(model, checkpoint_path: str) -> None:
+    state_dict = torch.load(checkpoint_path, map_location="cpu")
+
+    if _uses_quantized_vlm(model):
+        state_dict = {k: v for k, v in state_dict.items() if not k.startswith("qwen_vl_interface.")}
+        missing, unexpected = model.load_state_dict(state_dict, strict=False)
+        missing = [k for k in missing if not k.startswith("qwen_vl_interface.")]
+        if missing or unexpected:
+            raise RuntimeError(
+                "Quantized predict checkpoint load mismatch: "
+                f"missing={missing[:10]}, unexpected={unexpected[:10]}"
+            )
+        return
+
+    model.load_state_dict(state_dict, strict=True)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config_yaml", required=True)
+    parser.add_argument("--checkpoint", default=None)
     parser.add_argument("--save_json", default=None)
     args, unknown = parser.parse_known_args()
 
@@ -50,6 +68,8 @@ def main() -> None:
     device = torch.device("cuda")
 
     model = build_framework(cfg)
+    if args.checkpoint:
+        _load_rollout_checkpoint(model, args.checkpoint)
     model.eval()
     if not _uses_quantized_vlm(model):
         model = model.to(device)
@@ -77,6 +97,7 @@ def main() -> None:
 
     summary = {
         "config_yaml": args.config_yaml,
+        "checkpoint": args.checkpoint,
         "overrides": dotlist,
         "output_dir": str(output_dir),
         "batch_len": len(batch),

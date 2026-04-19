@@ -257,6 +257,13 @@ Selected canonical baseline:
 
 ### Phase 3: Close the matched-baseline gap
 
+- [x] Establish the first matched regular-head control on the corrected StarVLA setup:
+  - `QwenOFT`
+  - same `Qwen2.5-VL-3B` backbone
+  - same `libero_spatial_dhbxr` data mix
+  - same frozen-Qwen `200`-step short-train budget
+  - same direct LIBERO rollout smoke (`task_id=0`, `episode_idx=0`)
+  - reference note: `_workspace/starvla_qwenoft_control_baseline.md`
 - [ ] Run a matched regular-head baseline (`QwenOFT` or equivalent) under the same evaluator and offsets
 - [ ] Build a comparison table for:
   - success rate
@@ -264,6 +271,15 @@ Selected canonical baseline:
   - final `ee_minus_plate`
   - close / reopen geometry
 - [ ] Decide which DHB claims are now strong enough to make over a regular action head
+
+Current status:
+- The first short-train `QwenOFT` control is now runnable and tracked.
+- On one matched sample, `QwenOFT` has worse chunk MAE than the corrected `QwenDHB`
+  checkpoint:
+  - `QwenDHB`: `0.1545`
+  - `QwenOFT`: `0.2626`
+- Both direct-action rollout smokes still fail on the reference LIBERO task, so
+  this only partially closes the claim gap.
 
 ### Phase 4: Scale out only after the canonical baseline is stable
 

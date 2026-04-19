@@ -232,6 +232,28 @@ under the same:
   - final `ee_minus_plate`
   - success rate
 
+### Current status
+
+An initial matched regular-head control now exists:
+
+- config: `configs/libero_qwenoft_qwen.yaml`
+- same base VLM: `Qwen2.5-VL-3B-Instruct`
+- same corrected dataset: `libero_spatial_dhbxr`
+- same frozen-Qwen short-train budget: `200` steps
+
+Tracked note:
+
+- `_workspace/starvla_qwenoft_control_baseline.md`
+
+What it already shows:
+
+- `QwenOFT` is now runnable as a fair StarVLA control under the corrected setup
+- on one matched sample, its chunk MAE is worse than `QwenDHB`
+- both direct-action rollouts still fail on the reference LIBERO task
+
+So this narrows the gap, but does **not** yet support the full claim that DHB is
+better than a regular head under a matched execution protocol.
+
 ### Claims this phase should answer
 
 - Does DHB reduce IK infeasibility?
