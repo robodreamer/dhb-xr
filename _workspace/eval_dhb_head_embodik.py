@@ -715,7 +715,11 @@ def stage_sim(args):
 
     def run_trajectory(q_traj, gripper_cmds, init_state, label="",
                        output_max=0.5, kp=150, substeps=3, offset_m=0.0,
-                       release_gate_xy_m=0.04, release_gate_z_m=0.06):
+                       close_gate_xy_m=0.05, close_gate_z_m=0.05,
+                       release_gate_xy_m=0.04, release_gate_z_m=0.06,
+                       placement_tail=False, tail_plate_xy_m=0.05,
+                       tail_max_release_z_m=0.08, tail_move_steps=12,
+                       tail_open_steps=12, tail_lift_steps=12):
         env = OffScreenRenderEnv(
             bddl_file_name=BDDL_FILE,
             controller="JOINT_POSITION",
@@ -760,7 +764,21 @@ def stage_sim(args):
         close_snapshot = None
         reopen_snapshot = None
         last_effective_grip = gripper_cmds[0] if len(gripper_cmds) else -1.0
+        executed_trace = []
         append_frame(obs)
+
+        def step_joint_target(q_target, grip_cmd, repeats):
+            nonlocal reward
+            for _ in range(repeats):
+                q_current = np.array(robot._joint_positions)
+                delta = q_target - q_current
+                action = np.clip(delta / output_max, -1.0, 1.0)
+                full_action = np.concatenate([action, [grip_cmd]])
+                step_obs, r, done, info = env.step(full_action)
+                if r > reward:
+                    reward = r
+                append_frame(step_obs)
+            return step_obs
 
         for t in range(n_steps):
             # Clamp gripper index to valid range
@@ -769,33 +787,46 @@ def stage_sim(args):
             ee_pos_pre = np.array(robot.controller.ee_pos)
             effective_grip = desired_grip
 
-            # Preserve the planned close timing, but only reopen when the TCP
-            # is actually over the plate and low enough to release.
-            if desired_grip <= 0 and np.any(gripper_cmds[: grip_idx + 1] > 0):
-                ee_minus_plate = np.array(relative_snapshot(ee_pos_pre, scene_refs)["ee_minus_plate"])
-                release_ready = (
-                    abs(float(ee_minus_plate[0])) <= release_gate_xy_m
-                    and abs(float(ee_minus_plate[1])) <= release_gate_xy_m
-                    and float(ee_minus_plate[2]) <= release_gate_z_m
-                )
+            rel_pre = relative_snapshot(ee_pos_pre, scene_refs)
+            ee_minus_bowl = np.array(rel_pre.get("ee_minus_bowl", [np.inf, np.inf, np.inf]))
+            ee_minus_plate = np.array(rel_pre.get("ee_minus_plate", [np.inf, np.inf, np.inf]))
+            close_ready = (
+                abs(float(ee_minus_bowl[0])) <= close_gate_xy_m
+                and abs(float(ee_minus_bowl[1])) <= close_gate_xy_m
+                and float(ee_minus_bowl[2]) <= close_gate_z_m
+            )
+            release_ready = (
+                abs(float(ee_minus_plate[0])) <= release_gate_xy_m
+                and abs(float(ee_minus_plate[1])) <= release_gate_xy_m
+                and float(ee_minus_plate[2]) <= release_gate_z_m
+            )
+
+            # Demo or predicted gripper commands are only a phase prior. Actual
+            # close / release should still respect live bowl / plate geometry.
+            if desired_grip > 0 and last_effective_grip <= 0:
+                if not close_ready:
+                    effective_grip = -1.0
+            if desired_grip <= 0 and last_effective_grip > 0:
                 if not release_ready:
                     effective_grip = 1.0
 
-            for sub in range(substeps):
-                q_target = q_traj[t, :7]
-                q_current = np.array(robot._joint_positions)
-                delta = q_target - q_current
-                action = np.clip(delta / output_max, -1.0, 1.0)
-                full_action = np.concatenate([action, [effective_grip]])
-                obs, r, done, info = env.step(full_action)
-                if r > reward:
-                    reward = r
-                append_frame(obs)
+            q_target = q_traj[t, :7]
+            obs = step_joint_target(q_target, effective_grip, substeps)
 
             prev_grip = last_effective_grip
             cur_grip = effective_grip
             last_effective_grip = effective_grip
             ee_pos = np.array(robot.controller.ee_pos)
+            rel_post = relative_snapshot(ee_pos, scene_refs)
+            executed_trace.append(
+                {
+                    "t": int(t),
+                    "q_target": q_target.copy(),
+                    "ee_pos": ee_pos.copy(),
+                    "ee_minus_plate": np.array(rel_post.get("ee_minus_plate", [np.inf, np.inf, np.inf])),
+                    "effective_grip": float(effective_grip),
+                }
+            )
             if close_step is None and cur_grip > 0 and prev_grip <= 0:
                 close_step = t
                 close_snapshot = relative_snapshot(ee_pos, scene_refs)
@@ -814,6 +845,52 @@ def stage_sim(args):
                       f"q_err={q_err:.4f} grip={effective_grip:.0f} "
                       f"{'SUCCESS' if success else ''}")
 
+        tail_applied = False
+        tail_descend_source_step = None
+        if placement_tail and close_step is not None and reopen_step is None:
+            ee_pos_tail_start = np.array(robot.controller.ee_pos)
+            rel_tail_start = relative_snapshot(ee_pos_tail_start, scene_refs)
+            ee_minus_plate = np.array(rel_tail_start.get("ee_minus_plate", [np.inf, np.inf, np.inf]))
+            tail_ready = (
+                abs(float(ee_minus_plate[0])) <= tail_plate_xy_m
+                and abs(float(ee_minus_plate[1])) <= tail_plate_xy_m
+                and float(ee_minus_plate[2]) <= tail_max_release_z_m
+            )
+            plate_candidates = [
+                item for item in executed_trace
+                if item["effective_grip"] > 0
+                and abs(float(item["ee_minus_plate"][0])) <= tail_plate_xy_m
+                and abs(float(item["ee_minus_plate"][1])) <= tail_plate_xy_m
+                and float(item["ee_minus_plate"][2]) < float(ee_minus_plate[2]) - 1e-4
+            ]
+            if tail_ready:
+                if plate_candidates:
+                    descend_target = min(plate_candidates, key=lambda item: float(item["ee_minus_plate"][2]))
+                    tail_descend_source_step = int(descend_target["t"])
+                    tail_q_target = descend_target["q_target"]
+                else:
+                    tail_q_target = q_traj[-1, :7]
+
+                obs = step_joint_target(tail_q_target, 1.0, tail_move_steps)
+                ee_pos = np.array(robot.controller.ee_pos)
+                if success_at is None and env.check_success():
+                    success_at = n_steps
+
+                prev_grip = last_effective_grip
+                obs = step_joint_target(tail_q_target, -1.0, tail_open_steps)
+                last_effective_grip = -1.0
+                ee_pos = np.array(robot.controller.ee_pos)
+                if reopen_step is None and prev_grip > 0:
+                    reopen_step = n_steps + tail_move_steps
+                    reopen_snapshot = relative_snapshot(ee_pos, scene_refs)
+                if success_at is None and env.check_success():
+                    success_at = n_steps + tail_move_steps
+
+                obs = step_joint_target(q_traj[-1, :7], -1.0, tail_lift_steps)
+                if success_at is None and env.check_success():
+                    success_at = n_steps + tail_move_steps + tail_open_steps
+                tail_applied = True
+
         # Settling steps: hold the final commanded gripper state instead of
         # forcibly reclosing. For placement tasks, force-closing here can undo
         # a late release and masks whether the rollout actually executed the
@@ -821,14 +898,8 @@ def stage_sim(args):
         settle_grip = last_effective_grip if len(gripper_cmds) else 1.0
         for i in range(100):
             q_target = q_traj[-1, :7]
-            q_current = np.array(robot._joint_positions)
-            delta = q_target - q_current
-            action = np.clip(delta / output_max, -1.0, 1.0)
             grip = settle_grip
-            full_action = np.concatenate([action, [grip]])
-            obs, r, done, info = env.step(full_action)
-            if r > reward:
-                reward = r
+            obs = step_joint_target(q_target, grip, 1)
             success = env.check_success()
             if success and success_at is None:
                 success_at = n_steps + i
@@ -850,6 +921,13 @@ def stage_sim(args):
             "success": final_success,
             "reward": float(reward),
             "success_at": success_at,
+            "close_gate_xy_m": float(close_gate_xy_m),
+            "close_gate_z_m": float(close_gate_z_m),
+            "release_gate_xy_m": float(release_gate_xy_m),
+            "release_gate_z_m": float(release_gate_z_m),
+            "placement_tail": bool(placement_tail),
+            "tail_applied": bool(tail_applied),
+            "tail_descend_source_step": tail_descend_source_step,
             "close_step": close_step,
             "reopen_step": reopen_step,
             "close_snapshot": close_snapshot,
@@ -897,6 +975,16 @@ def stage_sim(args):
             result = run_trajectory(
                 q_traj, gripper, init_state, label,
                 offset_m=offset_m,
+                close_gate_xy_m=args.close_gate_xy_m,
+                close_gate_z_m=args.close_gate_z_m,
+                release_gate_xy_m=args.release_gate_xy_m,
+                release_gate_z_m=args.release_gate_z_m,
+                placement_tail=args.placement_tail,
+                tail_plate_xy_m=args.tail_plate_xy_m,
+                tail_max_release_z_m=args.tail_max_release_z_m,
+                tail_move_steps=args.tail_move_steps,
+                tail_open_steps=args.tail_open_steps,
+                tail_lift_steps=args.tail_lift_steps,
             )
             sim_rows.append({
                 "offset_cm": float(offset_cm),
@@ -917,6 +1005,16 @@ def stage_sim(args):
                     q_traj, gripper, init_state, f"{label} (high gains)",
                     output_max=1.0, kp=250, substeps=5,
                     offset_m=offset_m,
+                    close_gate_xy_m=args.close_gate_xy_m,
+                    close_gate_z_m=args.close_gate_z_m,
+                    release_gate_xy_m=args.release_gate_xy_m,
+                    release_gate_z_m=args.release_gate_z_m,
+                    placement_tail=args.placement_tail,
+                    tail_plate_xy_m=args.tail_plate_xy_m,
+                    tail_max_release_z_m=args.tail_max_release_z_m,
+                    tail_move_steps=args.tail_move_steps,
+                    tail_open_steps=args.tail_open_steps,
+                    tail_lift_steps=args.tail_lift_steps,
                 )
                 sim_rows.append({
                     "offset_cm": float(offset_cm),
@@ -970,6 +1068,26 @@ if __name__ == "__main__":
                         help="Base path for per-stage debug JSON summaries")
     parser.add_argument("--video-dir", default="_workspace/validation_videos",
                         help="Directory for saved sim-stage videos")
+    parser.add_argument("--close-gate-xy-m", type=float, default=0.05,
+                        help="Only allow first close when EE XY is within this distance of the bowl")
+    parser.add_argument("--close-gate-z-m", type=float, default=0.05,
+                        help="Only allow first close when EE Z is below this height above the bowl")
+    parser.add_argument("--release-gate-xy-m", type=float, default=0.04,
+                        help="Only allow first reopen when EE XY is within this distance of the plate")
+    parser.add_argument("--release-gate-z-m", type=float, default=0.06,
+                        help="Only allow first reopen when EE Z is below this height above the plate")
+    parser.add_argument("--placement-tail", action="store_true",
+                        help="If still holding near the plate at the end, reuse the lowest recent plate-near joint target before opening")
+    parser.add_argument("--tail-plate-xy-m", type=float, default=0.05,
+                        help="Plate XY tolerance for activating the placement tail")
+    parser.add_argument("--tail-max-release-z-m", type=float, default=0.08,
+                        help="Maximum EE height above the plate for the placement tail to activate")
+    parser.add_argument("--tail-move-steps", type=int, default=12,
+                        help="Control steps to move toward the reused plate-near descend target")
+    parser.add_argument("--tail-open-steps", type=int, default=12,
+                        help="Control steps to hold the descend target while opening")
+    parser.add_argument("--tail-lift-steps", type=int, default=12,
+                        help="Control steps to return to the final target after opening")
     args = parser.parse_args()
 
     if args.stage == "encode_gt":

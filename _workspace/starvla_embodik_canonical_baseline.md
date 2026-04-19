@@ -148,3 +148,36 @@ Keep this canonical baseline fixed and improve:
 
 Do not reopen the loop-search unless a later model change invalidates the
 current baseline.
+
+## Follow-up After Freezing
+
+The next two low-cost execution-side follow-ups were tested against this
+canonical baseline:
+
+1. add bowl-relative close gating in the Stage 3 sim loop
+2. add one minimal late placement tail that reuses the lowest recent
+   plate-near joint target before opening
+
+Artifacts:
+
+- bowl close gate:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/embodik_step200_replan4_clamp35_step20_sw3_blend06_geomgates_sim.json`
+- bowl close gate + minimal placement tail:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/embodik_step200_replan4_clamp35_step20_sw3_blend06_geomgates_tail2_sim.json`
+
+Outcome:
+
+- both still land at:
+  - `0 cm`: `1/3`
+  - `3 cm`: `1/3`
+- the close gate is still worth keeping because it delays obviously bad early
+  closes, especially for `seed 2`
+- the minimal placement tail can change timing for an already-working seed, but
+  did not create a new shared success
+
+Conclusion:
+
+- the frozen canonical loop remains the right baseline
+- but small sim-side phase heuristics are now close to exhausted
+- the next meaningful lift should come from a stronger phase-aware training or
+  supervision change, not more loop-side knob tuning

@@ -194,6 +194,21 @@ The current bottleneck is no longer the old orientation bug. It is:
   - release
   - small lift
 
+Current status:
+
+- bowl-relative close gating has been tested under the frozen canonical
+  `replan4 + clamp35 + blend06` loop
+- one minimal placement-tail heuristic has also been tested
+- both preserve cleaner phase semantics, but neither lifts the shared baseline
+  above `1/3` at `0 cm` / `3 cm`
+
+Interpretation:
+
+- this confirms the bottleneck is no longer another small execution bug
+- one more tiny sim-side heuristic is unlikely to be the highest-value move
+- the next lift should come from a stronger phase-aware model / supervision
+  change or rollout-grounded robustness intervention
+
 #### 2B. Keep gripper evaluation honest
 
 - Use demo gripper timing as the control branch while trajectory quality is

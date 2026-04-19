@@ -417,7 +417,10 @@ Interpretation:
   over the plate and low enough to release
 - [x] Test a `replan6 + clamp35 + blend06` compromise to see whether longer
   commit horizons help the failing `3 cm` seeds
-- [ ] Add phase-specific close / release logic and an explicit placement tail
+- [x] Add bowl-relative close gating to the canonical `replan4 + clamp35 + blend06`
+  sim loop and rerun the full `0 cm / 3 cm / 3 seed` sweep
+- [x] Try one minimal late-phase placement tail on top of the geometry-gated
+  canonical loop
 
 Current best `3 cm` artifacts:
 - `seed 1` success under the smoother `replan4` setting:
@@ -430,13 +433,27 @@ Current summaries:
   - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/embodik_step200_replan4_clamp35_step20_sw3_blend06_offset3_debug_sim.json`
 - `replan6 + clamp35 + blend06 + release gate`
   - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/embodik_step200_replan6_clamp35_step20_sw3_blend06_offset3_releasegate_debug_sim.json`
+- `replan4 + clamp35 + blend06 + bowl close gate`
+  - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/embodik_step200_replan4_clamp35_step20_sw3_blend06_geomgates_sim.json`
+- `replan4 + clamp35 + blend06 + bowl close gate + minimal placement tail`
+  - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/embodik_step200_replan4_clamp35_step20_sw3_blend06_geomgates_tail2_sim.json`
 
 Interpretation:
 - The loop semantics are now substantially cleaner:
   - no more forced gripper re-close during settling
+  - first close now respects live bowl-relative geometry
   - reopen can be held until the TCP is actually over the plate
-- But there is still no single shared configuration above `1/3` at `3 cm`
+- The bowl-relative close gate is mechanically correct, but it still leaves the
+  canonical baseline at `1/3` for both `0 cm` and `3 cm`
+- The minimal placement tail is also not enough to raise the shared baseline:
+  - it only accelerated the existing `0 cm seed 1` success
+  - it forced one late reopen for `3 cm seed 2`, but still did not create a
+    new success
+- So the remaining gap is no longer best attacked with more small sim-side
+  heuristics.
 - Different seeds prefer different replanning cadences:
   - `seed 1` is best under `replan4`
   - `seed 0` is best under `replan6`
-  - `seed 2` now looks like the best remaining target for a phase-logic fix
+  - `seed 2` remains the clearest “almost there” case, but now points toward a
+    stronger phase-aware model or supervision change rather than another
+    execution-only tweak
