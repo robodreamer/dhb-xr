@@ -197,6 +197,139 @@ So the honest statement is:
 - the current model is invariant-aware and tokenizer-regularized
 - but embodied execution is still driven by continuous invariant predictions, not a pure discrete token tape
 
+## Continuous DHB vs Discrete Invariant Tokens
+
+This distinction matters because “DHB-XR action head” can mean two related but
+different things:
+
+1. a **continuous invariant prediction head**
+2. a **discrete invariant-token policy**
+
+The current StarVLA implementation is mainly the first one, with the second one
+appearing as a training-time regularization / compression path through OAT.
+
+### Continuous DHB invariants
+
+In the current best StarVLA path, the DHB head predicts continuous invariant
+values and then decodes them into a future EE trajectory.
+
+That is the current:
+
+- `predict_trajectory()`
+- decode to SE(3) waypoints
+- `embodik` IK
+- joint execution
+
+This is the right choice when:
+
+- we still care about fine geometric precision
+- we need smooth trajectories
+- we want the easiest path to close-loop execution through IK
+- we are still debugging feasibility, grasp timing, and placement geometry
+
+Advantages:
+
+- smoother decode
+- easier to feed into `embodik`
+- lower risk of discretization artifacts
+- more natural for continuous trajectory optimization
+
+Weaknesses:
+
+- less compact than a discrete token sequence
+- not yet a pure token-language-style action interface
+- can still drift if the continuous regression head is poorly calibrated
+
+### Discrete DHB invariant tokens
+
+The stronger long-term DHB story is to represent motion as discrete invariant
+tokens rather than raw continuous action vectors.
+
+That is where the OAT / tokenizer path becomes important:
+
+- compress invariant structure
+- stabilize representation under SE(3) changes
+- make action more language-like or code-like as a sequence model target
+
+This is the right choice when:
+
+- we want stronger compression
+- we want more reusable symbolic / latent motion primitives
+- we care about token stability across transforms
+- we want a VLA-friendly action interface that behaves more like discrete
+  sequence modeling than direct regression
+
+Advantages:
+
+- better compression
+- cleaner sequence-modeling target
+- potentially stronger cross-offset reuse
+- potentially easier to compose with world-model or simulator augmentation
+
+Weaknesses:
+
+- quantization can discard fine control detail
+- token boundaries may hurt smoothness if decode is weak
+- execution still needs a continuous decode back into geometry
+
+### When to use which
+
+Use **continuous DHB invariants** when:
+
+- the immediate goal is embodied execution quality
+- we need precise waypoints for IK and controller integration
+- we are still validating the geometry / control contract
+
+Use **discrete DHB invariant tokens** when:
+
+- the immediate goal is scalable representation learning
+- we want strong compression and reuse
+- we want to compare action representations in a more VLA-native token setting
+- we are running augmentation / scaling studies rather than only the final
+  control loop
+
+### Why invariant tokens make sense for VLAs
+
+VLAs are naturally good at modeling sequences of structured symbols, but raw
+robot actions are a poor symbolic target:
+
+- absolute actions are brittle
+- delta actions are local and controller-dependent
+- relative poses are better, but still not invariant enough
+
+DHB invariant tokens are interesting because they sit closer to the right
+abstraction level:
+
+- more stable than raw action coordinates
+- more reusable across offsets and frames
+- more compressible than plain continuous action chunks
+- still decodable into actual robot motion
+
+So the VLA argument is:
+
+- Qwen handles perception and task semantics
+- DHB invariants provide the structured geometric action substrate
+- tokenization provides the compression and sequence-learning interface
+
+That is why the long-term DHB-XR story is stronger than “just replace an MLP
+action head.” It is really about giving the VLA a better action language.
+
+### Best current interpretation
+
+Today, the safest statement is:
+
+- the current StarVLA system already benefits from **continuous DHB invariant
+  prediction**
+- OAT/discrete tokenization is already present as a regularization path
+- but the strongest embodied results still come from **continuous invariant
+  decode**, not from a pure discrete-token closed loop
+
+So:
+
+- **continuous DHB** is the right current execution path
+- **discrete DHB tokens** are the right long-term scaling and representation
+  path
+
 ## How This Differs From Regular StarVLA Action Heads
 
 This is easiest to understand by contrast with standard StarVLA frameworks like:
