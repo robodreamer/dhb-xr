@@ -225,7 +225,10 @@ Interpretation:
 - [x] Run the canonical live test on `episode_idx=1`, `offset=3 cm`
 - [x] Run an easier live test on `episode_idx=0`, `offset=0 cm`
 - [x] Run a more conservative live test (`replan_every=1`, tighter clamp) to check whether the online failure is just a chunk-tuning issue
-- [ ] Decide whether the current model is strong enough for true live replanning, or whether the offline-style canonical baseline must remain the main progress metric for now
+- [x] Add an online-feasibility checkpoint sweep over the short-train checkpoints
+- [x] Rank checkpoints by live metrics instead of train loss alone
+- [x] Select the current online candidate checkpoint from that sweep
+- [x] Decide whether the current model is strong enough for true live replanning, or whether the offline-style canonical baseline must remain the main progress metric for now
 
 Current result:
 - live rollout note:
@@ -236,6 +239,9 @@ Current result:
   - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/live_rollout_ep0_offset0_summary.json`
 - conservative live `episode 0 / 0 cm` summary:
   - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/live_rollout_ep0_offset0_replan1_clamp25_step10_summary.json`
+- checkpoint sweep summary:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/live_checkpoint_sweep/summary.md`
+  - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/live_checkpoint_sweep/summary.json`
 
 Interpretation:
 - True live replanning is now implemented and executable on the laptop GPU.
@@ -244,6 +250,12 @@ Interpretation:
 - The remaining gap is therefore better explained by online model / data robustness than by another obvious rollout-plumbing bug.
 - Follow-up cleanup confirmed a real init-state mismatch (`demo` vs `benchmark` init state L2 about `0.357`), but switching to the demo init state plus bowl-relative close gating still did not recover success.
 - Under the stricter geometry-conditioned gripper logic, the live run never reaches a valid grasp region at all (`close_step = null`), which sharpens the diagnosis: the current live trajectory quality is still insufficient for online grasp acquisition.
+- A live checkpoint sweep across `steps_{50,100,150,200}` now provides a more honest selection signal than train loss alone.
+- `steps_200` is the best current online candidate:
+  - `avg_min_bowl_xyz_m = 0.2916`
+  - `avg_min_bowl_xy_m = 0.1431`
+  - `avg_ik_fail_total = 75.5`
+- none of the current checkpoints achieve live success yet, so the offline-style canonical baseline still remains the main progress metric for now.
 
 ## 2026-04-19 Gap-Closure Execution Plan
 

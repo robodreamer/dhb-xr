@@ -47,6 +47,14 @@ LIBERO_GRIPPER_OPEN_QPOS_THRESHOLD = 0.015
 LIBERO_ENV_RESOLUTION = 256
 
 
+class _NullWriter:
+    def append_data(self, frame):
+        return None
+
+    def close(self):
+        return None
+
+
 @contextmanager
 def _libero_torch_load_compat():
     original_torch_load = torch.load
@@ -295,6 +303,7 @@ def main() -> None:
     parser.add_argument("--settle-steps", type=int, default=100)
     parser.add_argument("--save_json", default=None)
     parser.add_argument("--save_video", default=None)
+    parser.add_argument("--no-video", action="store_true")
     args, unknown = parser.parse_known_args()
 
     dotlist = normalize_dotlist_args(unknown)
@@ -373,8 +382,10 @@ def main() -> None:
         f"live_offset_{args.offset_cm:.1f}cm_ep_{args.episode_idx}"
         f"_replan{args.replan_every}_clamp{int(args.max_first_offset_mm)}"
     )
-    video_path = Path(args.save_video) if args.save_video else _make_video_path(video_dir, label)
-    writer = imageio.get_writer(video_path, fps=10)
+    video_path = None if args.no_video else (
+        Path(args.save_video) if args.save_video else _make_video_path(video_dir, label)
+    )
+    writer = _NullWriter() if args.no_video else imageio.get_writer(video_path, fps=10)
     append_frame(writer, obs)
 
     q_current = np.zeros(robot_model.nq, dtype=np.float64)
@@ -394,6 +405,26 @@ def main() -> None:
     last_effective_grip = float(demo["gripper_cmd"][0]) if len(demo["gripper_cmd"]) else -1.0
     reward = 0.0
     success_at = None
+    ik_fail_total = 0
+    first_ik_fail_chunk = None
+    min_bowl_xy_m = float("inf")
+    min_bowl_xyz_m = float("inf")
+    min_plate_xy_m = float("inf")
+    min_plate_xyz_m = float("inf")
+
+    def update_min_dists(ee_pos_xyz: np.ndarray) -> None:
+        nonlocal min_bowl_xy_m, min_bowl_xyz_m, min_plate_xy_m, min_plate_xyz_m
+        rel = _relative_snapshot(ee_pos_xyz, scene_refs)
+        if "ee_minus_bowl" in rel:
+            ee_minus_bowl = np.asarray(rel["ee_minus_bowl"], dtype=np.float32)
+            min_bowl_xy_m = min(min_bowl_xy_m, float(np.linalg.norm(ee_minus_bowl[:2])))
+            min_bowl_xyz_m = min(min_bowl_xyz_m, float(np.linalg.norm(ee_minus_bowl)))
+        if "ee_minus_plate" in rel:
+            ee_minus_plate = np.asarray(rel["ee_minus_plate"], dtype=np.float32)
+            min_plate_xy_m = min(min_plate_xy_m, float(np.linalg.norm(ee_minus_plate[:2])))
+            min_plate_xyz_m = min(min_plate_xyz_m, float(np.linalg.norm(ee_minus_plate)))
+
+    update_min_dists(np.asarray(robot.controller.ee_pos, dtype=np.float32))
 
     t = 0
     while t < num_demo_steps:
@@ -475,6 +506,9 @@ def main() -> None:
                 **stability,
             }
         )
+        ik_fail_total += int(ik_failures)
+        if ik_failures > 0 and first_ik_fail_chunk is None:
+            first_ik_fail_chunk = len(debug_chunks) - 1
 
         for i in range(n_use):
             desired_grip = float(gripper_cmds[i])
@@ -514,6 +548,7 @@ def main() -> None:
                 if r > reward:
                     reward = float(r)
                 append_frame(writer, obs)
+                update_min_dists(np.asarray(robot.controller.ee_pos, dtype=np.float32))
 
             prev_grip = last_effective_grip
             last_effective_grip = float(effective_grip)
@@ -569,17 +604,24 @@ def main() -> None:
         "success": bool(final_success),
         "success_at": None if success_at is None else int(success_at),
         "reward": float(reward),
+        "ik_fail_total": int(ik_fail_total),
+        "first_ik_fail_chunk": None if first_ik_fail_chunk is None else int(first_ik_fail_chunk),
+        "num_chunks": int(len(debug_chunks)),
         "close_step": None if close_step is None else int(close_step),
         "reopen_step": None if reopen_step is None else int(reopen_step),
         "close_snapshot": close_snapshot,
         "reopen_snapshot": reopen_snapshot,
         "final_snapshot": _relative_snapshot(ee_final, scene_refs),
+        "min_bowl_xy_m": None if not np.isfinite(min_bowl_xy_m) else float(min_bowl_xy_m),
+        "min_bowl_xyz_m": None if not np.isfinite(min_bowl_xyz_m) else float(min_bowl_xyz_m),
+        "min_plate_xy_m": None if not np.isfinite(min_plate_xy_m) else float(min_plate_xy_m),
+        "min_plate_xyz_m": None if not np.isfinite(min_plate_xyz_m) else float(min_plate_xyz_m),
         "scene_refs": {
             "bowl_ref": scene_refs.get("bowl_ref"),
             "plate_ref": scene_refs.get("plate_ref"),
         },
         "chunks": debug_chunks,
-        "video_path": str(video_path),
+        "video_path": None if video_path is None else str(video_path),
         "overrides": dotlist,
     }
     save_json = Path(args.save_json) if args.save_json else output_dir / f"{label}_summary.json"

@@ -61,6 +61,42 @@ Interpretation:
 - the stronger conclusion is now that the live trajectory does not enter a valid
   grasp region, rather than “the arm closes at the wrong place”
 
+### Live checkpoint sweep: online-feasibility ranking
+
+To avoid selecting checkpoints only by train loss, the live rollout script now
+supports no-video evaluation plus a compact feasibility summary, and
+[scripts/starvla_dhb_live_checkpoint_sweep.py](/home/andypark/Projects/repos/dhb-xr/scripts/starvla_dhb_live_checkpoint_sweep.py)
+aggregates those results across representative live cases.
+
+Sweep artifacts:
+
+- markdown summary:
+  [_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/live_checkpoint_sweep/summary.md](/home/andypark/Projects/repos/dhb-xr/_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/live_checkpoint_sweep/summary.md)
+- json summary:
+  [_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/live_checkpoint_sweep/summary.json](/home/andypark/Projects/repos/dhb-xr/_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/live_checkpoint_sweep/summary.json)
+
+Representative cases:
+
+- `episode_idx=0`, `offset=0 cm`
+- `episode_idx=1`, `offset=3 cm`
+
+Ranking:
+
+| Rank | Step | Successes | Closes | Avg min bowl XYZ (m) | Avg min bowl XY (m) | Avg IK fails |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 200 | 0 | 0 | 0.2916 | 0.1431 | 75.5 |
+| 2 | 100 | 0 | 0 | 0.3672 | 0.2280 | 76.0 |
+| 3 | 50 | 0 | 0 | 0.3739 | 0.2500 | 80.5 |
+| 4 | 150 | 0 | 0 | 0.3740 | 0.2500 | 79.5 |
+
+Interpretation:
+
+- none of the current checkpoints are yet good enough for true live success
+- none reach a valid live close event under the stricter bowl-relative close gate
+- but the live metrics are still informative and clearly favor `steps_200`
+- `steps_200` should therefore be treated as the current online candidate
+  checkpoint until a stronger live metric or checkpoint overtakes it
+
 ### Canonical live test: `episode_idx=1`, `offset=3 cm`
 
 Command shape:
@@ -201,17 +237,7 @@ Two caveats still matter when interpreting the live result:
    Once the live arm drifts away from the demo manifold, close/open timing can
    desynchronize from the actual live pose.
 
-2. The environment start state currently comes from
-   `task_suite.get_task_init_states()[episode_idx]`, not the HDF5 demo's saved
-   `init_state`.
-
-   In practice these appear aligned for the current benchmark, but the live script
-   should eventually preserve the exact same per-demo init-state contract as the
-   offline packed `embodik` path.
-
-There is also one comparison caveat:
-
-3. The live script currently runs a single controller setting only.
+2. The live script currently runs a single controller setting only.
 
    The older offline evaluator retries failed runs with a higher-gain fallback.
    So a live failure is stricter than the canonical offline baseline, not yet a
@@ -228,7 +254,8 @@ Safe statement:
 
 Most likely next steps:
 
-1. checkpoint selection using online feasibility proxies, not only train loss
+1. keep `steps_200` as the online candidate based on the checkpoint sweep, not
+   just train loss
 2. training with state / observation perturbations closer to rollout conditions
 3. later, augmentation studies using simulation or world-model spatial diversity
    to improve online replanning robustness
