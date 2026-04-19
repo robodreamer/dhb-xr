@@ -119,6 +119,34 @@ Interpretation:
 This avoids repeating the SmolVLA pattern where more training improved loss but
 did not improve execution.
 
+### 2026-04-19 update: low-risk phase-aware training knobs are now wired
+
+Two low-risk training-side changes have now been implemented and smoke-tested:
+
+- terminal-step weighting in the DHB invariant loss
+- end-anchored chunk oversampling in the LeRobot mixture loader
+
+Files:
+
+- `src/dhb_xr/integration/vla/action_head.py`
+- `vendor/starVLA/starVLA/model/modules/action_model/DHBActionHeader.py`
+- `vendor/starVLA/starVLA/dataloader/gr00t_lerobot/datasets.py`
+- `configs/libero_dhbxr_qwen_phaseaug.yaml`
+
+Sanity checks:
+
+- the same invariant error placed at the last timestep now gets about `2.5x`
+  the loss of the same error at the first timestep
+- with `terminal_chunk_prob=1.0`, sampled training steps snap to the last valid
+  chunk of each trajectory as intended
+- the new config passes a real `QwenDHB` one-step train smoke on the laptop GPU
+
+Interpretation:
+
+- these are ready to use in the next training run
+- they are better aligned with the current failure mode than another round of
+  generic state-noise warm-starting
+
 ## Phase 1: Freeze The Canonical Closed-Loop
 
 ### Goal

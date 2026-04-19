@@ -20,6 +20,10 @@
 - [x] Compare smoke vs `50ep` vs `200ep` checkpoints on loss and closed-loop success
 - [ ] Add trainer logging hooks for future `wandb` integration
 - [ ] Decide whether to keep smoke checkpoint as deployment baseline or redesign training / checkpoint selection
+- [x] Implement terminal-step loss weighting for DHB invariant supervision
+- [x] Implement end-anchored chunk oversampling in the StarVLA LeRobot loader
+- [x] Add a dedicated `phaseaug` training config that enables the new low-risk robustness knobs
+- [x] Verify the new `phaseaug` config with a real one-step Qwen+DHB train smoke
 
 ## SmolVLA Exit Criteria
 

@@ -73,6 +73,7 @@ if HAS_TORCH:
             oat_num_registers: int = 8,
             oat_fsq_levels: Optional[list] = None,
             action_dim: Optional[int] = None,
+            terminal_loss_weight: float = 1.0,
         ):
             super().__init__()
 
@@ -82,6 +83,7 @@ if HAS_TORCH:
             self.use_oat = use_oat
             self.lambda_act = lambda_act
             self.action_dim = action_dim
+            self.terminal_loss_weight = terminal_loss_weight
 
             # Learnable query positions for each timestep
             self.query_embed = nn.Embedding(action_horizon, hidden_dim)
@@ -131,6 +133,22 @@ if HAS_TORCH:
             self.action_head = None
             if action_dim is not None:
                 self.action_head = nn.Linear(hidden_dim, action_dim)
+
+        def _invariant_loss(self, pred_inv: torch.Tensor, target_invariants: torch.Tensor) -> torch.Tensor:
+            """Compute invariant loss with optional terminal-step upweighting."""
+            per_step_mse = (pred_inv - target_invariants).pow(2).mean(dim=-1)  # (B, T)
+            if self.terminal_loss_weight is None or self.terminal_loss_weight <= 1.0:
+                return per_step_mse.mean()
+
+            weights = torch.linspace(
+                1.0,
+                float(self.terminal_loss_weight),
+                self.action_horizon,
+                device=pred_inv.device,
+                dtype=pred_inv.dtype,
+            )
+            weights = weights / weights.mean()
+            return (per_step_mse * weights.unsqueeze(0)).mean()
 
         def forward(
             self,
@@ -207,14 +225,7 @@ if HAS_TORCH:
             # The invariant loss ensures the internal representation is SE(3)-aware;
             # the action loss ensures the output is directly executable by the controller.
             if target_invariants is not None:
-                # Use the project's invariant matching loss (supports DHB-QR geodesic)
-                try:
-                    from dhb_xr.losses.invariant_loss import invariant_matching_loss_torch
-                    loss_inv = invariant_matching_loss_torch(
-                        pred_inv, target_invariants, method="dhb_dr"
-                    )
-                except ImportError:
-                    loss_inv = F.mse_loss(pred_inv, target_invariants)
+                loss_inv = self._invariant_loss(pred_inv, target_invariants)
                 result["loss_inv"] = loss_inv
                 total = self.lambda_inv * loss_inv
                 if oat_loss is not None:
