@@ -242,6 +242,8 @@ Interpretation:
 - The current `QwenDHB` checkpoint fails under that stricter online setting, even on the easier zero-offset case.
 - Tighter receding-horizon control reduces the earliest chunk errors but does not recover task success.
 - The remaining gap is therefore better explained by online model / data robustness than by another obvious rollout-plumbing bug.
+- Follow-up cleanup confirmed a real init-state mismatch (`demo` vs `benchmark` init state L2 about `0.357`), but switching to the demo init state plus bowl-relative close gating still did not recover success.
+- Under the stricter geometry-conditioned gripper logic, the live run never reaches a valid grasp region at all (`close_step = null`), which sharpens the diagnosis: the current live trajectory quality is still insufficient for online grasp acquisition.
 
 ## 2026-04-19 Gap-Closure Execution Plan
 

@@ -284,6 +284,9 @@ def main() -> None:
     parser.add_argument("--smooth-window", type=int, default=3)
     parser.add_argument("--blend-overlap-alpha", type=float, default=0.6)
     parser.add_argument("--gripper-source", choices=("demo", "model"), default="demo")
+    parser.add_argument("--init-state-source", choices=("demo", "benchmark"), default="demo")
+    parser.add_argument("--close-gate-xy-m", type=float, default=0.05)
+    parser.add_argument("--close-gate-z-m", type=float, default=0.05)
     parser.add_argument("--release-gate-xy-m", type=float, default=0.04)
     parser.add_argument("--release-gate-z-m", type=float, default=0.06)
     parser.add_argument("--output-max", type=float, default=0.5)
@@ -329,7 +332,12 @@ def main() -> None:
     )
     env.seed(cfg.seed)
     obs = env.reset()
-    init_state = np.asarray(initial_states[args.episode_idx], dtype=np.float32).copy()
+    benchmark_init_state = np.asarray(initial_states[args.episode_idx], dtype=np.float32).copy()
+    demo_init_state = np.asarray(demo["init_state"], dtype=np.float32).copy()
+    if args.init_state_source == "demo":
+        init_state = demo_init_state.copy()
+    else:
+        init_state = benchmark_init_state.copy()
     if args.offset_cm != 0:
         init_state[11] += args.offset_cm / 100.0
     env.set_init_state(init_state)
@@ -472,13 +480,27 @@ def main() -> None:
             desired_grip = float(gripper_cmds[i])
             ee_pos_pre = np.asarray(robot.controller.ee_pos, dtype=np.float32)
             effective_grip = desired_grip
-            if desired_grip <= 0 and np.any(gripper_cmds[: i + 1] > 0):
-                ee_minus_plate = np.asarray(_relative_snapshot(ee_pos_pre, scene_refs)["ee_minus_plate"], dtype=np.float32)
-                release_ready = (
-                    abs(float(ee_minus_plate[0])) <= args.release_gate_xy_m
-                    and abs(float(ee_minus_plate[1])) <= args.release_gate_xy_m
-                    and float(ee_minus_plate[2]) <= args.release_gate_z_m
-                )
+            rel_pre = _relative_snapshot(ee_pos_pre, scene_refs)
+            ee_minus_bowl = np.asarray(rel_pre.get("ee_minus_bowl", [np.inf, np.inf, np.inf]), dtype=np.float32)
+            ee_minus_plate = np.asarray(rel_pre.get("ee_minus_plate", [np.inf, np.inf, np.inf]), dtype=np.float32)
+            close_ready = (
+                abs(float(ee_minus_bowl[0])) <= args.close_gate_xy_m
+                and abs(float(ee_minus_bowl[1])) <= args.close_gate_xy_m
+                and float(ee_minus_bowl[2]) <= args.close_gate_z_m
+            )
+            release_ready = (
+                abs(float(ee_minus_plate[0])) <= args.release_gate_xy_m
+                and abs(float(ee_minus_plate[1])) <= args.release_gate_xy_m
+                and float(ee_minus_plate[2]) <= args.release_gate_z_m
+            )
+
+            # In the live receding-horizon loop, demo or model gripper commands are
+            # only a phase prior. Actual close / release should still respect the
+            # live geometry to avoid grasping or releasing far from the object.
+            if desired_grip > 0 and last_effective_grip <= 0:
+                if not close_ready:
+                    effective_grip = -1.0
+            if desired_grip <= 0 and last_effective_grip > 0:
                 if not release_ready:
                     effective_grip = 1.0
 
@@ -540,6 +562,10 @@ def main() -> None:
         "smooth_window": int(args.smooth_window),
         "blend_overlap_alpha": float(args.blend_overlap_alpha),
         "gripper_source": args.gripper_source,
+        "init_state_source": args.init_state_source,
+        "init_state_l2_diff": float(np.linalg.norm(demo_init_state - benchmark_init_state)),
+        "close_gate_xy_m": float(args.close_gate_xy_m),
+        "close_gate_z_m": float(args.close_gate_z_m),
         "success": bool(final_success),
         "success_at": None if success_at is None else int(success_at),
         "reward": float(reward),

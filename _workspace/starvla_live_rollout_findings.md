@@ -31,6 +31,36 @@ Key properties:
 
 ## Main Results
 
+### Follow-up live cleanup: demo init-state + geometry-conditioned gripper
+
+The live script was then tightened further to reduce two remaining interpretation
+caveats:
+
+- use the HDF5 demo's saved `init_state` by default
+- gate close on bowl-relative geometry and release on plate-relative geometry
+
+Representative rerun:
+
+- summary:
+  [live_rollout_ep0_offset0_geomgrip_summary.json](/home/andypark/Projects/repos/dhb-xr/_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/live_rollout_ep0_offset0_geomgrip_summary.json)
+
+Important observations:
+
+- `init_state_l2_diff ≈ 0.357` between the benchmark-provided init state and the
+  HDF5 demo init state, so this alignment fix was necessary
+- even after switching to the demo init state, the run still fails
+- with bowl-relative close gating enabled, the gripper never closes at all
+  (`close_step = null`)
+- final EE remains far from the bowl:
+  - `ee_minus_bowl ≈ [0.145, -0.119, 0.242]`
+
+Interpretation:
+
+- the init-state mismatch was real
+- but fixing it does not recover online success
+- the stronger conclusion is now that the live trajectory does not enter a valid
+  grasp region, rather than “the arm closes at the wrong place”
+
 ### Canonical live test: `episode_idx=1`, `offset=3 cm`
 
 Command shape:
