@@ -159,6 +159,48 @@ Conclusion:
   state-input noise, e.g. rollout-state perturbation, stronger observation/state
   augmentation, or phase-aware supervision
 
+### Phase-aware warm-start follow-up
+
+- config:
+  `configs/libero_dhbxr_qwen_phaseaug.yaml`
+- run:
+  `_workspace/starvla_runs/dhb_starvla_qwen_phaseaug1`
+- sweep summary:
+  `_workspace/starvla_runs/dhb_starvla_qwen_phaseaug1/live_checkpoint_sweep/summary.md`
+
+Result:
+
+- best phase-aware checkpoint: `steps_200`
+  - `avg_min_bowl_xyz_m = 0.3182`
+  - `avg_min_bowl_xy_m = 0.1894`
+  - `avg_ik_fail_total = 75.5`
+
+Comparison:
+
+- old live best: `shorttrain1/steps_200`
+  - `0.2916 / 0.1431 / 75.5`
+- first state-noise warm-start: `liveaug1/steps_300`
+  - `0.3245 / 0.1986 / 73.5`
+- new phase-aware warm-start: `phaseaug1/steps_200`
+  - `0.3182 / 0.1894 / 75.5`
+
+Interpretation:
+
+- terminal-step weighting plus end-anchored chunk oversampling is better than
+  `liveaug1` on bowl proximity
+- but it still does **not** beat the original live baseline from
+  `shorttrain1/steps_200`
+- `steps_100` is notable for low IK failures (`31.5`) but clearly worse bowl
+  approach, which reinforces that better reachability alone is not the same as
+  better task geometry
+
+Conclusion:
+
+- these low-risk phase-aware knobs are worth keeping available
+- but they are not sufficient to close the live replanning gap by themselves
+- the next training-side change should be more rollout-grounded than another
+  same-objective warm-start
+
 ### Canonical live test: `episode_idx=1`, `offset=3 cm`
 
 Command shape:

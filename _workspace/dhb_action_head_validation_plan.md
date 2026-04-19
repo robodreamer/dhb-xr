@@ -24,6 +24,8 @@
 - [x] Implement end-anchored chunk oversampling in the StarVLA LeRobot loader
 - [x] Add a dedicated `phaseaug` training config that enables the new low-risk robustness knobs
 - [x] Verify the new `phaseaug` config with a real one-step Qwen+DHB train smoke
+- [x] Run a short `phaseaug` warm-start from the old live-best checkpoint
+- [x] Re-run the live checkpoint sweep on the `phaseaug` run and compare against `shorttrain1` / `liveaug1`
 
 ## SmolVLA Exit Criteria
 
@@ -289,6 +291,56 @@ Interpretation:
 - so simple state-noise training is not enough by itself to close the live gap
 - the next training-side move should be a stronger, more rollout-grounded
   robustness intervention rather than more same-objective warm-start training
+
+### Phase-aware warm-start: `dhb_starvla_qwen_phaseaug1`
+
+Run:
+
+- directory:
+  `_workspace/starvla_runs/dhb_starvla_qwen_phaseaug1`
+- warm-start checkpoint:
+  `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/checkpoints/steps_200_pytorch_model.pt`
+- train budget:
+  `300` steps
+
+Live sweep summary:
+
+- markdown:
+  `_workspace/starvla_runs/dhb_starvla_qwen_phaseaug1/live_checkpoint_sweep/summary.md`
+- json:
+  `_workspace/starvla_runs/dhb_starvla_qwen_phaseaug1/live_checkpoint_sweep/summary.json`
+
+Ranking:
+
+- `steps_200`:
+  - `avg_min_bowl_xyz_m = 0.3182`
+  - `avg_min_bowl_xy_m = 0.1894`
+  - `avg_ik_fail_total = 75.5`
+- `steps_300`:
+  - `0.3347`
+  - `0.2087`
+  - `75.5`
+- `steps_100`:
+  - `0.3415`
+  - `0.2029`
+  - `31.5`
+
+Comparison against earlier runs:
+
+- old live best: `shorttrain1/steps_200`
+  - `0.2916 / 0.1431 / 75.5`
+- first state-noise warm-start: `liveaug1/steps_300`
+  - `0.3245 / 0.1986 / 73.5`
+- new phase-aware warm-start: `phaseaug1/steps_200`
+  - `0.3182 / 0.1894 / 75.5`
+
+Interpretation:
+
+- terminal-step weighting plus end-anchored chunk oversampling is better than
+  `liveaug1` on bowl approach
+- but it still does not beat the original `shorttrain1` live baseline
+- the next training-side intervention should therefore be more rollout-grounded,
+  not another same-objective warm-start on the current demo distribution
 
 ## 2026-04-19 Gap-Closure Execution Plan
 

@@ -147,6 +147,44 @@ Interpretation:
 - they are better aligned with the current failure mode than another round of
   generic state-noise warm-starting
 
+### 2026-04-19 update: phase-aware warm-start still does not beat the old live baseline
+
+The first real run using those knobs is now complete:
+
+- run dir:
+  `_workspace/starvla_runs/dhb_starvla_qwen_phaseaug1`
+- warm-start source:
+  `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/checkpoints/steps_200_pytorch_model.pt`
+- budget:
+  `300` steps
+
+Live-sweep best checkpoint:
+
+- `steps_200`
+  - `avg_min_bowl_xyz_m = 0.3182`
+  - `avg_min_bowl_xy_m = 0.1894`
+  - `avg_ik_fail_total = 75.5`
+
+Comparison:
+
+- old live best (`shorttrain1/steps_200`):
+  - `0.2916 / 0.1431 / 75.5`
+- state-noise warm-start (`liveaug1/steps_300`):
+  - `0.3245 / 0.1986 / 73.5`
+- phase-aware warm-start (`phaseaug1/steps_200`):
+  - `0.3182 / 0.1894 / 75.5`
+
+Interpretation:
+
+- phase-aware weighting + terminal oversampling is directionally better than
+  the earlier state-noise-only warm-start
+- but it still does not recover the original live baseline on bowl proximity
+- this reinforces the current ranking:
+  - keep these knobs available
+  - stop expecting same-objective warm-starting to close the live gap
+  - prioritize rollout-grounded corrective augmentation or matched execution
+    controls next
+
 ## Phase 1: Freeze The Canonical Closed-Loop
 
 ### Goal
