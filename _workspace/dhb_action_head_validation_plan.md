@@ -225,13 +225,25 @@ Reference note:
 
 ### Phase 1: Freeze the canonical StarVLA->`embodik` loop
 
-- [ ] Run a bounded calibration sweep over `replan_every in {4, 6}` and `max_first_offset_mm in {35, 40}` with `max_step_mm=20`, `smooth_window=3`, `blend_overlap_alpha=0.6`
-- [ ] Compare candidates on:
+- [x] Run a bounded calibration sweep over `replan_every in {4, 6}` and `max_first_offset_mm in {35, 40}` with `max_step_mm=20`, `smooth_window=3`, `blend_overlap_alpha=0.6`
+- [x] Compare candidates on:
   - success at `0cm` / `3cm`
   - IK failure rate
   - visible motion continuity
   - close / reopen timing
-- [ ] Select one shared StarVLA closed-loop config as the canonical baseline
+- [x] Select one shared StarVLA closed-loop config as the canonical baseline
+
+Selected canonical baseline:
+- reference note:
+  - `_workspace/starvla_embodik_canonical_baseline.md`
+- chosen setting:
+  - `replan_every = 4`
+  - `max_first_offset_mm = 35`
+  - `max_step_mm = 20`
+  - `smooth_window = 3`
+  - `blend_overlap_alpha = 0.6`
+  - demo gripper timing
+  - current release semantics from `_workspace/eval_dhb_head_embodik.py`
 
 ### Phase 2: Improve manipulation quality under the frozen loop
 
