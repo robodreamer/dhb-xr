@@ -218,6 +218,48 @@ Interpretation:
 - The old orientation and gripper pipeline bugs were real, but they are no longer the dominant issue here.
 - The next bottleneck is Stage-1 trajectory quality, especially the large first-waypoint translational overshoot seen across seeds and worst on `seed 1`.
 
+## 2026-04-19 Gap-Closure Execution Plan
+
+Reference note:
+- `notes/supplementary/16_starvla_dhb_gap_closure_plan.md`
+
+### Phase 1: Freeze the canonical StarVLA->`embodik` loop
+
+- [ ] Run a bounded calibration sweep over `replan_every in {4, 6}` and `max_first_offset_mm in {35, 40}` with `max_step_mm=20`, `smooth_window=3`, `blend_overlap_alpha=0.6`
+- [ ] Compare candidates on:
+  - success at `0cm` / `3cm`
+  - IK failure rate
+  - visible motion continuity
+  - close / reopen timing
+- [ ] Select one shared StarVLA closed-loop config as the canonical baseline
+
+### Phase 2: Improve manipulation quality under the frozen loop
+
+- [ ] Add bowl-relative close gating
+- [ ] Keep plate-relative release gating and explicit placement-tail logic where needed
+- [ ] Continue using demo gripper timing as the control branch while trajectory quality is tuned
+- [ ] Compare `seed 0`, `seed 1`, `seed 2` close/reopen geometry under the frozen loop
+- [ ] Match the SmolVLA smoke baseline with one shared config:
+  - `2/3` at `0cm`
+  - `1/3` at `3cm`
+
+### Phase 3: Close the matched-baseline gap
+
+- [ ] Run a matched regular-head baseline (`QwenOFT` or equivalent) under the same evaluator and offsets
+- [ ] Build a comparison table for:
+  - success rate
+  - IK failure rate
+  - final `ee_minus_plate`
+  - close / reopen geometry
+- [ ] Decide which DHB claims are now strong enough to make over a regular action head
+
+### Phase 4: Scale out only after the canonical baseline is stable
+
+- [ ] Fix the harness-side action contract for `embodik` execution
+- [ ] Wire the canonical StarVLA->DHB->`embodik` path into the harness server
+- [ ] Re-run LIBERO harness smoke with the canonical path
+- [ ] Only then broaden to VLA-Arena / RoboCasa smoke validation
+
 ## Stage-1 Feasibility Clamp Pass
 
 - [x] Add a lightweight Stage-1 feasibility pass to clamp the first waypoint and per-step motion

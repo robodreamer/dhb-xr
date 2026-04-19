@@ -1,6 +1,6 @@
 # DHB-XR CoRL 2026 — Supplementary Notes Index
 
-**Branch**: `paper/corl-2026` | **Worktree**: `dhb_xr_paper/` | **Updated**: 2026-04-09
+**Branch**: `paper/corl-2026` | **Worktree**: `dhb_xr_paper/` | **Updated**: 2026-04-19
 
 These notes capture everything that doesn't fit in the 8-page CoRL format.
 No page limit. Meant for internal use, future extensions, and journal version.
@@ -22,6 +22,11 @@ No page limit. Meant for internal use, future extensions, and journal version.
 | [09_next_iteration_plan.md](09_next_iteration_plan.md) | Prioritized roadmap with all 6 steps completed + remaining work |
 | [10_triple_invariant_tokenizer.md](10_triple_invariant_tokenizer.md) | FAST+DHB and OAT on magnitude invariants: 49.8x compression, 0% instability |
 | [11_session_summary.md](11_session_summary.md) | Complete session summary: all experiments, results, insights, remaining work |
+| [12_smolvla_dhb_action_head_summary.md](12_smolvla_dhb_action_head_summary.md) | SmolVLA DHB action-head validation summary |
+| [13_smolvla_results_discussion_draft.md](13_smolvla_results_discussion_draft.md) | Paper-style results/discussion subsection draft |
+| [14_dhb_action_head_internal_note.md](14_dhb_action_head_internal_note.md) | Internal explainer note for the DHB action head itself |
+| [15_qwen_dhb_integration_internal_note.md](15_qwen_dhb_integration_internal_note.md) | Internal Q&A note: how Qwen and DHB-XR are combined, what is validated now, and what is not yet proven |
+| [16_starvla_dhb_gap_closure_plan.md](16_starvla_dhb_gap_closure_plan.md) | Phased plan for closing the remaining StarVLA+DHB execution, comparison, and benchmark gaps |
 
 ---
 
