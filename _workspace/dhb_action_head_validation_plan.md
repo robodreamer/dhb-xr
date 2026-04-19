@@ -229,6 +229,10 @@ Interpretation:
 - [x] Rank checkpoints by live metrics instead of train loss alone
 - [x] Select the current online candidate checkpoint from that sweep
 - [x] Decide whether the current model is strong enough for true live replanning, or whether the offline-style canonical baseline must remain the main progress metric for now
+- [x] Add a first-pass live-robustness training variant with state-input drift augmentation
+- [x] Run a short warm-start (`300` steps) from the old live-best checkpoint under that augmentation
+- [x] Re-run the live checkpoint sweep on the augmented run and compare it against the old live-best checkpoint
+- [ ] Decide whether to continue with stronger rollout-grounded augmentation or pivot to phase-aware supervision first
 
 Current result:
 - live rollout note:
@@ -256,6 +260,31 @@ Interpretation:
   - `avg_min_bowl_xy_m = 0.1431`
   - `avg_ik_fail_total = 75.5`
 - none of the current checkpoints achieve live success yet, so the offline-style canonical baseline still remains the main progress metric for now.
+
+### First live-robustness augmentation follow-up
+
+- config:
+  `configs/libero_dhbxr_qwen_liveaug.yaml`
+- run:
+  `_workspace/starvla_runs/dhb_starvla_qwen_liveaug1`
+- sweep summary:
+  `_workspace/starvla_runs/dhb_starvla_qwen_liveaug1/live_checkpoint_sweep/summary.md`
+
+Result:
+
+- best augmented checkpoint: `steps_300`
+  - `avg_min_bowl_xyz_m = 0.3245`
+  - `avg_min_bowl_xy_m = 0.1986`
+  - `avg_ik_fail_total = 73.5`
+
+Interpretation:
+
+- this lightweight state-input drift augmentation improves IK-feasibility
+  slightly, but it still loses clearly on bowl proximity to the old online
+  candidate (`steps_200`)
+- so simple state-noise training is not enough by itself to close the live gap
+- the next training-side move should be a stronger, more rollout-grounded
+  robustness intervention rather than more same-objective warm-start training
 
 ## 2026-04-19 Gap-Closure Execution Plan
 

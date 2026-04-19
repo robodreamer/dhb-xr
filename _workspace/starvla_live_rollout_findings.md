@@ -97,6 +97,68 @@ Interpretation:
 - `steps_200` should therefore be treated as the current online candidate
   checkpoint until a stronger live metric or checkpoint overtakes it
 
+### First live-robustness training check: state-input drift augmentation
+
+To test the main diagnosis without changing the frozen execution loop, a first
+training-side robustness experiment was added:
+
+- config:
+  [configs/libero_dhbxr_qwen_liveaug.yaml](/home/andypark/Projects/repos/dhb-xr/configs/libero_dhbxr_qwen_liveaug.yaml)
+- dataset patch:
+  [vendor/starVLA/starVLA/dataloader/gr00t_lerobot/datasets.py](/home/andypark/Projects/repos/dhb-xr/vendor/starVLA/starVLA/dataloader/gr00t_lerobot/datasets.py)
+
+This experiment applies a **small, consistent perturbation to the state input**
+during training:
+
+- `state_input_noise_prob = 0.7`
+- `state_input_noise_pos_std_m = 0.01`
+- `state_input_noise_rot_std_rad = 0.05`
+
+The target trajectory is unchanged. This is intentionally only a light
+robustness augmentation, meant to reduce brittleness to small executed-state
+drift rather than simulate full online rollouts.
+
+Short warm-start run:
+
+- run dir:
+  [_workspace/starvla_runs/dhb_starvla_qwen_liveaug1](/home/andypark/Projects/repos/dhb-xr/_workspace/starvla_runs/dhb_starvla_qwen_liveaug1)
+- warm-start checkpoint:
+  `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/checkpoints/steps_200_pytorch_model.pt`
+- train budget: `300` steps
+
+Live sweep artifacts:
+
+- markdown summary:
+  [_workspace/starvla_runs/dhb_starvla_qwen_liveaug1/live_checkpoint_sweep/summary.md](/home/andypark/Projects/repos/dhb-xr/_workspace/starvla_runs/dhb_starvla_qwen_liveaug1/live_checkpoint_sweep/summary.md)
+
+Ranking:
+
+| Rank | Step | Successes | Closes | Avg min bowl XYZ (m) | Avg min bowl XY (m) | Avg IK fails |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 300 | 0 | 0 | 0.3245 | 0.1986 | 73.5 |
+| 2 | 100 | 0 | 0 | 0.3265 | 0.1975 | 75.5 |
+| 3 | 200 | 0 | 0 | 0.3360 | 0.1966 | 76.0 |
+
+Interpretation:
+
+- the light state-input perturbation did **not** beat the old online candidate
+  (`steps_200` from `dhb_starvla_qwen_invsup_shorttrain1`, which was
+  `0.2916 / 0.1431 / 75.5`)
+- it did slightly improve IK-feasibility relative to the old baseline
+  (`73.5` avg IK fails vs `75.5`)
+- but bowl proximity remained clearly worse
+- so this first-pass augmentation helps smoothness / feasibility more than
+  actual grasp-region targeting
+
+Conclusion:
+
+- the central diagnosis still holds: online robustness is the main gap
+- but this lightweight state-noise augmentation alone is **not** enough to close
+  it
+- the next training-side change should be more physically grounded than simple
+  state-input noise, e.g. rollout-state perturbation, stronger observation/state
+  augmentation, or phase-aware supervision
+
 ### Canonical live test: `episode_idx=1`, `offset=3 cm`
 
 Command shape:

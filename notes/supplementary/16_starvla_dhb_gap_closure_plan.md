@@ -91,6 +91,31 @@ The right order is:
 3. Run a matched baseline comparison.
 4. Only then scale to broader benchmark tools.
 
+### 2026-04-19 update: first live-robustness augmentation result
+
+A first training-side robustness check was added after the live checkpoint sweep
+showed that more warm-start training on the same objective does not improve the
+online baseline. The intervention was intentionally minimal:
+
+- keep the canonical `StarVLA -> DHB -> embodik` loop fixed
+- add small, consistent state-input drift during training
+- warm-start from the old live-best checkpoint
+
+Result:
+
+- the best augmented checkpoint (`liveaug1/steps_300`) slightly reduced average
+  IK failures
+- but it still did not beat the old live-best checkpoint on bowl proximity
+- it also produced `0` closes and `0` live successes
+
+Interpretation:
+
+- the main diagnosis is unchanged: the gap is still online robustness
+- but simple state-noise augmentation is too weak on its own
+- the next training-side iteration should therefore be more physically grounded,
+  such as rollout-state perturbation or stronger observation/state augmentation,
+  rather than just more warm-start training on the same objective
+
 This avoids repeating the SmolVLA pattern where more training improved loss but
 did not improve execution.
 
