@@ -393,8 +393,9 @@ def _geometry_contact_labels(
     """Build close/open labels from replayed object-relative geometry.
 
     This keeps the same exported schema as the transition-based path:
-    ``dhb.close_contact`` and ``dhb.open_contact`` are float masks, while
-    ``dhb.gripper_event`` remains ``0=hold, 1=close, 2=open``.
+    ``dhb.close_contact`` and ``dhb.open_contact`` are float masks marking
+    bowl-/plate-ready occupancy, while ``dhb.gripper_event`` is a sparse
+    transition token: ``0=hold, 1=close, 2=open``.
     """
     bowl_rel = np.asarray(bowl_rel, dtype=np.float32)
     plate_rel = np.asarray(plate_rel, dtype=np.float32)
@@ -432,9 +433,14 @@ def _geometry_contact_labels(
         & release_ready
         & has_closed_before
     ).astype(np.float32)
+    close_edge = close_contact > 0.5
+    close_edge[1:] &= ~(close_contact[:-1] > 0.5)
+    open_edge = open_contact > 0.5
+    open_edge[1:] &= ~(open_contact[:-1] > 0.5)
+
     gripper_event = np.zeros(len(open_now), dtype=np.int64)
-    gripper_event[close_contact > 0.5] = 1
-    gripper_event[open_contact > 0.5] = 2
+    gripper_event[close_edge] = 1
+    gripper_event[open_edge] = 2
     return close_contact, open_contact, gripper_event
 
 

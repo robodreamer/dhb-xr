@@ -665,3 +665,39 @@ Interpretation:
     likely by conditioning the contact head on object/perception cues more
     explicitly or by changing the event target structure rather than only
     relabeling the same 3-way token
+
+### Sparse Geometry Event Tokens
+
+- [x] Fix the Stage-3 learned-gripper initialization contract
+- [x] Change geometry-labeled `dhb.gripper_event` from a dense in-gate band to
+  a sparse edge-trigger token
+- [ ] Regenerate `/home/andypark/Projects/data/libero_lerobot` with the sparse
+  event token
+- [ ] Warm-start the gripper-token run again on the regenerated dataset
+
+Interpretation:
+- A second real evaluation bug remained in Stage 3:
+  - `_workspace/eval_dhb_head_embodik.py` was seeding the effective gripper
+    state from `gripper_cmds[0]` instead of the actual env/demo initial gripper
+    qpos
+  - that contaminated the learned-gripper canonical sweep because the first
+    predicted close could bypass the live bowl gate entirely
+- The bigger contract issue was in the exporter:
+  - `dhb.gripper_event` was still being written as a dense occupancy band over
+    every timestep inside the bowl-ready / plate-ready regions
+  - but the loader, centered event sampler, 3-way cross-entropy head, and
+    decode path all treat it as a sparse transition token
+- The exporter now keeps:
+  - `dhb.close_contact` and `dhb.open_contact` as dense geometry masks
+  - `dhb.gripper_event` as a sparse edge-trigger token:
+    - close on first entry into the bowl-ready region
+    - open on first entry into the plate-ready region
+- Reference `demo_0` after the sparse-event patch:
+  - `close_contact`: steps `37-42`
+  - `open_contact`: steps `77-88`
+  - `close_event`: step `37`
+  - `open_event`: step `77`
+- The first rebalanced retrain on the old dense-band target still stays closed
+  from chunk 0 on `episode 0`, so this sparse-event relabeling is now the
+  highest-leverage model-side change to test before another round of sampler or
+  class-weight tuning.

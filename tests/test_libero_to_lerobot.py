@@ -118,4 +118,4 @@ def test_geometry_contact_labels_follow_object_relative_gates():
 
     np.testing.assert_array_equal(close_contact, [0.0, 1.0, 0.0, 0.0])
     np.testing.assert_array_equal(open_contact, [0.0, 0.0, 1.0, 1.0])
-    np.testing.assert_array_equal(gripper_event, [0, 1, 2, 2])
+    np.testing.assert_array_equal(gripper_event, [0, 1, 2, 0])

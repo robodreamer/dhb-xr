@@ -33,6 +33,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
+LIBERO_GRIPPER_OPEN_QPOS_THRESHOLD = 0.015
+
 LIBERO_IMPORT_CANDIDATES = [
     "/home/andypark/Projects/repos/LIBERO",
     "/home/andypark/Projects/repos/LIBERO-PRO",
@@ -203,9 +205,9 @@ def stage_encode_gt(args):
             all_trajectories[f"{key}_pos"] = shifted_pos
             all_trajectories[f"{key}_quat"] = decoded_quat
 
-    # Gripper commands: qpos > 0.015 = open (-1), else close (1)
+    # Gripper commands: qpos > threshold = open (-1), else close (1)
     grip_qpos = demo_gripper[:, 0]
-    gripper_cmd = np.where(grip_qpos > 0.015, -1.0, 1.0)
+    gripper_cmd = np.where(grip_qpos > LIBERO_GRIPPER_OPEN_QPOS_THRESHOLD, -1.0, 1.0)
 
     # Save
     np.savez(
@@ -386,7 +388,7 @@ def stage_predict(args):
 
         # Gripper from this demo
         grip_qpos = demo_gripper[:, 0]
-        gripper_cmd = np.where(grip_qpos > 0.015, -1.0, 1.0)
+        gripper_cmd = np.where(grip_qpos > LIBERO_GRIPPER_OPEN_QPOS_THRESHOLD, -1.0, 1.0)
 
         # Store trajectory for each offset
         # For offset conditions: re-decode from offset initial pose (NOT just shift)
@@ -763,7 +765,14 @@ def stage_sim(args):
         reopen_step = None
         close_snapshot = None
         reopen_snapshot = None
-        last_effective_grip = gripper_cmds[0] if len(gripper_cmds) else -1.0
+        obs_gripper_qpos = obs.get("robot0_gripper_qpos")
+        if obs_gripper_qpos is not None:
+            obs_gripper_qpos = float(np.asarray(obs_gripper_qpos).reshape(-1)[0])
+            last_effective_grip = (
+                -1.0 if obs_gripper_qpos > LIBERO_GRIPPER_OPEN_QPOS_THRESHOLD else 1.0
+            )
+        else:
+            last_effective_grip = -1.0
         executed_trace = []
         append_frame(obs)
 
