@@ -26,6 +26,10 @@
 - [x] Verify the new `phaseaug` config with a real one-step Qwen+DHB train smoke
 - [x] Run a short `phaseaug` warm-start from the old live-best checkpoint
 - [x] Re-run the live checkpoint sweep on the `phaseaug` run and compare against `shorttrain1` / `liveaug1`
+- [x] Add a reach-only live evaluation mode that ignores gripper timing and scores bowl approach + smoothness
+- [x] Run a reach-only live checkpoint sweep on `dhb_starvla_qwen_invsup_shorttrain1`
+- [x] Compare canonical execution against a stripped-down “raw-ish” execution on the best reach checkpoint
+- [ ] Use the reach-only baseline as the main short-horizon target before revisiting learned gripper timing
 
 ## SmolVLA Exit Criteria
 
@@ -98,6 +102,36 @@ Current Stage-1 artifact:
 Interpretation:
 - StarVLA can now produce DHB-decoded EE pose chunks directly from live LIBERO observations on the laptop GPU.
 - The next step is no longer DHB decoding itself; it is handing those chunks into the already-working `embodik` IK / JOINT_POSITION execution stack.
+
+## Reach-Only Baseline
+
+- [x] Add a reach-only mode to live and offline `StarVLA -> DHB -> embodik` evaluators
+- [x] Define reach-only success from bowl-relative EE geometry instead of full task reward
+- [x] Log executed-trajectory smoothness metrics (`mean_accel_mm`, `hold_fraction`, `direction_flip_fraction`, `path_efficiency`)
+- [x] Re-rank `shorttrain1` checkpoints on reach-only live metrics
+- [x] Compare canonical execution vs stripped-down “raw-ish” execution on `shorttrain1/steps_200`
+- [ ] Improve smooth bowl approach under offsets before returning to learned close/open timing
+
+Tracked note:
+- `_workspace/starvla_reach_only_findings.md`
+
+Current reach-only ranking on the representative live cases:
+
+| Step | Avg min bowl XY (m) | Avg min bowl XYZ (m) | Avg IK fails | Avg accel (mm) | Avg hold frac |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 200 | 0.1465 | 0.2954 | 75.5 | 0.2306 | 0.8346 |
+| 100 | 0.2280 | 0.3672 | 76.0 | 0.2385 | 0.8418 |
+| 50 | 0.2500 | 0.3739 | 80.5 | 0.1602 | 0.8836 |
+| 150 | 0.2500 | 0.3740 | 79.5 | 0.1760 | 0.8700 |
+
+Interpretation:
+
+- `shorttrain1/steps_200` remains the best current checkpoint even without any
+  gripper timing in the loop
+- removing clamp / smoothing / overlap / repeated controller substeps makes the
+  same checkpoint worse on both bowl proximity and smoothness
+- so the current bottleneck is still trajectory quality, not mainly execution
+  heuristics
 
 ## First StarVLA→EmbodiK End-To-End Result
 

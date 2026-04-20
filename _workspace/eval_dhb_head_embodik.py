@@ -33,6 +33,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
+from dhb_xr.integration.vla.chunk_rollout import compute_motion_metrics
+
 LIBERO_GRIPPER_OPEN_QPOS_THRESHOLD = 0.015
 
 LIBERO_IMPORT_CANDIDATES = [
@@ -720,6 +722,8 @@ def stage_sim(args):
                        close_gate_xy_m=0.05, close_gate_z_m=0.05,
                        release_gate_xy_m=0.04, release_gate_z_m=0.06,
                        disable_gripper_gates=False,
+                       reach_only=False, reach_threshold_xy_m=0.05,
+                       reach_threshold_z_m=0.08, reach_stop_on_success=False,
                        placement_tail=False, tail_plate_xy_m=0.05,
                        tail_max_release_z_m=0.08, tail_move_steps=12,
                        tail_open_steps=12, tail_lift_steps=12):
@@ -766,6 +770,7 @@ def stage_sim(args):
         reopen_step = None
         close_snapshot = None
         reopen_snapshot = None
+        ee_trace = [np.array(robot.controller.ee_pos, dtype=np.float32).copy()]
         obs_gripper_qpos = obs.get("robot0_gripper_qpos")
         if obs_gripper_qpos is not None:
             obs_gripper_qpos = float(np.asarray(obs_gripper_qpos).reshape(-1)[0])
@@ -777,6 +782,16 @@ def stage_sim(args):
         executed_trace = []
         append_frame(obs)
 
+        def reach_ready(ee_pos_xyz):
+            rel = relative_snapshot(ee_pos_xyz, scene_refs)
+            if "ee_minus_bowl" not in rel:
+                return False
+            ee_minus_bowl = np.asarray(rel["ee_minus_bowl"], dtype=np.float32)
+            return (
+                float(np.linalg.norm(ee_minus_bowl[:2])) <= reach_threshold_xy_m
+                and float(ee_minus_bowl[2]) <= reach_threshold_z_m
+            )
+
         def step_joint_target(q_target, grip_cmd, repeats):
             nonlocal reward
             for _ in range(repeats):
@@ -787,13 +802,14 @@ def stage_sim(args):
                 step_obs, r, done, info = env.step(full_action)
                 if r > reward:
                     reward = r
+                ee_trace.append(np.array(robot.controller.ee_pos, dtype=np.float32).copy())
                 append_frame(step_obs)
             return step_obs
 
         for t in range(n_steps):
             # Clamp gripper index to valid range
             grip_idx = min(t, len(gripper_cmds) - 1)
-            desired_grip = gripper_cmds[grip_idx]
+            desired_grip = -1.0 if reach_only else gripper_cmds[grip_idx]
             ee_pos_pre = np.array(robot.controller.ee_pos)
             effective_grip = desired_grip
 
@@ -849,6 +865,10 @@ def stage_sim(args):
             success = env.check_success()
             if success and success_at is None:
                 success_at = t
+            if reach_only and success_at is None and reach_ready(ee_pos):
+                success_at = t
+            if reach_only and reach_stop_on_success and success_at is not None:
+                break
 
             if t % 20 == 0 or t == n_steps - 1:
                 q_now = np.array(robot._joint_positions)
@@ -857,9 +877,13 @@ def stage_sim(args):
                       f"q_err={q_err:.4f} grip={effective_grip:.0f} "
                       f"{'SUCCESS' if success else ''}")
 
-        tail_applied = False
+        if reach_only and reach_stop_on_success and success_at is not None:
+            tail_applied = False
+        else:
+            tail_applied = False
+
         tail_descend_source_step = None
-        if placement_tail and close_step is not None and reopen_step is None:
+        if (not reach_only) and placement_tail and close_step is not None and reopen_step is None:
             ee_pos_tail_start = np.array(robot.controller.ee_pos)
             rel_tail_start = relative_snapshot(ee_pos_tail_start, scene_refs)
             ee_minus_plate = np.array(rel_tail_start.get("ee_minus_plate", [np.inf, np.inf, np.inf]))
@@ -907,18 +931,22 @@ def stage_sim(args):
         # forcibly reclosing. For placement tasks, force-closing here can undo
         # a late release and masks whether the rollout actually executed the
         # intended open/close sequence.
-        settle_grip = last_effective_grip if len(gripper_cmds) else 1.0
-        for i in range(100):
-            q_target = q_traj[-1, :7]
-            grip = settle_grip
-            obs = step_joint_target(q_target, grip, 1)
-            success = env.check_success()
-            if success and success_at is None:
-                success_at = n_steps + i
-            append_frame(obs)
+        if not (reach_only and reach_stop_on_success and success_at is not None):
+            settle_grip = -1.0 if reach_only else (last_effective_grip if len(gripper_cmds) else 1.0)
+            for i in range(100):
+                q_target = q_traj[-1, :7]
+                grip = settle_grip
+                obs = step_joint_target(q_target, grip, 1)
+                success = env.check_success()
+                if success and success_at is None:
+                    success_at = n_steps + i
+                if reach_only and success_at is None and reach_ready(np.array(robot.controller.ee_pos)):
+                    success_at = n_steps + i
+                append_frame(obs)
 
-        final_success = env.check_success()
+        final_success = bool(success_at is not None) if reach_only else env.check_success()
         ee_final = np.array(robot.controller.ee_pos)
+        motion_metrics = compute_motion_metrics(np.asarray(ee_trace, dtype=np.float32))
         print(f"  Final: EE={ee_final}, success={final_success}, reward={reward:.2f}")
         if success_at is not None:
             print(f"  First success at step {success_at}")
@@ -938,6 +966,10 @@ def stage_sim(args):
             "release_gate_xy_m": float(release_gate_xy_m),
             "release_gate_z_m": float(release_gate_z_m),
             "disable_gripper_gates": bool(disable_gripper_gates),
+            "reach_only": bool(reach_only),
+            "reach_threshold_xy_m": float(reach_threshold_xy_m),
+            "reach_threshold_z_m": float(reach_threshold_z_m),
+            "reach_stop_on_success": bool(reach_stop_on_success),
             "placement_tail": bool(placement_tail),
             "tail_applied": bool(tail_applied),
             "tail_descend_source_step": tail_descend_source_step,
@@ -952,6 +984,7 @@ def stage_sim(args):
                 "bowl_pos": scene_refs.get("bowl_pos").tolist() if scene_refs.get("bowl_pos") is not None else None,
                 "plate_pos": scene_refs.get("plate_pos").tolist() if scene_refs.get("plate_pos") is not None else None,
             },
+            "motion_metrics": motion_metrics,
             "video_path": video_path,
         }
 
@@ -993,6 +1026,10 @@ def stage_sim(args):
                 release_gate_xy_m=args.release_gate_xy_m,
                 release_gate_z_m=args.release_gate_z_m,
                 disable_gripper_gates=args.disable_gripper_gates,
+                reach_only=args.reach_only,
+                reach_threshold_xy_m=args.reach_threshold_xy_m,
+                reach_threshold_z_m=args.reach_threshold_z_m,
+                reach_stop_on_success=args.reach_stop_on_success,
                 placement_tail=args.placement_tail,
                 tail_plate_xy_m=args.tail_plate_xy_m,
                 tail_max_release_z_m=args.tail_max_release_z_m,
@@ -1023,6 +1060,10 @@ def stage_sim(args):
                     close_gate_z_m=args.close_gate_z_m,
                     release_gate_xy_m=args.release_gate_xy_m,
                     release_gate_z_m=args.release_gate_z_m,
+                    reach_only=args.reach_only,
+                    reach_threshold_xy_m=args.reach_threshold_xy_m,
+                    reach_threshold_z_m=args.reach_threshold_z_m,
+                    reach_stop_on_success=args.reach_stop_on_success,
                     placement_tail=args.placement_tail,
                     tail_plate_xy_m=args.tail_plate_xy_m,
                     tail_max_release_z_m=args.tail_max_release_z_m,
@@ -1092,6 +1133,14 @@ if __name__ == "__main__":
                         help="Only allow first reopen when EE Z is below this height above the plate")
     parser.add_argument("--disable-gripper-gates", action="store_true",
                         help="Do not veto close / reopen transitions with live bowl / plate geometry gates.")
+    parser.add_argument("--reach-only", action="store_true",
+                        help="Ignore gripper timing and score smooth reach-to-bowl instead of full task success.")
+    parser.add_argument("--reach-threshold-xy-m", type=float, default=0.05,
+                        help="XY bowl-distance threshold for reach-only success.")
+    parser.add_argument("--reach-threshold-z-m", type=float, default=0.08,
+                        help="Maximum EE height above the bowl for reach-only success.")
+    parser.add_argument("--reach-stop-on-success", action="store_true",
+                        help="Stop executing once the bowl reach criterion is satisfied.")
     parser.add_argument("--placement-tail", action="store_true",
                         help="If still holding near the plate at the end, reuse the lowest recent plate-near joint target before opening")
     parser.add_argument("--tail-plate-xy-m", type=float, default=0.05,

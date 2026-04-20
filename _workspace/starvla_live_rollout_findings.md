@@ -159,6 +159,35 @@ Conclusion:
   state-input noise, e.g. rollout-state perturbation, stronger observation/state
   augmentation, or phase-aware supervision
 
+## Reach-Only Simplification
+
+A dedicated reach-only benchmark is now in place to remove the current gripper
+phase-alignment bottleneck from the next debugging loop.
+
+Tracked note:
+
+- [_workspace/starvla_reach_only_findings.md](/home/andypark/Projects/repos/dhb-xr/_workspace/starvla_reach_only_findings.md)
+
+Most important result:
+
+- the same `shorttrain1/steps_200` checkpoint is still the best current live
+  candidate when the task is simplified to “reach the bowl smoothly”:
+  - `avg_min_bowl_xy_m = 0.1465`
+  - `avg_min_bowl_xyz_m = 0.2954`
+  - `avg_ik_fail_total = 75.5`
+
+And the stripped-down “raw-ish” execution comparison is decisive:
+
+- removing clamp / smoothing / overlap / repeated controller substeps makes the
+  run **worse** on both bowl proximity and smoothness
+- so the current execution-side smoothing is not the main blocker
+- the remaining bottleneck is still the predicted trajectory quality itself
+
+This means the next model-quality target is now unambiguous:
+
+- improve smooth bowl approach under offsets first
+- only after that return to learned close / open timing
+
 ### Phase-aware warm-start follow-up
 
 - config:

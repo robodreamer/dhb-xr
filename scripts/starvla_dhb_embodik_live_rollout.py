@@ -14,7 +14,11 @@ from libero.libero import benchmark, get_libero_path
 from libero.libero.envs import OffScreenRenderEnv
 from omegaconf import OmegaConf
 
-from dhb_xr.integration.vla.chunk_rollout import ChunkRolloutConfig, TrajectoryChunkRunner
+from dhb_xr.integration.vla.chunk_rollout import (
+    ChunkRolloutConfig,
+    TrajectoryChunkRunner,
+    compute_motion_metrics,
+)
 from dhb_xr.integration.vla.libero import (
     libero_obs_quat_to_axis_angle,
 )
@@ -213,6 +217,10 @@ def main() -> None:
     parser.add_argument("--release-gate-xy-m", type=float, default=0.04)
     parser.add_argument("--release-gate-z-m", type=float, default=0.06)
     parser.add_argument("--disable-gripper-gates", action="store_true")
+    parser.add_argument("--reach-only", action="store_true")
+    parser.add_argument("--reach-threshold-xy-m", type=float, default=0.05)
+    parser.add_argument("--reach-threshold-z-m", type=float, default=0.08)
+    parser.add_argument("--reach-stop-on-success", action="store_true")
     parser.add_argument("--output-max", type=float, default=0.5)
     parser.add_argument("--kp", type=float, default=150.0)
     parser.add_argument("--substeps", type=int, default=3)
@@ -333,6 +341,17 @@ def main() -> None:
     min_bowl_xyz_m = float("inf")
     min_plate_xy_m = float("inf")
     min_plate_xyz_m = float("inf")
+    ee_trace = [np.asarray(robot.controller.ee_pos, dtype=np.float32).copy()]
+
+    def reach_ready(ee_pos_xyz: np.ndarray) -> bool:
+        rel = _relative_snapshot(ee_pos_xyz, scene_refs)
+        if "ee_minus_bowl" not in rel:
+            return False
+        ee_minus_bowl = np.asarray(rel["ee_minus_bowl"], dtype=np.float32)
+        return (
+            float(np.linalg.norm(ee_minus_bowl[:2])) <= args.reach_threshold_xy_m
+            and float(ee_minus_bowl[2]) <= args.reach_threshold_z_m
+        )
 
     def update_min_dists(ee_pos_xyz: np.ndarray) -> None:
         nonlocal min_bowl_xy_m, min_bowl_xyz_m, min_plate_xy_m, min_plate_xyz_m
@@ -416,7 +435,7 @@ def main() -> None:
             first_ik_fail_chunk = len(debug_chunks) - 1
 
         for i in range(n_use):
-            desired_grip = float(gripper_cmds[i])
+            desired_grip = -1.0 if args.reach_only else float(gripper_cmds[i])
             ee_pos_pre = np.asarray(robot.controller.ee_pos, dtype=np.float32)
             effective_grip = desired_grip
             rel_pre = _relative_snapshot(ee_pos_pre, scene_refs)
@@ -455,7 +474,9 @@ def main() -> None:
                 if r > reward:
                     reward = float(r)
                 append_frame(writer, obs)
-                update_min_dists(np.asarray(robot.controller.ee_pos, dtype=np.float32))
+                ee_now = np.asarray(robot.controller.ee_pos, dtype=np.float32)
+                ee_trace.append(ee_now.copy())
+                update_min_dists(ee_now)
 
             prev_grip = last_effective_grip
             last_effective_grip = float(effective_grip)
@@ -470,23 +491,36 @@ def main() -> None:
             success = env.check_success()
             if success and success_at is None:
                 success_at = t + i
+            if args.reach_only and success_at is None and reach_ready(ee_pos):
+                success_at = t + i
+            if args.reach_only and args.reach_stop_on_success and success_at is not None:
+                break
+
+        if args.reach_only and args.reach_stop_on_success and success_at is not None:
+            break
 
         t += n_use
 
-    settle_grip = last_effective_grip
-    for i in range(args.settle_steps):
-        action = np.zeros(7, dtype=np.float64)
-        full_action = np.concatenate([action, [settle_grip]])
-        obs, r, done, info = env.step(full_action)
-        if r > reward:
-            reward = float(r)
-        success = env.check_success()
-        if success and success_at is None:
-            success_at = num_demo_steps + i
-        append_frame(writer, obs)
+    if not (args.reach_only and args.reach_stop_on_success and success_at is not None):
+        settle_grip = -1.0 if args.reach_only else last_effective_grip
+        for i in range(args.settle_steps):
+            action = np.zeros(7, dtype=np.float64)
+            full_action = np.concatenate([action, [settle_grip]])
+            obs, r, done, info = env.step(full_action)
+            if r > reward:
+                reward = float(r)
+            ee_now = np.asarray(robot.controller.ee_pos, dtype=np.float32)
+            ee_trace.append(ee_now.copy())
+            success = env.check_success()
+            if success and success_at is None:
+                success_at = num_demo_steps + i
+            if args.reach_only and success_at is None and reach_ready(ee_now):
+                success_at = num_demo_steps + i
+            append_frame(writer, obs)
 
-    final_success = env.check_success()
+    final_success = bool(success_at is not None) if args.reach_only else env.check_success()
     ee_final = np.asarray(robot.controller.ee_pos, dtype=np.float32)
+    motion_metrics = compute_motion_metrics(np.asarray(ee_trace, dtype=np.float32))
     writer.close()
     env.close()
 
@@ -509,6 +543,10 @@ def main() -> None:
         "close_gate_xy_m": float(args.close_gate_xy_m),
         "close_gate_z_m": float(args.close_gate_z_m),
         "disable_gripper_gates": bool(args.disable_gripper_gates),
+        "reach_only": bool(args.reach_only),
+        "reach_threshold_xy_m": float(args.reach_threshold_xy_m),
+        "reach_threshold_z_m": float(args.reach_threshold_z_m),
+        "reach_stop_on_success": bool(args.reach_stop_on_success),
         "success": bool(final_success),
         "success_at": None if success_at is None else int(success_at),
         "reward": float(reward),
@@ -528,6 +566,7 @@ def main() -> None:
             "bowl_ref": scene_refs.get("bowl_ref"),
             "plate_ref": scene_refs.get("plate_ref"),
         },
+        "motion_metrics": motion_metrics,
         "chunks": debug_chunks,
         "video_path": None if video_path is None else str(video_path),
         "overrides": dotlist,

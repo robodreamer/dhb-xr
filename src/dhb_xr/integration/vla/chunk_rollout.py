@@ -109,6 +109,80 @@ def blend_overlap_positions(
     return blended, int(overlap)
 
 
+def compute_motion_metrics(positions: np.ndarray) -> dict[str, float | int | None]:
+    pos = np.asarray(positions, dtype=np.float32)
+    if len(pos) == 0:
+        return {
+            "num_points": 0,
+            "path_length_m": 0.0,
+            "net_displacement_m": 0.0,
+            "path_efficiency": None,
+            "mean_step_mm": 0.0,
+            "std_step_mm": 0.0,
+            "max_step_mm": 0.0,
+            "hold_fraction": 0.0,
+            "mean_accel_mm": 0.0,
+            "max_accel_mm": 0.0,
+            "mean_jerk_mm": 0.0,
+            "max_jerk_mm": 0.0,
+            "direction_flip_fraction": 0.0,
+        }
+
+    if len(pos) == 1:
+        return {
+            "num_points": 1,
+            "path_length_m": 0.0,
+            "net_displacement_m": 0.0,
+            "path_efficiency": None,
+            "mean_step_mm": 0.0,
+            "std_step_mm": 0.0,
+            "max_step_mm": 0.0,
+            "hold_fraction": 1.0,
+            "mean_accel_mm": 0.0,
+            "max_accel_mm": 0.0,
+            "mean_jerk_mm": 0.0,
+            "max_jerk_mm": 0.0,
+            "direction_flip_fraction": 0.0,
+        }
+
+    steps = np.diff(pos, axis=0)
+    step_norms = np.linalg.norm(steps, axis=1)
+    path_length_m = float(step_norms.sum())
+    net_displacement_m = float(np.linalg.norm(pos[-1] - pos[0]))
+    hold_fraction = float(np.mean(step_norms < 1e-4))
+
+    accel = np.diff(steps, axis=0)
+    accel_norms = np.linalg.norm(accel, axis=1) if len(accel) else np.zeros((0,), dtype=np.float32)
+    jerk = np.diff(accel, axis=0)
+    jerk_norms = np.linalg.norm(jerk, axis=1) if len(jerk) else np.zeros((0,), dtype=np.float32)
+
+    direction_flip_fraction = 0.0
+    if len(steps) > 1:
+        prev = steps[:-1]
+        nxt = steps[1:]
+        denom = np.linalg.norm(prev, axis=1) * np.linalg.norm(nxt, axis=1)
+        valid = denom > 1e-8
+        if np.any(valid):
+            cos = np.sum(prev[valid] * nxt[valid], axis=1) / denom[valid]
+            direction_flip_fraction = float(np.mean(cos < 0.0))
+
+    return {
+        "num_points": int(len(pos)),
+        "path_length_m": path_length_m,
+        "net_displacement_m": net_displacement_m,
+        "path_efficiency": None if path_length_m <= 1e-8 else float(net_displacement_m / path_length_m),
+        "mean_step_mm": float(step_norms.mean() * 1000.0),
+        "std_step_mm": float(step_norms.std() * 1000.0),
+        "max_step_mm": float(step_norms.max() * 1000.0),
+        "hold_fraction": hold_fraction,
+        "mean_accel_mm": 0.0 if len(accel_norms) == 0 else float(accel_norms.mean() * 1000.0),
+        "max_accel_mm": 0.0 if len(accel_norms) == 0 else float(accel_norms.max() * 1000.0),
+        "mean_jerk_mm": 0.0 if len(jerk_norms) == 0 else float(jerk_norms.mean() * 1000.0),
+        "max_jerk_mm": 0.0 if len(jerk_norms) == 0 else float(jerk_norms.max() * 1000.0),
+        "direction_flip_fraction": direction_flip_fraction,
+    }
+
+
 @dataclass
 class ChunkRolloutConfig:
     max_first_offset_m: float = 0.0

@@ -45,6 +45,10 @@ def _run_case(
     gripper_source: str,
     init_state_source: str,
     settle_steps: int,
+    reach_only: bool,
+    reach_threshold_xy_m: float,
+    reach_threshold_z_m: float,
+    reach_stop_on_success: bool,
 ) -> dict:
     summary_path = output_dir / (
         f"{checkpoint.stem}_ep{episode_idx}_offset{offset_cm:.1f}cm_summary.json"
@@ -84,6 +88,18 @@ def _run_case(
         str(summary_path),
         "--no-video",
     ]
+    if reach_only:
+        cmd.extend(
+            [
+                "--reach-only",
+                "--reach-threshold-xy-m",
+                str(reach_threshold_xy_m),
+                "--reach-threshold-z-m",
+                str(reach_threshold_z_m),
+            ]
+        )
+        if reach_stop_on_success:
+            cmd.append("--reach-stop-on-success")
     env = dict(os.environ)
     env.setdefault("PYTHONPATH", str(REPO_ROOT / "vendor/starVLA"))
     env.setdefault("WANDB_MODE", "disabled")
@@ -98,12 +114,24 @@ def _aggregate(rows: list[dict]) -> dict:
     min_bowl_xyz_vals = [r.get("min_bowl_xyz_m") for r in rows if r.get("min_bowl_xyz_m") is not None]
     min_bowl_xy_vals = [r.get("min_bowl_xy_m") for r in rows if r.get("min_bowl_xy_m") is not None]
     ik_fail_vals = [r.get("ik_fail_total", 0) for r in rows]
+    accel_vals = [
+        r.get("motion_metrics", {}).get("mean_accel_mm")
+        for r in rows
+        if r.get("motion_metrics", {}).get("mean_accel_mm") is not None
+    ]
+    hold_vals = [
+        r.get("motion_metrics", {}).get("hold_fraction")
+        for r in rows
+        if r.get("motion_metrics", {}).get("hold_fraction") is not None
+    ]
     return {
         "success_count": int(success_count),
         "close_count": int(close_count),
         "avg_min_bowl_xyz_m": None if not min_bowl_xyz_vals else float(sum(min_bowl_xyz_vals) / len(min_bowl_xyz_vals)),
         "avg_min_bowl_xy_m": None if not min_bowl_xy_vals else float(sum(min_bowl_xy_vals) / len(min_bowl_xy_vals)),
         "avg_ik_fail_total": None if not ik_fail_vals else float(sum(ik_fail_vals) / len(ik_fail_vals)),
+        "avg_mean_accel_mm": None if not accel_vals else float(sum(accel_vals) / len(accel_vals)),
+        "avg_hold_fraction": None if not hold_vals else float(sum(hold_vals) / len(hold_vals)),
     }
 
 
@@ -113,6 +141,7 @@ def _sort_key(item: dict):
         -agg["success_count"],
         -agg["close_count"],
         float("inf") if agg["avg_min_bowl_xyz_m"] is None else agg["avg_min_bowl_xyz_m"],
+        float("inf") if agg["avg_mean_accel_mm"] is None else agg["avg_mean_accel_mm"],
         float("inf") if agg["avg_ik_fail_total"] is None else agg["avg_ik_fail_total"],
         item["step"],
     )
@@ -133,6 +162,10 @@ def main() -> None:
     parser.add_argument("--gripper-source", choices=("demo", "model"), default="demo")
     parser.add_argument("--init-state-source", choices=("demo", "benchmark"), default="demo")
     parser.add_argument("--settle-steps", type=int, default=60)
+    parser.add_argument("--reach-only", action="store_true")
+    parser.add_argument("--reach-threshold-xy-m", type=float, default=0.05)
+    parser.add_argument("--reach-threshold-z-m", type=float, default=0.08)
+    parser.add_argument("--reach-stop-on-success", action="store_true")
     parser.add_argument("--output-json", default=None)
     parser.add_argument("--output-md", default=None)
     args = parser.parse_args()
@@ -170,6 +203,10 @@ def main() -> None:
                 gripper_source=args.gripper_source,
                 init_state_source=args.init_state_source,
                 settle_steps=args.settle_steps,
+                reach_only=args.reach_only,
+                reach_threshold_xy_m=args.reach_threshold_xy_m,
+                reach_threshold_z_m=args.reach_threshold_z_m,
+                reach_stop_on_success=args.reach_stop_on_success,
             )
             rows.append(row)
         results.append(
@@ -197,6 +234,10 @@ def main() -> None:
             "gripper_source": args.gripper_source,
             "init_state_source": args.init_state_source,
             "settle_steps": int(args.settle_steps),
+            "reach_only": bool(args.reach_only),
+            "reach_threshold_xy_m": float(args.reach_threshold_xy_m),
+            "reach_threshold_z_m": float(args.reach_threshold_z_m),
+            "reach_stop_on_success": bool(args.reach_stop_on_success),
         },
         "ranked": ranked,
     }
@@ -211,19 +252,21 @@ def main() -> None:
         f"- config: `{args.config_yaml}`",
         f"- cases: {', '.join(f'ep{ep}/offset{offset:.1f}cm' for ep, offset in parsed_cases)}",
         "",
-        "| Rank | Step | Successes | Closes | Avg min bowl XYZ (m) | Avg min bowl XY (m) | Avg IK fails |",
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
+        "| Rank | Step | Successes | Closes | Avg min bowl XYZ (m) | Avg min bowl XY (m) | Avg accel (mm) | Avg hold frac | Avg IK fails |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for rank, item in enumerate(ranked, start=1):
         agg = item["aggregate"]
         md_lines.append(
-            "| {rank} | {step} | {succ} | {close} | {xyz:.4f} | {xy:.4f} | {ik:.1f} |".format(
+            "| {rank} | {step} | {succ} | {close} | {xyz:.4f} | {xy:.4f} | {accel:.1f} | {hold:.3f} | {ik:.1f} |".format(
                 rank=rank,
                 step=item["step"],
                 succ=agg["success_count"],
                 close=agg["close_count"],
                 xyz=float("nan") if agg["avg_min_bowl_xyz_m"] is None else agg["avg_min_bowl_xyz_m"],
                 xy=float("nan") if agg["avg_min_bowl_xy_m"] is None else agg["avg_min_bowl_xy_m"],
+                accel=float("nan") if agg["avg_mean_accel_mm"] is None else agg["avg_mean_accel_mm"],
+                hold=float("nan") if agg["avg_hold_fraction"] is None else agg["avg_hold_fraction"],
                 ik=float("nan") if agg["avg_ik_fail_total"] is None else agg["avg_ik_fail_total"],
             )
         )
