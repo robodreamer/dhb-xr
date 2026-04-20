@@ -109,9 +109,19 @@ def main() -> None:
         "pred_first_action": actions[0, 0].tolist(),
         "pred_last_action": actions[0, -1].tolist(),
     }
-    if traj is not None and "pred_contact_probs" in traj:
+    if traj is not None and "pred_gripper_state_probs" in traj:
+        state_probs = traj["pred_gripper_state_probs"]
+        summary["pred_open_probs_head"] = state_probs[0, :, 0].tolist()
+        if state_probs.shape[-1] > 1:
+            summary["pred_close_probs_head"] = state_probs[0, :, 1].tolist()
+    elif traj is not None and "pred_contact_probs" in traj:
         contact_probs = traj["pred_contact_probs"]
-        if contact_probs.shape[-1] >= 3:
+        contact_mode = str(traj.get("contact_mode", "event"))
+        if contact_mode == "gripper_state":
+            summary["pred_open_probs_head"] = contact_probs[0, :, 0].tolist()
+            if contact_probs.shape[-1] > 1:
+                summary["pred_close_probs_head"] = contact_probs[0, :, 1].tolist()
+        elif contact_probs.shape[-1] >= 3:
             summary["pred_hold_probs_head"] = contact_probs[0, :, 0].tolist()
             summary["pred_close_probs_head"] = contact_probs[0, :, 1].tolist()
             summary["pred_open_probs_head"] = contact_probs[0, :, 2].tolist()
@@ -137,6 +147,10 @@ def main() -> None:
             ].tolist()
         if batch and "dhb.gripper_event" in batch[0]:
             summary["target_gripper_event"] = np.asarray(batch[0]["dhb.gripper_event"], dtype=np.int64)[
+                -actions.shape[1] :
+            ].tolist()
+        if batch and "dhb.gripper_state" in batch[0]:
+            summary["target_gripper_state"] = np.asarray(batch[0]["dhb.gripper_state"], dtype=np.int64)[
                 -actions.shape[1] :
             ].tolist()
 

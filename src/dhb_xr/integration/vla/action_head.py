@@ -79,8 +79,21 @@ if HAS_TORCH:
             contact_pos_weight: float | Sequence[float] = 1.0,
             contact_loss_type: str = "bce",
             contact_class_weight: float | Sequence[float] = 1.0,
+            contact_phase_dim: int = 0,
+            lambda_contact_phase: float = 0.0,
+            contact_phase_loss_type: str = "bce",
+            contact_phase_class_weight: float | Sequence[float] = 1.0,
+            contact_phase_pos_weight: float | Sequence[float] = 1.0,
+            gripper_state_dim: int = 0,
+            lambda_gripper_state: float = 0.0,
+            gripper_state_loss_type: str = "cross_entropy",
+            gripper_state_class_weight: float | Sequence[float] = 1.0,
+            gripper_state_pos_weight: float | Sequence[float] = 1.0,
+            contact_mode: str = "event",
             contact_use_vlm_context: bool = True,
             contact_use_state: bool = True,
+            contact_condition_on_phase: bool = False,
+            gripper_state_condition_on_phase: bool = False,
             action_loss_ignore_gripper: bool = False,
         ):
             super().__init__()
@@ -97,9 +110,47 @@ if HAS_TORCH:
             self.contact_pos_weight = contact_pos_weight
             self.contact_loss_type = contact_loss_type
             self.contact_class_weight = contact_class_weight
+            self.contact_phase_dim = contact_phase_dim
+            self.lambda_contact_phase = lambda_contact_phase
+            self.contact_phase_loss_type = contact_phase_loss_type
+            self.contact_phase_class_weight = contact_phase_class_weight
+            self.contact_phase_pos_weight = contact_phase_pos_weight
+            self.gripper_state_dim = gripper_state_dim
+            self.lambda_gripper_state = lambda_gripper_state
+            self.gripper_state_loss_type = gripper_state_loss_type
+            self.gripper_state_class_weight = gripper_state_class_weight
+            self.gripper_state_pos_weight = gripper_state_pos_weight
+            self.contact_mode = contact_mode
             self.contact_use_vlm_context = contact_use_vlm_context
             self.contact_use_state = contact_use_state
+            self.contact_condition_on_phase = contact_condition_on_phase
+            self.gripper_state_condition_on_phase = gripper_state_condition_on_phase
             self.action_loss_ignore_gripper = action_loss_ignore_gripper
+
+            if self.contact_mode not in {"event", "gripper_state"}:
+                raise ValueError(f"Unsupported contact_mode={self.contact_mode!r}")
+            if self.contact_mode == "gripper_state":
+                if contact_loss_type == "cross_entropy" and contact_dim not in {0, 2}:
+                    raise ValueError(
+                        "gripper_state mode with cross_entropy expects contact_dim=2 "
+                        f"for [open, closed], got {contact_dim}"
+                    )
+                if contact_loss_type != "cross_entropy" and contact_dim not in {0, 1}:
+                    raise ValueError(
+                        "gripper_state mode with BCE expects contact_dim=1, "
+                        f"got {contact_dim}"
+                    )
+            if gripper_state_dim:
+                if gripper_state_loss_type == "cross_entropy" and gripper_state_dim != 2:
+                    raise ValueError(
+                        "gripper_state_loss_type='cross_entropy' expects gripper_state_dim=2 "
+                        f"for [open, closed], got {gripper_state_dim}"
+                    )
+                if gripper_state_loss_type != "cross_entropy" and gripper_state_dim != 1:
+                    raise ValueError(
+                        "gripper_state BCE mode expects gripper_state_dim=1, "
+                        f"got {gripper_state_dim}"
+                    )
 
             # Learnable query positions for each timestep
             self.query_embed = nn.Embedding(action_horizon, hidden_dim)
@@ -151,8 +202,15 @@ if HAS_TORCH:
                 self.action_head = nn.Linear(hidden_dim, action_dim)
 
             self.contact_head = None
+            self.contact_phase_head = None
+            self.contact_phase_proj = None
+            self.gripper_state_head = None
             self.contact_cross_attn = None
-            if contact_dim and contact_dim > 0:
+            if (
+                (contact_dim and contact_dim > 0)
+                or (contact_phase_dim and contact_phase_dim > 0)
+                or (gripper_state_dim and gripper_state_dim > 0)
+            ):
                 contact_in_dim = hidden_dim
                 if contact_use_vlm_context:
                     self.contact_cross_attn = nn.MultiheadAttention(
@@ -164,11 +222,31 @@ if HAS_TORCH:
                     contact_in_dim += hidden_dim
                 if contact_use_state:
                     contact_in_dim += hidden_dim
+                event_in_dim = contact_in_dim
+                if contact_condition_on_phase and contact_phase_dim and contact_phase_dim > 0:
+                    event_in_dim += hidden_dim
+                gripper_state_in_dim = contact_in_dim
+                if gripper_state_condition_on_phase and contact_phase_dim and contact_phase_dim > 0:
+                    gripper_state_in_dim += hidden_dim
                 self.contact_head = nn.Sequential(
-                    nn.Linear(contact_in_dim, hidden_dim),
+                    nn.Linear(event_in_dim, hidden_dim),
                     nn.GELU(),
                     nn.Linear(hidden_dim, contact_dim),
+                ) if contact_dim and contact_dim > 0 else None
+                self.contact_phase_proj = nn.Sequential(
+                    nn.Linear(contact_in_dim, hidden_dim),
+                    nn.GELU(),
+                ) if contact_phase_dim and contact_phase_dim > 0 else None
+                self.contact_phase_head = (
+                    nn.Linear(hidden_dim, contact_phase_dim)
+                    if contact_phase_dim and contact_phase_dim > 0
+                    else None
                 )
+                self.gripper_state_head = nn.Sequential(
+                    nn.Linear(gripper_state_in_dim, hidden_dim),
+                    nn.GELU(),
+                    nn.Linear(hidden_dim, gripper_state_dim),
+                ) if gripper_state_dim and gripper_state_dim > 0 else None
 
         def _invariant_loss(self, pred_inv: torch.Tensor, target_invariants: torch.Tensor) -> torch.Tensor:
             """Compute invariant loss with optional terminal-step upweighting."""
@@ -193,6 +271,8 @@ if HAS_TORCH:
             target_invariants: Optional[torch.Tensor] = None,
             target_actions: Optional[torch.Tensor] = None,
             target_contact: Optional[torch.Tensor] = None,
+            target_contact_phase: Optional[torch.Tensor] = None,
+            target_gripper_state: Optional[torch.Tensor] = None,
         ) -> Dict[str, torch.Tensor]:
             """
             Forward pass: predict DHB invariants from VLM hidden states.
@@ -252,7 +332,9 @@ if HAS_TORCH:
                 result["pred_actions"] = pred_actions
 
             pred_contact_logits = None
-            if self.contact_head is not None:
+            pred_contact_phase_logits = None
+            pred_gripper_state_logits = None
+            if self.contact_head is not None or self.contact_phase_head is not None or self.gripper_state_head is not None:
                 contact_inputs = [decoded]
                 if self.contact_use_vlm_context:
                     contact_vlm_ctx, _ = self.contact_cross_attn(
@@ -269,12 +351,47 @@ if HAS_TORCH:
                         zeros = torch.zeros_like(decoded)
                         contact_inputs.append(zeros)
                 contact_features = torch.cat(contact_inputs, dim=-1)
-                pred_contact_logits = self.contact_head(contact_features)  # (B, T, contact_dim)
-                result["pred_contact_logits"] = pred_contact_logits
-                if self.contact_loss_type == "cross_entropy":
-                    result["pred_contact_probs"] = pred_contact_logits.softmax(dim=-1)
-                else:
-                    result["pred_contact_probs"] = pred_contact_logits.sigmoid()
+                phase_features = None
+                if self.contact_phase_head is not None:
+                    phase_features = self.contact_phase_proj(contact_features)
+                    pred_contact_phase_logits = self.contact_phase_head(phase_features)
+                    if self.contact_phase_loss_type == "cross_entropy":
+                        if pred_contact_phase_logits.shape[-1] != 3:
+                            raise ValueError(
+                                "contact_phase_loss_type='cross_entropy' requires contact_phase_dim=3 "
+                                f"for [none, close_phase, open_phase], got "
+                                f"{pred_contact_phase_logits.shape[-1]}"
+                            )
+                        result["pred_contact_phase_probs"] = pred_contact_phase_logits.softmax(dim=-1)
+                    else:
+                        result["pred_contact_phase_probs"] = pred_contact_phase_logits.sigmoid()
+                    result["pred_contact_phase_logits"] = pred_contact_phase_logits
+                if self.contact_head is not None:
+                    event_features = contact_features
+                    if (
+                        self.contact_condition_on_phase
+                        and pred_contact_phase_logits is not None
+                        and self.contact_phase_dim > 0
+                        and phase_features is not None
+                    ):
+                        event_features = torch.cat([event_features, phase_features], dim=-1)
+                    pred_contact_logits = self.contact_head(event_features)  # (B, T, contact_dim)
+                    result["pred_contact_logits"] = pred_contact_logits
+                    result["contact_mode"] = self.contact_mode
+                    if self.contact_loss_type == "cross_entropy":
+                        result["pred_contact_probs"] = pred_contact_logits.softmax(dim=-1)
+                    else:
+                        result["pred_contact_probs"] = pred_contact_logits.sigmoid()
+                if self.gripper_state_head is not None:
+                    gripper_state_features = contact_features
+                    if self.gripper_state_condition_on_phase and phase_features is not None:
+                        gripper_state_features = torch.cat([gripper_state_features, phase_features], dim=-1)
+                    pred_gripper_state_logits = self.gripper_state_head(gripper_state_features)
+                    result["pred_gripper_state_logits"] = pred_gripper_state_logits
+                    if self.gripper_state_loss_type == "cross_entropy":
+                        result["pred_gripper_state_probs"] = pred_gripper_state_logits.softmax(dim=-1)
+                    else:
+                        result["pred_gripper_state_probs"] = pred_gripper_state_logits.sigmoid()
 
             # ── Training loss (aligned with LEGATO manuscript Section 7) ──
             #
@@ -396,6 +513,177 @@ if HAS_TORCH:
                     )
                 result["loss_contact"] = loss_contact
                 total = self.lambda_contact * loss_contact if total is None else total + self.lambda_contact * loss_contact
+
+            if target_contact_phase is not None and pred_contact_phase_logits is not None:
+                if self.contact_phase_loss_type == "cross_entropy":
+                    phase_class_weight_values = None
+                    if not isinstance(self.contact_phase_class_weight, (str, bytes)):
+                        try:
+                            phase_class_weight_values = list(self.contact_phase_class_weight)
+                        except TypeError:
+                            phase_class_weight_values = None
+
+                    if phase_class_weight_values is not None:
+                        phase_class_weight = torch.as_tensor(
+                            phase_class_weight_values,
+                            device=pred_contact_phase_logits.device,
+                            dtype=pred_contact_phase_logits.dtype,
+                        )
+                        if phase_class_weight.numel() == 1:
+                            phase_class_weight = phase_class_weight.expand(pred_contact_phase_logits.shape[-1])
+                        elif phase_class_weight.numel() != pred_contact_phase_logits.shape[-1]:
+                            raise ValueError(
+                                "contact_phase_class_weight must be scalar or match categorical phase classes; "
+                                f"got {phase_class_weight.numel()} values for phase logits="
+                                f"{pred_contact_phase_logits.shape[-1]}"
+                            )
+                    else:
+                        phase_class_weight = torch.full(
+                            (pred_contact_phase_logits.shape[-1],),
+                            float(self.contact_phase_class_weight),
+                            device=pred_contact_phase_logits.device,
+                            dtype=pred_contact_phase_logits.dtype,
+                        )
+
+                    if target_contact_phase.ndim == pred_contact_phase_logits.ndim:
+                        target_contact_phase_ce = target_contact_phase.argmax(dim=-1)
+                    else:
+                        target_contact_phase_ce = target_contact_phase
+                    target_contact_phase_ce = target_contact_phase_ce.to(
+                        device=pred_contact_phase_logits.device,
+                        dtype=torch.long,
+                    )
+                    loss_contact_phase = F.cross_entropy(
+                        pred_contact_phase_logits.reshape(-1, pred_contact_phase_logits.shape[-1]),
+                        target_contact_phase_ce.reshape(-1),
+                        weight=phase_class_weight,
+                    )
+                else:
+                    phase_pos_weight_values = None
+                    if not isinstance(self.contact_phase_pos_weight, (str, bytes)):
+                        try:
+                            phase_pos_weight_values = list(self.contact_phase_pos_weight)
+                        except TypeError:
+                            phase_pos_weight_values = None
+
+                    if phase_pos_weight_values is not None:
+                        phase_pos_weight = torch.as_tensor(
+                            phase_pos_weight_values,
+                            device=pred_contact_phase_logits.device,
+                            dtype=pred_contact_phase_logits.dtype,
+                        )
+                        if phase_pos_weight.numel() == 1:
+                            phase_pos_weight = phase_pos_weight.expand(pred_contact_phase_logits.shape[-1])
+                        elif phase_pos_weight.numel() != pred_contact_phase_logits.shape[-1]:
+                            raise ValueError(
+                                "contact_phase_pos_weight must be scalar or match contact_phase_dim; "
+                                f"got {phase_pos_weight.numel()} values for contact_phase_dim="
+                                f"{pred_contact_phase_logits.shape[-1]}"
+                            )
+                    else:
+                        phase_pos_weight = torch.full(
+                            (pred_contact_phase_logits.shape[-1],),
+                            float(self.contact_phase_pos_weight),
+                            device=pred_contact_phase_logits.device,
+                            dtype=pred_contact_phase_logits.dtype,
+                        )
+                    loss_contact_phase = F.binary_cross_entropy_with_logits(
+                        pred_contact_phase_logits,
+                        target_contact_phase,
+                        pos_weight=phase_pos_weight,
+                    )
+                result["loss_contact_phase"] = loss_contact_phase
+                total = (
+                    self.lambda_contact_phase * loss_contact_phase
+                    if total is None
+                    else total + self.lambda_contact_phase * loss_contact_phase
+                )
+
+            if target_gripper_state is not None and pred_gripper_state_logits is not None:
+                if self.gripper_state_loss_type == "cross_entropy":
+                    class_weight_values = None
+                    if not isinstance(self.gripper_state_class_weight, (str, bytes)):
+                        try:
+                            class_weight_values = list(self.gripper_state_class_weight)
+                        except TypeError:
+                            class_weight_values = None
+
+                    if class_weight_values is not None:
+                        class_weight = torch.as_tensor(
+                            class_weight_values,
+                            device=pred_gripper_state_logits.device,
+                            dtype=pred_gripper_state_logits.dtype,
+                        )
+                        if class_weight.numel() == 1:
+                            class_weight = class_weight.expand(pred_gripper_state_logits.shape[-1])
+                        elif class_weight.numel() != pred_gripper_state_logits.shape[-1]:
+                            raise ValueError(
+                                "gripper_state_class_weight must be scalar or match gripper_state_dim; "
+                                f"got {class_weight.numel()} values for gripper_state_dim="
+                                f"{pred_gripper_state_logits.shape[-1]}"
+                            )
+                    else:
+                        class_weight = torch.full(
+                            (pred_gripper_state_logits.shape[-1],),
+                            float(self.gripper_state_class_weight),
+                            device=pred_gripper_state_logits.device,
+                            dtype=pred_gripper_state_logits.dtype,
+                        )
+
+                    if target_gripper_state.ndim == pred_gripper_state_logits.ndim:
+                        target_gripper_state_ce = target_gripper_state.argmax(dim=-1)
+                    else:
+                        target_gripper_state_ce = target_gripper_state
+                    target_gripper_state_ce = target_gripper_state_ce.to(
+                        device=pred_gripper_state_logits.device,
+                        dtype=torch.long,
+                    )
+                    loss_gripper_state = F.cross_entropy(
+                        pred_gripper_state_logits.reshape(-1, pred_gripper_state_logits.shape[-1]),
+                        target_gripper_state_ce.reshape(-1),
+                        weight=class_weight,
+                    )
+                else:
+                    pos_weight_values = None
+                    if not isinstance(self.gripper_state_pos_weight, (str, bytes)):
+                        try:
+                            pos_weight_values = list(self.gripper_state_pos_weight)
+                        except TypeError:
+                            pos_weight_values = None
+
+                    if pos_weight_values is not None:
+                        pos_weight = torch.as_tensor(
+                            pos_weight_values,
+                            device=pred_gripper_state_logits.device,
+                            dtype=pred_gripper_state_logits.dtype,
+                        )
+                        if pos_weight.numel() == 1:
+                            pos_weight = pos_weight.expand(pred_gripper_state_logits.shape[-1])
+                        elif pos_weight.numel() != pred_gripper_state_logits.shape[-1]:
+                            raise ValueError(
+                                "gripper_state_pos_weight must be scalar or match gripper_state_dim; "
+                                f"got {pos_weight.numel()} values for gripper_state_dim="
+                                f"{pred_gripper_state_logits.shape[-1]}"
+                            )
+                    else:
+                        pos_weight = torch.full(
+                            (pred_gripper_state_logits.shape[-1],),
+                            float(self.gripper_state_pos_weight),
+                            device=pred_gripper_state_logits.device,
+                            dtype=pred_gripper_state_logits.dtype,
+                        )
+                    loss_gripper_state = F.binary_cross_entropy_with_logits(
+                        pred_gripper_state_logits,
+                        target_gripper_state,
+                        pos_weight=pos_weight,
+                    )
+
+                result["loss_gripper_state"] = loss_gripper_state
+                total = (
+                    self.lambda_gripper_state * loss_gripper_state
+                    if total is None
+                    else total + self.lambda_gripper_state * loss_gripper_state
+                )
 
             if total is not None:
                 result["loss"] = total

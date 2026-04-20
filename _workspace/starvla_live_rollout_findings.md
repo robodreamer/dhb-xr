@@ -363,3 +363,79 @@ Most likely next steps:
 2. training with state / observation perturbations closer to rollout conditions
 3. later, augmentation studies using simulation or world-model spatial diversity
    to improve online replanning robustness
+
+## Learned Gripper Token Follow-up
+
+The first corrected dense-state gripper run changes the diagnosis again.
+
+Checkpoint:
+
+- `_workspace/starvla_runs/dhb_starvla_qwen_gripper_multitask4/checkpoints/steps_200_pytorch_model.pt`
+
+What changed before this probe:
+
+- `dhb.gripper_state` is now rebuilt from geometry-aligned close/open events
+  instead of raw demo occupancy
+- event / phase chunk sampling no longer hides a midpoint-centering bias
+- live and offline sim evaluators now support `--disable-gripper-gates`
+  so a learned gripper token can be evaluated without the legacy bowl / plate
+  veto overriding it at runtime
+
+Key findings:
+
+1. The learned gripper branch is no longer dead.
+
+   Under the old runtime vetoes, the canonical offline sweep looked always-open.
+   That turned out to be misleading. The learned close commands survive through
+   Stage 1, pack, and IK.
+
+2. The learned token is still phase-misaligned.
+
+   In the offline Stage-1 reference demos:
+
+   - `episode 0`: closes at `20-23`
+   - `episode 1`: closes at `52-55`
+   - `episode 10`: never closes
+
+   These are all misaligned relative to the geometry-conditioned target phases.
+
+3. Removing the runtime vetoes does not recover success yet.
+
+   Offline no-gate canonical sweep:
+
+   - `0 cm`: `0/3`
+   - `3 cm`: `0/3`
+
+   But it does reveal real learned transitions:
+
+   - `0 cm seed 0`: close at `20`, reopen at `24`
+   - `0 cm seed 1`: close at `52`, reopen at `56`
+
+4. True live learned-gripper rollout also fails.
+
+   Artifact:
+
+   - `_workspace/starvla_runs/dhb_starvla_qwen_gripper_multitask4/live_rollout_ep0_offset0_step200_modelgrip_nogate_summary.json`
+
+   Result:
+
+   - `success = false`
+   - `close_step = 4`
+   - `reopen_step = 8`
+   - `ik_fail_total = 82`
+   - `min_bowl_xy_m ≈ 0.210`
+
+Interpretation:
+
+- The current gap is no longer “runtime gating suppressed the learned token.”
+- The learned token now acts, but it acts at the wrong phase under live
+  replanning.
+- The older offline demo-conditioned Stage-1 loop is also a biased evaluator
+  for learned gripper timing, because an early learned close is followed by a
+  replan on the demo’s still-open observation stream.
+
+Current best read:
+
+- learned gripper evaluation should prefer the live rollout path
+- the next lift should come from phase-alignment training / checkpoint
+  selection, not more execution-side heuristics

@@ -701,3 +701,50 @@ Interpretation:
   from chunk 0 on `episode 0`, so this sparse-event relabeling is now the
   highest-leverage model-side change to test before another round of sampler or
   class-weight tuning.
+
+### Dense Gripper State, Geometry-Aligned
+
+- [x] Rebuild `dhb.gripper_state` from geometry-aligned close/open events
+- [x] Remove hidden midpoint anchoring from event / phase chunk sampling
+- [x] Tighten `QwenDHB` so gripper-focused runs fail fast if DHB labels are
+  missing
+- [x] Probe corrected dense-state checkpoints on reference demos before full
+  rollouts
+- [x] Run the best corrected dense-state checkpoint through the frozen offline
+  canonical `StarVLA -> DHB -> embodik` loop
+- [x] Remove runtime bowl / plate vetoes from learned-gripper evaluation via an
+  explicit `--disable-gripper-gates` flag
+- [x] Recheck live rollout with learned gripper and no runtime vetoes
+
+Interpretation:
+- The corrected dense-state path is materially better than the earlier event
+  token runs:
+  - `multitask4/steps_100` is the healthiest startup checkpoint
+  - `multitask4/steps_200` is the first checkpoint that both stays open at
+    chunk start and later predicts real closes on reference demos
+- Reference Stage-1 close windows for `multitask4/steps_200` are:
+  - `episode 0`: closed at steps `20-23`
+  - `episode 1`: closed at steps `52-55`
+  - `episode 10`: no close
+- Under the old Stage-3 geometry vetoes, these learned closes were silently
+  suppressed and the rollout looked always-open. That was an evaluation
+  contract bug for learned-gripper runs, not evidence that the head was dead.
+- With the vetoes disabled:
+  - offline canonical sweep is still `0/3` at `0 cm` and `0/3` at `3 cm`
+  - but real close / reopen events now appear in sim for seeds `0` and `1`
+- The stricter live rollout with learned gripper and no vetoes also still fails:
+  - `episode 0`, `offset 0 cm`, `steps_200`
+  - `close_step = 4`
+  - `reopen_step = 8`
+  - `ik_fail_total = 82`
+  - `min_bowl_xy_m ≈ 0.210`
+- So the current bottleneck is no longer “gripper branch is dead.” It is phase
+  alignment under live replanning:
+  - seed `0` closes far too early
+  - seed `1` closes too late and reopens too quickly
+  - seed `2` never closes
+- This also exposes a limitation of the offline demo-conditioned Stage-1 loop
+  for learned gripper evaluation: if the learned policy closes earlier than the
+  demo, the next replan still sees the demo’s open-gripper observation, which
+  biases it back toward reopening. Live evaluation is therefore the more honest
+  signal for learned gripper timing than the frozen offline canonical loop.

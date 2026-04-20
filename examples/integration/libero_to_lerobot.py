@@ -253,7 +253,9 @@ class _LiberoGeometryLabeler:
             plate_rel.append(np.asarray(obs[self.plate_key], dtype=np.float32))
         return np.stack(bowl_rel, axis=0), np.stack(plate_rel, axis=0)
 
-    def build_labels(self, sim_states: np.ndarray, gripper_open: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def build_labels(
+        self, sim_states: np.ndarray, gripper_open: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         bowl_rel, plate_rel = self.replay_relative_snapshots(sim_states)
         return _geometry_contact_labels(
             bowl_rel=bowl_rel,
@@ -389,13 +391,18 @@ def _geometry_contact_labels(
     close_gate_z_m: float = LIBERO_CLOSE_GATE_Z_M,
     release_gate_xy_m: float = LIBERO_RELEASE_GATE_XY_M,
     release_gate_z_m: float = LIBERO_RELEASE_GATE_Z_M,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    event_onset_steps: int = 1,
+    close_phase_steps: int = 6,
+    open_phase_steps: int = 6,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Build close/open labels from replayed object-relative geometry.
 
     This keeps the same exported schema as the transition-based path:
-    ``dhb.close_contact`` and ``dhb.open_contact`` are float masks marking
-    bowl-/plate-ready occupancy, while ``dhb.gripper_event`` is a sparse
-    transition token: ``0=hold, 1=close, 2=open``.
+    ``dhb.close_contact`` and ``dhb.open_contact`` are short geometry-
+    conditioned phase windows after entering the bowl-/plate-ready regions.
+    ``dhb.gripper_event`` is a sparse onset token inside those phases:
+    ``0=hold, 1=close, 2=open``. The categorical ``dhb.gripper_phase`` field
+    uses the same class ids for dense phase supervision.
     """
     bowl_rel = np.asarray(bowl_rel, dtype=np.float32)
     plate_rel = np.asarray(plate_rel, dtype=np.float32)
@@ -423,25 +430,85 @@ def _geometry_contact_labels(
         & (plate_rel[:, 2] <= release_gate_z_m)
     )
 
-    close_contact = (
+    close_ready_mask = (
         (open_now > 0.5)
         & close_ready
         & (~has_opened_after_close)
-    ).astype(np.float32)
-    open_contact = (
+    )
+    open_ready_mask = (
         (open_now <= 0.5)
         & release_ready
         & has_closed_before
-    ).astype(np.float32)
+    )
+
+    def _phase_window_labels(ready_mask: np.ndarray, window_steps: int) -> np.ndarray:
+        ready_mask = np.asarray(ready_mask, dtype=bool)
+        phase = np.zeros(len(ready_mask), dtype=np.float32)
+        phase_steps = max(1, int(window_steps))
+        onset = ready_mask.copy()
+        onset[1:] &= ~ready_mask[:-1]
+        for idx in np.flatnonzero(onset):
+            end = min(len(phase), idx + phase_steps)
+            phase[idx:end] = np.maximum(phase[idx:end], ready_mask[idx:end].astype(np.float32))
+        return phase
+
+    close_contact = _phase_window_labels(close_ready_mask, close_phase_steps)
+    open_contact = _phase_window_labels(open_ready_mask, open_phase_steps)
+    onset_steps = max(1, int(event_onset_steps))
     close_edge = close_contact > 0.5
     close_edge[1:] &= ~(close_contact[:-1] > 0.5)
     open_edge = open_contact > 0.5
     open_edge[1:] &= ~(open_contact[:-1] > 0.5)
 
     gripper_event = np.zeros(len(open_now), dtype=np.int64)
-    gripper_event[close_edge] = 1
-    gripper_event[open_edge] = 2
-    return close_contact, open_contact, gripper_event
+    for idx in np.flatnonzero(close_edge):
+        end = min(len(gripper_event), idx + onset_steps)
+        gripper_event[idx:end] = 1
+    for idx in np.flatnonzero(open_edge):
+        end = min(len(gripper_event), idx + onset_steps)
+        gripper_event[idx:end] = 2
+    gripper_phase = np.zeros(len(open_now), dtype=np.int64)
+    gripper_phase[close_contact > 0.5] = 1
+    gripper_phase[open_contact > 0.5] = 2
+    return close_contact, open_contact, gripper_event, gripper_phase
+
+
+def _gripper_state_from_events(
+    *,
+    gripper_open: np.ndarray,
+    close_contact: np.ndarray,
+    open_contact: np.ndarray,
+) -> np.ndarray:
+    """Build dense desired gripper state from transition onsets.
+
+    Returns categorical labels with ``0=open`` and ``1=closed``. Unlike the raw
+    demo qpos trace, this keeps dense state supervision aligned with the same
+    geometry/phase transition contract used for ``dhb.gripper_event`` and
+    ``dhb.gripper_phase``.
+    """
+    open_now = np.asarray(gripper_open, dtype=np.float32).reshape(-1)
+    close_contact = np.asarray(close_contact, dtype=np.float32).reshape(-1)
+    open_contact = np.asarray(open_contact, dtype=np.float32).reshape(-1)
+    if not (len(open_now) == len(close_contact) == len(open_contact)):
+        raise ValueError(
+            "gripper state labels must share the same length: "
+            f"open={open_now.shape}, close={close_contact.shape}, release={open_contact.shape}"
+        )
+
+    close_edge = close_contact > 0.5
+    close_edge[1:] &= ~(close_contact[:-1] > 0.5)
+    open_edge = open_contact > 0.5
+    open_edge[1:] &= ~(open_contact[:-1] > 0.5)
+
+    is_closed = bool(open_now[0] <= 0.5)
+    state = np.zeros(len(open_now), dtype=np.int64)
+    for idx in range(len(open_now)):
+        if close_edge[idx]:
+            is_closed = True
+        if open_edge[idx]:
+            is_closed = False
+        state[idx] = 1 if is_closed else 0
+    return state
 
 
 def list_demos_in_file(h5_path: Path) -> List[int]:
@@ -605,7 +672,7 @@ def create_episode_dataframe(
     action_vector = demo_data["delta_actions"].astype(np.float32)
     gripper_open = (demo_data["gripper_state"][:, 0] > LIBERO_GRIPPER_OPEN_QPOS_THRESHOLD).astype(np.float32)
     if geometry_labeler is not None and demo_data.get("sim_states") is not None:
-        close_contact, open_contact, gripper_event = geometry_labeler.build_labels(
+        close_contact, open_contact, gripper_event, gripper_phase = geometry_labeler.build_labels(
             demo_data["sim_states"],
             gripper_open,
         )
@@ -613,6 +680,14 @@ def create_episode_dataframe(
         close_contact = _event_transition_labels(gripper_open, transition="close")
         open_contact = _event_transition_labels(gripper_open, transition="open")
         gripper_event = _event_class_labels(gripper_open)
+        gripper_phase = np.zeros_like(gripper_event, dtype=np.int64)
+        gripper_phase[close_contact > 0.5] = 1
+        gripper_phase[open_contact > 0.5] = 2
+    gripper_state = _gripper_state_from_events(
+        gripper_open=gripper_open,
+        close_contact=close_contact,
+        open_contact=open_contact,
+    )
     
     # Build one parquet row per environment step. The StarVLA LeRobot loader
     # expects trajectory data to be indexed by timestep inside each episode
@@ -663,7 +738,9 @@ def create_episode_dataframe(
 
     data_dict["dhb.close_contact"] = close_contact.astype(np.float32).tolist()
     data_dict["dhb.open_contact"] = open_contact.astype(np.float32).tolist()
+    data_dict["dhb.gripper_state"] = gripper_state.astype(np.int64).tolist()
     data_dict["dhb.gripper_event"] = gripper_event.astype(np.int64).tolist()
+    data_dict["dhb.gripper_phase"] = gripper_phase.astype(np.int64).tolist()
     
     df = pd.DataFrame(data_dict)
     return df

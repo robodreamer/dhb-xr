@@ -212,6 +212,7 @@ def main() -> None:
     parser.add_argument("--close-gate-z-m", type=float, default=0.05)
     parser.add_argument("--release-gate-xy-m", type=float, default=0.04)
     parser.add_argument("--release-gate-z-m", type=float, default=0.06)
+    parser.add_argument("--disable-gripper-gates", action="store_true")
     parser.add_argument("--output-max", type=float, default=0.5)
     parser.add_argument("--kp", type=float, default=150.0)
     parser.add_argument("--substeps", type=int, default=3)
@@ -432,15 +433,17 @@ def main() -> None:
                 and float(ee_minus_plate[2]) <= args.release_gate_z_m
             )
 
-            # In the live receding-horizon loop, demo or model gripper commands are
-            # only a phase prior. Actual close / release should still respect the
-            # live geometry to avoid grasping or releasing far from the object.
-            if desired_grip > 0 and last_effective_grip <= 0:
-                if not close_ready:
-                    effective_grip = -1.0
-            if desired_grip <= 0 and last_effective_grip > 0:
-                if not release_ready:
-                    effective_grip = 1.0
+            # Geometry vetoes are useful for replayed demo timing, but they
+            # should be disable-able once the gripper token is retrained from
+            # geometry-conditioned labels and is meant to act directly from
+            # perception, state, and the current DHB plan.
+            if not args.disable_gripper_gates:
+                if desired_grip > 0 and last_effective_grip <= 0:
+                    if not close_ready:
+                        effective_grip = -1.0
+                if desired_grip <= 0 and last_effective_grip > 0:
+                    if not release_ready:
+                        effective_grip = 1.0
 
             for _ in range(args.substeps):
                 q_target = q_chunk[i, :7]
@@ -505,6 +508,7 @@ def main() -> None:
         "init_state_l2_diff": float(np.linalg.norm(demo_init_state - benchmark_init_state)),
         "close_gate_xy_m": float(args.close_gate_xy_m),
         "close_gate_z_m": float(args.close_gate_z_m),
+        "disable_gripper_gates": bool(args.disable_gripper_gates),
         "success": bool(final_success),
         "success_at": None if success_at is None else int(success_at),
         "reward": float(reward),

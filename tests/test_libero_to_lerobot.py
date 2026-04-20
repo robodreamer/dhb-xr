@@ -7,6 +7,7 @@ from scipy.spatial.transform import Rotation
 from examples.integration.libero_to_lerobot import (
     _event_class_labels,
     _event_transition_labels,
+    _gripper_state_from_events,
     _geometry_contact_labels,
     create_episode_dataframe,
     load_libero_demo,
@@ -58,19 +59,25 @@ def test_create_episode_dataframe_uses_axis_angle_state_and_delta_actions(tmp_pa
     assert "dhb.angular_invariants" in df.columns
     assert "dhb.close_contact" in df.columns
     assert "dhb.open_contact" in df.columns
+    assert "dhb.gripper_state" in df.columns
     assert "dhb.gripper_event" in df.columns
+    assert "dhb.gripper_phase" in df.columns
     lin0 = np.asarray(df.iloc[0]["dhb.linear_invariants"], dtype=np.float32)
     ang0 = np.asarray(df.iloc[0]["dhb.angular_invariants"], dtype=np.float32)
     close = np.asarray(df["dhb.close_contact"], dtype=np.float32)
     open_ = np.asarray(df["dhb.open_contact"], dtype=np.float32)
+    gripper_state = np.asarray(df["dhb.gripper_state"], dtype=np.int64)
     gripper_event = np.asarray(df["dhb.gripper_event"], dtype=np.int64)
+    gripper_phase = np.asarray(df["dhb.gripper_phase"], dtype=np.int64)
     assert lin0.shape == (4,)
     assert ang0.shape == (4,)
     assert np.isfinite(lin0).all()
     assert np.isfinite(ang0).all()
     np.testing.assert_allclose(close, [0.0, 0.0], atol=1e-6)
     np.testing.assert_allclose(open_, [1.0, 2.0 / 3.0], atol=1e-6)
+    np.testing.assert_array_equal(gripper_state, [0, 0])
     np.testing.assert_array_equal(gripper_event, [2, 2])
+    np.testing.assert_array_equal(gripper_phase, [2, 2])
 
 
 def test_event_transition_labels_mark_close_and_open_windows():
@@ -110,7 +117,7 @@ def test_geometry_contact_labels_follow_object_relative_gates():
         dtype=np.float32,
     )
 
-    close_contact, open_contact, gripper_event = _geometry_contact_labels(
+    close_contact, open_contact, gripper_event, gripper_phase = _geometry_contact_labels(
         bowl_rel=bowl_rel,
         plate_rel=plate_rel,
         gripper_open=gripper_open,
@@ -119,3 +126,50 @@ def test_geometry_contact_labels_follow_object_relative_gates():
     np.testing.assert_array_equal(close_contact, [0.0, 1.0, 0.0, 0.0])
     np.testing.assert_array_equal(open_contact, [0.0, 0.0, 1.0, 1.0])
     np.testing.assert_array_equal(gripper_event, [0, 1, 2, 0])
+    np.testing.assert_array_equal(gripper_phase, [0, 1, 2, 2])
+
+
+def test_geometry_contact_labels_use_short_phase_windows_after_onset():
+    gripper_open = np.ones(10, dtype=np.float32)
+    bowl_rel = np.array(
+        [
+            [0.08, 0.00, 0.08],  # not close-ready yet
+            [0.01, 0.00, 0.03],
+            [0.01, 0.00, 0.03],
+            [0.01, 0.00, 0.03],
+            [0.01, 0.00, 0.03],
+            [0.01, 0.00, 0.03],
+            [0.01, 0.00, 0.03],
+            [0.01, 0.00, 0.03],
+            [0.01, 0.00, 0.03],
+            [0.08, 0.00, 0.08],  # leaves the region later
+        ],
+        dtype=np.float32,
+    )
+    plate_rel = np.full((10, 3), 0.20, dtype=np.float32)
+
+    close_contact, open_contact, gripper_event, gripper_phase = _geometry_contact_labels(
+        bowl_rel=bowl_rel,
+        plate_rel=plate_rel,
+        gripper_open=gripper_open,
+        close_phase_steps=6,
+    )
+
+    np.testing.assert_array_equal(close_contact, [0, 1, 1, 1, 1, 1, 1, 0, 0, 0])
+    np.testing.assert_array_equal(open_contact, np.zeros(10, dtype=np.float32))
+    np.testing.assert_array_equal(gripper_event, [0, 1, 0, 0, 0, 0, 0, 0, 0, 0])
+    np.testing.assert_array_equal(gripper_phase, [0, 1, 1, 1, 1, 1, 1, 0, 0, 0])
+
+
+def test_gripper_state_from_events_tracks_geometry_aligned_state():
+    gripper_open = np.array([1.0, 1.0, 0.0, 0.0, 1.0, 1.0], dtype=np.float32)
+    close_contact = np.array([0, 1, 1, 0, 0, 0], dtype=np.float32)
+    open_contact = np.array([0, 0, 0, 0, 1, 1], dtype=np.float32)
+
+    gripper_state = _gripper_state_from_events(
+        gripper_open=gripper_open,
+        close_contact=close_contact,
+        open_contact=open_contact,
+    )
+
+    np.testing.assert_array_equal(gripper_state, [0, 1, 1, 1, 0, 0])

@@ -59,6 +59,7 @@ def decode_contact_probs_to_gripper_cmds(
     *,
     initial_gripper_cmd: float = -1.0,
     threshold: float = 0.5,
+    contact_mode: str = "event",
 ) -> np.ndarray:
     """Decode close/open event probabilities into persistent gripper commands.
 
@@ -70,8 +71,15 @@ def decode_contact_probs_to_gripper_cmds(
     is_closed = float(initial_gripper_cmd) > 0.0
     cmds = np.empty(len(probs), dtype=np.float32)
 
-    if probs.ndim != 2 or probs.shape[-1] < 2:
+    if probs.ndim != 2 or probs.shape[-1] < 1:
         raise ValueError(f"Expected (T, 2+) contact probs, got shape {probs.shape}")
+
+    if contact_mode == "gripper_state":
+        if probs.shape[-1] >= 2:
+            closed_probs = probs[:, 1]
+        else:
+            closed_probs = probs[:, 0]
+        return np.where(closed_probs >= threshold, 1.0, -1.0).astype(np.float32)
 
     if probs.shape[-1] >= 3:
         event_ids = probs.argmax(axis=-1)
@@ -104,16 +112,55 @@ def decode_model_gripper_cmds(
     """Decode model output into controller gripper commands.
 
     Preference order:
-    1. learned close/open contact probabilities from the DHB contact head
-    2. fallback binary open predictions from normalized action dim 6
+    1. learned dense gripper-state probabilities
+    2. learned close/open contact probabilities from the DHB contact head
+    3. fallback binary open predictions from normalized action dim 6
     """
+    if "pred_gripper_state_probs" in result and result["pred_gripper_state_probs"] is not None:
+        gripper_state_probs = np.asarray(result["pred_gripper_state_probs"][0, :n_use], dtype=np.float32)
+        cmds = decode_contact_probs_to_gripper_cmds(
+            gripper_state_probs,
+            initial_gripper_cmd=initial_gripper_cmd,
+            threshold=threshold,
+            contact_mode="gripper_state",
+        )
+        if gripper_state_probs.shape[-1] >= 2:
+            closed_probs = gripper_state_probs[:, 1]
+            open_probs = gripper_state_probs[:, 0]
+        else:
+            closed_probs = gripper_state_probs[:, 0]
+            open_probs = 1.0 - closed_probs
+        return cmds, {
+            "source": "gripper_state_probs",
+            "state_probs": gripper_state_probs.tolist(),
+            "close_probs": closed_probs.tolist(),
+            "open_probs": open_probs.tolist(),
+            "threshold": float(threshold),
+        }
+
     if "pred_contact_probs" in result and result["pred_contact_probs"] is not None:
         contact_probs = np.asarray(result["pred_contact_probs"][0, :n_use], dtype=np.float32)
+        contact_mode = str(result.get("contact_mode", "event"))
         cmds = decode_contact_probs_to_gripper_cmds(
             contact_probs,
             initial_gripper_cmd=initial_gripper_cmd,
             threshold=threshold,
+            contact_mode=contact_mode,
         )
+        if contact_mode == "gripper_state":
+            if contact_probs.shape[-1] >= 2:
+                closed_probs = contact_probs[:, 1]
+                open_probs = contact_probs[:, 0]
+            else:
+                closed_probs = contact_probs[:, 0]
+                open_probs = 1.0 - closed_probs
+            return cmds, {
+                "source": "gripper_state_probs",
+                "state_probs": contact_probs.tolist(),
+                "close_probs": closed_probs.tolist(),
+                "open_probs": open_probs.tolist(),
+                "threshold": float(threshold),
+            }
         return cmds, {
             "source": "contact_probs",
             "event_probs": contact_probs.tolist(),

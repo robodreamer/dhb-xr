@@ -719,6 +719,7 @@ def stage_sim(args):
                        output_max=0.5, kp=150, substeps=3, offset_m=0.0,
                        close_gate_xy_m=0.05, close_gate_z_m=0.05,
                        release_gate_xy_m=0.04, release_gate_z_m=0.06,
+                       disable_gripper_gates=False,
                        placement_tail=False, tail_plate_xy_m=0.05,
                        tail_max_release_z_m=0.08, tail_move_steps=12,
                        tail_open_steps=12, tail_lift_steps=12):
@@ -810,14 +811,16 @@ def stage_sim(args):
                 and float(ee_minus_plate[2]) <= release_gate_z_m
             )
 
-            # Demo or predicted gripper commands are only a phase prior. Actual
-            # close / release should still respect live bowl / plate geometry.
-            if desired_grip > 0 and last_effective_grip <= 0:
-                if not close_ready:
-                    effective_grip = -1.0
-            if desired_grip <= 0 and last_effective_grip > 0:
-                if not release_ready:
-                    effective_grip = 1.0
+            # Geometry vetoes are useful for replayed demo timing, but they
+            # should be disable-able for learned gripper policies whose labels
+            # already come from offline geometry-conditioned supervision.
+            if not disable_gripper_gates:
+                if desired_grip > 0 and last_effective_grip <= 0:
+                    if not close_ready:
+                        effective_grip = -1.0
+                if desired_grip <= 0 and last_effective_grip > 0:
+                    if not release_ready:
+                        effective_grip = 1.0
 
             q_target = q_traj[t, :7]
             obs = step_joint_target(q_target, effective_grip, substeps)
@@ -934,6 +937,7 @@ def stage_sim(args):
             "close_gate_z_m": float(close_gate_z_m),
             "release_gate_xy_m": float(release_gate_xy_m),
             "release_gate_z_m": float(release_gate_z_m),
+            "disable_gripper_gates": bool(disable_gripper_gates),
             "placement_tail": bool(placement_tail),
             "tail_applied": bool(tail_applied),
             "tail_descend_source_step": tail_descend_source_step,
@@ -988,6 +992,7 @@ def stage_sim(args):
                 close_gate_z_m=args.close_gate_z_m,
                 release_gate_xy_m=args.release_gate_xy_m,
                 release_gate_z_m=args.release_gate_z_m,
+                disable_gripper_gates=args.disable_gripper_gates,
                 placement_tail=args.placement_tail,
                 tail_plate_xy_m=args.tail_plate_xy_m,
                 tail_max_release_z_m=args.tail_max_release_z_m,
@@ -1085,6 +1090,8 @@ if __name__ == "__main__":
                         help="Only allow first reopen when EE XY is within this distance of the plate")
     parser.add_argument("--release-gate-z-m", type=float, default=0.06,
                         help="Only allow first reopen when EE Z is below this height above the plate")
+    parser.add_argument("--disable-gripper-gates", action="store_true",
+                        help="Do not veto close / reopen transitions with live bowl / plate geometry gates.")
     parser.add_argument("--placement-tail", action="store_true",
                         help="If still holding near the plate at the end, reuse the lowest recent plate-near joint target before opening")
     parser.add_argument("--tail-plate-xy-m", type=float, default=0.05,

@@ -173,6 +173,129 @@ class TestDHBActionHead:
         assert "loss_contact" in result
         assert result["loss_contact"].item() > 0.0
 
+    def test_contact_event_and_phase_losses_can_train_together(self):
+        head = DHBActionHead(
+            vlm_dim=128,
+            action_horizon=8,
+            invariant_dim=8,
+            hidden_dim=64,
+            num_heads=4,
+            num_layers=2,
+            contact_dim=3,
+            lambda_contact=1.0,
+            contact_loss_type="cross_entropy",
+            contact_class_weight=[1.0, 16.0, 8.0],
+            contact_phase_dim=3,
+            lambda_contact_phase=0.5,
+            contact_phase_loss_type="cross_entropy",
+            contact_phase_class_weight=[0.5, 8.0, 4.0],
+            contact_condition_on_phase=True,
+        )
+        vlm_hidden = torch.randn(self.B, self.S, 128)
+        target_contact = torch.zeros(self.B, 8, dtype=torch.long)
+        target_contact[:, 2] = 1
+        target_contact[:, 5] = 2
+        target_contact_phase = torch.zeros(self.B, 8, dtype=torch.long)
+        target_contact_phase[:, 2:4] = 1
+        target_contact_phase[:, 5:7] = 2
+        result = head(
+            vlm_hidden,
+            target_contact=target_contact,
+            target_contact_phase=target_contact_phase,
+        )
+        assert "pred_contact_logits" in result
+        assert "pred_contact_phase_logits" in result
+        assert result["pred_contact_phase_logits"].shape == (self.B, 8, 3)
+        assert result["pred_contact_phase_probs"].shape == (self.B, 8, 3)
+        assert "loss_contact" in result
+        assert "loss_contact_phase" in result
+        assert result["loss_contact"].item() > 0.0
+        assert result["loss_contact_phase"].item() > 0.0
+
+    def test_gripper_state_and_phase_losses_can_train_together(self):
+        head = DHBActionHead(
+            vlm_dim=128,
+            action_horizon=8,
+            invariant_dim=8,
+            hidden_dim=64,
+            num_heads=4,
+            num_layers=2,
+            contact_dim=2,
+            lambda_contact=1.0,
+            contact_loss_type="cross_entropy",
+            contact_class_weight=[1.0, 1.0],
+            contact_mode="gripper_state",
+            contact_phase_dim=3,
+            lambda_contact_phase=0.5,
+            contact_phase_loss_type="cross_entropy",
+            contact_phase_class_weight=[0.5, 8.0, 4.0],
+            contact_condition_on_phase=True,
+        )
+        vlm_hidden = torch.randn(self.B, self.S, 128)
+        target_contact = torch.zeros(self.B, 8, dtype=torch.long)
+        target_contact[:, 2:6] = 1
+        target_contact_phase = torch.zeros(self.B, 8, dtype=torch.long)
+        target_contact_phase[:, 2:4] = 1
+        target_contact_phase[:, 5:7] = 2
+        result = head(
+            vlm_hidden,
+            target_contact=target_contact,
+            target_contact_phase=target_contact_phase,
+        )
+        assert result["contact_mode"] == "gripper_state"
+        assert "pred_contact_logits" in result
+        assert result["pred_contact_logits"].shape == (self.B, 8, 2)
+        assert "loss_contact" in result
+        assert "loss_contact_phase" in result
+        assert result["loss_contact"].item() > 0.0
+        assert result["loss_contact_phase"].item() > 0.0
+
+    def test_event_phase_and_gripper_state_can_train_together(self):
+        head = DHBActionHead(
+            vlm_dim=128,
+            action_horizon=8,
+            invariant_dim=8,
+            hidden_dim=64,
+            num_heads=4,
+            num_layers=2,
+            contact_dim=3,
+            lambda_contact=1.0,
+            contact_loss_type="cross_entropy",
+            contact_class_weight=[0.5, 8.0, 4.0],
+            contact_mode="event",
+            contact_phase_dim=3,
+            lambda_contact_phase=0.5,
+            contact_phase_loss_type="cross_entropy",
+            contact_phase_class_weight=[0.5, 8.0, 4.0],
+            gripper_state_dim=2,
+            lambda_gripper_state=1.0,
+            gripper_state_loss_type="cross_entropy",
+            gripper_state_class_weight=[1.0, 1.0],
+        )
+        vlm_hidden = torch.randn(self.B, self.S, 128)
+        target_contact = torch.zeros(self.B, 8, dtype=torch.long)
+        target_contact[:, 3] = 1
+        target_contact[:, 6] = 2
+        target_contact_phase = torch.zeros(self.B, 8, dtype=torch.long)
+        target_contact_phase[:, 3:5] = 1
+        target_contact_phase[:, 6:8] = 2
+        target_gripper_state = torch.zeros(self.B, 8, dtype=torch.long)
+        target_gripper_state[:, 3:6] = 1
+        result = head(
+            vlm_hidden,
+            target_contact=target_contact,
+            target_contact_phase=target_contact_phase,
+            target_gripper_state=target_gripper_state,
+        )
+        assert result["contact_mode"] == "event"
+        assert result["pred_contact_logits"].shape == (self.B, 8, 3)
+        assert result["pred_contact_phase_logits"].shape == (self.B, 8, 3)
+        assert result["pred_gripper_state_logits"].shape == (self.B, 8, 2)
+        assert "loss_contact" in result
+        assert "loss_contact_phase" in result
+        assert "loss_gripper_state" in result
+        assert result["loss_gripper_state"].item() > 0.0
+
     def test_action_loss_can_ignore_gripper_dim(self):
         head = DHBActionHead(
             vlm_dim=128,
