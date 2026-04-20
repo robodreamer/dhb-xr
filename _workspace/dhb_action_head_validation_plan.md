@@ -608,3 +608,60 @@ Interpretation:
     `episode 10`
   - so the remaining blocker is no longer just chunk selection; it is that the
     close/open labels still are not object/perception-conditioned enough
+
+### Geometry-Conditioned Gripper Relabeling
+
+- [x] Regenerate `libero_lerobot` with geometry-conditioned close/open labels
+- [x] Warm-start the focused gripper-token checkpoint on the regenerated data
+- [x] Re-run the frozen offline canonical `StarVLA -> DHB -> embodik` loop
+- [x] Fix the Stage-1 learned-gripper decode bug that was partially resetting
+  each chunk from the demo gripper state instead of the model's last decoded
+  state
+
+Artifacts:
+- run:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_gripper_geom1`
+- regenerated dataset:
+  - `/home/andypark/Projects/data/libero_lerobot`
+- stage-1 model-gripper sweeps:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_gripper_geom1/stage1_ep0_modelgrip_summary.json`
+  - `_workspace/starvla_runs/dhb_starvla_qwen_gripper_geom1/stage1_ep1_modelgrip_summary.json`
+  - `_workspace/starvla_runs/dhb_starvla_qwen_gripper_geom1/stage1_ep10_modelgrip_summary.json`
+- offline canonical evaluation:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_gripper_geom1/embodik_modelgrip_geom_canonical_ik.json`
+  - `_workspace/starvla_runs/dhb_starvla_qwen_gripper_geom1/embodik_modelgrip_geom_canonical_sim.json`
+  - `_workspace/validation_videos/starvla_embodik_gripper_geom1_canonical`
+
+Interpretation:
+- The geometry relabeling itself is sane:
+  - full regenerated dataset event counts are:
+    - hold: `53724`
+    - close: `3575`
+    - open: `4951`
+  - reference `demo_0` close labels shift to a geometry band around steps
+    `37-42`, and open labels to `77-88`
+- A real evaluation bug was present in the offline Stage-1 path:
+  - model gripper decoding was being re-initialized from the demo's previous
+    gripper command at each chunk boundary
+  - this created a false `closed -> open -> closed` oscillation in
+    `episode 1` and `episode 10`
+  - the Stage-1 script now carries the model's last decoded gripper command
+    across chunks instead
+- After fixing that decode bug, the geometry-labeled checkpoint still fails
+  under the frozen canonical offline loop:
+  - `0 cm`: `0/3`
+  - `3 cm`: `0/3`
+- The corrected diagnosis is stronger than before:
+  - the current learned event token is not merely being mis-decoded
+  - it is genuinely biased toward early close from the first chunk
+  - after the decoder fix, all three reference episode previews start closed
+    for the first three chunks under the canonical `replan4 + clamp35 +
+    blend06` settings
+- So the next gap is no longer rollout plumbing or chunk-boundary reset.
+  It is the event supervision itself:
+  - the model still learns an always-close prior even when trained on
+    geometry-conditioned close/open labels
+  - the next model-side change should target phase semantics more directly,
+    likely by conditioning the contact head on object/perception cues more
+    explicitly or by changing the event target structure rather than only
+    relabeling the same 3-way token

@@ -176,6 +176,7 @@ def main() -> None:
     )
     chunk_runner = TrajectoryChunkRunner(chunk_cfg)
     t = 0
+    last_gripper_cmd = float(demo["gripper_cmd"][0]) if len(demo["gripper_cmd"]) else -1.0
     while t < num_demo_steps:
         state = _demo_state_vector(
             demo["ee_pos"][t],
@@ -200,13 +201,15 @@ def main() -> None:
             anchor_pos=demo["ee_pos"][t],
             current_start=t,
             n_use=n_use,
-            initial_gripper_cmd=float(demo["gripper_cmd"][max(t - 1, 0)]),
+            initial_gripper_cmd=last_gripper_cmd,
             demo_gripper_chunk=demo["gripper_cmd"][t : t + n_use],
         )
 
         all_positions.append(prepared["positions"])
         all_quaternions.append(prepared["quaternions"])
         all_gripper.append(prepared["gripper_cmds"])
+        if len(prepared["gripper_cmds"]):
+            last_gripper_cmd = float(prepared["gripper_cmds"][-1])
 
         gt_chunk = demo["ee_pos"][t : t + n_use]
         pos_err_mm = np.linalg.norm(prepared["positions"] - gt_chunk, axis=1) * 1000.0
