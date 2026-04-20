@@ -850,3 +850,54 @@ Integrated consequence:
   - keep `ramp + commit2` as the best pre-grasp / reach-only mode
   - keep the old `replan4 + clamp35 + blend06` loop as the integrated default
   - next integrated move should be phase-split rather than a whole-loop swap
+
+### Fresh Corrected Training + State History: Negative Result
+
+- [x] Add a fresh corrected-dataset training config with `state_history_window = 4`
+- [x] Run a from-scratch frozen-Qwen training job on the regenerated dataset
+- [x] Sweep the fresh checkpoints under the current best reach-only handoff
+
+Interpretation:
+- This did **not** beat the reach-only control baseline.
+- Fresh run:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_statehist4`
+- Best checkpoint:
+  - `step 200`
+  - `avg_min_bowl_xy_m = 0.2381`
+  - `avg_min_bowl_xyz_m = 0.3681`
+  - `avg_ik_fail_total = 42.0`
+- Current reach-only control baseline remains:
+  - `shorttrain1/steps_200`
+  - `avg_min_bowl_xy_m = 0.1375`
+  - `avg_min_bowl_xyz_m = 0.2867`
+  - `avg_ik_fail_total = 75.5`
+- So the plain “fresh corrected train + state history” path is not the next
+  breakthrough by itself.
+
+### Phase-Split Integrated Bridge
+
+- [x] Add a phase-split chunk mode:
+  - `ramp + commit2` only before the first close phase
+  - canonical chunking after that
+- [x] Re-run the full offline integrated `StarVLA -> DHB -> embodik` sweep
+
+Interpretation:
+- Global `ramp + commit2` had regressed the integrated sweep to:
+  - `0 cm`: `0/3`
+  - `3 cm`: `0/3`
+- Phase-split recovers the old aggregate baseline:
+  - `0 cm`: `1/3`
+  - `3 cm`: `1/3`
+- This is useful, but not a true breakthrough:
+  - keep canonical as the integrated default
+  - keep phase-split as the best integrated bridge for reach-first behavior
+
+### Current Priority
+
+The next highest-value move is now:
+
+1. stop spending the next cycle on more same-family fresh training
+2. stop broadening execution heuristics beyond the new phase-split bridge
+3. move the model side toward continuation conditioning:
+   - committed-prefix continuation input, or
+   - short action-history / prefix-conditioned chunk continuation

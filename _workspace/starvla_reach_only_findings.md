@@ -390,3 +390,106 @@ Current recommendation:
 - prioritize a more structural next change:
   - future-state / committed-tail chunk handoff, or
   - history-aware continuation conditioning
+
+## 2026-04-20 Follow-Up: Fresh Corrected-Dataset + State-History-4 Did Not Beat Baseline
+
+A fresh from-scratch run was then trained on the corrected regenerated dataset
+with explicit state history:
+
+- config:
+  `configs/libero_dhbxr_qwen_fresh_statehist4.yaml`
+- run dir:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_statehist4`
+- key change:
+  `state_history_window = 4`
+
+Reach-only live sweep artifacts:
+
+- JSON:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_statehist4/live_checkpoint_sweep/summary.json`
+- Markdown:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_statehist4/live_checkpoint_sweep/summary.md`
+
+Result:
+
+| Rank | Step | Avg min bowl XY (m) | Avg min bowl XYZ (m) | Avg accel (mm) | Avg hold frac | Avg IK fails |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 200 | 0.2381 | 0.3681 | 0.6 | 0.533 | 42.0 |
+| 2 | 300 | 0.2498 | 0.3739 | 0.4 | 0.768 | 68.0 |
+| 3 | 100 | 0.2498 | 0.3738 | 0.2 | 0.883 | 81.0 |
+| 4 | 500 | 0.2498 | 0.3738 | 0.2 | 0.891 | 81.0 |
+| 5 | 400 | 0.2500 | 0.3740 | 0.2 | 0.852 | 77.0 |
+
+Interpretation:
+
+- this is materially worse than the current reach-only control baseline:
+  - old best:
+    - `0.1375 / 0.2867 / 75.5`
+  - fresh `state_history_window = 4` best:
+    - `0.2381 / 0.3681 / 42.0`
+- the fresh run does not support “more epochs” or “fresh retrain with state
+  history” as the next near-term breakthrough path
+- the `step 200` case is also behaviorally mixed:
+  - `episode 1`, `3 cm` has `0` IK failures but still poor bowl geometry and
+    visibly higher acceleration
+  - `episode 0`, `0 cm` still drifts away and accumulates heavy IK failure
+
+Current conclusion:
+
+- state history alone is not enough
+- the immediate next model-side move should not be another from-scratch
+  `state_history_window = 4` rerun
+- if history is revisited, it should be done as part of a more structural
+  continuation-conditioning change rather than another plain fresh train
+
+## 2026-04-20 Follow-Up: Phase-Split Integrated Loop Recovers The Old Baseline
+
+The next execution-side bridge was then tested:
+
+- use `ramp + commit2` only during pre-grasp approach
+- switch back to the old canonical chunking after the first close phase
+
+Implementation:
+
+- [chunk_rollout.py](/home/andypark/Projects/repos/dhb-xr/src/dhb_xr/integration/vla/chunk_rollout.py)
+- [starvla_dhb_embodik_stage1.py](/home/andypark/Projects/repos/dhb-xr/scripts/starvla_dhb_embodik_stage1.py)
+- [starvla_dhb_embodik_live_rollout.py](/home/andypark/Projects/repos/dhb-xr/scripts/starvla_dhb_embodik_live_rollout.py)
+
+Offline integrated artifacts:
+
+- IK:
+  `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/embodik_step200_replan4_clamp35_step20_sw3_blend06_phasesplit_ik.json`
+- sim:
+  `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/embodik_step200_replan4_clamp35_step20_sw3_blend06_phasesplit_sim.json`
+- videos:
+  `_workspace/validation_videos/starvla_embodik_invsup_step200_replan4_clamp35_step20_sw3_blend06_phasesplit_fullsweep`
+
+Result:
+
+- `0 cm`: `1/3`
+- `3 cm`: `1/3`
+
+Interpretation:
+
+- this does **not** beat the old integrated baseline in aggregate
+- but it does fix the previous regression from the global `ramp + commit2`
+  swap, which had fallen to `0/3` at both offsets
+- so phase-split is a valid integrated bridge:
+  - safe enough to keep as an experimental integrated mode
+  - not strong enough to replace the old integrated default
+
+Additional note:
+
+- the successful `0 cm` case now completes earlier:
+  - old canonical success:
+    - `seed 1`, `success_at = 172`
+  - phase-split:
+    - `seed 1`, `success_at = 74`
+
+Updated recommendation:
+
+- keep the old canonical loop as the integrated default
+- keep `ramp + commit2` as the best reach-only / pre-grasp approach mode
+- treat phase-split as the last worthwhile execution-side variant
+- next model-side focus should move toward continuation conditioning rather than
+  more same-family retraining

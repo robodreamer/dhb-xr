@@ -164,7 +164,10 @@ def _max_steps_for_suite(name: str) -> int:
 
 
 def _state_history_window(cfg) -> int:
-    return max(1, int(OmegaConf.select(cfg, "framework.action_model.state_history_window", default=1) or 1))
+    framework = getattr(cfg, "framework", None)
+    action_model = getattr(framework, "action_model", None) if framework is not None else None
+    value = getattr(action_model, "state_history_window", 1) if action_model is not None else 1
+    return max(1, int(value or 1))
 
 
 def _load_libero_demo_actions(hdf5_path: str, demo_id: int, action_mode: str) -> np.ndarray:

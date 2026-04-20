@@ -126,7 +126,10 @@ def _demo_state_vector(ee_pos: np.ndarray, ee_quat_wxyz: np.ndarray, grip_qpos: 
 
 
 def _state_history_window(cfg) -> int:
-    return max(1, int(OmegaConf.select(cfg, "framework.action_model.state_history_window", default=1) or 1))
+    framework = getattr(cfg, "framework", None)
+    action_model = getattr(framework, "action_model", None) if framework is not None else None
+    value = getattr(action_model, "state_history_window", 1) if action_model is not None else 1
+    return max(1, int(value or 1))
 
 
 def main() -> None:
@@ -144,6 +147,8 @@ def main() -> None:
     parser.add_argument("--blend-overlap-alpha", type=float, default=0.0)
     parser.add_argument("--blend-mode", choices=("constant", "ramp"), default="constant")
     parser.add_argument("--commit-prefix-steps", type=int, default=0)
+    parser.add_argument("--approach-blend-mode", choices=("constant", "ramp"), default=None)
+    parser.add_argument("--approach-commit-prefix-steps", type=int, default=-1)
     parser.add_argument("--save_npz", default=None)
     parser.add_argument("--save_json", default=None)
     args, unknown = parser.parse_known_args()
@@ -195,7 +200,30 @@ def main() -> None:
         commit_prefix_steps=max(0, args.commit_prefix_steps),
         gripper_source=args.gripper_source,
     )
+    approach_cfg = None
+    if args.approach_blend_mode is not None or args.approach_commit_prefix_steps >= 0:
+        approach_cfg = ChunkRolloutConfig(
+            max_first_offset_m=chunk_cfg.max_first_offset_m,
+            max_step_m=chunk_cfg.max_step_m,
+            smooth_window=chunk_cfg.smooth_window,
+            blend_overlap_alpha=chunk_cfg.blend_overlap_alpha,
+            blend_mode=args.approach_blend_mode or chunk_cfg.blend_mode,
+            commit_prefix_steps=max(
+                0,
+                args.approach_commit_prefix_steps
+                if args.approach_commit_prefix_steps >= 0
+                else chunk_cfg.commit_prefix_steps,
+            ),
+            gripper_source=chunk_cfg.gripper_source,
+        )
     chunk_runner = TrajectoryChunkRunner(chunk_cfg)
+    first_close_step = None
+    if len(demo["gripper_cmd"]) > 1:
+        close_edges = np.nonzero(
+            (demo["gripper_cmd"][1:] > 0.0) & (demo["gripper_cmd"][:-1] <= 0.0)
+        )[0]
+        if len(close_edges):
+            first_close_step = int(close_edges[0] + 1)
     t = 0
     last_gripper_cmd = float(demo["gripper_cmd"][0]) if len(demo["gripper_cmd"]) else -1.0
     while t < num_demo_steps:
@@ -216,6 +244,7 @@ def main() -> None:
             result = model.predict_trajectory([example])
 
         n_use = min(args.replan_every, len(result["positions"][0]), num_demo_steps - t)
+        active_cfg = approach_cfg if (approach_cfg is not None and first_close_step is not None and t < first_close_step) else None
         prepared = chunk_runner.prepare_chunk(
             result,
             anchor_pos=demo["ee_pos"][t],
@@ -223,6 +252,7 @@ def main() -> None:
             n_use=n_use,
             initial_gripper_cmd=last_gripper_cmd,
             demo_gripper_chunk=demo["gripper_cmd"][t : t + n_use],
+            config_override=active_cfg,
         )
 
         all_positions.append(prepared["positions"])
@@ -242,6 +272,7 @@ def main() -> None:
                 "first_pred_pos": prepared["first_pred_pos"],
                 "first_stabilized_pos": prepared["first_stabilized_pos"],
                 "first_gt_pos": gt_chunk[0].tolist(),
+                "phase_mode": "approach_override" if active_cfg is not None else "default",
                 **prepared["debug"],
             }
         )
@@ -281,6 +312,9 @@ def main() -> None:
         "blend_overlap_alpha": float(args.blend_overlap_alpha),
         "blend_mode": args.blend_mode,
         "commit_prefix_steps": int(args.commit_prefix_steps),
+        "approach_blend_mode": args.approach_blend_mode,
+        "approach_commit_prefix_steps": int(args.approach_commit_prefix_steps),
+        "first_close_step": None if first_close_step is None else int(first_close_step),
         "num_demo_steps": num_demo_steps,
         "num_chunks": len(debug_chunks),
         "gripper_source": args.gripper_source,

@@ -150,7 +150,10 @@ def _state_vector_from_obs(obs: dict) -> np.ndarray:
 
 
 def _state_history_window(cfg) -> int:
-    return max(1, int(OmegaConf.select(cfg, "framework.action_model.state_history_window", default=1) or 1))
+    framework = getattr(cfg, "framework", None)
+    action_model = getattr(framework, "action_model", None) if framework is not None else None
+    value = getattr(action_model, "state_history_window", 1) if action_model is not None else 1
+    return max(1, int(value or 1))
 
 
 def _make_video_path(video_dir: Path, label: str, suffix: str = "mp4") -> Path:
@@ -218,6 +221,10 @@ def main() -> None:
     parser.add_argument("--blend-overlap-alpha", type=float, default=0.6)
     parser.add_argument("--blend-mode", choices=("constant", "ramp"), default="constant")
     parser.add_argument("--commit-prefix-steps", type=int, default=0)
+    parser.add_argument("--approach-blend-mode", choices=("constant", "ramp"), default=None)
+    parser.add_argument("--approach-commit-prefix-steps", type=int, default=-1)
+    parser.add_argument("--approach-bowl-xy-m", type=float, default=0.10)
+    parser.add_argument("--approach-bowl-z-m", type=float, default=0.10)
     parser.add_argument("--gripper-source", choices=("demo", "model"), default="demo")
     parser.add_argument("--init-state-source", choices=("demo", "benchmark"), default="demo")
     parser.add_argument("--close-gate-xy-m", type=float, default=0.05)
@@ -341,6 +348,22 @@ def main() -> None:
         commit_prefix_steps=max(0, args.commit_prefix_steps),
         gripper_source=args.gripper_source,
     )
+    approach_cfg = None
+    if args.approach_blend_mode is not None or args.approach_commit_prefix_steps >= 0:
+        approach_cfg = ChunkRolloutConfig(
+            max_first_offset_m=chunk_cfg.max_first_offset_m,
+            max_step_m=chunk_cfg.max_step_m,
+            smooth_window=chunk_cfg.smooth_window,
+            blend_overlap_alpha=chunk_cfg.blend_overlap_alpha,
+            blend_mode=args.approach_blend_mode or chunk_cfg.blend_mode,
+            commit_prefix_steps=max(
+                0,
+                args.approach_commit_prefix_steps
+                if args.approach_commit_prefix_steps >= 0
+                else chunk_cfg.commit_prefix_steps,
+            ),
+            gripper_source=chunk_cfg.gripper_source,
+        )
     chunk_runner = TrajectoryChunkRunner(chunk_cfg)
     debug_chunks = []
     close_step = None
@@ -404,6 +427,15 @@ def main() -> None:
             result = model.predict_trajectory([example])
 
         n_use = min(args.replan_every, len(result["positions"][0]), num_demo_steps - t)
+        rel_live = _relative_snapshot(ee_pos_live, scene_refs)
+        active_cfg = None
+        if approach_cfg is not None and "ee_minus_bowl" in rel_live:
+            ee_minus_bowl_live = np.asarray(rel_live["ee_minus_bowl"], dtype=np.float32)
+            if (
+                float(np.linalg.norm(ee_minus_bowl_live[:2])) > args.approach_bowl_xy_m
+                or float(ee_minus_bowl_live[2]) > args.approach_bowl_z_m
+            ):
+                active_cfg = approach_cfg
         prepared = chunk_runner.prepare_chunk(
             result,
             anchor_pos=ee_pos_live,
@@ -411,6 +443,7 @@ def main() -> None:
             n_use=n_use,
             initial_gripper_cmd=last_effective_grip,
             demo_gripper_chunk=demo["gripper_cmd"][t : t + n_use],
+            config_override=active_cfg,
         )
         chunk_pos_stable = prepared["positions_full"]
         q_chunk = np.zeros((n_use, robot_model.nq), dtype=np.float64)
@@ -448,6 +481,7 @@ def main() -> None:
                 "first_pred_pos": prepared["first_pred_pos"],
                 "first_stabilized_pos": prepared["first_stabilized_pos"],
                 "first_gt_pos": gt_chunk[0].tolist(),
+                "phase_mode": "approach_override" if active_cfg is not None else "default",
                 **gripper_debug,
             }
         )
@@ -561,6 +595,10 @@ def main() -> None:
         "blend_overlap_alpha": float(args.blend_overlap_alpha),
         "blend_mode": args.blend_mode,
         "commit_prefix_steps": int(args.commit_prefix_steps),
+        "approach_blend_mode": args.approach_blend_mode,
+        "approach_commit_prefix_steps": int(args.approach_commit_prefix_steps),
+        "approach_bowl_xy_m": float(args.approach_bowl_xy_m),
+        "approach_bowl_z_m": float(args.approach_bowl_z_m),
         "state_history_window": int(state_history_window),
         "gripper_source": args.gripper_source,
         "init_state_source": args.init_state_source,

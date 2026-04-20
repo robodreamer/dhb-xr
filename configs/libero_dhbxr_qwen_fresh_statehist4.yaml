@@ -2,6 +2,8 @@ run_id: dhb_starvla_qwen_fresh_statehist4
 run_root_dir: /home/andypark/Projects/repos/dhb-xr/_workspace/starvla_runs
 seed: 42
 trackers: [jsonl]
+wandb_entity: offline
+wandb_project: dhb_xr_corl2026
 is_debug: false
 
 framework:

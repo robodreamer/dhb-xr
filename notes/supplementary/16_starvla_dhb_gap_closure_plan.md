@@ -575,3 +575,41 @@ with clear evidence:
 If Phase 2 cannot match the SmolVLA smoke baseline under one shared config,
 then do not broaden benchmarks yet. At that point the next effort should go
 back into model/training changes, not more evaluation plumbing.
+
+## 2026-04-20 Execution Update
+
+Recent evidence narrows the gap-closure order further:
+
+- The best reach-only control is still the old checkpoint plus the committed
+  handoff:
+  - `shorttrain1/steps_200`
+  - `ramp + commit2`
+  - `avg_min_bowl_xy_m = 0.1375`
+- A fresh corrected-dataset run with `state_history_window = 4` did **not**
+  beat that baseline:
+  - best fresh checkpoint:
+    - `0.2381 / 0.3681`
+- A phase-split execution loop is worth keeping as the last execution-side
+  bridge:
+  - committed handoff for pre-grasp approach
+  - canonical chunking after the close phase
+  - this recovers the integrated `1/3, 1/3` baseline after the global
+    handoff had regressed it to `0/3, 0/3`
+
+So the next model-side step should now shift from:
+
+- plain fresh retraining
+
+to:
+
+- continuation conditioning
+- committed-prefix-aware chunk prediction
+- or short action-history / prefix-conditioned continuation
+
+In other words:
+
+- execution-side tuning is close to exhausted
+- same-family warm-starts are not the lever
+- the next real breakthrough is more likely to come from teaching the policy
+  how to continue a partially committed trajectory than from more clamp/blend
+  or more plain state-history retraining

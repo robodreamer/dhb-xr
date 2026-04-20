@@ -236,28 +236,30 @@ class TrajectoryChunkRunner:
         n_use: int,
         initial_gripper_cmd: float,
         demo_gripper_chunk: np.ndarray | None = None,
+        config_override: ChunkRolloutConfig | None = None,
     ) -> dict[str, Any]:
+        cfg = config_override or self.config
         chunk_pos = np.asarray(result["positions"][0], dtype=np.float32)
         chunk_quat = np.asarray(result["quaternions"][0], dtype=np.float32)  # wxyz
 
         chunk_pos_stable, stability = stabilize_chunk_positions(
             chunk_pos,
             anchor_pos=anchor_pos,
-            max_first_offset_m=max(0.0, self.config.max_first_offset_m),
-            max_step_m=max(0.0, self.config.max_step_m),
-            smooth_window=max(0, self.config.smooth_window),
+            max_first_offset_m=max(0.0, cfg.max_first_offset_m),
+            max_step_m=max(0.0, cfg.max_step_m),
+            smooth_window=max(0, cfg.smooth_window),
         )
         chunk_pos_stable, overlap_steps, commit_steps = blend_overlap_positions(
             chunk_pos_stable,
             current_start=current_start,
             prev_chunk=self._prev_chunk_pos,
             prev_start=self._prev_chunk_start,
-            blend_alpha=self.config.blend_overlap_alpha,
-            blend_mode=self.config.blend_mode,
-            commit_prefix_steps=self.config.commit_prefix_steps,
+            blend_alpha=cfg.blend_overlap_alpha,
+            blend_mode=cfg.blend_mode,
+            commit_prefix_steps=cfg.commit_prefix_steps,
         )
 
-        if self.config.gripper_source == "demo":
+        if cfg.gripper_source == "demo":
             if demo_gripper_chunk is None:
                 raise ValueError("demo_gripper_chunk is required when gripper_source='demo'")
             gripper_cmds = np.asarray(demo_gripper_chunk[:n_use], dtype=np.float32)
@@ -283,7 +285,7 @@ class TrajectoryChunkRunner:
                 "open_probs": gripper_debug.get("open_probs"),
                 "overlap_steps": int(overlap_steps),
                 "commit_prefix_steps": int(commit_steps),
-                "blend_mode": self.config.blend_mode,
+                "blend_mode": cfg.blend_mode,
                 **stability,
             },
             "first_pred_pos": chunk_pos[0].tolist() if len(chunk_pos) else None,
