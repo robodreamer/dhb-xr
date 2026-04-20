@@ -258,6 +258,128 @@ Interpretation:
 - this is cleaner than the synthetic corrective rewrite
 - but it still does **not** beat the original `shorttrain1/steps_200` reach-only
   checkpoint
+
+## 2026-04-20 Follow-Up: Committed-Handoff Chunk Runner Improves Reach Without Retraining
+
+A structural execution-side follow-up was tested instead of another warm-start:
+
+- add ramped overlap blending in the shared chunk runner
+- optionally commit the first `k` overlap steps to the previously predicted tail
+- keep the same best checkpoint:
+  `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/checkpoints/steps_200_pytorch_model.pt`
+
+Probe settings on the two reference live cases:
+
+- `blend_mode = ramp`
+- `commit_prefix_steps = 2`
+- same loop otherwise:
+  - `replan_every = 4`
+  - `max_first_offset_mm = 35`
+  - `max_step_mm = 20`
+  - `smooth_window = 3`
+  - `blend_overlap_alpha = 0.6`
+
+Reference artifacts:
+
+- probe JSONs:
+  `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/handoff_probe/*.json`
+
+Per-case improvement against the old canonical reach-only loop:
+
+### Episode 0, offset 0 cm
+
+- old:
+  - `min_bowl_xy_m = 0.1590`
+  - `min_bowl_xyz_m = 0.2974`
+  - `ik_fail_total = 82`
+- new (`ramp + commit2`):
+  - `min_bowl_xy_m = 0.1410`
+  - `min_bowl_xyz_m = 0.2799`
+  - `ik_fail_total = 82`
+
+### Episode 1, offset 3 cm
+
+- old:
+  - `min_bowl_xy_m = 0.1339`
+  - `min_bowl_xyz_m = 0.2935`
+  - `ik_fail_total = 69`
+- new (`ramp + commit2`):
+  - `min_bowl_xy_m = 0.1223`
+  - `min_bowl_xyz_m = 0.2862`
+  - `ik_fail_total = 68`
+
+Full reach-only checkpoint sweep under the new handoff:
+
+- all checkpoint case files:
+  `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/live_checkpoint_sweep/step_*/*.json`
+
+Updated ranking:
+
+| Rank | Step | Avg min bowl XY (m) | Avg min bowl XYZ (m) | Avg IK fails | Avg accel (mm) | Avg hold frac |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 200 | 0.1375 | 0.2867 | 75.5 | 0.2583 | 0.8346 |
+| 2 | 100 | 0.2287 | 0.3672 | 76.0 | 0.2843 | 0.8388 |
+| 3 | 50 | 0.2500 | 0.3739 | 80.5 | 0.1688 | 0.8834 |
+| 4 | 150 | 0.2500 | 0.3740 | 79.0 | 0.1972 | 0.8652 |
+
+Interpretation:
+
+- this is the first post-training change that clearly improves the reach-only
+  bowl metric on the best checkpoint
+- the gain is modest but consistent across both reference cases
+- it is strong enough to keep as the current best reach-only execution mode
+- but it does **not** justify replacing the full integrated pipeline blindly
+
+## 2026-04-20 Follow-Up: Integrated Full Task Regresses Under The Same Handoff
+
+The improved reach-only handoff was then pushed back into the full offline
+`StarVLA -> DHB -> embodik` pipeline with demo gripper timing:
+
+- Stage 1:
+  `scripts/starvla_dhb_embodik_stage1.py`
+  with `blend_mode = ramp`, `commit_prefix_steps = 2`
+- Stage 2:
+  `_workspace/eval_dhb_head_embodik.py --stage ik`
+- Stage 3:
+  `_workspace/eval_dhb_head_embodik.py --stage sim`
+
+Artifacts:
+
+- IK:
+  `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/embodik_step200_replan4_clamp35_step20_sw3_blend06_ramp_commit2_ik_ik.json`
+- sim:
+  `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/embodik_step200_replan4_clamp35_step20_sw3_blend06_ramp_commit2_sim_sim.json`
+- videos:
+  `_workspace/validation_videos/starvla_embodik_invsup_step200_replan4_clamp35_step20_sw3_blend06_ramp_commit2_fullsweep`
+
+Result:
+
+- `0 cm`: `0/3`
+- `3 cm`: `0/3`
+
+Compared to the old canonical integrated baseline:
+
+- old:
+  - `0 cm`: `1/3`
+  - `3 cm`: `1/3`
+- new handoff:
+  - `0 cm`: `0/3`
+  - `3 cm`: `0/3`
+
+Interpretation:
+
+- the committed-handoff improvement is **phase-local**
+- it helps open-gripper bowl approach
+- but once the full manipulation sequence is reintroduced, the same stronger
+  commitment hurts downstream grasp / transport / placement behavior
+
+Current conclusion:
+
+- `ramp + commit2` is now the best **reach-only** execution mode
+- it is **not** yet the new integrated default
+- the right next integrated design is likely phase-split:
+  - use the committed-handoff mode for pre-grasp reach
+  - then hand off to the old canonical integrated loop for the rest
 - more same-family warm-start training is therefore no longer the highest-value
   move
 

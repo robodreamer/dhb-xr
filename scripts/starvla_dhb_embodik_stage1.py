@@ -137,6 +137,8 @@ def main() -> None:
     parser.add_argument("--max-step-mm", type=float, default=0.0)
     parser.add_argument("--smooth-window", type=int, default=0)
     parser.add_argument("--blend-overlap-alpha", type=float, default=0.0)
+    parser.add_argument("--blend-mode", choices=("constant", "ramp"), default="constant")
+    parser.add_argument("--commit-prefix-steps", type=int, default=0)
     parser.add_argument("--save_npz", default=None)
     parser.add_argument("--save_json", default=None)
     args, unknown = parser.parse_known_args()
@@ -172,6 +174,8 @@ def main() -> None:
         max_step_m=max(0.0, args.max_step_mm) / 1000.0,
         smooth_window=max(0, args.smooth_window),
         blend_overlap_alpha=float(args.blend_overlap_alpha),
+        blend_mode=args.blend_mode,
+        commit_prefix_steps=max(0, args.commit_prefix_steps),
         gripper_source=args.gripper_source,
     )
     chunk_runner = TrajectoryChunkRunner(chunk_cfg)
@@ -259,6 +263,8 @@ def main() -> None:
         "max_step_mm": float(args.max_step_mm),
         "smooth_window": int(args.smooth_window),
         "blend_overlap_alpha": float(args.blend_overlap_alpha),
+        "blend_mode": args.blend_mode,
+        "commit_prefix_steps": int(args.commit_prefix_steps),
         "num_demo_steps": num_demo_steps,
         "num_chunks": len(debug_chunks),
         "gripper_source": args.gripper_source,

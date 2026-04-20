@@ -42,6 +42,8 @@ def _run_case(
     max_step_mm: float,
     smooth_window: int,
     blend_overlap_alpha: float,
+    blend_mode: str,
+    commit_prefix_steps: int,
     gripper_source: str,
     init_state_source: str,
     settle_steps: int,
@@ -78,6 +80,10 @@ def _run_case(
         str(smooth_window),
         "--blend-overlap-alpha",
         str(blend_overlap_alpha),
+        "--blend-mode",
+        blend_mode,
+        "--commit-prefix-steps",
+        str(commit_prefix_steps),
         "--gripper-source",
         gripper_source,
         "--init-state-source",
@@ -162,6 +168,8 @@ def main() -> None:
     parser.add_argument("--max-step-mm", type=float, default=20.0)
     parser.add_argument("--smooth-window", type=int, default=3)
     parser.add_argument("--blend-overlap-alpha", type=float, default=0.6)
+    parser.add_argument("--blend-mode", choices=("constant", "ramp"), default="constant")
+    parser.add_argument("--commit-prefix-steps", type=int, default=0)
     parser.add_argument("--gripper-source", choices=("demo", "model"), default="demo")
     parser.add_argument("--init-state-source", choices=("demo", "benchmark"), default="demo")
     parser.add_argument("--settle-steps", type=int, default=60)
@@ -203,6 +211,8 @@ def main() -> None:
                 max_step_mm=args.max_step_mm,
                 smooth_window=args.smooth_window,
                 blend_overlap_alpha=args.blend_overlap_alpha,
+                blend_mode=args.blend_mode,
+                commit_prefix_steps=args.commit_prefix_steps,
                 gripper_source=args.gripper_source,
                 init_state_source=args.init_state_source,
                 settle_steps=args.settle_steps,
@@ -234,6 +244,8 @@ def main() -> None:
             "max_step_mm": float(args.max_step_mm),
             "smooth_window": int(args.smooth_window),
             "blend_overlap_alpha": float(args.blend_overlap_alpha),
+            "blend_mode": args.blend_mode,
+            "commit_prefix_steps": int(args.commit_prefix_steps),
             "gripper_source": args.gripper_source,
             "init_state_source": args.init_state_source,
             "settle_steps": int(args.settle_steps),

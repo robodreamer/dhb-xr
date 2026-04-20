@@ -805,3 +805,48 @@ Interpretation:
   demo, the next replan still sees the demo’s open-gripper observation, which
   biases it back toward reopening. Live evaluation is therefore the more honest
   signal for learned gripper timing than the frozen offline canonical loop.
+
+### Reach-Only Handoff Baseline
+
+- [x] Add a committed-handoff mode to the shared chunk runner
+- [x] Probe `ramp` overlap blending with `commit_prefix_steps = 1/2`
+- [x] Re-rank the full reach-only checkpoint sweep under the best handoff mode
+- [x] Push the same handoff back into the full offline integrated pipeline
+
+Interpretation:
+- A structural execution-side change finally improved the reach-only control
+  baseline without retraining:
+  - `blend_mode = ramp`
+  - `commit_prefix_steps = 2`
+- On the best checkpoint (`shorttrain1/steps_200`), both reference cases
+  improved:
+  - `episode 0`, `0 cm`:
+    - bowl XY `0.1590 -> 0.1410`
+    - bowl XYZ `0.2974 -> 0.2799`
+  - `episode 1`, `3 cm`:
+    - bowl XY `0.1339 -> 0.1223`
+    - bowl XYZ `0.2935 -> 0.2862`
+- Full reach-only checkpoint sweep under this handoff now ranks:
+  - `steps_200`: `avg_min_bowl_xy_m = 0.1375`
+  - `steps_100`: `0.2287`
+  - `steps_50`: `0.2500`
+  - `steps_150`: `0.2500`
+- So this is the new best **reach-only** execution mode.
+
+Integrated consequence:
+- The same handoff was then pushed through the full offline
+  `StarVLA -> DHB -> embodik` pipeline with demo gripper timing.
+- Result:
+  - old integrated canonical:
+    - `0 cm`: `1/3`
+    - `3 cm`: `1/3`
+  - new handoff integrated:
+    - `0 cm`: `0/3`
+    - `3 cm`: `0/3`
+- So the gain is real, but phase-local:
+  - good enough to revisit the integrated pipeline experimentally
+  - not good enough to replace the integrated canonical loop globally
+- Current best interpretation:
+  - keep `ramp + commit2` as the best pre-grasp / reach-only mode
+  - keep the old `replan4 + clamp35 + blend06` loop as the integrated default
+  - next integrated move should be phase-split rather than a whole-loop swap

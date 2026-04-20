@@ -90,23 +90,39 @@ def blend_overlap_positions(
     prev_chunk: np.ndarray | None,
     prev_start: int | None,
     blend_alpha: float,
-) -> tuple[np.ndarray, int]:
+    blend_mode: str = "constant",
+    commit_prefix_steps: int = 0,
+) -> tuple[np.ndarray, int, int]:
     if prev_chunk is None or prev_start is None:
-        return current_chunk, 0
+        return current_chunk, 0, 0
 
     prev_end = prev_start + len(prev_chunk)
     overlap = min(max(prev_end - current_start, 0), len(current_chunk))
     if overlap <= 0:
-        return current_chunk, 0
+        return current_chunk, 0, 0
 
     alpha = float(np.clip(blend_alpha, 0.0, 1.0))
-    if alpha <= 0.0:
-        return current_chunk, 0
+    commit = int(max(0, min(commit_prefix_steps, overlap)))
+    if alpha <= 0.0 and commit <= 0:
+        return current_chunk, 0, 0
 
     blended = np.asarray(current_chunk, dtype=np.float32).copy()
     prev_tail = np.asarray(prev_chunk[-overlap:], dtype=np.float32)
-    blended[:overlap] = (1.0 - alpha) * prev_tail + alpha * blended[:overlap]
-    return blended, int(overlap)
+    if commit > 0:
+        blended[:commit] = prev_tail[:commit]
+
+    if overlap > commit and alpha > 0.0:
+        if blend_mode == "ramp":
+            alpha_lo = min(alpha, 0.2)
+            alpha_sched = np.linspace(alpha_lo, alpha, overlap - commit, dtype=np.float32)
+            for idx, alpha_i in enumerate(alpha_sched, start=commit):
+                blended[idx] = (1.0 - alpha_i) * prev_tail[idx] + alpha_i * blended[idx]
+        else:
+            blended[commit:overlap] = (
+                (1.0 - alpha) * prev_tail[commit:overlap]
+                + alpha * blended[commit:overlap]
+            )
+    return blended, int(overlap), int(commit)
 
 
 def compute_motion_metrics(positions: np.ndarray) -> dict[str, float | int | None]:
@@ -189,6 +205,8 @@ class ChunkRolloutConfig:
     max_step_m: float = 0.0
     smooth_window: int = 0
     blend_overlap_alpha: float = 0.0
+    blend_mode: str = "constant"
+    commit_prefix_steps: int = 0
     gripper_source: str = "demo"
 
 
@@ -229,12 +247,14 @@ class TrajectoryChunkRunner:
             max_step_m=max(0.0, self.config.max_step_m),
             smooth_window=max(0, self.config.smooth_window),
         )
-        chunk_pos_stable, overlap_steps = blend_overlap_positions(
+        chunk_pos_stable, overlap_steps, commit_steps = blend_overlap_positions(
             chunk_pos_stable,
             current_start=current_start,
             prev_chunk=self._prev_chunk_pos,
             prev_start=self._prev_chunk_start,
             blend_alpha=self.config.blend_overlap_alpha,
+            blend_mode=self.config.blend_mode,
+            commit_prefix_steps=self.config.commit_prefix_steps,
         )
 
         if self.config.gripper_source == "demo":
@@ -262,6 +282,8 @@ class TrajectoryChunkRunner:
                 "close_probs": gripper_debug.get("close_probs"),
                 "open_probs": gripper_debug.get("open_probs"),
                 "overlap_steps": int(overlap_steps),
+                "commit_prefix_steps": int(commit_steps),
+                "blend_mode": self.config.blend_mode,
                 **stability,
             },
             "first_pred_pos": chunk_pos[0].tolist() if len(chunk_pos) else None,

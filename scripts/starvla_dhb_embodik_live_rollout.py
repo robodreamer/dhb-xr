@@ -210,6 +210,8 @@ def main() -> None:
     parser.add_argument("--max-step-mm", type=float, default=20.0)
     parser.add_argument("--smooth-window", type=int, default=3)
     parser.add_argument("--blend-overlap-alpha", type=float, default=0.6)
+    parser.add_argument("--blend-mode", choices=("constant", "ramp"), default="constant")
+    parser.add_argument("--commit-prefix-steps", type=int, default=0)
     parser.add_argument("--gripper-source", choices=("demo", "model"), default="demo")
     parser.add_argument("--init-state-source", choices=("demo", "benchmark"), default="demo")
     parser.add_argument("--close-gate-xy-m", type=float, default=0.05)
@@ -324,6 +326,8 @@ def main() -> None:
         max_step_m=max(0.0, args.max_step_mm) / 1000.0,
         smooth_window=max(0, args.smooth_window),
         blend_overlap_alpha=float(args.blend_overlap_alpha),
+        blend_mode=args.blend_mode,
+        commit_prefix_steps=max(0, args.commit_prefix_steps),
         gripper_source=args.gripper_source,
     )
     chunk_runner = TrajectoryChunkRunner(chunk_cfg)
@@ -537,6 +541,8 @@ def main() -> None:
         "max_step_mm": float(args.max_step_mm),
         "smooth_window": int(args.smooth_window),
         "blend_overlap_alpha": float(args.blend_overlap_alpha),
+        "blend_mode": args.blend_mode,
+        "commit_prefix_steps": int(args.commit_prefix_steps),
         "gripper_source": args.gripper_source,
         "init_state_source": args.init_state_source,
         "init_state_l2_diff": float(np.linalg.norm(demo_init_state - benchmark_init_state)),
