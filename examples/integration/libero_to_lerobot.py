@@ -75,6 +75,14 @@ from scipy.spatial.transform import Rotation
 
 from dhb_xr.encoder.dhb_dr import encode_dhb_dr
 
+try:
+    from libero.libero import benchmark, get_libero_path
+    from libero.libero.envs import OffScreenRenderEnv
+
+    HAS_LIBERO = True
+except ImportError:  # pragma: no cover - optional dependency in unit tests
+    HAS_LIBERO = False
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -106,6 +114,14 @@ DEFAULT_VIDEO_RES = (512, 384)  # (width, height)
 ACTION_MODE = "delta"
 LIBERO_GRIPPER_OPEN_QPOS_THRESHOLD = 0.015
 CONTACT_EVENT_LABEL_RADIUS = 2
+LIBERO_CLOSE_GATE_XY_M = 0.05
+LIBERO_CLOSE_GATE_Z_M = 0.05
+# Offline label generation uses a slightly wider plate gate than the online
+# execution veto. The stricter 0.04m runtime gate produced zero positive
+# release labels on the reference demo, which starves retraining of reopen
+# supervision entirely.
+LIBERO_RELEASE_GATE_XY_M = 0.05
+LIBERO_RELEASE_GATE_Z_M = 0.06
 
 
 # ============================================================================
@@ -137,6 +153,7 @@ def load_libero_demo(h5_path: Path, demo_id: int) -> Dict:
 
         # Extract actions
         actions = np.array(demo[LIBERO_ACTIONS_KEY], dtype=np.float32)
+        sim_states = np.array(demo["states"], dtype=np.float32) if "states" in demo else None
         
         # Extract robot states
         robot_states = np.array(demo[LIBERO_ROBOT_STATES_KEY], dtype=np.float64)
@@ -195,10 +212,106 @@ def load_libero_demo(h5_path: Path, demo_id: int) -> Dict:
             "euler_angles": euler_angles,  # [T, 3] roll, pitch, yaw
             "ee_axis_angle": ee_axis_angle,  # [T, 3] axis-angle / rotvec
             "delta_actions": delta_actions,  # [T, 7] delta_pos + delta_rotvec + next_gripper_open
+            "sim_states": sim_states,  # [T, nq+nv] flattened MuJoCo states for exact scene replay
             "agentview_rgb": agentview_rgb,  # [T, H, W, 3]
             "wrist_rgb": wrist_rgb,  # [T, H, W, 3]
             "length": len(actions),
         }
+
+
+class _LiberoGeometryLabeler:
+    """Replay LIBERO demo states to derive bowl/plate-relative gripper labels."""
+
+    def __init__(
+        self,
+        env,
+        *,
+        bowl_key: str,
+        plate_key: str,
+        close_gate_xy_m: float = LIBERO_CLOSE_GATE_XY_M,
+        close_gate_z_m: float = LIBERO_CLOSE_GATE_Z_M,
+        release_gate_xy_m: float = LIBERO_RELEASE_GATE_XY_M,
+        release_gate_z_m: float = LIBERO_RELEASE_GATE_Z_M,
+    ) -> None:
+        self.env = env
+        self.bowl_key = bowl_key
+        self.plate_key = plate_key
+        self.close_gate_xy_m = float(close_gate_xy_m)
+        self.close_gate_z_m = float(close_gate_z_m)
+        self.release_gate_xy_m = float(release_gate_xy_m)
+        self.release_gate_z_m = float(release_gate_z_m)
+
+    def close(self) -> None:
+        self.env.close()
+
+    def replay_relative_snapshots(self, sim_states: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        bowl_rel = []
+        plate_rel = []
+        for mujoco_state in np.asarray(sim_states, dtype=np.float32):
+            obs = self.env.set_init_state(mujoco_state)
+            bowl_rel.append(np.asarray(obs[self.bowl_key], dtype=np.float32))
+            plate_rel.append(np.asarray(obs[self.plate_key], dtype=np.float32))
+        return np.stack(bowl_rel, axis=0), np.stack(plate_rel, axis=0)
+
+    def build_labels(self, sim_states: np.ndarray, gripper_open: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        bowl_rel, plate_rel = self.replay_relative_snapshots(sim_states)
+        return _geometry_contact_labels(
+            bowl_rel=bowl_rel,
+            plate_rel=plate_rel,
+            gripper_open=gripper_open,
+            close_gate_xy_m=self.close_gate_xy_m,
+            close_gate_z_m=self.close_gate_z_m,
+            release_gate_xy_m=self.release_gate_xy_m,
+            release_gate_z_m=self.release_gate_z_m,
+        )
+
+
+def _find_task_by_name(task_suite_name: str, task_name: str):
+    if not HAS_LIBERO:
+        raise ImportError("libero is required for geometry-conditioned label generation.")
+
+    benchmark_dict = benchmark.get_benchmark_dict()
+    if task_suite_name not in benchmark_dict:
+        raise KeyError(f"Unknown LIBERO task suite '{task_suite_name}'")
+
+    task_suite = benchmark_dict[task_suite_name]()
+    for task_id in range(task_suite.get_num_tasks()):
+        task = task_suite.get_task(task_id)
+        if task.name == task_name:
+            return task
+    raise KeyError(f"Task '{task_name}' not found in LIBERO suite '{task_suite_name}'")
+
+
+def _build_geometry_labeler(task_suite_name: str, task_name: str) -> _LiberoGeometryLabeler:
+    task = _find_task_by_name(task_suite_name, task_name)
+    task_bddl_file = Path(get_libero_path("bddl_files")) / task.problem_folder / task.bddl_file
+    env = OffScreenRenderEnv(
+        bddl_file_name=task_bddl_file,
+        controller="OSC_POSE",
+        camera_heights=128,
+        camera_widths=128,
+    )
+    env.reset()
+    obs = env.env._get_observations()
+
+    def _pick_rel_key(target: str) -> str:
+        matches = sorted(
+            key
+            for key in obs.keys()
+            if key.endswith("_to_robot0_eef_pos") and target in key.lower()
+        )
+        if not matches:
+            raise KeyError(
+                f"Could not find '*_to_robot0_eef_pos' key containing '{target}' "
+                f"for task '{task_name}'. Available keys sample: {sorted(obs.keys())[:20]}"
+            )
+        return matches[0]
+
+    return _LiberoGeometryLabeler(
+        env,
+        bowl_key=_pick_rel_key("bowl"),
+        plate_key=_pick_rel_key("plate"),
+    )
 
 
 def _event_transition_labels(
@@ -265,6 +378,64 @@ def _event_class_labels(
         labels[start:end] = 2
 
     return labels.astype(np.int64)
+
+
+def _geometry_contact_labels(
+    *,
+    bowl_rel: np.ndarray,
+    plate_rel: np.ndarray,
+    gripper_open: np.ndarray,
+    close_gate_xy_m: float = LIBERO_CLOSE_GATE_XY_M,
+    close_gate_z_m: float = LIBERO_CLOSE_GATE_Z_M,
+    release_gate_xy_m: float = LIBERO_RELEASE_GATE_XY_M,
+    release_gate_z_m: float = LIBERO_RELEASE_GATE_Z_M,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Build close/open labels from replayed object-relative geometry.
+
+    This keeps the same exported schema as the transition-based path:
+    ``dhb.close_contact`` and ``dhb.open_contact`` are float masks, while
+    ``dhb.gripper_event`` remains ``0=hold, 1=close, 2=open``.
+    """
+    bowl_rel = np.asarray(bowl_rel, dtype=np.float32)
+    plate_rel = np.asarray(plate_rel, dtype=np.float32)
+    open_now = np.asarray(gripper_open, dtype=np.float32).reshape(-1)
+    if bowl_rel.shape[0] != len(open_now) or plate_rel.shape[0] != len(open_now):
+        raise ValueError(
+            "Geometry label inputs must share the same length: "
+            f"bowl={bowl_rel.shape}, plate={plate_rel.shape}, open={open_now.shape}"
+        )
+
+    next_open = np.concatenate([open_now[1:], open_now[-1:]], axis=0)
+    close_transitions = (open_now > 0.5) & (next_open <= 0.5)
+    open_transitions = (open_now <= 0.5) & (next_open > 0.5)
+    has_closed_before = np.cumsum(close_transitions.astype(np.int32)) > 0
+    has_opened_after_close = np.cumsum(open_transitions.astype(np.int32)) > 0
+
+    close_ready = (
+        (np.abs(bowl_rel[:, 0]) <= close_gate_xy_m)
+        & (np.abs(bowl_rel[:, 1]) <= close_gate_xy_m)
+        & (bowl_rel[:, 2] <= close_gate_z_m)
+    )
+    release_ready = (
+        (np.abs(plate_rel[:, 0]) <= release_gate_xy_m)
+        & (np.abs(plate_rel[:, 1]) <= release_gate_xy_m)
+        & (plate_rel[:, 2] <= release_gate_z_m)
+    )
+
+    close_contact = (
+        (open_now > 0.5)
+        & close_ready
+        & (~has_opened_after_close)
+    ).astype(np.float32)
+    open_contact = (
+        (open_now <= 0.5)
+        & release_ready
+        & has_closed_before
+    ).astype(np.float32)
+    gripper_event = np.zeros(len(open_now), dtype=np.int64)
+    gripper_event[close_contact > 0.5] = 1
+    gripper_event[open_contact > 0.5] = 2
+    return close_contact, open_contact, gripper_event
 
 
 def list_demos_in_file(h5_path: Path) -> List[int]:
@@ -397,6 +568,7 @@ def create_episode_dataframe(
     episode_index: int,
     task_index: int = 0,
     dhb_invariants: Optional[Dict] = None,
+    geometry_labeler: Optional[_LiberoGeometryLabeler] = None,
 ) -> pd.DataFrame:
     """Create a pandas DataFrame for an episode in LeRobot format.
     
@@ -426,9 +598,15 @@ def create_episode_dataframe(
     # [delta_x, delta_y, delta_z, delta_rx, delta_ry, delta_rz, next_open_gripper]
     action_vector = demo_data["delta_actions"].astype(np.float32)
     gripper_open = (demo_data["gripper_state"][:, 0] > LIBERO_GRIPPER_OPEN_QPOS_THRESHOLD).astype(np.float32)
-    close_contact = _event_transition_labels(gripper_open, transition="close")
-    open_contact = _event_transition_labels(gripper_open, transition="open")
-    gripper_event = _event_class_labels(gripper_open)
+    if geometry_labeler is not None and demo_data.get("sim_states") is not None:
+        close_contact, open_contact, gripper_event = geometry_labeler.build_labels(
+            demo_data["sim_states"],
+            gripper_open,
+        )
+    else:
+        close_contact = _event_transition_labels(gripper_open, transition="close")
+        open_contact = _event_transition_labels(gripper_open, transition="open")
+        gripper_event = _event_class_labels(gripper_open)
     
     # Build one parquet row per environment step. The StarVLA LeRobot loader
     # expects trajectory data to be indexed by timestep inside each episode
@@ -549,6 +727,7 @@ def convert_libero_to_lerobot(
     """
     output_root = Path(output_root)
     output_root.mkdir(parents=True, exist_ok=True)
+    normalized_task_name = task_name[:-5] if task_name.endswith("_demo") else task_name
     
     meta_dir = output_root / "meta"
     data_dir = output_root / "data"
@@ -565,37 +744,64 @@ def convert_libero_to_lerobot(
     all_episodes = []
     all_tasks = {task_index: task_name}
     total_frames = 0
+    geometry_labeler = None
+
+    task_suite_name = libero_h5_path.parent.name
+    if HAS_LIBERO and task_suite_name.startswith("libero_"):
+        try:
+            geometry_labeler = _build_geometry_labeler(task_suite_name, normalized_task_name)
+            logger.info(
+                "Using geometry-conditioned gripper labels for %s via suite '%s'",
+                normalized_task_name,
+                task_suite_name,
+            )
+        except Exception as exc:
+            logger.warning(
+                "Falling back to transition-based gripper labels for %s: %s",
+                task_name,
+                exc,
+            )
     
     # Convert each demo
-    for local_idx, demo_id in enumerate(demo_ids):
-        try:
-            global_idx = episode_offset + local_idx
-            logger.info(f"  Loading demo {demo_id}...")
-            demo_data = load_libero_demo(libero_h5_path, demo_id)
-            
-            # Create episode metadata
-            episode_meta = create_episode_metadata(global_idx, demo_data["length"], task_index)
-            all_episodes.append(episode_meta)
-            
-            # Create dataframe
-            df = create_episode_dataframe(demo_data, global_idx, task_index, dhb_invariants)
-            
-            # Determine chunk index
-            chunk_index = global_idx // LEROBOT_CHUNK_SIZE
-            chunk_dir = data_dir / f"{chunk_index:06d}"
-            chunk_dir.mkdir(exist_ok=True)
-            
-            # Save parquet
-            parquet_path = chunk_dir / f"episode_{global_idx:06d}.parquet"
-            logger.info(f"  Saving to {parquet_path.relative_to(output_root)}")
-            df.to_parquet(parquet_path, index=False)
-            write_episode_videos(demo_data, output_root, global_idx)
-            
-            total_frames += demo_data["length"]
-            
-        except Exception as e:
-            logger.error(f"  Error converting demo {demo_id}: {e}")
-            continue
+    try:
+        for local_idx, demo_id in enumerate(demo_ids):
+            try:
+                global_idx = episode_offset + local_idx
+                logger.info(f"  Loading demo {demo_id}...")
+                demo_data = load_libero_demo(libero_h5_path, demo_id)
+
+                # Create episode metadata
+                episode_meta = create_episode_metadata(global_idx, demo_data["length"], task_index)
+                all_episodes.append(episode_meta)
+
+                # Create dataframe
+                df = create_episode_dataframe(
+                    demo_data,
+                    global_idx,
+                    task_index,
+                    dhb_invariants,
+                    geometry_labeler=geometry_labeler,
+                )
+
+                # Determine chunk index
+                chunk_index = global_idx // LEROBOT_CHUNK_SIZE
+                chunk_dir = data_dir / f"{chunk_index:06d}"
+                chunk_dir.mkdir(exist_ok=True)
+
+                # Save parquet
+                parquet_path = chunk_dir / f"episode_{global_idx:06d}.parquet"
+                logger.info(f"  Saving to {parquet_path.relative_to(output_root)}")
+                df.to_parquet(parquet_path, index=False)
+                write_episode_videos(demo_data, output_root, global_idx)
+
+                total_frames += demo_data["length"]
+
+            except Exception as e:
+                logger.error(f"  Error converting demo {demo_id}: {e}")
+                continue
+    finally:
+        if geometry_labeler is not None:
+            geometry_labeler.close()
     
     logger.info(f"Successfully converted {len(all_episodes)} episodes ({total_frames} frames)")
     

@@ -7,6 +7,7 @@ from scipy.spatial.transform import Rotation
 from examples.integration.libero_to_lerobot import (
     _event_class_labels,
     _event_transition_labels,
+    _geometry_contact_labels,
     create_episode_dataframe,
     load_libero_demo,
 )
@@ -86,3 +87,35 @@ def test_event_class_labels_mark_hold_close_open():
     gripper_open = np.array([1.0, 1.0, 0.0, 0.0, 1.0], dtype=np.float32)
     labels = _event_class_labels(gripper_open, radius=1)
     np.testing.assert_array_equal(labels, [1, 1, 2, 2, 2])
+
+
+def test_geometry_contact_labels_follow_object_relative_gates():
+    gripper_open = np.array([1.0, 1.0, 0.0, 0.0], dtype=np.float32)
+    bowl_rel = np.array(
+        [
+            [0.08, 0.00, 0.08],   # too far to close
+            [0.01, -0.02, 0.03],  # close-ready while open
+            [0.00, -0.01, 0.02],  # still near bowl, but already closed
+            [0.10, 0.00, 0.10],   # far from bowl
+        ],
+        dtype=np.float32,
+    )
+    plate_rel = np.array(
+        [
+            [0.20, 0.00, 0.10],   # far from plate
+            [0.18, 0.00, 0.10],   # far from plate
+            [0.03, 0.02, 0.05],   # release-ready while closed
+            [0.02, 0.01, 0.04],   # still release-ready while closed
+        ],
+        dtype=np.float32,
+    )
+
+    close_contact, open_contact, gripper_event = _geometry_contact_labels(
+        bowl_rel=bowl_rel,
+        plate_rel=plate_rel,
+        gripper_open=gripper_open,
+    )
+
+    np.testing.assert_array_equal(close_contact, [0.0, 1.0, 0.0, 0.0])
+    np.testing.assert_array_equal(open_contact, [0.0, 0.0, 1.0, 1.0])
+    np.testing.assert_array_equal(gripper_event, [0, 1, 2, 2])
