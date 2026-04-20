@@ -185,6 +185,47 @@ Interpretation:
   - prioritize rollout-grounded corrective augmentation or matched execution
     controls next
 
+### 2026-04-20 update: two reach-focused follow-ups still do not beat the original control
+
+Two more reach-only interventions are now complete:
+
+1. `reachcorr`
+   - rollout-grounded corrective rewrite of state + action + invariants
+   - best checkpoint: `steps_200`
+   - live reach-only result:
+     - `avg_min_bowl_xy_m = 0.1736`
+     - `avg_min_bowl_xyz_m = 0.3331`
+     - `avg_ik_fail_total = 76.5`
+2. `reachphase`
+   - no synthetic target rewrite
+   - oversample real approach chunks so the close phase lands near the end of
+     the horizon
+   - best checkpoint: `steps_100`
+   - live reach-only result:
+     - `avg_min_bowl_xy_m = 0.1913`
+     - `avg_min_bowl_xyz_m = 0.3289`
+     - `avg_ik_fail_total = 75.5`
+
+Reference control remains:
+
+- `shorttrain1/steps_200`
+  - `avg_min_bowl_xy_m = 0.1465`
+  - `avg_min_bowl_xyz_m = 0.2954`
+  - `avg_ik_fail_total = 75.5`
+
+Interpretation:
+
+- the original `shorttrain1/steps_200` checkpoint is still the reach-only
+  control to beat
+- same-family warm-start training is no longer the highest-confidence path
+- the next promising move should be more structural than small data
+  reweighting, specifically:
+  - future-state / committed-tail chunk handoff, or
+  - history-aware continuation conditioning
+
+This is now the most credible next branch before returning to the full
+gripper-integrated task.
+
 ## Phase 1: Freeze The Canonical Closed-Loop
 
 ### Goal

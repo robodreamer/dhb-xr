@@ -198,3 +198,73 @@ and not:
 
 This is the cleanest way to reduce the current failure to one thing at a time.
 
+## 2026-04-20 Follow-Up: Corrective Reach Augmentation Failed
+
+A first rollout-grounded corrective augmentation run was tested at:
+
+- run dir:
+  `_workspace/starvla_runs/dhb_starvla_qwen_reachcorr`
+- config:
+  `configs/libero_dhbxr_qwen_reachcorr.yaml`
+- warm-start source:
+  `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/checkpoints/steps_200_pytorch_model.pt`
+
+Result:
+
+| Step | Avg min bowl XY (m) | Avg min bowl XYZ (m) | Avg IK fails |
+| ---: | ---: | ---: | ---: |
+| 100 | 0.1970 | 0.3304 | 75.5 |
+| 200 | 0.1736 | 0.3331 | 76.5 |
+| 300 | 0.1989 | 0.3506 | 77.5 |
+
+Interpretation:
+
+- this did **not** beat the old reach-only baseline (`0.1465 / 0.2954 / 75.5`)
+- the likely failure mode is that the corrective rewrite targeted the wrong
+  phase:
+  - it overemphasized close-phase chunks
+  - it rewrote state and targets without changing the images
+- so the model learned to emit late pre-grasp geometry too early rather than a
+  better open-gripper approach
+
+Conclusion:
+
+- keep the idea documented, but do not treat this augmentation as the current
+  path forward
+- do not spend more budget on the same corrective-rewrite setup
+
+## 2026-04-20 Follow-Up: Reach-Phase Oversampling Also Failed To Beat Baseline
+
+A cleaner reach-focused warm-start was then tested:
+
+- run dir:
+  `_workspace/starvla_runs/dhb_starvla_qwen_reachphase1`
+- config:
+  `configs/libero_dhbxr_qwen_reachphase.yaml`
+- intervention:
+  oversample real open-gripper approach chunks so the close phase lands near the
+  end of the horizon (`gripper_event_target_pos=6`)
+
+Result:
+
+| Step | Avg min bowl XY (m) | Avg min bowl XYZ (m) | Avg IK fails |
+| ---: | ---: | ---: | ---: |
+| 100 | 0.1913 | 0.3289 | 75.5 |
+| 200 | 0.1963 | 0.3475 | 76.5 |
+| 300 | 0.2498 | 0.3738 | 80.5 |
+
+Interpretation:
+
+- this is cleaner than the synthetic corrective rewrite
+- but it still does **not** beat the original `shorttrain1/steps_200` reach-only
+  checkpoint
+- more same-family warm-start training is therefore no longer the highest-value
+  move
+
+Current recommendation:
+
+- keep `shorttrain1/steps_200` as the reach-only control baseline
+- stop iterating on small sampling-only warm-starts
+- prioritize a more structural next change:
+  - future-state / committed-tail chunk handoff, or
+  - history-aware continuation conditioning

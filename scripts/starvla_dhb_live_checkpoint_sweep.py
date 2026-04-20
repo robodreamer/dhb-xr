@@ -135,12 +135,15 @@ def _aggregate(rows: list[dict]) -> dict:
     }
 
 
-def _sort_key(item: dict):
+def _sort_key(item: dict, *, reach_only: bool = False):
     agg = item["aggregate"]
+    primary_dist = agg["avg_min_bowl_xy_m"] if reach_only else agg["avg_min_bowl_xyz_m"]
+    secondary_dist = agg["avg_min_bowl_xyz_m"] if reach_only else agg["avg_min_bowl_xy_m"]
     return (
         -agg["success_count"],
         -agg["close_count"],
-        float("inf") if agg["avg_min_bowl_xyz_m"] is None else agg["avg_min_bowl_xyz_m"],
+        float("inf") if primary_dist is None else primary_dist,
+        float("inf") if secondary_dist is None else secondary_dist,
         float("inf") if agg["avg_mean_accel_mm"] is None else agg["avg_mean_accel_mm"],
         float("inf") if agg["avg_ik_fail_total"] is None else agg["avg_ik_fail_total"],
         item["step"],
@@ -218,7 +221,7 @@ def main() -> None:
             }
         )
 
-    ranked = sorted(results, key=_sort_key)
+    ranked = sorted(results, key=lambda item: _sort_key(item, reach_only=args.reach_only))
     payload = {
         "config_yaml": args.config_yaml,
         "run_dir": str(run_dir),

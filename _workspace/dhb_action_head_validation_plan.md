@@ -110,7 +110,12 @@ Interpretation:
 - [x] Log executed-trajectory smoothness metrics (`mean_accel_mm`, `hold_fraction`, `direction_flip_fraction`, `path_efficiency`)
 - [x] Re-rank `shorttrain1` checkpoints on reach-only live metrics
 - [x] Compare canonical execution vs stripped-down “raw-ish” execution on `shorttrain1/steps_200`
+- [x] Test a rollout-grounded corrective augmentation warm-start (`reachcorr`) against the reach-only baseline
+- [x] Test a cleaner reach-phase oversampling warm-start (`reachphase`) against the reach-only baseline
 - [ ] Improve smooth bowl approach under offsets before returning to learned close/open timing
+- [ ] Try a more structural next change than same-family warm-start training:
+  - future-state / committed-tail chunk handoff, or
+  - history-aware continuation conditioning
 
 Tracked note:
 - `_workspace/starvla_reach_only_findings.md`
@@ -132,6 +137,24 @@ Interpretation:
   same checkpoint worse on both bowl proximity and smoothness
 - so the current bottleneck is still trajectory quality, not mainly execution
   heuristics
+
+Follow-up results:
+
+- `reachcorr` did not beat the old reach-only baseline:
+  - best checkpoint: `steps_200`
+  - `0.1736 / 0.3331 / 76.5`
+- `reachphase` also did not beat the old reach-only baseline:
+  - best checkpoint: `steps_100`
+  - `0.1913 / 0.3289 / 75.5`
+
+Current interpretation:
+
+- both new runs underperform the original `shorttrain1/steps_200` control
+- more same-family warm-start training is therefore not the most credible next
+  move
+- the next likely improvement has to be more structural than:
+  - synthetic target rewrite
+  - small sampling-only rebiasing
 
 ## First StarVLA→EmbodiK End-To-End Result
 
