@@ -14,7 +14,10 @@ from libero.libero import benchmark, get_libero_path
 from libero.libero.envs import OffScreenRenderEnv
 from omegaconf import OmegaConf
 
-from dhb_xr.integration.vla.libero import libero_obs_quat_to_axis_angle
+from dhb_xr.integration.vla.libero import (
+    decode_model_gripper_cmds,
+    libero_obs_quat_to_axis_angle,
+)
 from starVLA.model.framework.base_framework import build_framework
 from starVLA.training.trainer_utils.config_tracker import wrap_config
 from starVLA.training.trainer_utils.trainer_tools import normalize_dotlist_args
@@ -479,15 +482,15 @@ def main() -> None:
                 ik_failures += 1
             q_chunk[i] = q_seed.copy()
 
+        gripper_debug = {"source": "demo"}
         if args.gripper_source == "demo":
             gripper_cmds = demo["gripper_cmd"][t : t + n_use].astype(np.float32)
         else:
-            normalized_actions = np.asarray(result.get("normalized_actions", []), dtype=np.float32)
-            if normalized_actions.size:
-                open_vals = normalized_actions[0, :n_use, 6]
-                gripper_cmds = np.where(open_vals > 0.5, -1.0, 1.0).astype(np.float32)
-            else:
-                gripper_cmds = np.full(n_use, -1.0, dtype=np.float32)
+            gripper_cmds, gripper_debug = decode_model_gripper_cmds(
+                result,
+                n_use=n_use,
+                initial_gripper_cmd=last_effective_grip,
+            )
 
         gt_chunk = demo["ee_pos"][t : t + n_use]
         pos_err_mm = np.linalg.norm(chunk_pos_stable[:n_use] - gt_chunk, axis=1) * 1000.0
@@ -503,6 +506,9 @@ def main() -> None:
                 "first_stabilized_pos": chunk_pos_stable[0].tolist(),
                 "first_gt_pos": gt_chunk[0].tolist(),
                 "overlap_steps": int(overlap_steps),
+                "gripper_source_used": gripper_debug.get("source"),
+                "close_probs": gripper_debug.get("close_probs"),
+                "open_probs": gripper_debug.get("open_probs"),
                 **stability,
             }
         )

@@ -513,3 +513,85 @@ Interpretation:
   - `seed 2` remains the clearest “almost there” case, but now points toward a
     stronger phase-aware model or supervision change rather than another
     execution-only tweak
+
+## Joint DHB + Contact Signal
+
+- [x] Add a jointly trained DHB contact head and export close/open supervision into the LeRobot dataset
+- [x] Verify `QwenDHB.predict_trajectory()` exposes learned contact probabilities
+- [x] Route Stage-1 and live rollout `gripper_source=model` through the learned contact head instead of the old raw-action gripper branch
+- [x] Run an initial contact retrain and probe close/open predictions on real dataset chunks
+- [x] Run a stronger weighted-contact retrain from the best initial contact checkpoint
+- [ ] Replace demo-timed gripper replay only after the learned close signal becomes usable in rollout
+
+Artifacts:
+- initial contact run:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_contact1`
+- weighted contact run:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_contact_weighted1`
+- checkpoint probes:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_contact1/contact_checkpoint_probe.json`
+  - `_workspace/starvla_runs/dhb_starvla_qwen_contact_weighted1/contact_checkpoint_probe.json`
+- model-gripper stage-1 check:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_contact1/embodik_stage1_ep0_modelgrip_step200.json`
+
+Interpretation:
+- The joint token+gripper path is now real end to end:
+  - data export emits `dhb.close_contact` / `dhb.open_contact`
+  - StarVLA batches carry those targets
+  - the DHB head predicts a parallel contact signal
+  - rollout code can consume learned contact outputs directly
+- Current learned behavior is asymmetric:
+  - open-event prediction is strong
+  - close-event prediction is still effectively collapsed
+- On canonical stage-1 replay with `gripper_source=model`, the learned contact
+  branch keeps the gripper open throughout the episode, so the model-only
+  gripper path is not yet a valid replacement for demo timing.
+- The next gap is therefore not rollout plumbing. It is the close-event
+  learning objective itself.
+
+## Gripper Event Token
+
+- [x] Replace the 2-logit close/open contact head with a 3-way event token:
+  `hold / close / open`
+- [x] Export `dhb.gripper_event` labels into the LeRobot dataset
+- [x] Add event-centered chunk oversampling in the StarVLA loader
+- [x] Retrain from the invariant-supervised checkpoint with perception-conditioned
+  event prediction
+- [x] Run the learned-gripper checkpoint through the frozen offline canonical
+  `StarVLA -> DHB -> embodik` loop
+
+Artifacts:
+- config:
+  - `configs/libero_dhbxr_qwen_gripper_token.yaml`
+  - `configs/libero_dhbxr_qwen_gripper_token_focus.yaml`
+- run:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_gripper_token1`
+  - `_workspace/starvla_runs/dhb_starvla_qwen_gripper_token_focus1`
+- stage-1 model-gripper sweeps:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_gripper_token_focus1/embodik_stage1_ep0_modelgrip_canonical.json`
+  - `_workspace/starvla_runs/dhb_starvla_qwen_gripper_token_focus1/embodik_stage1_ep1_modelgrip_canonical.json`
+  - `_workspace/starvla_runs/dhb_starvla_qwen_gripper_token_focus1/embodik_stage1_ep10_modelgrip_canonical.json`
+- offline canonical evaluation:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_gripper_token_focus1/embodik_modelgrip_canonical_ik.json`
+  - `_workspace/starvla_runs/dhb_starvla_qwen_gripper_token_focus1/embodik_modelgrip_canonical_sim.json`
+  - `_workspace/validation_videos/starvla_embodik_gripper_token_focus1_canonical`
+
+Interpretation:
+- The 3-way event token fixes the previous degenerate failure mode:
+  - the model no longer stays open forever
+  - the learned gripper now produces real transitions in Stage 1
+- But the new event head is phase-wrong:
+  - it closes from the first chunk on all three seeds
+  - `episode 1` and `episode 10` also show an early reopen / re-close pattern
+- Under the same frozen offline canonical loop, learned gripper makes the
+  overall result worse:
+  - `0 cm`: `0/3`
+  - `3 cm`: `0/3`
+  - every run starts effectively closed, so Stage 3 records `close_step = null`
+- So the current learned event token has crossed the threshold from “dead” to
+  “active,” but it is still not phase-correct enough to replace demo timing in
+  benchmark claims.
+- This narrows the next model gap:
+  - not “make the gripper event head exist”
+  - but “align close/open to perceptual task phase rather than overfitting an
+    always-close prior”

@@ -19,6 +19,8 @@ class TestDHBActionHead:
             hidden_dim=64,
             num_heads=4,
             num_layers=2,
+            contact_dim=2,
+            lambda_contact=0.5,
         )
         self.B = 2
         self.S = 10  # VLM sequence length
@@ -28,6 +30,8 @@ class TestDHBActionHead:
         vlm_hidden = torch.randn(self.B, self.S, 128)
         result = self.head(vlm_hidden)
         assert result["pred_invariants"].shape == (self.B, 20, 8)
+        assert result["pred_contact_logits"].shape == (self.B, 20, 2)
+        assert result["pred_contact_probs"].shape == (self.B, 20, 2)
 
     def test_forward_with_state(self):
         """State conditioning doesn't break output shape."""
@@ -113,14 +117,89 @@ class TestDHBActionHead:
         vlm_hidden = torch.randn(self.B, self.S, 128)
         target_inv = torch.randn(self.B, 20, 8)
         target_act = torch.randn(self.B, 20, 7)
+        target_contact = torch.zeros(self.B, 20, 2)
+        target_contact[:, 5, 0] = 1.0
         result = self.head(
             vlm_hidden,
             target_invariants=target_inv,
             target_actions=target_act,
+            target_contact=target_contact,
         )
         assert "loss" in result
         assert "loss_inv" in result
         assert "loss_act" in result
+        assert "loss_contact" in result
+
+    def test_contact_loss_accepts_per_channel_pos_weights(self):
+        head = DHBActionHead(
+            vlm_dim=128,
+            action_horizon=8,
+            invariant_dim=8,
+            hidden_dim=64,
+            num_heads=4,
+            num_layers=2,
+            contact_dim=2,
+            lambda_contact=1.0,
+            contact_pos_weight=[16.0, 4.0],
+        )
+        vlm_hidden = torch.randn(self.B, self.S, 128)
+        target_contact = torch.zeros(self.B, 8, 2)
+        target_contact[:, 2, 0] = 1.0
+        target_contact[:, 5, 1] = 1.0
+        result = head(vlm_hidden, target_contact=target_contact)
+        assert "loss_contact" in result
+        assert result["loss_contact"].item() > 0.0
+
+    def test_contact_loss_supports_three_way_event_classes(self):
+        head = DHBActionHead(
+            vlm_dim=128,
+            action_horizon=8,
+            invariant_dim=8,
+            hidden_dim=64,
+            num_heads=4,
+            num_layers=2,
+            contact_dim=3,
+            lambda_contact=1.0,
+            contact_loss_type="cross_entropy",
+            contact_class_weight=[1.0, 16.0, 8.0],
+        )
+        vlm_hidden = torch.randn(self.B, self.S, 128)
+        target_contact = torch.zeros(self.B, 8, dtype=torch.long)
+        target_contact[:, 2] = 1
+        target_contact[:, 5] = 2
+        result = head(vlm_hidden, target_contact=target_contact)
+        assert "pred_contact_logits" in result
+        assert result["pred_contact_logits"].shape == (self.B, 8, 3)
+        assert "loss_contact" in result
+        assert result["loss_contact"].item() > 0.0
+
+    def test_action_loss_can_ignore_gripper_dim(self):
+        head = DHBActionHead(
+            vlm_dim=128,
+            action_horizon=8,
+            invariant_dim=8,
+            hidden_dim=64,
+            num_heads=4,
+            num_layers=2,
+            dropout=0.0,
+            action_dim=7,
+            lambda_act=1.0,
+            action_loss_ignore_gripper=True,
+        )
+        head.eval()
+        vlm_hidden = torch.randn(self.B, self.S, 128)
+        target_actions = torch.zeros(self.B, 8, 7)
+
+        with torch.no_grad():
+            out = head(vlm_hidden)
+            pred = out["pred_actions"].detach().clone()
+
+        target_actions[..., :6] = pred[..., :6]
+        target_actions[..., 6] = pred[..., 6] + 10.0
+
+        result = head(vlm_hidden, target_actions=target_actions)
+        assert "loss_act" in result
+        assert result["loss_act"].item() < 1e-5
 
     def test_predict_invariants_only(self):
         """Predict mode returns invariants without gradients."""

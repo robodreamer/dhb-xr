@@ -4,7 +4,12 @@ import h5py
 import numpy as np
 from scipy.spatial.transform import Rotation
 
-from examples.integration.libero_to_lerobot import create_episode_dataframe, load_libero_demo
+from examples.integration.libero_to_lerobot import (
+    _event_class_labels,
+    _event_transition_labels,
+    create_episode_dataframe,
+    load_libero_demo,
+)
 
 
 def test_create_episode_dataframe_uses_axis_angle_state_and_delta_actions(tmp_path: Path):
@@ -50,9 +55,34 @@ def test_create_episode_dataframe_uses_axis_angle_state_and_delta_actions(tmp_pa
 
     assert "dhb.linear_invariants" in df.columns
     assert "dhb.angular_invariants" in df.columns
+    assert "dhb.close_contact" in df.columns
+    assert "dhb.open_contact" in df.columns
+    assert "dhb.gripper_event" in df.columns
     lin0 = np.asarray(df.iloc[0]["dhb.linear_invariants"], dtype=np.float32)
     ang0 = np.asarray(df.iloc[0]["dhb.angular_invariants"], dtype=np.float32)
+    close = np.asarray(df["dhb.close_contact"], dtype=np.float32)
+    open_ = np.asarray(df["dhb.open_contact"], dtype=np.float32)
+    gripper_event = np.asarray(df["dhb.gripper_event"], dtype=np.int64)
     assert lin0.shape == (4,)
     assert ang0.shape == (4,)
     assert np.isfinite(lin0).all()
     assert np.isfinite(ang0).all()
+    np.testing.assert_allclose(close, [0.0, 0.0], atol=1e-6)
+    np.testing.assert_allclose(open_, [1.0, 2.0 / 3.0], atol=1e-6)
+    np.testing.assert_array_equal(gripper_event, [2, 2])
+
+
+def test_event_transition_labels_mark_close_and_open_windows():
+    gripper_open = np.array([1.0, 1.0, 0.0, 0.0, 1.0], dtype=np.float32)
+
+    close = _event_transition_labels(gripper_open, transition="close", radius=1)
+    open_ = _event_transition_labels(gripper_open, transition="open", radius=1)
+
+    np.testing.assert_allclose(close, [0.5, 1.0, 0.5, 0.0, 0.0], atol=1e-6)
+    np.testing.assert_allclose(open_, [0.0, 0.0, 0.5, 1.0, 0.5], atol=1e-6)
+
+
+def test_event_class_labels_mark_hold_close_open():
+    gripper_open = np.array([1.0, 1.0, 0.0, 0.0, 1.0], dtype=np.float32)
+    labels = _event_class_labels(gripper_open, radius=1)
+    np.testing.assert_array_equal(labels, [1, 1, 2, 2, 2])

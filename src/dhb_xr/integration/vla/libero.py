@@ -54,6 +54,92 @@ def libero_obs_quat_to_axis_angle(quat: np.ndarray) -> np.ndarray:
     return Rotation.from_quat(quat_xyzw).as_rotvec().astype(np.float32)
 
 
+def decode_contact_probs_to_gripper_cmds(
+    contact_probs: np.ndarray,
+    *,
+    initial_gripper_cmd: float = -1.0,
+    threshold: float = 0.5,
+) -> np.ndarray:
+    """Decode close/open event probabilities into persistent gripper commands.
+
+    The contact head predicts event probabilities per step, not absolute open/close
+    state. This decoder converts those event logits into the controller contract
+    used throughout the repo: ``-1.0`` means open and ``1.0`` means closed.
+    """
+    probs = np.asarray(contact_probs, dtype=np.float32)
+    is_closed = float(initial_gripper_cmd) > 0.0
+    cmds = np.empty(len(probs), dtype=np.float32)
+
+    if probs.ndim != 2 or probs.shape[-1] < 2:
+        raise ValueError(f"Expected (T, 2+) contact probs, got shape {probs.shape}")
+
+    if probs.shape[-1] >= 3:
+        event_ids = probs.argmax(axis=-1)
+        for i, event_id in enumerate(event_ids):
+            if int(event_id) == 1:
+                is_closed = True
+            elif int(event_id) == 2:
+                is_closed = False
+            cmds[i] = 1.0 if is_closed else -1.0
+        return cmds
+
+    close_probs = probs[:, 0]
+    open_probs = probs[:, 1]
+    for i, (close_p, open_p) in enumerate(zip(close_probs, open_probs)):
+        if close_p >= threshold and close_p >= open_p:
+            is_closed = True
+        elif open_p >= threshold and open_p > close_p:
+            is_closed = False
+        cmds[i] = 1.0 if is_closed else -1.0
+    return cmds
+
+
+def decode_model_gripper_cmds(
+    result: Dict,
+    *,
+    n_use: int,
+    initial_gripper_cmd: float = -1.0,
+    threshold: float = 0.5,
+) -> Tuple[np.ndarray, Dict[str, object]]:
+    """Decode model output into controller gripper commands.
+
+    Preference order:
+    1. learned close/open contact probabilities from the DHB contact head
+    2. fallback binary open predictions from normalized action dim 6
+    """
+    if "pred_contact_probs" in result and result["pred_contact_probs"] is not None:
+        contact_probs = np.asarray(result["pred_contact_probs"][0, :n_use], dtype=np.float32)
+        cmds = decode_contact_probs_to_gripper_cmds(
+            contact_probs,
+            initial_gripper_cmd=initial_gripper_cmd,
+            threshold=threshold,
+        )
+        return cmds, {
+            "source": "contact_probs",
+            "event_probs": contact_probs.tolist(),
+            "close_probs": (
+                contact_probs[:, 1].tolist() if contact_probs.shape[-1] >= 3 else
+                contact_probs[:, 0].tolist() if contact_probs.shape[-1] >= 1 else []
+            ),
+            "open_probs": (
+                contact_probs[:, 2].tolist() if contact_probs.shape[-1] >= 3 else
+                contact_probs[:, 1].tolist() if contact_probs.shape[-1] >= 2 else []
+            ),
+            "threshold": float(threshold),
+        }
+
+    normalized_actions = np.asarray(result.get("normalized_actions", []), dtype=np.float32)
+    if normalized_actions.size:
+        open_vals = normalized_actions[0, :n_use, 6]
+        cmds = np.where(open_vals > 0.5, -1.0, 1.0).astype(np.float32)
+        return cmds, {
+            "source": "normalized_actions",
+            "open_vals": open_vals.tolist(),
+        }
+
+    return np.full(n_use, -1.0, dtype=np.float32), {"source": "default_open"}
+
+
 @dataclass
 class LiberoAdapter:
     """

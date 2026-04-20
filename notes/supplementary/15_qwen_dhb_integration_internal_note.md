@@ -26,6 +26,34 @@ More concretely:
 
 So yes, DHB invariants are now genuinely in the real training and rollout pipeline. But the strongest current rollout path is still continuous invariant prediction and decode, not a fully discrete token-only policy execution loop.
 
+One important extension is now planned and partially implemented in code:
+
+- the DHB representation should predict not only trajectory invariants, but also
+  a jointly learned interaction/contact signal for gripper timing
+
+The clean version of that idea is **not** “gripper is itself an SE(3)
+geometric invariant.” Instead, it is:
+
+- DHB invariants encode motion geometry
+- a parallel contact / interaction head encodes when manipulation events should
+  happen along that motion
+
+That gives a stronger unified action representation without making a mathematically
+incorrect claim about the gripper scalar itself.
+
+Current status of that extension:
+
+- the joint DHB + contact head is now implemented in code and trained on
+  close/open event labels exported alongside the DHB invariants
+- the rollout scripts can now consume that learned contact signal directly
+- the current result is still asymmetric:
+  - open-event prediction learns strongly
+  - close-event prediction remains weak / collapsed
+
+So the concept is now in the real pipeline, but the close-event learning
+objective still needs improvement before the learned contact signal can replace
+demo-timed replay in the main benchmark loop.
+
 ## Main Components
 
 The current StarVLA path is assembled from four layers:
@@ -62,6 +90,7 @@ flowchart LR
     F --> G[Predicted DHB invariants]
     F --> H[Predicted direct actions]
     G --> I[Decode to EE trajectory]
+    F --> M[Predicted contact / interaction signal]
     I --> J[embodik IK]
     J --> K[Joint trajectory]
     K --> L[LIBERO closed-loop sim]
@@ -102,6 +131,7 @@ From `src/dhb_xr/integration/vla/action_head.py`, the head:
 - predicts:
   - `pred_invariants`
   - `pred_actions`
+  - optionally `pred_contact_logits`
 
 At inference, it can do two things:
 
@@ -113,6 +143,12 @@ At inference, it can do two things:
    - decode them into future SE(3) waypoints using the current pose
 
 This second path is currently the more useful one in embodied evaluation.
+
+The intended medium-term path is therefore:
+
+1. predict continuous DHB invariants for motion geometry
+2. predict a companion contact / phase signal for grasp and release events
+3. decode both into an executable manipulation rollout
 
 ## State Conditioning: Where It Enters
 
@@ -196,6 +232,14 @@ So the honest statement is:
 
 - the current model is invariant-aware and tokenizer-regularized
 - but embodied execution is still driven by continuous invariant predictions, not a pure discrete token tape
+
+The same logic applies to the gripper/contact path:
+
+- near-term execution can still use continuous decoded trajectories with a jointly
+  predicted contact signal
+- longer-term VLA-style tokenization can include a discrete interaction / phase
+  token stream **alongside** the DHB geometric tokens, not by pretending contact
+  is the same thing as a geometric invariant
 
 ## Continuous DHB vs Discrete Invariant Tokens
 
@@ -510,6 +554,97 @@ Current results still show:
 - the remaining bottleneck is phase logic and trajectory quality
 
 So the current story is promising, not final.
+
+## Learned Gripper Event Signal
+
+The gripper/event path is now in a more informative state than before.
+
+Earlier, the first jointly trained contact path used separate close/open logits.
+That did prove the architecture and data contract, but it collapsed toward a
+`hold/open` bias:
+
+- open-event prediction became strong
+- close-event prediction stayed too weak to use in rollout
+
+We then moved to a stronger formulation:
+
+- export `dhb.gripper_event`
+- predict a 3-way event token: `hold / close / open`
+- condition the event head on:
+  - decoded DHB features
+  - VLM context
+  - current state
+- ignore raw action-loss supervision on the gripper dimension
+- oversample event-containing chunks during training
+
+This is a better fit to the intended manuscript story:
+
+```text
+Qwen -> DHB latent -> { trajectory invariants, interaction event token }
+```
+
+That is stronger than saying “trajectory comes from DHB, but gripper timing is
+borrowed from the demo.”
+
+### What The 3-Way Event Token Already Shows
+
+It fixed the earlier dead-gripper regime:
+
+- the model no longer stays open for the whole episode
+- the learned signal now produces real open/close transitions in Stage 1
+
+So the event token is no longer merely theoretical. It is alive enough to drive
+rollout behavior.
+
+### What It Does Not Yet Show
+
+The learned event token is not phase-correct yet.
+
+Under the frozen offline canonical `StarVLA -> DHB -> embodik` loop:
+
+- the model closes from the first chunk on all three seeds
+- some seeds also show an early reopen / re-close pattern
+- the full learned-gripper canonical sweep drops to:
+  - `0 cm: 0/3`
+  - `3 cm: 0/3`
+
+So the current event token has crossed from:
+
+- `inactive / collapsed`
+
+to:
+
+- `active but over-closing`
+
+That is still a useful result because it tells us the remaining gap is not
+dataset inversion or rollout plumbing. It is event-phase alignment.
+
+### Why Existing Vendor VLA References Matter
+
+The StarVLA vendor references do not appear to use an event-token formulation
+for the gripper. The dominant pattern is still:
+
+- predict a binary gripper/open channel alongside the action chunk
+- threshold or binarize it at evaluation time
+- rely on chunk execution / action-repeat semantics for stability
+
+So the DHB-XR event-token path is a genuine extension, not a reimplementation of
+standard vendor practice.
+
+That makes the current result more valuable conceptually:
+
+- we are testing a stronger representation idea than the vendor default
+- but we should be careful not to overclaim until the event phase becomes
+  perceptually aligned with the task
+
+### Best Current Interpretation
+
+The right description is:
+
+- the learned interaction token is now real and trainable
+- it is not yet calibrated well enough to replace demo timing
+- the next step is not “make gripper prediction exist,” but “make the event
+  token fire at the right perceptual/manipulation phase”
 
 ## Best Publicly Safe Claim Right Now
 

@@ -105,6 +105,7 @@ DEFAULT_VIDEO_RES = (512, 384)  # (width, height)
 # Action mode configuration
 ACTION_MODE = "delta"
 LIBERO_GRIPPER_OPEN_QPOS_THRESHOLD = 0.015
+CONTACT_EVENT_LABEL_RADIUS = 2
 
 
 # ============================================================================
@@ -198,6 +199,72 @@ def load_libero_demo(h5_path: Path, demo_id: int) -> Dict:
             "wrist_rgb": wrist_rgb,  # [T, H, W, 3]
             "length": len(actions),
         }
+
+
+def _event_transition_labels(
+    gripper_open: np.ndarray,
+    transition: str,
+    radius: int = CONTACT_EVENT_LABEL_RADIUS,
+) -> np.ndarray:
+    """Build soft close/open event labels from binary demo gripper states.
+
+    These labels stay tied to demonstrated contact transitions, but they are
+    represented as local event windows rather than absolute-timestep replay.
+    The model can then learn chunk-relative contact phase jointly with the DHB
+    trajectory invariants.
+    """
+    if transition not in {"close", "open"}:
+        raise ValueError(f"Unsupported transition type: {transition}")
+
+    open_now = np.asarray(gripper_open, dtype=np.float32).reshape(-1)
+    if open_now.size == 0:
+        return np.zeros(0, dtype=np.float32)
+
+    next_open = np.concatenate([open_now[1:], open_now[-1:]], axis=0)
+    if transition == "close":
+        event_indices = np.where((open_now > 0.5) & (next_open <= 0.5))[0]
+    else:
+        event_indices = np.where((open_now <= 0.5) & (next_open > 0.5))[0]
+
+    labels = np.zeros_like(open_now, dtype=np.float32)
+    if radius < 0:
+        raise ValueError("radius must be non-negative")
+
+    for idx in event_indices:
+        for offset in range(-radius, radius + 1):
+            target = idx + offset
+            if 0 <= target < len(labels):
+                weight = 1.0 - (abs(offset) / float(radius + 1))
+                labels[target] = max(labels[target], weight)
+
+    return labels.astype(np.float32)
+
+
+def _event_class_labels(
+    gripper_open: np.ndarray,
+    radius: int = CONTACT_EVENT_LABEL_RADIUS,
+) -> np.ndarray:
+    """Build integer gripper event labels: 0=hold, 1=close, 2=open."""
+    open_now = np.asarray(gripper_open, dtype=np.float32).reshape(-1)
+    if open_now.size == 0:
+        return np.zeros(0, dtype=np.int64)
+
+    labels = np.zeros_like(open_now, dtype=np.int64)
+    next_open = np.concatenate([open_now[1:], open_now[-1:]], axis=0)
+    close_indices = np.where((open_now > 0.5) & (next_open <= 0.5))[0]
+    open_indices = np.where((open_now <= 0.5) & (next_open > 0.5))[0]
+
+    for idx in close_indices:
+        start = max(0, idx - radius)
+        end = min(len(labels), idx + radius + 1)
+        labels[start:end] = 1
+
+    for idx in open_indices:
+        start = max(0, idx - radius)
+        end = min(len(labels), idx + radius + 1)
+        labels[start:end] = 2
+
+    return labels.astype(np.int64)
 
 
 def list_demos_in_file(h5_path: Path) -> List[int]:
@@ -358,6 +425,10 @@ def create_episode_dataframe(
     # Prepare action vector (StarVLA LIBERO-style deltas):
     # [delta_x, delta_y, delta_z, delta_rx, delta_ry, delta_rz, next_open_gripper]
     action_vector = demo_data["delta_actions"].astype(np.float32)
+    gripper_open = (demo_data["gripper_state"][:, 0] > LIBERO_GRIPPER_OPEN_QPOS_THRESHOLD).astype(np.float32)
+    close_contact = _event_transition_labels(gripper_open, transition="close")
+    open_contact = _event_transition_labels(gripper_open, transition="open")
+    gripper_event = _event_class_labels(gripper_open)
     
     # Build one parquet row per environment step. The StarVLA LeRobot loader
     # expects trajectory data to be indexed by timestep inside each episode
@@ -405,6 +476,10 @@ def create_episode_dataframe(
                 f"{len(arr)} != {length}"
             )
         data_dict[f"dhb.{key}"] = list(arr)
+
+    data_dict["dhb.close_contact"] = close_contact.astype(np.float32).tolist()
+    data_dict["dhb.open_contact"] = open_contact.astype(np.float32).tolist()
+    data_dict["dhb.gripper_event"] = gripper_event.astype(np.int64).tolist()
     
     df = pd.DataFrame(data_dict)
     return df

@@ -20,7 +20,7 @@ The head is a drop-in replacement for FAST, OFT, or DiT action heads.
 """
 from __future__ import annotations
 
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Sequence, Tuple
 
 try:
     import torch
@@ -74,6 +74,14 @@ if HAS_TORCH:
             oat_fsq_levels: Optional[list] = None,
             action_dim: Optional[int] = None,
             terminal_loss_weight: float = 1.0,
+            contact_dim: int = 0,
+            lambda_contact: float = 0.0,
+            contact_pos_weight: float | Sequence[float] = 1.0,
+            contact_loss_type: str = "bce",
+            contact_class_weight: float | Sequence[float] = 1.0,
+            contact_use_vlm_context: bool = True,
+            contact_use_state: bool = True,
+            action_loss_ignore_gripper: bool = False,
         ):
             super().__init__()
 
@@ -84,6 +92,14 @@ if HAS_TORCH:
             self.lambda_act = lambda_act
             self.action_dim = action_dim
             self.terminal_loss_weight = terminal_loss_weight
+            self.contact_dim = contact_dim
+            self.lambda_contact = lambda_contact
+            self.contact_pos_weight = contact_pos_weight
+            self.contact_loss_type = contact_loss_type
+            self.contact_class_weight = contact_class_weight
+            self.contact_use_vlm_context = contact_use_vlm_context
+            self.contact_use_state = contact_use_state
+            self.action_loss_ignore_gripper = action_loss_ignore_gripper
 
             # Learnable query positions for each timestep
             self.query_embed = nn.Embedding(action_horizon, hidden_dim)
@@ -134,6 +150,26 @@ if HAS_TORCH:
             if action_dim is not None:
                 self.action_head = nn.Linear(hidden_dim, action_dim)
 
+            self.contact_head = None
+            self.contact_cross_attn = None
+            if contact_dim and contact_dim > 0:
+                contact_in_dim = hidden_dim
+                if contact_use_vlm_context:
+                    self.contact_cross_attn = nn.MultiheadAttention(
+                        embed_dim=hidden_dim,
+                        num_heads=num_heads,
+                        dropout=dropout,
+                        batch_first=True,
+                    )
+                    contact_in_dim += hidden_dim
+                if contact_use_state:
+                    contact_in_dim += hidden_dim
+                self.contact_head = nn.Sequential(
+                    nn.Linear(contact_in_dim, hidden_dim),
+                    nn.GELU(),
+                    nn.Linear(hidden_dim, contact_dim),
+                )
+
         def _invariant_loss(self, pred_inv: torch.Tensor, target_invariants: torch.Tensor) -> torch.Tensor:
             """Compute invariant loss with optional terminal-step upweighting."""
             per_step_mse = (pred_inv - target_invariants).pow(2).mean(dim=-1)  # (B, T)
@@ -156,6 +192,7 @@ if HAS_TORCH:
             state: Optional[torch.Tensor] = None,
             target_invariants: Optional[torch.Tensor] = None,
             target_actions: Optional[torch.Tensor] = None,
+            target_contact: Optional[torch.Tensor] = None,
         ) -> Dict[str, torch.Tensor]:
             """
             Forward pass: predict DHB invariants from VLM hidden states.
@@ -176,13 +213,15 @@ if HAS_TORCH:
             B = vlm_hidden.shape[0]
 
             # Project VLM hidden states
-            memory = self.vlm_proj(vlm_hidden)  # (B, S, hidden_dim)
+            memory_vlm = self.vlm_proj(vlm_hidden)  # (B, S, hidden_dim)
+            memory = memory_vlm
 
             # Build query sequence
             query_pos = torch.arange(self.action_horizon, device=vlm_hidden.device)
             queries = self.query_embed(query_pos).unsqueeze(0).expand(B, -1, -1)
 
             # Optionally condition on current state
+            state_feat = None
             if state is not None:
                 state_feat = self.state_proj(state).unsqueeze(1)  # (B, 1, hidden_dim)
                 memory = torch.cat([state_feat, memory], dim=1)
@@ -212,6 +251,31 @@ if HAS_TORCH:
                 pred_actions = self.action_head(decoded)  # (B, T, action_dim)
                 result["pred_actions"] = pred_actions
 
+            pred_contact_logits = None
+            if self.contact_head is not None:
+                contact_inputs = [decoded]
+                if self.contact_use_vlm_context:
+                    contact_vlm_ctx, _ = self.contact_cross_attn(
+                        decoded,
+                        memory_vlm,
+                        memory_vlm,
+                        need_weights=False,
+                    )
+                    contact_inputs.append(contact_vlm_ctx)
+                if self.contact_use_state:
+                    if state_feat is not None:
+                        contact_inputs.append(state_feat.expand(-1, self.action_horizon, -1))
+                    else:
+                        zeros = torch.zeros_like(decoded)
+                        contact_inputs.append(zeros)
+                contact_features = torch.cat(contact_inputs, dim=-1)
+                pred_contact_logits = self.contact_head(contact_features)  # (B, T, contact_dim)
+                result["pred_contact_logits"] = pred_contact_logits
+                if self.contact_loss_type == "cross_entropy":
+                    result["pred_contact_probs"] = pred_contact_logits.softmax(dim=-1)
+                else:
+                    result["pred_contact_probs"] = pred_contact_logits.sigmoid()
+
             # ── Training loss (aligned with LEGATO manuscript Section 7) ──
             #
             # L_total = lambda_inv * L_inv + lambda_act * L_act [+ 0.1 * L_oat]
@@ -224,6 +288,7 @@ if HAS_TORCH:
             # geometric regularization) AND raw actions (for direct closed-loop execution).
             # The invariant loss ensures the internal representation is SE(3)-aware;
             # the action loss ensures the output is directly executable by the controller.
+            total = None
             if target_invariants is not None:
                 loss_inv = self._invariant_loss(pred_inv, target_invariants)
                 result["loss_inv"] = loss_inv
@@ -233,7 +298,10 @@ if HAS_TORCH:
 
                 if target_actions is not None and pred_actions is not None:
                     # Dual-head mode: L1 action loss + invariant regularization
-                    loss_act = F.l1_loss(pred_actions, target_actions)
+                    if self.action_loss_ignore_gripper and pred_actions.shape[-1] >= 7:
+                        loss_act = F.l1_loss(pred_actions[..., :6], target_actions[..., :6])
+                    else:
+                        loss_act = F.l1_loss(pred_actions, target_actions)
                     result["loss_act"] = loss_act
                     total = self.lambda_act * loss_act + self.lambda_inv * loss_inv
                     if oat_loss is not None:
@@ -243,6 +311,93 @@ if HAS_TORCH:
                     loss_act = torch.tensor(0.0, device=vlm_hidden.device)
                     result["loss_act"] = loss_act
 
+            elif target_actions is not None and pred_actions is not None:
+                if self.action_loss_ignore_gripper and pred_actions.shape[-1] >= 7:
+                    loss_act = F.l1_loss(pred_actions[..., :6], target_actions[..., :6])
+                else:
+                    loss_act = F.l1_loss(pred_actions, target_actions)
+                result["loss_act"] = loss_act
+                total = self.lambda_act * loss_act
+
+            if target_contact is not None and pred_contact_logits is not None:
+                if self.contact_loss_type == "cross_entropy":
+                    class_weight_values = None
+                    if not isinstance(self.contact_class_weight, (str, bytes)):
+                        try:
+                            class_weight_values = list(self.contact_class_weight)
+                        except TypeError:
+                            class_weight_values = None
+
+                    if class_weight_values is not None:
+                        class_weight = torch.as_tensor(
+                            class_weight_values,
+                            device=pred_contact_logits.device,
+                            dtype=pred_contact_logits.dtype,
+                        )
+                        if class_weight.numel() == 1:
+                            class_weight = class_weight.expand(pred_contact_logits.shape[-1])
+                        elif class_weight.numel() != pred_contact_logits.shape[-1]:
+                            raise ValueError(
+                                "contact_class_weight must be scalar or match contact_dim; "
+                                f"got {class_weight.numel()} values for contact_dim="
+                                f"{pred_contact_logits.shape[-1]}"
+                            )
+                    else:
+                        class_weight = torch.full(
+                            (pred_contact_logits.shape[-1],),
+                            float(self.contact_class_weight),
+                            device=pred_contact_logits.device,
+                            dtype=pred_contact_logits.dtype,
+                        )
+
+                    if target_contact.ndim == pred_contact_logits.ndim:
+                        target_contact_ce = target_contact.argmax(dim=-1)
+                    else:
+                        target_contact_ce = target_contact
+                    target_contact_ce = target_contact_ce.to(device=pred_contact_logits.device, dtype=torch.long)
+                    loss_contact = F.cross_entropy(
+                        pred_contact_logits.reshape(-1, pred_contact_logits.shape[-1]),
+                        target_contact_ce.reshape(-1),
+                        weight=class_weight,
+                    )
+                else:
+                    pos_weight_values = None
+                    if not isinstance(self.contact_pos_weight, (str, bytes)):
+                        try:
+                            pos_weight_values = list(self.contact_pos_weight)
+                        except TypeError:
+                            pos_weight_values = None
+
+                    if pos_weight_values is not None:
+                        pos_weight = torch.as_tensor(
+                            pos_weight_values,
+                            device=pred_contact_logits.device,
+                            dtype=pred_contact_logits.dtype,
+                        )
+                        if pos_weight.numel() == 1:
+                            pos_weight = pos_weight.expand(pred_contact_logits.shape[-1])
+                        elif pos_weight.numel() != pred_contact_logits.shape[-1]:
+                            raise ValueError(
+                                "contact_pos_weight must be scalar or match contact_dim; "
+                                f"got {pos_weight.numel()} values for contact_dim="
+                                f"{pred_contact_logits.shape[-1]}"
+                            )
+                    else:
+                        pos_weight = torch.full(
+                            (pred_contact_logits.shape[-1],),
+                            float(self.contact_pos_weight),
+                            device=pred_contact_logits.device,
+                            dtype=pred_contact_logits.dtype,
+                        )
+                    loss_contact = F.binary_cross_entropy_with_logits(
+                        pred_contact_logits,
+                        target_contact,
+                        pos_weight=pos_weight,
+                    )
+                result["loss_contact"] = loss_contact
+                total = self.lambda_contact * loss_contact if total is None else total + self.lambda_contact * loss_contact
+
+            if total is not None:
                 result["loss"] = total
 
             return result

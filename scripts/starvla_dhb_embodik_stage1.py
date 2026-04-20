@@ -13,7 +13,10 @@ from libero.libero import benchmark, get_libero_path
 from omegaconf import OmegaConf
 from scipy.spatial.transform import Rotation
 
-from dhb_xr.integration.vla.libero import libero_obs_quat_to_axis_angle
+from dhb_xr.integration.vla.libero import (
+    decode_model_gripper_cmds,
+    libero_obs_quat_to_axis_angle,
+)
 from starVLA.model.framework.base_framework import build_framework
 from starVLA.training.trainer_utils.config_tracker import wrap_config
 from starVLA.training.trainer_utils.trainer_tools import normalize_dotlist_args
@@ -68,10 +71,6 @@ def _load_rollout_checkpoint(model, checkpoint_path: str) -> None:
             )
         return
     model.load_state_dict(state_dict, strict=True)
-
-
-def _binarize_gripper(open_val: float) -> float:
-    return float(1.0 - 2.0 * (open_val > 0.5))
 
 
 def _demo_hdf5_path(task_suite_name: str, task_name: str) -> Path:
@@ -304,17 +303,16 @@ def main() -> None:
         all_positions.append(chunk_pos_stable[:n_use])
         all_quaternions.append(chunk_quat[:n_use])
 
+        gripper_debug = {"source": "demo"}
         if args.gripper_source == "demo":
             all_gripper.append(demo["gripper_cmd"][t : t + n_use])
         else:
-            normalized_actions = np.asarray(result.get("normalized_actions", []), dtype=np.float32)
-            if normalized_actions.size:
-                chunk_gripper = np.array(
-                    [_binarize_gripper(v) for v in normalized_actions[0, :n_use, 6]],
-                    dtype=np.float32,
-                )
-            else:
-                chunk_gripper = np.full(n_use, -1.0, dtype=np.float32)
+            prev_idx = max(t - 1, 0)
+            chunk_gripper, gripper_debug = decode_model_gripper_cmds(
+                result,
+                n_use=n_use,
+                initial_gripper_cmd=float(demo["gripper_cmd"][prev_idx]),
+            )
             all_gripper.append(chunk_gripper)
 
         gt_chunk = demo["ee_pos"][t : t + n_use]
@@ -329,6 +327,9 @@ def main() -> None:
                 "first_stabilized_pos": chunk_pos_stable[0].tolist(),
                 "first_gt_pos": gt_chunk[0].tolist(),
                 "overlap_steps": int(overlap_steps),
+                "gripper_source_used": gripper_debug.get("source"),
+                "close_probs": gripper_debug.get("close_probs"),
+                "open_probs": gripper_debug.get("open_probs"),
                 **stability,
             }
         )

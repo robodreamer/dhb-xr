@@ -86,6 +86,7 @@ def main() -> None:
     start.record()
     with torch.inference_mode():
         pred = model.predict_action(batch)
+        traj = model.predict_trajectory(batch) if hasattr(model, "predict_trajectory") else None
     end.record()
     torch.cuda.synchronize(device)
 
@@ -108,6 +109,16 @@ def main() -> None:
         "pred_first_action": actions[0, 0].tolist(),
         "pred_last_action": actions[0, -1].tolist(),
     }
+    if traj is not None and "pred_contact_probs" in traj:
+        contact_probs = traj["pred_contact_probs"]
+        if contact_probs.shape[-1] >= 3:
+            summary["pred_hold_probs_head"] = contact_probs[0, :, 0].tolist()
+            summary["pred_close_probs_head"] = contact_probs[0, :, 1].tolist()
+            summary["pred_open_probs_head"] = contact_probs[0, :, 2].tolist()
+        else:
+            summary["pred_close_probs_head"] = contact_probs[0, :, 0].tolist()
+            if contact_probs.shape[-1] > 1:
+                summary["pred_open_probs_head"] = contact_probs[0, :, 1].tolist()
     if target is not None:
         import numpy as np
 
@@ -116,6 +127,18 @@ def main() -> None:
         summary["target_first_action"] = target_arr[0].tolist()
         summary["target_last_action"] = target_arr[-1].tolist()
         summary["chunk_mae"] = float(np.abs(pred_arr - target_arr).mean())
+        if batch and "dhb.close_contact" in batch[0]:
+            summary["target_close_contact"] = np.asarray(batch[0]["dhb.close_contact"], dtype=np.float32)[
+                -actions.shape[1] :
+            ].tolist()
+        if batch and "dhb.open_contact" in batch[0]:
+            summary["target_open_contact"] = np.asarray(batch[0]["dhb.open_contact"], dtype=np.float32)[
+                -actions.shape[1] :
+            ].tolist()
+        if batch and "dhb.gripper_event" in batch[0]:
+            summary["target_gripper_event"] = np.asarray(batch[0]["dhb.gripper_event"], dtype=np.int64)[
+                -actions.shape[1] :
+            ].tolist()
 
     save_json = Path(args.save_json) if args.save_json else output_dir / "predict_smoke_summary.json"
     save_json.parent.mkdir(parents=True, exist_ok=True)

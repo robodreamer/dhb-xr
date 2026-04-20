@@ -3,7 +3,12 @@ from scipy.spatial.transform import Rotation
 
 import h5py
 
-from dhb_xr.integration.vla.libero import LiberoAdapter, libero_obs_quat_to_axis_angle, libero_obs_quat_wxyz_to_xyzw
+from dhb_xr.integration.vla.libero import (
+    LiberoAdapter,
+    decode_contact_probs_to_gripper_cmds,
+    libero_obs_quat_to_axis_angle,
+    libero_obs_quat_wxyz_to_xyzw,
+)
 
 
 def test_libero_obs_quat_conversion_matches_hdf5_convention():
@@ -52,3 +57,34 @@ def test_libero_adapter_loads_binary_gripper_from_small_qpos_values(tmp_path):
     sample = next(LiberoAdapter().load_dataset(str(h5_path)))
     np.testing.assert_allclose(sample["gripper_qpos"], [0.0, 0.02, 0.01], atol=1e-6)
     np.testing.assert_allclose(sample["gripper"], [0.0, 1.0, 0.0], atol=1e-6)
+
+
+def test_decode_contact_probs_to_gripper_cmds_tracks_event_state():
+    contact_probs = np.array(
+        [
+            [0.1, 0.2],  # remain open
+            [0.8, 0.1],  # close event
+            [0.2, 0.1],  # stay closed
+            [0.1, 0.9],  # open event
+            [0.1, 0.2],  # stay open
+        ],
+        dtype=np.float32,
+    )
+
+    cmds = decode_contact_probs_to_gripper_cmds(contact_probs, initial_gripper_cmd=-1.0, threshold=0.5)
+    np.testing.assert_allclose(cmds, [-1.0, 1.0, 1.0, -1.0, -1.0], atol=1e-6)
+
+
+def test_decode_contact_probs_to_gripper_cmds_supports_three_way_events():
+    contact_probs = np.array(
+        [
+            [0.9, 0.05, 0.05],  # hold open
+            [0.1, 0.8, 0.1],    # close event
+            [0.9, 0.05, 0.05],  # hold closed
+            [0.1, 0.1, 0.8],    # open event
+            [0.9, 0.05, 0.05],  # hold open
+        ],
+        dtype=np.float32,
+    )
+    cmds = decode_contact_probs_to_gripper_cmds(contact_probs, initial_gripper_cmd=-1.0)
+    np.testing.assert_allclose(cmds, [-1.0, 1.0, 1.0, -1.0, -1.0], atol=1e-6)
