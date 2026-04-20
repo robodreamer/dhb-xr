@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import deque
 import functools
 import json
 from contextlib import contextmanager
@@ -16,7 +17,7 @@ from libero.libero.envs import OffScreenRenderEnv
 from omegaconf import OmegaConf
 from scipy.spatial.transform import Rotation
 
-from dhb_xr.integration.vla.libero import libero_obs_quat_to_axis_angle
+from dhb_xr.integration.vla.libero import build_state_history_window, libero_obs_quat_to_axis_angle
 from starVLA.model.framework.base_framework import build_framework
 from starVLA.training.trainer_utils.config_tracker import wrap_config
 from starVLA.training.trainer_utils.trainer_tools import normalize_dotlist_args
@@ -162,6 +163,10 @@ def _max_steps_for_suite(name: str) -> int:
     }[name]
 
 
+def _state_history_window(cfg) -> int:
+    return max(1, int(OmegaConf.select(cfg, "framework.action_model.state_history_window", default=1) or 1))
+
+
 def _load_libero_demo_actions(hdf5_path: str, demo_id: int, action_mode: str) -> np.ndarray:
     demo_key = f"demo_{demo_id}"
     with h5py.File(hdf5_path, "r") as f:
@@ -217,6 +222,7 @@ def main() -> None:
     cfg.output_dir = str(_default_output_dir(cfg))
     output_dir = Path(cfg.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    state_history_window = _state_history_window(cfg)
     action_norm_stats = None if args.gt_hdf5 else _load_action_norm_stats(cfg, output_dir, checkpoint=args.checkpoint)
 
     benchmark_dict = benchmark.get_benchmark_dict()
@@ -253,6 +259,16 @@ def main() -> None:
     obs = env.set_init_state(initial_states[args.episode_idx])
     for _ in range(args.num_steps_wait):
         obs, _, _, _ = env.step(LIBERO_DUMMY_ACTION)
+    state_history: deque[np.ndarray] = deque(maxlen=state_history_window)
+    initial_state = np.concatenate(
+        (
+            obs["robot0_eef_pos"],
+            libero_obs_quat_to_axis_angle(obs["robot0_eef_quat"]),
+            np.array([0.0], dtype=np.float32),
+            obs["robot0_gripper_qpos"][:1],
+        )
+    ).astype(np.float32)
+    state_history.append(initial_state)
     use_delta_actions = raw_actions_gt is None or args.gt_action_mode == "delta"
     for robot in env.robots:
         robot.controller.use_delta = use_delta_actions
@@ -285,10 +301,16 @@ def main() -> None:
         ).astype(np.float32)
 
         if raw_actions_gt is None:
+            if not state_history or not np.allclose(state_history[-1], state):
+                state_history.append(state.copy())
+            state_window = build_state_history_window(
+                list(state_history),
+                history_window=state_history_window,
+            )
             example = {
                 "image": [img, wrist_img],
                 "lang": task.language,
-                "state": np.expand_dims(state, axis=0),
+                "state": state_window,
             }
 
             if raw_actions_chunk is None or _step % len(raw_actions_chunk) == 0:
@@ -329,6 +351,16 @@ def main() -> None:
         actions.append(delta_action.tolist())
 
         obs, _, done, _info = env.step(delta_action.tolist())
+        state_history.append(
+            np.concatenate(
+                (
+                    obs["robot0_eef_pos"],
+                    libero_obs_quat_to_axis_angle(obs["robot0_eef_quat"]),
+                    np.array([0.0], dtype=np.float32),
+                    obs["robot0_gripper_qpos"][:1],
+                )
+            ).astype(np.float32)
+        )
         if done:
             break
 
@@ -357,6 +389,7 @@ def main() -> None:
         "episode_idx": args.episode_idx,
         "task_language": task.language,
         "success": bool(done),
+        "state_history_window": int(state_history_window),
         "num_steps": len(actions),
         "rollout_time_ms": round(start.elapsed_time(end), 2) if device is not None else None,
         "gpu_name": torch.cuda.get_device_name(device) if device is not None else None,

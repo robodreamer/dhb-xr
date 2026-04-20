@@ -10,7 +10,7 @@ Note: obs/ee_ori contains Euler angles, not quaternions.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, Iterator, Optional, Tuple
+from typing import Dict, Iterator, Optional, Sequence, Tuple
 
 import numpy as np
 from scipy.spatial.transform import Rotation
@@ -52,6 +52,39 @@ def libero_obs_quat_to_axis_angle(quat: np.ndarray) -> np.ndarray:
     quat_xyzw = libero_obs_quat_wxyz_to_xyzw(quat)
     quat_xyzw = quat_xyzw / np.linalg.norm(quat_xyzw)
     return Rotation.from_quat(quat_xyzw).as_rotvec().astype(np.float32)
+
+
+def build_state_history_window(
+    states: np.ndarray | Sequence[np.ndarray],
+    *,
+    history_window: int,
+    state_dim: int = 8,
+) -> np.ndarray:
+    """Pad or trim a past-inclusive state history to a fixed ``(H, D)`` window.
+
+    The training loader now feeds DHB with a short history window ending at the
+    current step. Offline stage-1 and live rollout should mirror that contract
+    instead of passing a single flattened state. Missing history is padded by
+    repeating the oldest available state, matching the action-head behavior.
+    """
+    history_window = max(1, int(history_window))
+    arr = np.asarray(states, dtype=np.float32)
+    if arr.ndim == 1:
+        if arr.shape[0] != state_dim:
+            raise ValueError(
+                f"Expected single state dim {state_dim}, got shape {tuple(arr.shape)}"
+            )
+        arr = arr[None, :]
+    if arr.ndim != 2 or arr.shape[1] != state_dim:
+        raise ValueError(
+            f"Expected state history shape (H, {state_dim}), got {tuple(arr.shape)}"
+        )
+    if arr.shape[0] < history_window:
+        pad = np.repeat(arr[:1], history_window - arr.shape[0], axis=0)
+        arr = np.concatenate([pad, arr], axis=0)
+    elif arr.shape[0] > history_window:
+        arr = arr[-history_window:]
+    return arr.astype(np.float32, copy=False)
 
 
 def decode_contact_probs_to_gripper_cmds(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import deque
 import functools
 import json
 from contextlib import contextmanager
@@ -20,6 +21,7 @@ from dhb_xr.integration.vla.chunk_rollout import (
     compute_motion_metrics,
 )
 from dhb_xr.integration.vla.libero import (
+    build_state_history_window,
     libero_obs_quat_to_axis_angle,
 )
 from starVLA.model.framework.base_framework import build_framework
@@ -147,6 +149,10 @@ def _state_vector_from_obs(obs: dict) -> np.ndarray:
     ).astype(np.float32)
 
 
+def _state_history_window(cfg) -> int:
+    return max(1, int(OmegaConf.select(cfg, "framework.action_model.state_history_window", default=1) or 1))
+
+
 def _make_video_path(video_dir: Path, label: str, suffix: str = "mp4") -> Path:
     safe = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in label).strip("_")
     return video_dir / f"{safe}.{suffix}"
@@ -248,6 +254,7 @@ def main() -> None:
     model = build_framework(cfg)
     _load_rollout_checkpoint(model, args.checkpoint)
     model.eval()
+    state_history_window = _state_history_window(cfg)
 
     benchmark_dict = benchmark.get_benchmark_dict()
     task_suite = benchmark_dict[args.task_suite_name]()
@@ -287,6 +294,10 @@ def main() -> None:
     ctrl.action_scale = None
 
     scene_refs = _capture_scene_refs(env)
+    state_history: deque[np.ndarray] = deque(
+        [_state_vector_from_obs(obs)],
+        maxlen=state_history_window,
+    )
 
     import embodik
 
@@ -375,12 +386,18 @@ def main() -> None:
     while t < num_demo_steps:
         ee_pos_live = np.asarray(obs["robot0_eef_pos"], dtype=np.float32)
         state = _state_vector_from_obs(obs)
+        if not state_history or not np.allclose(state_history[-1], state):
+            state_history.append(state.copy())
+        state_window = build_state_history_window(
+            list(state_history),
+            history_window=state_history_window,
+        )
         agentview = np.ascontiguousarray(obs["agentview_image"][::-1, ::-1])
         wrist = np.ascontiguousarray(obs["robot0_eye_in_hand_image"][::-1, ::-1])
         example = {
             "image": [agentview, wrist],
             "lang": task.language,
-            "state": np.expand_dims(state, axis=0),
+            "state": state_window,
         }
 
         with torch.inference_mode():
@@ -480,6 +497,7 @@ def main() -> None:
                 append_frame(writer, obs)
                 ee_now = np.asarray(robot.controller.ee_pos, dtype=np.float32)
                 ee_trace.append(ee_now.copy())
+                state_history.append(_state_vector_from_obs(obs))
                 update_min_dists(ee_now)
 
             prev_grip = last_effective_grip
@@ -543,6 +561,7 @@ def main() -> None:
         "blend_overlap_alpha": float(args.blend_overlap_alpha),
         "blend_mode": args.blend_mode,
         "commit_prefix_steps": int(args.commit_prefix_steps),
+        "state_history_window": int(state_history_window),
         "gripper_source": args.gripper_source,
         "init_state_source": args.init_state_source,
         "init_state_l2_diff": float(np.linalg.norm(demo_init_state - benchmark_init_state)),

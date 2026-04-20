@@ -15,6 +15,7 @@ from scipy.spatial.transform import Rotation
 
 from dhb_xr.integration.vla.chunk_rollout import ChunkRolloutConfig, TrajectoryChunkRunner
 from dhb_xr.integration.vla.libero import (
+    build_state_history_window,
     libero_obs_quat_to_axis_angle,
 )
 from starVLA.model.framework.base_framework import build_framework
@@ -124,6 +125,10 @@ def _demo_state_vector(ee_pos: np.ndarray, ee_quat_wxyz: np.ndarray, grip_qpos: 
     ).astype(np.float32)
 
 
+def _state_history_window(cfg) -> int:
+    return max(1, int(OmegaConf.select(cfg, "framework.action_model.state_history_window", default=1) or 1))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config_yaml", required=True)
@@ -164,6 +169,18 @@ def main() -> None:
     if args.checkpoint:
         _load_rollout_checkpoint(model, args.checkpoint)
     model.eval()
+    state_history_window = _state_history_window(cfg)
+    demo_states = np.stack(
+        [
+            _demo_state_vector(
+                demo["ee_pos"][i],
+                demo["ee_quat_wxyz"][i],
+                float(demo["gripper_qpos"][i]),
+            )
+            for i in range(num_demo_steps)
+        ],
+        axis=0,
+    ).astype(np.float32)
 
     all_positions = []
     all_quaternions = []
@@ -182,10 +199,9 @@ def main() -> None:
     t = 0
     last_gripper_cmd = float(demo["gripper_cmd"][0]) if len(demo["gripper_cmd"]) else -1.0
     while t < num_demo_steps:
-        state = _demo_state_vector(
-            demo["ee_pos"][t],
-            demo["ee_quat_wxyz"][t],
-            float(demo["gripper_qpos"][t]),
+        state_window = build_state_history_window(
+            demo_states[max(0, t - state_history_window + 1) : t + 1],
+            history_window=state_history_window,
         )
         example = {
             "image": [
@@ -193,7 +209,7 @@ def main() -> None:
                 np.ascontiguousarray(demo["wrist_rgb"][t]),
             ],
             "lang": task.language,
-            "state": np.expand_dims(state, axis=0),
+            "state": state_window,
         }
 
         with torch.inference_mode():
@@ -268,6 +284,7 @@ def main() -> None:
         "num_demo_steps": num_demo_steps,
         "num_chunks": len(debug_chunks),
         "gripper_source": args.gripper_source,
+        "state_history_window": int(state_history_window),
         "positions_shape": list(positions.shape),
         "quaternions_shape": list(quaternions.shape),
         "gripper_shape": list(gripper.shape) if gripper is not None else None,

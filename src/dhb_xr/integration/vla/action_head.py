@@ -63,6 +63,8 @@ if HAS_TORCH:
             vlm_dim: int = 768,
             action_horizon: int = 50,
             invariant_dim: int = 8,
+            state_dim: int = 8,
+            state_history_window: int = 1,
             hidden_dim: int = 256,
             num_heads: int = 8,
             num_layers: int = 4,
@@ -100,6 +102,8 @@ if HAS_TORCH:
 
             self.action_horizon = action_horizon
             self.invariant_dim = invariant_dim
+            self.state_dim = int(state_dim)
+            self.state_history_window = max(1, int(state_history_window))
             self.lambda_inv = lambda_inv
             self.use_oat = use_oat
             self.lambda_act = lambda_act
@@ -175,7 +179,10 @@ if HAS_TORCH:
             self.invariant_head = nn.Linear(hidden_dim, invariant_dim)
 
             # Optional: state projection for conditioning on current EE state
-            self.state_proj = nn.Linear(8, hidden_dim)  # eef_pos(3) + aa(3) + grip(2)
+            self.state_proj = nn.Linear(
+                self.state_dim * self.state_history_window,
+                hidden_dim,
+            )  # [history, eef_pos(3) + aa(3) + grip(2)]
 
             # Optional: OAT tokenizer for discrete token prediction
             self.oat = None
@@ -248,6 +255,41 @@ if HAS_TORCH:
                     nn.Linear(hidden_dim, gripper_state_dim),
                 ) if gripper_state_dim and gripper_state_dim > 0 else None
 
+        def _flatten_state_history(self, state: torch.Tensor) -> torch.Tensor:
+            """Flatten state history to a fixed-size token input.
+
+            Accepts either:
+            - (B, D): single state vector or already-flattened history
+            - (B, H, D): state-history window, oldest -> newest
+            """
+            if state.ndim == 2:
+                if state.shape[-1] == self.state_dim * self.state_history_window:
+                    return state
+                if state.shape[-1] == self.state_dim:
+                    if self.state_history_window == 1:
+                        return state
+                    state = state.unsqueeze(1).expand(-1, self.state_history_window, -1)
+                else:
+                    raise ValueError(
+                        f"Unexpected flat state shape {tuple(state.shape)} for "
+                        f"state_dim={self.state_dim}, state_history_window={self.state_history_window}"
+                    )
+
+            if state.ndim != 3:
+                raise ValueError(f"State tensor must have ndim 2 or 3, got shape {tuple(state.shape)}")
+
+            B, H, D = state.shape
+            if D != self.state_dim:
+                raise ValueError(
+                    f"Expected state feature dim {self.state_dim}, got {D} for shape {tuple(state.shape)}"
+                )
+            if H < self.state_history_window:
+                pad = state[:, :1, :].expand(-1, self.state_history_window - H, -1)
+                state = torch.cat([pad, state], dim=1)
+            elif H > self.state_history_window:
+                state = state[:, -self.state_history_window :, :]
+            return state.reshape(B, self.state_dim * self.state_history_window)
+
         def _invariant_loss(self, pred_inv: torch.Tensor, target_invariants: torch.Tensor) -> torch.Tensor:
             """Compute invariant loss with optional terminal-step upweighting."""
             per_step_mse = (pred_inv - target_invariants).pow(2).mean(dim=-1)  # (B, T)
@@ -303,7 +345,8 @@ if HAS_TORCH:
             # Optionally condition on current state
             state_feat = None
             if state is not None:
-                state_feat = self.state_proj(state).unsqueeze(1)  # (B, 1, hidden_dim)
+                state_flat = self._flatten_state_history(state)
+                state_feat = self.state_proj(state_flat).unsqueeze(1)  # (B, 1, hidden_dim)
                 memory = torch.cat([state_feat, memory], dim=1)
 
             # Cross-attention decode
