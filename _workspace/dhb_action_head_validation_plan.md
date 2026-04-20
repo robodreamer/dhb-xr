@@ -567,6 +567,7 @@ Artifacts:
 - run:
   - `_workspace/starvla_runs/dhb_starvla_qwen_gripper_token1`
   - `_workspace/starvla_runs/dhb_starvla_qwen_gripper_token_focus1`
+  - `_workspace/starvla_runs/dhb_starvla_qwen_gripper_token_centered1`
 - stage-1 model-gripper sweeps:
   - `_workspace/starvla_runs/dhb_starvla_qwen_gripper_token_focus1/embodik_stage1_ep0_modelgrip_canonical.json`
   - `_workspace/starvla_runs/dhb_starvla_qwen_gripper_token_focus1/embodik_stage1_ep1_modelgrip_canonical.json`
@@ -595,3 +596,15 @@ Interpretation:
   - not “make the gripper event head exist”
   - but “align close/open to perceptual task phase rather than overfitting an
     always-close prior”
+- A concrete loader-side bias was present and is now fixed:
+  - among close-event chunks from the first 20 parquet files, the previous
+    oversampler placed the first close label at relative position `0` in
+    `105 / 252` candidates
+  - the centered-event sampler now targets relative position `4` for the 8-step
+    chunk, which removes that front-loading bias in the training examples
+- But the centered retrain still does not fix rollout-phase alignment:
+  - `dhb_starvla_qwen_gripper_token_centered1` still predicts immediate close on
+    `episode 0` and `episode 1`, and stays closed throughout the preview on
+    `episode 10`
+  - so the remaining blocker is no longer just chunk selection; it is that the
+    close/open labels still are not object/perception-conditioned enough

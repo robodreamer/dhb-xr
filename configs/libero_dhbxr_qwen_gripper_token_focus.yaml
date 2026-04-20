@@ -47,6 +47,7 @@ datasets:
     terminal_chunk_prob: 0.2
     gripper_event_chunk_prob: 0.4
     gripper_close_chunk_prob: 0.75
+    gripper_event_target_pos: 4
     state_input_noise_prob: 0.7
     state_input_noise_pos_std_m: 0.01
     state_input_noise_rot_std_rad: 0.05
