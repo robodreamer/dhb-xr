@@ -88,3 +88,37 @@ def test_runner_decodes_three_way_contact_probs_to_persistent_gripper_cmds():
 
     assert prepared["debug"]["gripper_source_used"] == "contact_probs"
     assert prepared["gripper_cmds"].tolist() == [-1.0, 1.0, -1.0]
+
+
+def test_runner_debounces_dense_gripper_state_predictions():
+    runner = TrajectoryChunkRunner(
+        ChunkRolloutConfig(
+            gripper_source="model",
+            gripper_close_threshold=0.6,
+            gripper_open_threshold=0.4,
+        )
+    )
+    prepared = runner.prepare_chunk(
+        {
+            "positions": np.array([[[0.00, 0.00, 0.00], [0.01, 0.00, 0.00], [0.02, 0.00, 0.00], [0.03, 0.00, 0.00]]], dtype=np.float32),
+            "quaternions": np.array([[[1.0, 0.0, 0.0, 0.0]] * 4], dtype=np.float32),
+            "pred_gripper_state_probs": np.array(
+                [[
+                    [0.45, 0.55],  # stay open
+                    [0.38, 0.62],  # close
+                    [0.43, 0.57],  # remain closed in hysteresis band
+                    [0.61, 0.39],  # reopen
+                ]],
+                dtype=np.float32,
+            ),
+        },
+        anchor_pos=np.zeros(3, dtype=np.float32),
+        current_start=0,
+        n_use=4,
+        initial_gripper_cmd=-1.0,
+    )
+
+    assert prepared["debug"]["gripper_source_used"] == "gripper_state_probs"
+    assert prepared["gripper_cmds"].tolist() == [-1.0, 1.0, 1.0, -1.0]
+    assert prepared["debug"]["gripper_close_threshold"] == 0.6
+    assert prepared["debug"]["gripper_open_threshold"] == 0.4

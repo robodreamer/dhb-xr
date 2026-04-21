@@ -107,3 +107,26 @@ def test_decode_contact_probs_to_gripper_cmds_supports_dense_gripper_state():
         contact_mode="gripper_state",
     )
     np.testing.assert_allclose(cmds, [-1.0, 1.0, 1.0, -1.0], atol=1e-6)
+
+
+def test_decode_contact_probs_to_gripper_cmds_supports_hysteresis_for_gripper_state():
+    contact_probs = np.array(
+        [
+            [0.45, 0.55],  # stay open: below close threshold
+            [0.42, 0.58],  # stay open: still below close threshold
+            [0.38, 0.62],  # close
+            [0.43, 0.57],  # stay closed in hysteresis band
+            [0.61, 0.39],  # reopen
+            [0.55, 0.45],  # stay open in hysteresis band
+        ],
+        dtype=np.float32,
+    )
+    cmds = decode_contact_probs_to_gripper_cmds(
+        contact_probs,
+        initial_gripper_cmd=-1.0,
+        threshold=0.5,
+        contact_mode="gripper_state",
+        close_threshold=0.6,
+        open_threshold=0.4,
+    )
+    np.testing.assert_allclose(cmds, [-1.0, -1.0, 1.0, 1.0, -1.0, -1.0], atol=1e-6)

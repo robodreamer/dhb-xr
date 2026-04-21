@@ -208,6 +208,9 @@ class ChunkRolloutConfig:
     blend_mode: str = "constant"
     commit_prefix_steps: int = 0
     gripper_source: str = "demo"
+    gripper_threshold: float = 0.5
+    gripper_close_threshold: float | None = 0.6
+    gripper_open_threshold: float | None = 0.4
 
 
 class TrajectoryChunkRunner:
@@ -269,6 +272,9 @@ class TrajectoryChunkRunner:
                 result,
                 n_use=n_use,
                 initial_gripper_cmd=float(initial_gripper_cmd),
+                threshold=float(cfg.gripper_threshold),
+                close_threshold=cfg.gripper_close_threshold,
+                open_threshold=cfg.gripper_open_threshold,
             )
 
         self._prev_chunk_pos = chunk_pos_stable.copy()
@@ -283,6 +289,9 @@ class TrajectoryChunkRunner:
                 "gripper_source_used": gripper_debug.get("source"),
                 "close_probs": gripper_debug.get("close_probs"),
                 "open_probs": gripper_debug.get("open_probs"),
+                "gripper_threshold": gripper_debug.get("threshold"),
+                "gripper_close_threshold": gripper_debug.get("close_threshold"),
+                "gripper_open_threshold": gripper_debug.get("open_threshold"),
                 "overlap_steps": int(overlap_steps),
                 "commit_prefix_steps": int(commit_steps),
                 "blend_mode": cfg.blend_mode,

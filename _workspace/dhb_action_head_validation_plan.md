@@ -818,6 +818,37 @@ Interpretation:
   biases it back toward reopening. Live evaluation is therefore the more honest
   signal for learned gripper timing than the frozen offline canonical loop.
 
+### 2026-04-21 update: external gripper references favor state + debounce, not pure event tokens
+
+External repo checks sharpen the gripper direction:
+
+- `vla_foundry` treats gripper as a standard learned action/state dimension and
+  applies a small hysteresis debouncer at inference time
+- `TRI-LBM` does not add gripper-specific event structure; its closest useful
+  analogue is a lightweight auxiliary status signal
+
+The updated gripper-side plan is therefore:
+
+- use learned `gripper_state` as the primary benchmark-time gripper output
+- keep `gripper_event` / `gripper_phase` as auxiliary supervision only
+- stabilize learned gripper inference with adapter-level hysteresis, not demo
+  timing or script-local ad hoc logic
+
+The shared rollout code now supports this directly:
+
+- `src/dhb_xr/integration/vla/libero.py`
+- `src/dhb_xr/integration/vla/chunk_rollout.py`
+- `scripts/starvla_dhb_embodik_stage1.py`
+- `scripts/starvla_dhb_embodik_live_rollout.py`
+
+Current default hysteresis for learned `gripper_state`:
+
+- close threshold: `0.6`
+- open threshold: `0.4`
+
+This is not the main reach breakthrough. It is a benchmark-contract cleanup that
+should reduce chatter once the model-side gripper-state path is revisited.
+
 ### Reach-Only Handoff Baseline
 
 - [x] Add a committed-handoff mode to the shared chunk runner

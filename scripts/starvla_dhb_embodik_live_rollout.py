@@ -227,6 +227,9 @@ def main() -> None:
     parser.add_argument("--approach-bowl-z-m", type=float, default=0.10)
     parser.add_argument("--gripper-source", choices=("demo", "model"), default="demo")
     parser.add_argument("--init-state-source", choices=("demo", "benchmark"), default="demo")
+    parser.add_argument("--gripper-threshold", type=float, default=0.5)
+    parser.add_argument("--gripper-close-threshold", type=float, default=0.6)
+    parser.add_argument("--gripper-open-threshold", type=float, default=0.4)
     parser.add_argument("--close-gate-xy-m", type=float, default=0.05)
     parser.add_argument("--close-gate-z-m", type=float, default=0.05)
     parser.add_argument("--release-gate-xy-m", type=float, default=0.04)
@@ -347,6 +350,9 @@ def main() -> None:
         blend_mode=args.blend_mode,
         commit_prefix_steps=max(0, args.commit_prefix_steps),
         gripper_source=args.gripper_source,
+        gripper_threshold=float(args.gripper_threshold),
+        gripper_close_threshold=float(args.gripper_close_threshold),
+        gripper_open_threshold=float(args.gripper_open_threshold),
     )
     approach_cfg = None
     if args.approach_blend_mode is not None or args.approach_commit_prefix_steps >= 0:
@@ -363,6 +369,9 @@ def main() -> None:
                 else chunk_cfg.commit_prefix_steps,
             ),
             gripper_source=chunk_cfg.gripper_source,
+            gripper_threshold=chunk_cfg.gripper_threshold,
+            gripper_close_threshold=chunk_cfg.gripper_close_threshold,
+            gripper_open_threshold=chunk_cfg.gripper_open_threshold,
         )
     chunk_runner = TrajectoryChunkRunner(chunk_cfg)
     debug_chunks = []
@@ -601,6 +610,9 @@ def main() -> None:
         "approach_bowl_z_m": float(args.approach_bowl_z_m),
         "state_history_window": int(state_history_window),
         "gripper_source": args.gripper_source,
+        "gripper_threshold": float(args.gripper_threshold),
+        "gripper_close_threshold": float(args.gripper_close_threshold),
+        "gripper_open_threshold": float(args.gripper_open_threshold),
         "init_state_source": args.init_state_source,
         "init_state_l2_diff": float(np.linalg.norm(demo_init_state - benchmark_init_state)),
         "close_gate_xy_m": float(args.close_gate_xy_m),

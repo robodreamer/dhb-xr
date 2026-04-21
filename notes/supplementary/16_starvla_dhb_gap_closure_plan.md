@@ -141,9 +141,13 @@ The updated ranking is therefore:
 
 1. add DHB-specific continuation conditioning with a committed-prefix mask
 2. keep the reach-only benchmark as the main short-horizon target
-3. once reach improves, return to the integrated pipeline with the phase-split
+3. keep learned `gripper_state` as the primary gripper output and treat
+   event/phase as auxiliary
+4. stabilize learned gripper inference with adapter-level hysteresis instead of
+   demo timing
+5. once reach improves, return to the integrated pipeline with the phase-split
    bridge
-4. only then add a lightweight auxiliary phase/status head if integrated
+6. only then add a lightweight auxiliary phase/status head if integrated
    manipulation still stalls
 
 ### 2026-04-19 update: first live-robustness augmentation result

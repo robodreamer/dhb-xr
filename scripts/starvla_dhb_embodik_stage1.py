@@ -151,6 +151,9 @@ def main() -> None:
     parser.add_argument("--approach-commit-prefix-steps", type=int, default=-1)
     parser.add_argument("--save_npz", default=None)
     parser.add_argument("--save_json", default=None)
+    parser.add_argument("--gripper-threshold", type=float, default=0.5)
+    parser.add_argument("--gripper-close-threshold", type=float, default=0.6)
+    parser.add_argument("--gripper-open-threshold", type=float, default=0.4)
     args, unknown = parser.parse_known_args()
 
     dotlist = normalize_dotlist_args(unknown)
@@ -199,6 +202,9 @@ def main() -> None:
         blend_mode=args.blend_mode,
         commit_prefix_steps=max(0, args.commit_prefix_steps),
         gripper_source=args.gripper_source,
+        gripper_threshold=float(args.gripper_threshold),
+        gripper_close_threshold=float(args.gripper_close_threshold),
+        gripper_open_threshold=float(args.gripper_open_threshold),
     )
     approach_cfg = None
     if args.approach_blend_mode is not None or args.approach_commit_prefix_steps >= 0:
@@ -215,6 +221,9 @@ def main() -> None:
                 else chunk_cfg.commit_prefix_steps,
             ),
             gripper_source=chunk_cfg.gripper_source,
+            gripper_threshold=chunk_cfg.gripper_threshold,
+            gripper_close_threshold=chunk_cfg.gripper_close_threshold,
+            gripper_open_threshold=chunk_cfg.gripper_open_threshold,
         )
     chunk_runner = TrajectoryChunkRunner(chunk_cfg)
     first_close_step = None
@@ -318,6 +327,9 @@ def main() -> None:
         "num_demo_steps": num_demo_steps,
         "num_chunks": len(debug_chunks),
         "gripper_source": args.gripper_source,
+        "gripper_threshold": float(args.gripper_threshold),
+        "gripper_close_threshold": float(args.gripper_close_threshold),
+        "gripper_open_threshold": float(args.gripper_open_threshold),
         "state_history_window": int(state_history_window),
         "positions_shape": list(positions.shape),
         "quaternions_shape": list(quaternions.shape),

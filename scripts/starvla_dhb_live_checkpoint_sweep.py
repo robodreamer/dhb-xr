@@ -46,6 +46,9 @@ def _run_case(
     commit_prefix_steps: int,
     gripper_source: str,
     init_state_source: str,
+    gripper_threshold: float,
+    gripper_close_threshold: float,
+    gripper_open_threshold: float,
     settle_steps: int,
     reach_only: bool,
     reach_threshold_xy_m: float,
@@ -88,6 +91,12 @@ def _run_case(
         gripper_source,
         "--init-state-source",
         init_state_source,
+        "--gripper-threshold",
+        str(gripper_threshold),
+        "--gripper-close-threshold",
+        str(gripper_close_threshold),
+        "--gripper-open-threshold",
+        str(gripper_open_threshold),
         "--settle-steps",
         str(settle_steps),
         "--save_json",
@@ -172,6 +181,9 @@ def main() -> None:
     parser.add_argument("--commit-prefix-steps", type=int, default=0)
     parser.add_argument("--gripper-source", choices=("demo", "model"), default="demo")
     parser.add_argument("--init-state-source", choices=("demo", "benchmark"), default="demo")
+    parser.add_argument("--gripper-threshold", type=float, default=0.5)
+    parser.add_argument("--gripper-close-threshold", type=float, default=0.6)
+    parser.add_argument("--gripper-open-threshold", type=float, default=0.4)
     parser.add_argument("--settle-steps", type=int, default=60)
     parser.add_argument("--reach-only", action="store_true")
     parser.add_argument("--reach-threshold-xy-m", type=float, default=0.05)
@@ -215,6 +227,9 @@ def main() -> None:
                 commit_prefix_steps=args.commit_prefix_steps,
                 gripper_source=args.gripper_source,
                 init_state_source=args.init_state_source,
+                gripper_threshold=float(args.gripper_threshold),
+                gripper_close_threshold=float(args.gripper_close_threshold),
+                gripper_open_threshold=float(args.gripper_open_threshold),
                 settle_steps=args.settle_steps,
                 reach_only=args.reach_only,
                 reach_threshold_xy_m=args.reach_threshold_xy_m,
@@ -247,6 +262,9 @@ def main() -> None:
             "blend_mode": args.blend_mode,
             "commit_prefix_steps": int(args.commit_prefix_steps),
             "gripper_source": args.gripper_source,
+            "gripper_threshold": float(args.gripper_threshold),
+            "gripper_close_threshold": float(args.gripper_close_threshold),
+            "gripper_open_threshold": float(args.gripper_open_threshold),
             "init_state_source": args.init_state_source,
             "settle_steps": int(args.settle_steps),
             "reach_only": bool(args.reach_only),
