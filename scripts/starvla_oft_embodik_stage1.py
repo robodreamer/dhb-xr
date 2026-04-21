@@ -127,6 +127,10 @@ def main() -> None:
     parser.add_argument("--blend-overlap-alpha", type=float, default=0.0)
     parser.add_argument("--blend-mode", choices=("constant", "ramp"), default="constant")
     parser.add_argument("--commit-prefix-steps", type=int, default=0)
+    parser.add_argument("--adaptive-commit-threshold-mm", type=float, default=0.0)
+    parser.add_argument("--adaptive-commit-max-steps", type=int, default=0)
+    parser.add_argument("--delta-continuation-alpha", type=float, default=0.0)
+    parser.add_argument("--delta-continuation-steps", type=int, default=0)
     parser.add_argument("--save_npz", default=None)
     parser.add_argument("--save_json", default=None)
     parser.add_argument("--gripper-threshold", type=float, default=0.5)
@@ -181,6 +185,10 @@ def main() -> None:
         blend_overlap_alpha=float(args.blend_overlap_alpha),
         blend_mode=args.blend_mode,
         commit_prefix_steps=max(0, args.commit_prefix_steps),
+        adaptive_commit_threshold_m=max(0.0, args.adaptive_commit_threshold_mm) / 1000.0,
+        adaptive_commit_max_steps=max(0, args.adaptive_commit_max_steps),
+        delta_continuation_alpha=float(args.delta_continuation_alpha),
+        delta_continuation_steps=max(0, args.delta_continuation_steps),
         gripper_source=args.gripper_source,
         gripper_threshold=float(args.gripper_threshold),
         gripper_close_threshold=float(args.gripper_close_threshold),
@@ -287,6 +295,10 @@ def main() -> None:
         "blend_overlap_alpha": float(args.blend_overlap_alpha),
         "blend_mode": args.blend_mode,
         "commit_prefix_steps": int(args.commit_prefix_steps),
+        "adaptive_commit_threshold_mm": float(args.adaptive_commit_threshold_mm),
+        "adaptive_commit_max_steps": int(args.adaptive_commit_max_steps),
+        "delta_continuation_alpha": float(args.delta_continuation_alpha),
+        "delta_continuation_steps": int(args.delta_continuation_steps),
         "gripper_threshold": float(args.gripper_threshold),
         "gripper_close_threshold": float(args.gripper_close_threshold),
         "gripper_open_threshold": float(args.gripper_open_threshold),

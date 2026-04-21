@@ -882,3 +882,44 @@ Concretely:
 This keeps the benchmark setup aligned with the current direction:
 - general adapter-level debounce / continuation logic in shared code
 - task-specific geometry only in evaluator code
+
+## 2026-04-21 Boundary Continuity Reach Baseline
+
+The first rollout-side change that improved the representative reach-only cases
+without any task-specific geometry was not adaptive prefix commitment. It was
+boundary step continuity across replans.
+
+We added two generic continuation controls to the shared runner:
+- overlap-disagreement adaptive commit
+- boundary step / velocity continuation smoothing
+
+The stronger result came from:
+- `blend_mode = ramp`
+- `commit_prefix_steps = 0`
+- `delta_continuation_alpha = 0.6`
+- `delta_continuation_steps = 2`
+
+Representative reach-only results on `shorttrain1/steps_200`:
+
+- `episode 0, 0 cm`:
+  - `min_bowl_xy_m = 0.1423`
+  - `min_bowl_xyz_m = 0.2811`
+  - `ik_fail_total = 79`
+- `episode 1, 3 cm`:
+  - `min_bowl_xy_m = 0.1165`
+  - `min_bowl_xyz_m = 0.2764`
+  - `ik_fail_total = 66`
+
+Two-case aggregate:
+- `avg_min_bowl_xy_m = 0.1294`
+- `avg_min_bowl_xyz_m = 0.2788`
+- `avg_ik_fail_total = 72.5`
+
+This beats the earlier reach-only control average (`0.1375 / 0.2867 / 75.5`)
+while remaining fully object-agnostic in the shared module.
+
+Plan consequence:
+- keep the adaptive-commit path as an optional fallback
+- use boundary step continuity as the new shared reach-only rollout baseline
+- next integrated check should carry this exact continuation setting through
+  the existing phase-split bridge before reopening more model-side gripper work

@@ -92,22 +92,51 @@ def blend_overlap_positions(
     blend_alpha: float,
     blend_mode: str = "constant",
     commit_prefix_steps: int = 0,
-) -> tuple[np.ndarray, int, int]:
+    adaptive_commit_threshold_m: float = 0.0,
+    adaptive_commit_max_steps: int = 0,
+) -> tuple[np.ndarray, int, int, dict[str, float | int | None]]:
     if prev_chunk is None or prev_start is None:
-        return current_chunk, 0, 0
+        return current_chunk, 0, 0, {
+            "adaptive_commit_steps": 0,
+            "adaptive_commit_triggered": 0,
+            "overlap_disagreement_mean_mm": None,
+            "overlap_disagreement_max_mm": None,
+        }
 
     prev_end = prev_start + len(prev_chunk)
     overlap = min(max(prev_end - current_start, 0), len(current_chunk))
     if overlap <= 0:
-        return current_chunk, 0, 0
+        return current_chunk, 0, 0, {
+            "adaptive_commit_steps": 0,
+            "adaptive_commit_triggered": 0,
+            "overlap_disagreement_mean_mm": None,
+            "overlap_disagreement_max_mm": None,
+        }
 
     alpha = float(np.clip(blend_alpha, 0.0, 1.0))
+    prev_tail = np.asarray(prev_chunk[-overlap:], dtype=np.float32)
+    prefix = np.asarray(current_chunk[:overlap], dtype=np.float32)
+    disagreement = np.linalg.norm(prefix - prev_tail, axis=1)
     commit = int(max(0, min(commit_prefix_steps, overlap)))
+    adaptive_commit = 0
+    if adaptive_commit_threshold_m > 0.0:
+        adaptive_limit = overlap if adaptive_commit_max_steps <= 0 else min(overlap, adaptive_commit_max_steps)
+        for idx in range(commit, adaptive_limit):
+            if float(disagreement[idx]) > adaptive_commit_threshold_m:
+                adaptive_commit = idx + 1
+            else:
+                break
+    commit = max(commit, adaptive_commit)
+    debug = {
+        "adaptive_commit_steps": int(adaptive_commit),
+        "adaptive_commit_triggered": int(adaptive_commit > 0),
+        "overlap_disagreement_mean_mm": float(disagreement.mean() * 1000.0),
+        "overlap_disagreement_max_mm": float(disagreement.max() * 1000.0),
+    }
     if alpha <= 0.0 and commit <= 0:
-        return current_chunk, 0, 0
+        return current_chunk, 0, 0, debug
 
     blended = np.asarray(current_chunk, dtype=np.float32).copy()
-    prev_tail = np.asarray(prev_chunk[-overlap:], dtype=np.float32)
     if commit > 0:
         blended[:commit] = prev_tail[:commit]
 
@@ -122,7 +151,7 @@ def blend_overlap_positions(
                 (1.0 - alpha) * prev_tail[commit:overlap]
                 + alpha * blended[commit:overlap]
             )
-    return blended, int(overlap), int(commit)
+    return blended, int(overlap), int(commit), debug
 
 
 def compute_motion_metrics(positions: np.ndarray) -> dict[str, float | int | None]:
@@ -199,6 +228,52 @@ def compute_motion_metrics(positions: np.ndarray) -> dict[str, float | int | Non
     }
 
 
+def smooth_chunk_step_prefix(
+    chunk_pos: np.ndarray,
+    *,
+    prev_tail_step: np.ndarray | None,
+    max_step_m: float,
+    delta_continuation_alpha: float,
+    delta_continuation_steps: int,
+) -> tuple[np.ndarray, dict[str, float | int]]:
+    smoothed = np.asarray(chunk_pos, dtype=np.float32).copy()
+    debug = {
+        "delta_continuation_applied": 0,
+        "delta_continuation_steps_used": 0,
+    }
+    if (
+        prev_tail_step is None
+        or float(delta_continuation_alpha) <= 0.0
+        or int(delta_continuation_steps) <= 0
+        or len(smoothed) < 2
+    ):
+        return smoothed, debug
+
+    deltas = np.diff(smoothed, axis=0)
+    n = min(len(deltas), max(0, int(delta_continuation_steps)))
+    if n <= 0:
+        return smoothed, debug
+
+    alpha = float(np.clip(delta_continuation_alpha, 0.0, 1.0))
+    prev_step = np.asarray(prev_tail_step, dtype=np.float32).reshape(3)
+    for idx in range(n):
+        if n == 1:
+            weight = alpha
+        else:
+            weight = alpha * (1.0 - float(idx) / float(n - 1))
+        deltas[idx] = (1.0 - weight) * deltas[idx] + weight * prev_step
+        if max_step_m > 0.0:
+            deltas[idx] = clip_vector_norm(deltas[idx], max_step_m)
+
+    smoothed[0] = chunk_pos[0]
+    for idx in range(1, len(smoothed)):
+        smoothed[idx] = smoothed[idx - 1] + deltas[idx - 1]
+
+    debug["delta_continuation_applied"] = 1
+    debug["delta_continuation_steps_used"] = int(n)
+    return smoothed.astype(np.float32), debug
+
+
 @dataclass
 class ChunkRolloutConfig:
     max_first_offset_m: float = 0.0
@@ -207,6 +282,10 @@ class ChunkRolloutConfig:
     blend_overlap_alpha: float = 0.0
     blend_mode: str = "constant"
     commit_prefix_steps: int = 0
+    adaptive_commit_threshold_m: float = 0.0
+    adaptive_commit_max_steps: int = 0
+    delta_continuation_alpha: float = 0.0
+    delta_continuation_steps: int = 0
     gripper_source: str = "demo"
     gripper_threshold: float = 0.5
     gripper_close_threshold: float | None = 0.6
@@ -226,10 +305,12 @@ class TrajectoryChunkRunner:
         self.config = config
         self._prev_chunk_pos: np.ndarray | None = None
         self._prev_chunk_start: int | None = None
+        self._prev_tail_step: np.ndarray | None = None
 
     def reset(self) -> None:
         self._prev_chunk_pos = None
         self._prev_chunk_start = None
+        self._prev_tail_step = None
 
     def prepare_chunk(
         self,
@@ -253,7 +334,7 @@ class TrajectoryChunkRunner:
             max_step_m=max(0.0, cfg.max_step_m),
             smooth_window=max(0, cfg.smooth_window),
         )
-        chunk_pos_stable, overlap_steps, commit_steps = blend_overlap_positions(
+        chunk_pos_stable, overlap_steps, commit_steps, blend_debug = blend_overlap_positions(
             chunk_pos_stable,
             current_start=current_start,
             prev_chunk=self._prev_chunk_pos,
@@ -261,6 +342,15 @@ class TrajectoryChunkRunner:
             blend_alpha=cfg.blend_overlap_alpha,
             blend_mode=cfg.blend_mode,
             commit_prefix_steps=cfg.commit_prefix_steps,
+            adaptive_commit_threshold_m=max(0.0, cfg.adaptive_commit_threshold_m),
+            adaptive_commit_max_steps=max(0, cfg.adaptive_commit_max_steps),
+        )
+        chunk_pos_stable, delta_debug = smooth_chunk_step_prefix(
+            chunk_pos_stable,
+            prev_tail_step=self._prev_tail_step,
+            max_step_m=max(0.0, cfg.max_step_m),
+            delta_continuation_alpha=float(cfg.delta_continuation_alpha),
+            delta_continuation_steps=max(0, cfg.delta_continuation_steps),
         )
 
         if cfg.gripper_source == "demo":
@@ -281,6 +371,10 @@ class TrajectoryChunkRunner:
 
         self._prev_chunk_pos = chunk_pos_stable.copy()
         self._prev_chunk_start = int(current_start)
+        if len(chunk_pos_stable) >= 2:
+            self._prev_tail_step = (chunk_pos_stable[-1] - chunk_pos_stable[-2]).astype(np.float32)
+        else:
+            self._prev_tail_step = None
 
         return {
             "positions": chunk_pos_stable[:n_use],
@@ -298,6 +392,12 @@ class TrajectoryChunkRunner:
                 "overlap_steps": int(overlap_steps),
                 "commit_prefix_steps": int(commit_steps),
                 "blend_mode": cfg.blend_mode,
+                "adaptive_commit_threshold_mm": float(cfg.adaptive_commit_threshold_m * 1000.0),
+                "adaptive_commit_max_steps": int(cfg.adaptive_commit_max_steps),
+                "delta_continuation_alpha": float(cfg.delta_continuation_alpha),
+                "delta_continuation_steps": int(cfg.delta_continuation_steps),
+                **blend_debug,
+                **delta_debug,
                 **stability,
             },
             "first_pred_pos": chunk_pos[0].tolist() if len(chunk_pos) else None,

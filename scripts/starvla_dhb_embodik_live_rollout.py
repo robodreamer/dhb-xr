@@ -209,6 +209,10 @@ def main() -> None:
     parser.add_argument("--blend-overlap-alpha", type=float, default=0.6)
     parser.add_argument("--blend-mode", choices=("constant", "ramp"), default="constant")
     parser.add_argument("--commit-prefix-steps", type=int, default=0)
+    parser.add_argument("--adaptive-commit-threshold-mm", type=float, default=0.0)
+    parser.add_argument("--adaptive-commit-max-steps", type=int, default=0)
+    parser.add_argument("--delta-continuation-alpha", type=float, default=0.0)
+    parser.add_argument("--delta-continuation-steps", type=int, default=0)
     parser.add_argument("--approach-blend-mode", choices=("constant", "ramp"), default=None)
     parser.add_argument("--approach-commit-prefix-steps", type=int, default=-1)
     parser.add_argument("--approach-bowl-xy-m", type=float, default=0.10)
@@ -338,6 +342,10 @@ def main() -> None:
         blend_overlap_alpha=float(args.blend_overlap_alpha),
         blend_mode=args.blend_mode,
         commit_prefix_steps=max(0, args.commit_prefix_steps),
+        adaptive_commit_threshold_m=max(0.0, args.adaptive_commit_threshold_mm) / 1000.0,
+        adaptive_commit_max_steps=max(0, args.adaptive_commit_max_steps),
+        delta_continuation_alpha=float(args.delta_continuation_alpha),
+        delta_continuation_steps=max(0, args.delta_continuation_steps),
         gripper_source=args.gripper_source,
         gripper_threshold=float(args.gripper_threshold),
         gripper_close_threshold=float(args.gripper_close_threshold),
@@ -358,6 +366,10 @@ def main() -> None:
                 if args.approach_commit_prefix_steps >= 0
                 else chunk_cfg.commit_prefix_steps,
             ),
+            adaptive_commit_threshold_m=chunk_cfg.adaptive_commit_threshold_m,
+            adaptive_commit_max_steps=chunk_cfg.adaptive_commit_max_steps,
+            delta_continuation_alpha=chunk_cfg.delta_continuation_alpha,
+            delta_continuation_steps=chunk_cfg.delta_continuation_steps,
             gripper_source=chunk_cfg.gripper_source,
             gripper_threshold=chunk_cfg.gripper_threshold,
             gripper_close_threshold=chunk_cfg.gripper_close_threshold,
@@ -595,6 +607,10 @@ def main() -> None:
         "blend_overlap_alpha": float(args.blend_overlap_alpha),
         "blend_mode": args.blend_mode,
         "commit_prefix_steps": int(args.commit_prefix_steps),
+        "adaptive_commit_threshold_mm": float(args.adaptive_commit_threshold_mm),
+        "adaptive_commit_max_steps": int(args.adaptive_commit_max_steps),
+        "delta_continuation_alpha": float(args.delta_continuation_alpha),
+        "delta_continuation_steps": int(args.delta_continuation_steps),
         "approach_blend_mode": args.approach_blend_mode,
         "approach_commit_prefix_steps": int(args.approach_commit_prefix_steps),
         "approach_bowl_xy_m": float(args.approach_bowl_xy_m),

@@ -201,3 +201,94 @@ def test_phase_aware_runner_applies_phase_override_with_shared_state():
     assert first["debug"]["phase_mode"] == "default"
     assert second["debug"]["phase_mode"] == "approach"
     assert second["debug"]["commit_prefix_steps"] == 1
+
+
+def test_runner_adaptively_commits_overlap_when_replans_disagree():
+    runner = TrajectoryChunkRunner(
+        ChunkRolloutConfig(
+            blend_overlap_alpha=0.6,
+            adaptive_commit_threshold_m=0.05,
+            adaptive_commit_max_steps=2,
+            gripper_source="demo",
+        )
+    )
+    runner.prepare_chunk(
+        {
+            "positions": np.array(
+                [[[0.00, 0.00, 0.00], [0.02, 0.00, 0.00], [0.04, 0.00, 0.00], [0.06, 0.00, 0.00]]],
+                dtype=np.float32,
+            ),
+            "quaternions": np.array([[[1.0, 0.0, 0.0, 0.0]] * 4], dtype=np.float32),
+        },
+        anchor_pos=np.zeros(3, dtype=np.float32),
+        current_start=0,
+        n_use=4,
+        initial_gripper_cmd=-1.0,
+        demo_gripper_chunk=np.array([-1.0, -1.0, -1.0, -1.0], dtype=np.float32),
+    )
+    prepared = runner.prepare_chunk(
+        {
+            "positions": np.array(
+                [[[0.18, 0.00, 0.00], [0.20, 0.00, 0.00], [0.22, 0.00, 0.00], [0.24, 0.00, 0.00]]],
+                dtype=np.float32,
+            ),
+            "quaternions": np.array([[[1.0, 0.0, 0.0, 0.0]] * 4], dtype=np.float32),
+        },
+        anchor_pos=np.array([0.02, 0.0, 0.0], dtype=np.float32),
+        current_start=2,
+        n_use=4,
+        initial_gripper_cmd=-1.0,
+        demo_gripper_chunk=np.array([-1.0, -1.0, -1.0, -1.0], dtype=np.float32),
+    )
+
+    assert prepared["debug"]["overlap_steps"] == 2
+    assert prepared["debug"]["adaptive_commit_triggered"] == 1
+    assert prepared["debug"]["adaptive_commit_steps"] == 2
+    assert prepared["debug"]["commit_prefix_steps"] == 2
+    assert np.allclose(
+        prepared["positions_full"][:2],
+        np.array([[0.04, 0.0, 0.0], [0.06, 0.0, 0.0]], dtype=np.float32),
+    )
+
+
+def test_runner_smooths_step_prefix_against_previous_tail_velocity():
+    runner = TrajectoryChunkRunner(
+        ChunkRolloutConfig(
+            delta_continuation_alpha=0.5,
+            delta_continuation_steps=2,
+            gripper_source="demo",
+        )
+    )
+    runner.prepare_chunk(
+        {
+            "positions": np.array(
+                [[[0.00, 0.00, 0.00], [0.02, 0.00, 0.00], [0.04, 0.00, 0.00], [0.06, 0.00, 0.00]]],
+                dtype=np.float32,
+            ),
+            "quaternions": np.array([[[1.0, 0.0, 0.0, 0.0]] * 4], dtype=np.float32),
+        },
+        anchor_pos=np.zeros(3, dtype=np.float32),
+        current_start=0,
+        n_use=4,
+        initial_gripper_cmd=-1.0,
+        demo_gripper_chunk=np.array([-1.0, -1.0, -1.0, -1.0], dtype=np.float32),
+    )
+    prepared = runner.prepare_chunk(
+        {
+            "positions": np.array(
+                [[[0.06, 0.00, 0.00], [0.10, 0.00, 0.00], [0.14, 0.00, 0.00], [0.18, 0.00, 0.00]]],
+                dtype=np.float32,
+            ),
+            "quaternions": np.array([[[1.0, 0.0, 0.0, 0.0]] * 4], dtype=np.float32),
+        },
+        anchor_pos=np.array([0.06, 0.0, 0.0], dtype=np.float32),
+        current_start=4,
+        n_use=4,
+        initial_gripper_cmd=-1.0,
+        demo_gripper_chunk=np.array([-1.0, -1.0, -1.0, -1.0], dtype=np.float32),
+    )
+
+    step_norms = np.linalg.norm(np.diff(prepared["positions_full"], axis=0), axis=1)
+    assert prepared["debug"]["delta_continuation_applied"] == 1
+    assert prepared["debug"]["delta_continuation_steps_used"] == 2
+    assert np.allclose(step_norms[:2], np.array([0.03, 0.04], dtype=np.float32), atol=1e-6)

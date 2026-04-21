@@ -113,6 +113,8 @@ Interpretation:
 - [x] Test a rollout-grounded corrective augmentation warm-start (`reachcorr`) against the reach-only baseline
 - [x] Test a cleaner reach-phase oversampling warm-start (`reachphase`) against the reach-only baseline
 - [ ] Improve smooth bowl approach under offsets before returning to learned close/open timing
+- [x] Add a generic boundary step-continuity pass to the shared chunk runner and validate it on the representative reach-only cases
+- [ ] Use the new boundary-continuity reach-only setting as the pre-grasp baseline before re-entering the integrated benchmark
 - [x] Implement DHB continuation conditioning with a committed chunk prefix in the action head
 - [x] Add a continuation-trained StarVLA config and verify it with a real one-step train smoke
 - [x] Launch a short continuation-conditioned warm-start from `shorttrain1/steps_200`
@@ -162,6 +164,27 @@ Current interpretation:
   - synthetic target rewrite
   - small sampling-only rebiasing
   - plain state-history retraining
+
+2026-04-21 rollout-adapter update:
+
+- the shared chunk runner now supports two generic continuation controls:
+  - overlap-disagreement adaptive commit
+  - boundary step continuity
+- adaptive commit is worth keeping as a fallback, but the stronger result came
+  from boundary step continuity with:
+  - `delta_continuation_alpha = 0.6`
+  - `delta_continuation_steps = 2`
+  - `blend_mode = ramp`
+  - `commit_prefix_steps = 0`
+- on the representative reach-only cases this improves the two-case aggregate
+  from the old `0.1375 / 0.2867 / 75.5` control to:
+  - `avg_min_bowl_xy_m = 0.1294`
+  - `avg_min_bowl_xyz_m = 0.2788`
+  - `avg_ik_fail_total = 72.5`
+- this is now the best general reach-only rollout setting
+- next step should be to carry this exact continuation setting into the
+  phase-split integrated benchmark rather than reopening more gripper-only
+  tuning
 
 External repo checks now point in the same direction:
 

@@ -493,3 +493,66 @@ Updated recommendation:
 - treat phase-split as the last worthwhile execution-side variant
 - next model-side focus should move toward continuation conditioning rather than
   more same-family retraining
+
+## 2026-04-21 Follow-Up: Boundary Step Continuity Beats The Old Reach-Only Average
+
+The shared rollout adapter now supports two object-agnostic continuation
+controls in
+[chunk_rollout.py](/home/andypark/Projects/repos/dhb-xr/src/dhb_xr/integration/vla/chunk_rollout.py):
+
+- overlap-disagreement adaptive prefix commitment
+- boundary step / velocity continuation smoothing
+
+The adaptive prefix guard was a reasonable fallback, but it did not improve the
+representative reach-only cases enough on its own. The more useful general
+change was boundary step continuity with:
+
+- `blend_mode = ramp`
+- `commit_prefix_steps = 0`
+- `delta_continuation_alpha = 0.6`
+- `delta_continuation_steps = 2`
+
+Artifacts:
+
+- [ep0 summary](/home/andypark/Projects/repos/dhb-xr/_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/live_rollout_ep0_offset0_reachonly_ramp_deltacont06_step2_summary.json)
+- [ep1 summary](/home/andypark/Projects/repos/dhb-xr/_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/live_rollout_ep1_offset3_reachonly_ramp_deltacont06_step2_summary.json)
+
+Updated reference cases:
+
+### Episode 0, offset 0 cm
+
+- `min_bowl_xy_m = 0.1423`
+- `min_bowl_xyz_m = 0.2811`
+- `ik_fail_total = 79`
+- `path_efficiency = 0.9792`
+- `mean_accel_mm = 0.1790`
+- `hold_fraction = 0.8376`
+- `direction_flip_fraction = 0.0159`
+
+### Episode 1, offset 3 cm
+
+- `min_bowl_xy_m = 0.1165`
+- `min_bowl_xyz_m = 0.2764`
+- `ik_fail_total = 66`
+- `path_efficiency = 0.9703`
+- `mean_accel_mm = 0.2444`
+- `hold_fraction = 0.8267`
+- `direction_flip_fraction = 0.0`
+
+Two-case aggregate:
+
+- `avg_min_bowl_xy_m = 0.1294`
+- `avg_min_bowl_xyz_m = 0.2788`
+- `avg_ik_fail_total = 72.5`
+- `avg_mean_accel_mm = 0.2117`
+- `avg_hold_fraction = 0.8321`
+
+Interpretation:
+
+- this is the first generic rollout-side change in a while that improves both
+  representative reach-only cases at once
+- the gain comes from boundary velocity continuity across replans, not from any
+  bowl/plate-specific gate in the shared modules
+- this is strong enough to become the new reach-only rollout baseline
+- the next integrated check should use this continuation setting through the
+  existing phase-split bridge rather than reopening more gripper-only work

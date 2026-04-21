@@ -44,6 +44,10 @@ def _run_case(
     blend_overlap_alpha: float,
     blend_mode: str,
     commit_prefix_steps: int,
+    adaptive_commit_threshold_mm: float,
+    adaptive_commit_max_steps: int,
+    delta_continuation_alpha: float,
+    delta_continuation_steps: int,
     gripper_source: str,
     init_state_source: str,
     gripper_threshold: float,
@@ -88,6 +92,14 @@ def _run_case(
         blend_mode,
         "--commit-prefix-steps",
         str(commit_prefix_steps),
+        "--adaptive-commit-threshold-mm",
+        str(adaptive_commit_threshold_mm),
+        "--adaptive-commit-max-steps",
+        str(adaptive_commit_max_steps),
+        "--delta-continuation-alpha",
+        str(delta_continuation_alpha),
+        "--delta-continuation-steps",
+        str(delta_continuation_steps),
         "--gripper-source",
         gripper_source,
         "--init-state-source",
@@ -182,6 +194,10 @@ def main() -> None:
     parser.add_argument("--blend-overlap-alpha", type=float, default=0.6)
     parser.add_argument("--blend-mode", choices=("constant", "ramp"), default="constant")
     parser.add_argument("--commit-prefix-steps", type=int, default=0)
+    parser.add_argument("--adaptive-commit-threshold-mm", type=float, default=0.0)
+    parser.add_argument("--adaptive-commit-max-steps", type=int, default=0)
+    parser.add_argument("--delta-continuation-alpha", type=float, default=0.0)
+    parser.add_argument("--delta-continuation-steps", type=int, default=0)
     parser.add_argument("--gripper-source", choices=("demo", "model"), default="demo")
     parser.add_argument("--init-state-source", choices=("demo", "benchmark"), default="demo")
     parser.add_argument("--gripper-threshold", type=float, default=0.5)
@@ -229,6 +245,10 @@ def main() -> None:
                 blend_overlap_alpha=args.blend_overlap_alpha,
                 blend_mode=args.blend_mode,
                 commit_prefix_steps=args.commit_prefix_steps,
+                adaptive_commit_threshold_mm=args.adaptive_commit_threshold_mm,
+                adaptive_commit_max_steps=args.adaptive_commit_max_steps,
+                delta_continuation_alpha=args.delta_continuation_alpha,
+                delta_continuation_steps=args.delta_continuation_steps,
                 gripper_source=args.gripper_source,
                 init_state_source=args.init_state_source,
                 gripper_threshold=float(args.gripper_threshold),
@@ -266,6 +286,10 @@ def main() -> None:
             "blend_overlap_alpha": float(args.blend_overlap_alpha),
             "blend_mode": args.blend_mode,
             "commit_prefix_steps": int(args.commit_prefix_steps),
+            "adaptive_commit_threshold_mm": float(args.adaptive_commit_threshold_mm),
+            "adaptive_commit_max_steps": int(args.adaptive_commit_max_steps),
+            "delta_continuation_alpha": float(args.delta_continuation_alpha),
+            "delta_continuation_steps": int(args.delta_continuation_steps),
             "gripper_source": args.gripper_source,
             "gripper_threshold": float(args.gripper_threshold),
             "gripper_close_threshold": float(args.gripper_close_threshold),
