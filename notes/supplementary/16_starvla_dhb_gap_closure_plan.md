@@ -827,3 +827,37 @@ So the debounce path is worth keeping as benchmark infrastructure, but it does
 not close the remaining manipulation gap on its own. The next real gain still
 has to come from better phase alignment and better bowl approach, not from more
 decode-only gripper smoothing.
+
+## 2026-04-21 Dense Gripper-State Follow-Up
+
+We also tested a stricter "dense gripper state is primary" warm-start using
+[configs/libero_dhbxr_qwen_gripper_state_primary.yaml](/home/andypark/Projects/repos/dhb-xr/configs/libero_dhbxr_qwen_gripper_state_primary.yaml).
+
+This keeps the same general architecture as `gripper_multitask4`:
+- primary dense `gripper_state`
+- auxiliary `gripper_event`
+- auxiliary `gripper_phase`
+
+but shifts the loss balance toward dense state and reduces event-heavy sampling.
+
+Outcome:
+- stage-1 preview became more plausible:
+  - first `12` commands open
+  - `first_close_step = 43`
+- live reference behavior got worse:
+  - no close / reopen event at all
+  - `min_bowl_xy_m = 0.2417`
+  - `ik_fail_total = 83`
+
+Compared with `gripper_multitask4/steps_200` on the same no-gate reference
+case:
+- `gripper_multitask4`: `close=4`, `reopen=8`, `min_bowl_xy=0.2097`, `ik_fail=82`
+- `gripper_state_primary1`: `close=null`, `reopen=null`, `min_bowl_xy=0.2417`, `ik_fail=83`
+
+So this branch is a useful negative result:
+- the remaining failure is not that the dense `gripper_state` head is absent
+- it is already present in the best current general checkpoint
+- simply making it more dominant in the loss does not improve live behavior
+
+The best general learned-gripper baseline therefore remains
+`gripper_multitask4`, plus the shared inference-side debounce path.

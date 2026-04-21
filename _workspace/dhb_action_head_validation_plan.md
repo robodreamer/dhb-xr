@@ -1048,3 +1048,34 @@ The next highest-value move is now:
   - the shared debounce path is worth keeping
   - but the remaining gap is still phase alignment / approach quality, not
     basic `gripper_state` chattering
+
+### 2026-04-21 Update: Reweighted Dense Gripper-State Warm-Start
+
+- Added tracked config:
+  - [configs/libero_dhbxr_qwen_gripper_state_primary.yaml](/home/andypark/Projects/repos/dhb-xr/configs/libero_dhbxr_qwen_gripper_state_primary.yaml)
+- Goal:
+  - keep the same general `gripper_state + event + phase` architecture as
+    `gripper_multitask4`
+  - increase `lambda_gripper_state`
+  - downweight event / phase losses and chunk oversampling so dense state is
+    clearly primary
+- Warm-start source:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_gripper_multitask4/checkpoints/steps_200_pytorch_model.pt`
+- Result after `100` steps:
+  - stage-1 preview is cleaner:
+    - first `12` decoded commands stay open
+    - `first_close_step = 43`
+  - but the live reference case regresses:
+    - `close_step = null`
+    - `reopen_step = null`
+    - `min_bowl_xy_m = 0.2417`
+    - `ik_fail_total = 83`
+- Comparison on the same `episode 0 / 0 cm / no-gate / debounce2` case:
+  - `gripper_multitask4/steps_200`: `close=4`, `reopen=8`, `min_bowl_xy=0.2097`, `ik_fail=82`
+  - `gripper_state_primary1/steps_100`: `close=null`, `reopen=null`, `min_bowl_xy=0.2417`, `ik_fail=83`
+- Interpretation:
+  - making dense `gripper_state` supervision more dominant does **not** fix the
+    remaining manipulation gap on its own
+  - the best general learned-gripper checkpoint remains `gripper_multitask4`
+  - remaining work should stay focused on phase alignment / approach quality,
+    not on further loss-only shifts toward dense gripper state
