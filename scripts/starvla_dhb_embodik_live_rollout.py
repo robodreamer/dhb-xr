@@ -21,8 +21,9 @@ from dhb_xr.integration.vla.chunk_rollout import (
     compute_motion_metrics,
 )
 from dhb_xr.integration.vla.libero import (
+    build_libero_state_vector_from_obs,
     build_state_history_window,
-    libero_obs_quat_to_axis_angle,
+    get_state_history_window,
 )
 from starVLA.model.framework.base_framework import build_framework
 from starVLA.training.trainer_utils.config_tracker import wrap_config
@@ -138,24 +139,6 @@ def _load_demo_episode(task_suite_name: str, task_name: str, episode_idx: int) -
     }
 
 
-def _state_vector_from_obs(obs: dict) -> np.ndarray:
-    return np.concatenate(
-        (
-            np.asarray(obs["robot0_eef_pos"], dtype=np.float32),
-            libero_obs_quat_to_axis_angle(obs["robot0_eef_quat"]).astype(np.float32),
-            np.array([0.0], dtype=np.float32),
-            np.asarray(obs["robot0_gripper_qpos"][:1], dtype=np.float32),
-        )
-    ).astype(np.float32)
-
-
-def _state_history_window(cfg) -> int:
-    framework = getattr(cfg, "framework", None)
-    action_model = getattr(framework, "action_model", None) if framework is not None else None
-    value = getattr(action_model, "state_history_window", 1) if action_model is not None else 1
-    return max(1, int(value or 1))
-
-
 def _make_video_path(video_dir: Path, label: str, suffix: str = "mp4") -> Path:
     safe = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in label).strip("_")
     return video_dir / f"{safe}.{suffix}"
@@ -264,7 +247,7 @@ def main() -> None:
     model = build_framework(cfg)
     _load_rollout_checkpoint(model, args.checkpoint)
     model.eval()
-    state_history_window = _state_history_window(cfg)
+    state_history_window = get_state_history_window(cfg)
 
     benchmark_dict = benchmark.get_benchmark_dict()
     task_suite = benchmark_dict[args.task_suite_name]()
@@ -305,7 +288,7 @@ def main() -> None:
 
     scene_refs = _capture_scene_refs(env)
     state_history: deque[np.ndarray] = deque(
-        [_state_vector_from_obs(obs)],
+        [build_libero_state_vector_from_obs(obs)],
         maxlen=state_history_window,
     )
 
@@ -417,7 +400,7 @@ def main() -> None:
     t = 0
     while t < num_demo_steps:
         ee_pos_live = np.asarray(obs["robot0_eef_pos"], dtype=np.float32)
-        state = _state_vector_from_obs(obs)
+        state = build_libero_state_vector_from_obs(obs)
         if not state_history or not np.allclose(state_history[-1], state):
             state_history.append(state.copy())
         state_window = build_state_history_window(
@@ -540,7 +523,7 @@ def main() -> None:
                 append_frame(writer, obs)
                 ee_now = np.asarray(robot.controller.ee_pos, dtype=np.float32)
                 ee_trace.append(ee_now.copy())
-                state_history.append(_state_vector_from_obs(obs))
+                state_history.append(build_libero_state_vector_from_obs(obs))
                 update_min_dists(ee_now)
 
             prev_grip = last_effective_grip

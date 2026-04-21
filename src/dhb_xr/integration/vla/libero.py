@@ -89,6 +89,38 @@ def build_state_history_window(
     return arr.astype(np.float32, copy=False)
 
 
+def build_libero_state_vector(
+    ee_pos: np.ndarray,
+    ee_quat_wxyz: np.ndarray,
+    grip_qpos: float,
+) -> np.ndarray:
+    """Build the canonical 8D LIBERO state vector used by StarVLA+DHB."""
+    axis_angle = libero_obs_quat_to_axis_angle(ee_quat_wxyz)
+    return np.concatenate(
+        (
+            np.asarray(ee_pos, dtype=np.float32),
+            axis_angle.astype(np.float32),
+            np.array([0.0], dtype=np.float32),
+            np.array([grip_qpos], dtype=np.float32),
+        )
+    ).astype(np.float32)
+
+
+def build_libero_state_vector_from_obs(obs: dict) -> np.ndarray:
+    return build_libero_state_vector(
+        np.asarray(obs["robot0_eef_pos"], dtype=np.float32),
+        np.asarray(obs["robot0_eef_quat"], dtype=np.float32),
+        float(np.asarray(obs["robot0_gripper_qpos"][:1], dtype=np.float32)[0]),
+    )
+
+
+def get_state_history_window(cfg) -> int:
+    framework = getattr(cfg, "framework", None)
+    action_model = getattr(framework, "action_model", None) if framework is not None else None
+    value = getattr(action_model, "state_history_window", 1) if action_model is not None else 1
+    return max(1, int(value or 1))
+
+
 def _extract_action_stats(payload: dict, stats_path: Path) -> dict:
     if not payload:
         raise ValueError(f"Dataset statistics file is empty: {stats_path}")

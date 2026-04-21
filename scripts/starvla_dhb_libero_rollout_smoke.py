@@ -17,8 +17,9 @@ from omegaconf import OmegaConf
 from scipy.spatial.transform import Rotation
 
 from dhb_xr.integration.vla.libero import (
+    build_libero_state_vector_from_obs,
     build_state_history_window,
-    libero_obs_quat_to_axis_angle,
+    get_state_history_window,
     load_run_action_stats,
     unnormalize_actions,
 )
@@ -114,13 +115,6 @@ def _max_steps_for_suite(name: str) -> int:
     }[name]
 
 
-def _state_history_window(cfg) -> int:
-    framework = getattr(cfg, "framework", None)
-    action_model = getattr(framework, "action_model", None) if framework is not None else None
-    value = getattr(action_model, "state_history_window", 1) if action_model is not None else 1
-    return max(1, int(value or 1))
-
-
 def _load_libero_demo_actions(hdf5_path: str, demo_id: int, action_mode: str) -> np.ndarray:
     demo_key = f"demo_{demo_id}"
     with h5py.File(hdf5_path, "r") as f:
@@ -176,7 +170,7 @@ def main() -> None:
     cfg.output_dir = str(_default_output_dir(cfg))
     output_dir = Path(cfg.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    state_history_window = _state_history_window(cfg)
+    state_history_window = get_state_history_window(cfg)
     action_norm_stats = None if args.gt_hdf5 else load_run_action_stats(output_dir, checkpoint=args.checkpoint)
 
     benchmark_dict = benchmark.get_benchmark_dict()
@@ -214,14 +208,7 @@ def main() -> None:
     for _ in range(args.num_steps_wait):
         obs, _, _, _ = env.step(LIBERO_DUMMY_ACTION)
     state_history: deque[np.ndarray] = deque(maxlen=state_history_window)
-    initial_state = np.concatenate(
-        (
-            obs["robot0_eef_pos"],
-            libero_obs_quat_to_axis_angle(obs["robot0_eef_quat"]),
-            np.array([0.0], dtype=np.float32),
-            obs["robot0_gripper_qpos"][:1],
-        )
-    ).astype(np.float32)
+    initial_state = build_libero_state_vector_from_obs(obs)
     state_history.append(initial_state)
     use_delta_actions = raw_actions_gt is None or args.gt_action_mode == "delta"
     for robot in env.robots:
@@ -245,14 +232,7 @@ def main() -> None:
         wrist_img = np.ascontiguousarray(obs["robot0_eye_in_hand_image"][::-1, ::-1])
         replay_images.append(img)
 
-        state = np.concatenate(
-            (
-                obs["robot0_eef_pos"],
-                libero_obs_quat_to_axis_angle(obs["robot0_eef_quat"]),
-                np.array([0.0], dtype=np.float32),  # pad channel to match 8D training state
-                obs["robot0_gripper_qpos"][:1],
-            )
-        ).astype(np.float32)
+        state = build_libero_state_vector_from_obs(obs)
 
         if raw_actions_gt is None:
             if not state_history or not np.allclose(state_history[-1], state):
@@ -305,16 +285,7 @@ def main() -> None:
         actions.append(delta_action.tolist())
 
         obs, _, done, _info = env.step(delta_action.tolist())
-        state_history.append(
-            np.concatenate(
-                (
-                    obs["robot0_eef_pos"],
-                    libero_obs_quat_to_axis_angle(obs["robot0_eef_quat"]),
-                    np.array([0.0], dtype=np.float32),
-                    obs["robot0_gripper_qpos"][:1],
-                )
-            ).astype(np.float32)
-        )
+        state_history.append(build_libero_state_vector_from_obs(obs))
         if done:
             break
 

@@ -14,9 +14,10 @@ from omegaconf import OmegaConf
 
 from dhb_xr.integration.vla.chunk_rollout import ChunkRolloutConfig, TrajectoryChunkRunner
 from dhb_xr.integration.vla.libero import (
+    build_libero_state_vector,
     build_state_history_window,
     integrate_delta_action_chunk,
-    libero_obs_quat_to_axis_angle,
+    get_state_history_window,
     load_run_action_stats,
     unnormalize_actions,
 )
@@ -106,25 +107,6 @@ def _load_demo_episode(task_suite_name: str, task_name: str, episode_idx: int) -
     }
 
 
-def _demo_state_vector(ee_pos: np.ndarray, ee_quat_wxyz: np.ndarray, grip_qpos: float) -> np.ndarray:
-    axis_angle = libero_obs_quat_to_axis_angle(ee_quat_wxyz)
-    return np.concatenate(
-        (
-            np.asarray(ee_pos, dtype=np.float32),
-            axis_angle.astype(np.float32),
-            np.array([0.0], dtype=np.float32),
-            np.array([grip_qpos], dtype=np.float32),
-        )
-    ).astype(np.float32)
-
-
-def _state_history_window(cfg) -> int:
-    framework = getattr(cfg, "framework", None)
-    action_model = getattr(framework, "action_model", None) if framework is not None else None
-    value = getattr(action_model, "state_history_window", 1) if action_model is not None else 1
-    return max(1, int(value or 1))
-
-
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config_yaml", required=True)
@@ -169,10 +151,10 @@ def main() -> None:
     _load_rollout_checkpoint(model, args.checkpoint)
     model.eval()
 
-    state_history_window = _state_history_window(cfg)
+    state_history_window = get_state_history_window(cfg)
     demo_states = np.stack(
         [
-            _demo_state_vector(
+            build_libero_state_vector(
                 demo["ee_pos"][i],
                 demo["ee_quat_wxyz"][i],
                 float(demo["gripper_qpos"][i]),
