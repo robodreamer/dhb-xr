@@ -861,3 +861,24 @@ So this branch is a useful negative result:
 
 The best general learned-gripper baseline therefore remains
 `gripper_multitask4`, plus the shared inference-side debounce path.
+
+## 2026-04-21 Phase-Aware Adapter Contract
+
+The next infrastructure step after the negative dense-state run was to
+centralize phase-specific rollout policy in the shared adapter, while keeping
+phase *selection* local to each evaluator.
+
+Concretely:
+- shared adapter:
+  - owns continuation state across replans
+  - maps a generic `phase_name` such as `default` / `approach` to the matching
+    chunk-rollout config
+  - remains object-agnostic
+- evaluator:
+  - decides phase names from task-local signals
+  - e.g. LIBERO can still use bowl / plate geometry locally without leaking
+    those semantics into the reusable rollout module
+
+This keeps the benchmark setup aligned with the current direction:
+- general adapter-level debounce / continuation logic in shared code
+- task-specific geometry only in evaluator code

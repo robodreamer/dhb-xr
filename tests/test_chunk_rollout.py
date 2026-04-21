@@ -2,6 +2,7 @@ import numpy as np
 
 from dhb_xr.integration.vla.chunk_rollout import (
     ChunkRolloutConfig,
+    PhaseAwareChunkRunner,
     TrajectoryChunkRunner,
     stabilize_chunk_positions,
 )
@@ -159,3 +160,44 @@ def test_runner_applies_temporal_debounce_to_gripper_state_predictions():
 
     assert prepared["gripper_cmds"].tolist() == [-1.0, -1.0, 1.0, 1.0, -1.0]
     assert prepared["debug"]["gripper_transition_debounce_steps"] == 2
+
+
+def test_phase_aware_runner_applies_phase_override_with_shared_state():
+    runner = PhaseAwareChunkRunner(
+        ChunkRolloutConfig(gripper_source="demo"),
+        phase_configs={
+            "approach": ChunkRolloutConfig(
+                gripper_source="demo",
+                commit_prefix_steps=2,
+                blend_overlap_alpha=0.5,
+            )
+        },
+    )
+    first = runner.prepare_chunk(
+        {
+            "positions": np.array([[[0.00, 0.00, 0.00], [0.02, 0.00, 0.00], [0.04, 0.00, 0.00]]], dtype=np.float32),
+            "quaternions": np.array([[[1.0, 0.0, 0.0, 0.0]] * 3], dtype=np.float32),
+        },
+        anchor_pos=np.zeros(3, dtype=np.float32),
+        current_start=0,
+        n_use=3,
+        initial_gripper_cmd=-1.0,
+        demo_gripper_chunk=np.array([-1.0, -1.0, -1.0], dtype=np.float32),
+        phase_name="default",
+    )
+    second = runner.prepare_chunk(
+        {
+            "positions": np.array([[[0.10, 0.00, 0.00], [0.12, 0.00, 0.00], [0.14, 0.00, 0.00]]], dtype=np.float32),
+            "quaternions": np.array([[[1.0, 0.0, 0.0, 0.0]] * 3], dtype=np.float32),
+        },
+        anchor_pos=np.array([0.02, 0.0, 0.0], dtype=np.float32),
+        current_start=2,
+        n_use=3,
+        initial_gripper_cmd=-1.0,
+        demo_gripper_chunk=np.array([-1.0, -1.0, -1.0], dtype=np.float32),
+        phase_name="approach",
+    )
+
+    assert first["debug"]["phase_mode"] == "default"
+    assert second["debug"]["phase_mode"] == "approach"
+    assert second["debug"]["commit_prefix_steps"] == 1

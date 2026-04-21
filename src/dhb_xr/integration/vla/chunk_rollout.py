@@ -13,7 +13,7 @@ learned gripper decoding so Stage 1 and live rollout do not reimplement the
 same logic independently.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
@@ -303,3 +303,51 @@ class TrajectoryChunkRunner:
             "first_pred_pos": chunk_pos[0].tolist() if len(chunk_pos) else None,
             "first_stabilized_pos": chunk_pos_stable[0].tolist() if len(chunk_pos_stable) else None,
         }
+
+
+@dataclass
+class PhaseAwareChunkRunner:
+    """Generic phase-aware wrapper around one shared trajectory chunk runner.
+
+    The caller decides *which* phase is active. This wrapper centralizes
+    *how* each phase maps to a chunk-rollout policy while keeping the
+    continuation state shared across phases.
+    """
+
+    default_config: ChunkRolloutConfig
+    phase_configs: dict[str, ChunkRolloutConfig] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        self._runner = TrajectoryChunkRunner(self.default_config)
+
+    def reset(self) -> None:
+        self._runner.reset()
+
+    def get_phase_config(self, phase_name: str | None) -> ChunkRolloutConfig | None:
+        if phase_name is None or phase_name == "default":
+            return None
+        return self.phase_configs.get(phase_name)
+
+    def prepare_chunk(
+        self,
+        result: dict[str, Any],
+        *,
+        anchor_pos: np.ndarray,
+        current_start: int,
+        n_use: int,
+        initial_gripper_cmd: float,
+        demo_gripper_chunk: np.ndarray | None = None,
+        phase_name: str | None = None,
+    ) -> dict[str, Any]:
+        active_phase = "default" if phase_name is None else str(phase_name)
+        prepared = self._runner.prepare_chunk(
+            result,
+            anchor_pos=anchor_pos,
+            current_start=current_start,
+            n_use=n_use,
+            initial_gripper_cmd=initial_gripper_cmd,
+            demo_gripper_chunk=demo_gripper_chunk,
+            config_override=self.get_phase_config(active_phase),
+        )
+        prepared["debug"]["phase_mode"] = active_phase
+        return prepared

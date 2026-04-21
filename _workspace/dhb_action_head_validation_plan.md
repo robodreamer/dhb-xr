@@ -1079,3 +1079,21 @@ The next highest-value move is now:
   - the best general learned-gripper checkpoint remains `gripper_multitask4`
   - remaining work should stay focused on phase alignment / approach quality,
     not on further loss-only shifts toward dense gripper state
+
+### 2026-04-21 Update: Phase-Aware Chunk Adapter
+
+- The benchmark-side continuation logic is now centralized in a generic,
+  phase-aware runner wrapper in
+  [src/dhb_xr/integration/vla/chunk_rollout.py](/home/andypark/Projects/repos/dhb-xr/src/dhb_xr/integration/vla/chunk_rollout.py).
+- Shared module responsibilities:
+  - store one continuation state across replans
+  - map a caller-provided `phase_name` to the corresponding chunk policy
+  - keep the rollout mechanics phase-aware without baking task semantics into
+    reusable code
+- Evaluator responsibilities remain local:
+  - decide *which* phase is active
+  - e.g. LIBERO can still use bowl / plate geometry locally, but the shared
+    adapter only sees `default`, `approach`, or other generic phase names
+- This is the benchmark-setup direction we want:
+  - shared continuation / debounce / chunk policy in the adapter
+  - task-specific geometry only in the evaluator

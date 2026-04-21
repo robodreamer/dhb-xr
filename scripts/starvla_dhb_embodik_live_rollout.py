@@ -17,7 +17,7 @@ from omegaconf import OmegaConf
 
 from dhb_xr.integration.vla.chunk_rollout import (
     ChunkRolloutConfig,
-    TrajectoryChunkRunner,
+    PhaseAwareChunkRunner,
     compute_motion_metrics,
 )
 from dhb_xr.integration.vla.libero import (
@@ -364,7 +364,10 @@ def main() -> None:
             gripper_open_threshold=chunk_cfg.gripper_open_threshold,
             gripper_transition_debounce_steps=chunk_cfg.gripper_transition_debounce_steps,
         )
-    chunk_runner = TrajectoryChunkRunner(chunk_cfg)
+    phase_runner = PhaseAwareChunkRunner(
+        chunk_cfg,
+        phase_configs={} if approach_cfg is None else {"approach": approach_cfg},
+    )
     debug_chunks = []
     close_step = None
     reopen_step = None
@@ -428,22 +431,22 @@ def main() -> None:
 
         n_use = min(args.replan_every, len(result["positions"][0]), num_demo_steps - t)
         rel_live = _relative_snapshot(ee_pos_live, scene_refs)
-        active_cfg = None
+        active_phase = "default"
         if approach_cfg is not None and "ee_minus_bowl" in rel_live:
             ee_minus_bowl_live = np.asarray(rel_live["ee_minus_bowl"], dtype=np.float32)
             if (
                 float(np.linalg.norm(ee_minus_bowl_live[:2])) > args.approach_bowl_xy_m
                 or float(ee_minus_bowl_live[2]) > args.approach_bowl_z_m
             ):
-                active_cfg = approach_cfg
-        prepared = chunk_runner.prepare_chunk(
+                active_phase = "approach"
+        prepared = phase_runner.prepare_chunk(
             result,
             anchor_pos=ee_pos_live,
             current_start=t,
             n_use=n_use,
             initial_gripper_cmd=last_effective_grip,
             demo_gripper_chunk=demo["gripper_cmd"][t : t + n_use],
-            config_override=active_cfg,
+            phase_name=active_phase,
         )
         chunk_pos_stable = prepared["positions_full"]
         q_chunk = np.zeros((n_use, robot_model.nq), dtype=np.float64)
@@ -481,7 +484,6 @@ def main() -> None:
                 "first_pred_pos": prepared["first_pred_pos"],
                 "first_stabilized_pos": prepared["first_stabilized_pos"],
                 "first_gt_pos": gt_chunk[0].tolist(),
-                "phase_mode": "approach_override" if active_cfg is not None else "default",
                 **gripper_debug,
             }
         )
