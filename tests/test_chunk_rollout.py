@@ -122,3 +122,40 @@ def test_runner_debounces_dense_gripper_state_predictions():
     assert prepared["gripper_cmds"].tolist() == [-1.0, 1.0, 1.0, -1.0]
     assert prepared["debug"]["gripper_close_threshold"] == 0.6
     assert prepared["debug"]["gripper_open_threshold"] == 0.4
+
+
+def test_runner_applies_temporal_debounce_to_gripper_state_predictions():
+    runner = TrajectoryChunkRunner(
+        ChunkRolloutConfig(
+            gripper_source="model",
+            gripper_close_threshold=0.6,
+            gripper_open_threshold=0.4,
+            gripper_transition_debounce_steps=2,
+        )
+    )
+    prepared = runner.prepare_chunk(
+        {
+            "positions": np.array(
+                [[[0.00, 0.00, 0.00], [0.01, 0.00, 0.00], [0.02, 0.00, 0.00], [0.03, 0.00, 0.00], [0.04, 0.00, 0.00]]],
+                dtype=np.float32,
+            ),
+            "quaternions": np.array([[[1.0, 0.0, 0.0, 0.0]] * 5], dtype=np.float32),
+            "pred_gripper_state_probs": np.array(
+                [[
+                    [0.45, 0.55],  # below close threshold
+                    [0.38, 0.62],  # close evidence 1
+                    [0.37, 0.63],  # close evidence 2 -> close
+                    [0.61, 0.39],  # open evidence 1
+                    [0.62, 0.38],  # open evidence 2 -> reopen
+                ]],
+                dtype=np.float32,
+            ),
+        },
+        anchor_pos=np.zeros(3, dtype=np.float32),
+        current_start=0,
+        n_use=5,
+        initial_gripper_cmd=-1.0,
+    )
+
+    assert prepared["gripper_cmds"].tolist() == [-1.0, -1.0, 1.0, 1.0, -1.0]
+    assert prepared["debug"]["gripper_transition_debounce_steps"] == 2

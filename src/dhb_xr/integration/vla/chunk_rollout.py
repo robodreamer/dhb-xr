@@ -211,6 +211,7 @@ class ChunkRolloutConfig:
     gripper_threshold: float = 0.5
     gripper_close_threshold: float | None = 0.6
     gripper_open_threshold: float | None = 0.4
+    gripper_transition_debounce_steps: int = 1
 
 
 class TrajectoryChunkRunner:
@@ -275,6 +276,7 @@ class TrajectoryChunkRunner:
                 threshold=float(cfg.gripper_threshold),
                 close_threshold=cfg.gripper_close_threshold,
                 open_threshold=cfg.gripper_open_threshold,
+                transition_debounce_steps=max(1, int(cfg.gripper_transition_debounce_steps)),
             )
 
         self._prev_chunk_pos = chunk_pos_stable.copy()
@@ -292,6 +294,7 @@ class TrajectoryChunkRunner:
                 "gripper_threshold": gripper_debug.get("threshold"),
                 "gripper_close_threshold": gripper_debug.get("close_threshold"),
                 "gripper_open_threshold": gripper_debug.get("open_threshold"),
+                "gripper_transition_debounce_steps": gripper_debug.get("transition_debounce_steps"),
                 "overlap_steps": int(overlap_steps),
                 "commit_prefix_steps": int(commit_steps),
                 "blend_mode": cfg.blend_mode,

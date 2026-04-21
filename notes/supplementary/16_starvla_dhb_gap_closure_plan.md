@@ -796,3 +796,34 @@ In other words:
 - the next real breakthrough is more likely to come from teaching the policy
   how to continue a partially committed trajectory than from more clamp/blend
   or more plain state-history retraining
+
+## 2026-04-21 Gripper Path Update
+
+Two practical decisions are now clearer:
+
+1. The reusable rollout modules should stay object-agnostic.
+   - We kept shared `gripper_state` hysteresis / temporal debounce in the
+     general path.
+   - We did **not** move bowl / plate geometry vetoes into the shared module.
+     Those remain evaluator-specific LIBERO scaffolding.
+
+2. The correct learned gripper hierarchy is:
+   - primary output: dense `gripper_state`
+   - auxiliary signals: sparse `gripper_event`, dense `gripper_phase`
+
+Focused evidence on `dhb_starvla_qwen_gripper_multitask4/steps_200`:
+
+- With `gripper_transition_debounce_steps=2`, the stage-1 preview for the
+  reference episode begins with the first `12` decoded commands all open.
+- The corresponding live no-gate case still fails, but early chatter is
+  reduced:
+  - previous: `close_step=4`, `reopen_step=8`
+  - debounced: `close_step=5`, `reopen_step=13`
+- Bowl approach does not improve:
+  - `min_bowl_xy_m ≈ 0.2097`
+  - `ik_fail_total = 82`
+
+So the debounce path is worth keeping as benchmark infrastructure, but it does
+not close the remaining manipulation gap on its own. The next real gain still
+has to come from better phase alignment and better bowl approach, not from more
+decode-only gripper smoothing.

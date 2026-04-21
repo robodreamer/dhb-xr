@@ -133,6 +133,29 @@ def test_decode_contact_probs_to_gripper_cmds_supports_hysteresis_for_gripper_st
     np.testing.assert_allclose(cmds, [-1.0, -1.0, 1.0, 1.0, -1.0, -1.0], atol=1e-6)
 
 
+def test_decode_contact_probs_to_gripper_cmds_supports_temporal_debounce_for_gripper_state():
+    contact_probs = np.array(
+        [
+            [0.45, 0.55],  # below close threshold
+            [0.38, 0.62],  # close evidence 1
+            [0.37, 0.63],  # close evidence 2 -> close
+            [0.61, 0.39],  # open evidence 1
+            [0.62, 0.38],  # open evidence 2 -> reopen
+        ],
+        dtype=np.float32,
+    )
+    cmds = decode_contact_probs_to_gripper_cmds(
+        contact_probs,
+        initial_gripper_cmd=-1.0,
+        threshold=0.5,
+        contact_mode="gripper_state",
+        close_threshold=0.6,
+        open_threshold=0.4,
+        transition_debounce_steps=2,
+    )
+    np.testing.assert_allclose(cmds, [-1.0, -1.0, 1.0, 1.0, -1.0], atol=1e-6)
+
+
 def test_integrate_delta_action_chunk_builds_absolute_waypoints():
     start_pos = np.array([0.0, 0.0, 0.0], dtype=np.float32)
     start_quat_wxyz = np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float32)

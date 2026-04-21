@@ -65,7 +65,12 @@ def _load_rollout_checkpoint(model, checkpoint_path: str) -> None:
     if _uses_quantized_vlm(model):
         state_dict = {k: v for k, v in state_dict.items() if not k.startswith("qwen_vl_interface.")}
         missing, unexpected = model.load_state_dict(state_dict, strict=False)
-        missing = [k for k in missing if not k.startswith("qwen_vl_interface.")]
+        missing = [
+            k
+            for k in missing
+            if not k.startswith("qwen_vl_interface.")
+            and "committed_prefix_" not in k
+        ]
         if missing or unexpected:
             raise RuntimeError(
                 "Quantized checkpoint load mismatch: "
@@ -136,6 +141,7 @@ def main() -> None:
     parser.add_argument("--gripper-threshold", type=float, default=0.5)
     parser.add_argument("--gripper-close-threshold", type=float, default=0.6)
     parser.add_argument("--gripper-open-threshold", type=float, default=0.4)
+    parser.add_argument("--gripper-transition-debounce-steps", type=int, default=1)
     args, unknown = parser.parse_known_args()
 
     dotlist = normalize_dotlist_args(unknown)
@@ -187,6 +193,7 @@ def main() -> None:
         gripper_threshold=float(args.gripper_threshold),
         gripper_close_threshold=float(args.gripper_close_threshold),
         gripper_open_threshold=float(args.gripper_open_threshold),
+        gripper_transition_debounce_steps=max(1, int(args.gripper_transition_debounce_steps)),
     )
     approach_cfg = None
     if args.approach_blend_mode is not None or args.approach_commit_prefix_steps >= 0:
@@ -206,6 +213,7 @@ def main() -> None:
             gripper_threshold=chunk_cfg.gripper_threshold,
             gripper_close_threshold=chunk_cfg.gripper_close_threshold,
             gripper_open_threshold=chunk_cfg.gripper_open_threshold,
+            gripper_transition_debounce_steps=chunk_cfg.gripper_transition_debounce_steps,
         )
     chunk_runner = TrajectoryChunkRunner(chunk_cfg)
     first_close_step = None
@@ -312,6 +320,7 @@ def main() -> None:
         "gripper_threshold": float(args.gripper_threshold),
         "gripper_close_threshold": float(args.gripper_close_threshold),
         "gripper_open_threshold": float(args.gripper_open_threshold),
+        "gripper_transition_debounce_steps": int(args.gripper_transition_debounce_steps),
         "state_history_window": int(state_history_window),
         "positions_shape": list(positions.shape),
         "quaternions_shape": list(quaternions.shape),

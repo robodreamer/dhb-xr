@@ -84,7 +84,12 @@ def _load_rollout_checkpoint(model, checkpoint_path: str) -> None:
     if _uses_quantized_vlm(model):
         state_dict = {k: v for k, v in state_dict.items() if not k.startswith("qwen_vl_interface.")}
         missing, unexpected = model.load_state_dict(state_dict, strict=False)
-        missing = [k for k in missing if not k.startswith("qwen_vl_interface.")]
+        missing = [
+            k
+            for k in missing
+            if not k.startswith("qwen_vl_interface.")
+            and "committed_prefix_" not in k
+        ]
         if missing or unexpected:
             raise RuntimeError(
                 "Quantized rollout checkpoint load mismatch: "

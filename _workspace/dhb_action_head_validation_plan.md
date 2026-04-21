@@ -1021,3 +1021,30 @@ The next highest-value move is now:
 3. move the model side toward continuation conditioning:
    - committed-prefix continuation input, or
    - short action-history / prefix-conditioned chunk continuation
+
+### 2026-04-21 Update: Gripper-State Primary Path and Generalized Inference
+
+- Keep the reusable modules general:
+  - shared `gripper_state` decoding now supports configurable temporal debounce
+  - object-specific bowl / plate distance vetoes remain local to the LIBERO
+    evaluators and are **not** baked into the core chunk runner
+- Older quantized checkpoints are now backward-compatible with the newer
+  continuation-conditioned runtime:
+  - missing `committed_prefix_*` params are ignored during rollout loads
+- The intended learned gripper hierarchy is now explicit:
+  - primary learned output: `gripper_state`
+  - auxiliary supervision: `gripper_event`, `gripper_phase`
+  - raw action gripper dim should remain non-primary
+- Focused validation on the existing `gripper_multitask4/steps_200` checkpoint:
+  - stage-1 preview with `gripper_transition_debounce_steps=2` starts with the
+    first `12` decoded commands all open
+  - live no-gate reference case still fails, but chatter is reduced:
+    - old: `close_step=4`, `reopen_step=8`
+    - new: `close_step=5`, `reopen_step=13`
+  - bowl approach is unchanged:
+    - `min_bowl_xy_m ≈ 0.2097`
+    - `ik_fail_total = 82`
+- Interpretation:
+  - the shared debounce path is worth keeping
+  - but the remaining gap is still phase alignment / approach quality, not
+    basic `gripper_state` chattering
