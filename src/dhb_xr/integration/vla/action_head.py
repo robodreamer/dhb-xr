@@ -177,6 +177,8 @@ if HAS_TORCH:
 
             # Project decoder output to invariant space
             self.invariant_head = nn.Linear(hidden_dim, invariant_dim)
+            self.committed_prefix_proj = nn.Linear(invariant_dim, hidden_dim)
+            self.committed_prefix_bias = nn.Parameter(torch.zeros(1, 1, hidden_dim))
 
             # Optional: state projection for conditioning on current EE state
             self.state_proj = nn.Linear(
@@ -306,6 +308,47 @@ if HAS_TORCH:
             weights = weights / weights.mean()
             return (per_step_mse * weights.unsqueeze(0)).mean()
 
+        @staticmethod
+        def _normalize_temporal_mask(
+            loss_mask: Optional[torch.Tensor],
+            *,
+            batch_size: int,
+            horizon: int,
+            device: torch.device,
+            dtype: torch.dtype,
+        ) -> Optional[torch.Tensor]:
+            if loss_mask is None:
+                return None
+            mask = loss_mask.to(device=device, dtype=dtype)
+            if mask.ndim == 1:
+                if mask.shape[0] != horizon:
+                    raise ValueError(f"Expected 1D mask of length {horizon}, got {tuple(mask.shape)}")
+                mask = mask.unsqueeze(0).expand(batch_size, -1)
+            elif mask.ndim == 2:
+                if mask.shape != (batch_size, horizon):
+                    raise ValueError(
+                        f"Expected 2D mask shape {(batch_size, horizon)}, got {tuple(mask.shape)}"
+                    )
+            elif mask.ndim == 3 and mask.shape[-1] == 1:
+                if mask.shape[:2] != (batch_size, horizon):
+                    raise ValueError(
+                        f"Expected 3D mask shape {(batch_size, horizon, 1)}, got {tuple(mask.shape)}"
+                    )
+                mask = mask.squeeze(-1)
+            else:
+                raise ValueError(
+                    f"Unsupported temporal mask shape {tuple(mask.shape)} for batch={batch_size} horizon={horizon}"
+                )
+            return mask
+
+        @staticmethod
+        def _masked_temporal_mean(values: torch.Tensor, mask: Optional[torch.Tensor]) -> torch.Tensor:
+            if mask is None:
+                return values.mean()
+            weighted = values * mask
+            denom = mask.sum().clamp_min(1.0)
+            return weighted.sum() / denom
+
         def forward(
             self,
             vlm_hidden: torch.Tensor,
@@ -315,6 +358,9 @@ if HAS_TORCH:
             target_contact: Optional[torch.Tensor] = None,
             target_contact_phase: Optional[torch.Tensor] = None,
             target_gripper_state: Optional[torch.Tensor] = None,
+            committed_prefix_invariants: Optional[torch.Tensor] = None,
+            committed_prefix_mask: Optional[torch.Tensor] = None,
+            loss_mask: Optional[torch.Tensor] = None,
         ) -> Dict[str, torch.Tensor]:
             """
             Forward pass: predict DHB invariants from VLM hidden states.
@@ -342,12 +388,45 @@ if HAS_TORCH:
             query_pos = torch.arange(self.action_horizon, device=vlm_hidden.device)
             queries = self.query_embed(query_pos).unsqueeze(0).expand(B, -1, -1)
 
+            temporal_loss_mask = self._normalize_temporal_mask(
+                loss_mask,
+                batch_size=B,
+                horizon=self.action_horizon,
+                device=vlm_hidden.device,
+                dtype=queries.dtype,
+            )
+
             # Optionally condition on current state
             state_feat = None
             if state is not None:
                 state_flat = self._flatten_state_history(state)
                 state_feat = self.state_proj(state_flat).unsqueeze(1)  # (B, 1, hidden_dim)
                 memory = torch.cat([state_feat, memory], dim=1)
+
+            prefix_mask = self._normalize_temporal_mask(
+                committed_prefix_mask,
+                batch_size=B,
+                horizon=self.action_horizon,
+                device=vlm_hidden.device,
+                dtype=queries.dtype,
+            )
+            if committed_prefix_invariants is not None:
+                if committed_prefix_invariants.shape[:2] != (B, self.action_horizon):
+                    raise ValueError(
+                        "committed_prefix_invariants must have shape "
+                        f"(B, T, {self.invariant_dim}), got {tuple(committed_prefix_invariants.shape)}"
+                    )
+                prefix_values = committed_prefix_invariants.to(device=vlm_hidden.device, dtype=queries.dtype)
+                prefix_hidden = self.committed_prefix_proj(prefix_values)
+                if prefix_mask is None:
+                    prefix_mask = (
+                        prefix_values.abs().sum(dim=-1) > 0
+                    ).to(device=vlm_hidden.device, dtype=queries.dtype)
+                queries = queries + prefix_hidden * prefix_mask.unsqueeze(-1)
+                queries = queries + prefix_mask.unsqueeze(-1) * self.committed_prefix_bias
+                result_prefix_mask = prefix_mask
+            else:
+                result_prefix_mask = prefix_mask
 
             # Cross-attention decode
             decoded = self.decoder(queries, memory)  # (B, T, hidden_dim)
@@ -367,6 +446,8 @@ if HAS_TORCH:
             result = {"pred_invariants": pred_inv, "pred_invariants_recon": pred_inv_recon}
             if self.oat is not None:
                 result["oat_loss"] = oat_loss
+            if result_prefix_mask is not None:
+                result["committed_prefix_mask"] = result_prefix_mask
 
             # Optional: predict raw actions via action_head
             pred_actions = None
@@ -450,7 +531,18 @@ if HAS_TORCH:
             # the action loss ensures the output is directly executable by the controller.
             total = None
             if target_invariants is not None:
-                loss_inv = self._invariant_loss(pred_inv, target_invariants)
+                per_step_mse = (pred_inv - target_invariants).pow(2).mean(dim=-1)
+                if self.terminal_loss_weight is not None and self.terminal_loss_weight > 1.0:
+                    weights = torch.linspace(
+                        1.0,
+                        float(self.terminal_loss_weight),
+                        self.action_horizon,
+                        device=pred_inv.device,
+                        dtype=pred_inv.dtype,
+                    )
+                    weights = weights / weights.mean()
+                    per_step_mse = per_step_mse * weights.unsqueeze(0)
+                loss_inv = self._masked_temporal_mean(per_step_mse, temporal_loss_mask)
                 result["loss_inv"] = loss_inv
                 total = self.lambda_inv * loss_inv
                 if oat_loss is not None:
@@ -459,9 +551,10 @@ if HAS_TORCH:
                 if target_actions is not None and pred_actions is not None:
                     # Dual-head mode: L1 action loss + invariant regularization
                     if self.action_loss_ignore_gripper and pred_actions.shape[-1] >= 7:
-                        loss_act = F.l1_loss(pred_actions[..., :6], target_actions[..., :6])
+                        per_step_l1 = (pred_actions[..., :6] - target_actions[..., :6]).abs().mean(dim=-1)
                     else:
-                        loss_act = F.l1_loss(pred_actions, target_actions)
+                        per_step_l1 = (pred_actions - target_actions).abs().mean(dim=-1)
+                    loss_act = self._masked_temporal_mean(per_step_l1, temporal_loss_mask)
                     result["loss_act"] = loss_act
                     total = self.lambda_act * loss_act + self.lambda_inv * loss_inv
                     if oat_loss is not None:
@@ -473,9 +566,10 @@ if HAS_TORCH:
 
             elif target_actions is not None and pred_actions is not None:
                 if self.action_loss_ignore_gripper and pred_actions.shape[-1] >= 7:
-                    loss_act = F.l1_loss(pred_actions[..., :6], target_actions[..., :6])
+                    per_step_l1 = (pred_actions[..., :6] - target_actions[..., :6]).abs().mean(dim=-1)
                 else:
-                    loss_act = F.l1_loss(pred_actions, target_actions)
+                    per_step_l1 = (pred_actions - target_actions).abs().mean(dim=-1)
+                loss_act = self._masked_temporal_mean(per_step_l1, temporal_loss_mask)
                 result["loss_act"] = loss_act
                 total = self.lambda_act * loss_act
 
@@ -515,11 +609,13 @@ if HAS_TORCH:
                     else:
                         target_contact_ce = target_contact
                     target_contact_ce = target_contact_ce.to(device=pred_contact_logits.device, dtype=torch.long)
-                    loss_contact = F.cross_entropy(
+                    per_step_contact = F.cross_entropy(
                         pred_contact_logits.reshape(-1, pred_contact_logits.shape[-1]),
                         target_contact_ce.reshape(-1),
                         weight=class_weight,
+                        reduction="none",
                     )
+                    per_step_contact = per_step_contact.reshape(pred_contact_logits.shape[0], pred_contact_logits.shape[1])
                 else:
                     pos_weight_values = None
                     if not isinstance(self.contact_pos_weight, (str, bytes)):
@@ -549,11 +645,14 @@ if HAS_TORCH:
                             device=pred_contact_logits.device,
                             dtype=pred_contact_logits.dtype,
                         )
-                    loss_contact = F.binary_cross_entropy_with_logits(
+                    per_step_contact = F.binary_cross_entropy_with_logits(
                         pred_contact_logits,
                         target_contact,
                         pos_weight=pos_weight,
+                        reduction="none",
                     )
+                    per_step_contact = per_step_contact.mean(dim=-1)
+                loss_contact = self._masked_temporal_mean(per_step_contact, temporal_loss_mask)
                 result["loss_contact"] = loss_contact
                 total = self.lambda_contact * loss_contact if total is None else total + self.lambda_contact * loss_contact
 
@@ -596,10 +695,15 @@ if HAS_TORCH:
                         device=pred_contact_phase_logits.device,
                         dtype=torch.long,
                     )
-                    loss_contact_phase = F.cross_entropy(
+                    per_step_contact_phase = F.cross_entropy(
                         pred_contact_phase_logits.reshape(-1, pred_contact_phase_logits.shape[-1]),
                         target_contact_phase_ce.reshape(-1),
                         weight=phase_class_weight,
+                        reduction="none",
+                    )
+                    per_step_contact_phase = per_step_contact_phase.reshape(
+                        pred_contact_phase_logits.shape[0],
+                        pred_contact_phase_logits.shape[1],
                     )
                 else:
                     phase_pos_weight_values = None
@@ -630,11 +734,14 @@ if HAS_TORCH:
                             device=pred_contact_phase_logits.device,
                             dtype=pred_contact_phase_logits.dtype,
                         )
-                    loss_contact_phase = F.binary_cross_entropy_with_logits(
+                    per_step_contact_phase = F.binary_cross_entropy_with_logits(
                         pred_contact_phase_logits,
                         target_contact_phase,
                         pos_weight=phase_pos_weight,
+                        reduction="none",
                     )
+                    per_step_contact_phase = per_step_contact_phase.mean(dim=-1)
+                loss_contact_phase = self._masked_temporal_mean(per_step_contact_phase, temporal_loss_mask)
                 result["loss_contact_phase"] = loss_contact_phase
                 total = (
                     self.lambda_contact_phase * loss_contact_phase
@@ -681,10 +788,15 @@ if HAS_TORCH:
                         device=pred_gripper_state_logits.device,
                         dtype=torch.long,
                     )
-                    loss_gripper_state = F.cross_entropy(
+                    per_step_gripper_state = F.cross_entropy(
                         pred_gripper_state_logits.reshape(-1, pred_gripper_state_logits.shape[-1]),
                         target_gripper_state_ce.reshape(-1),
                         weight=class_weight,
+                        reduction="none",
+                    )
+                    per_step_gripper_state = per_step_gripper_state.reshape(
+                        pred_gripper_state_logits.shape[0],
+                        pred_gripper_state_logits.shape[1],
                     )
                 else:
                     pos_weight_values = None
@@ -715,12 +827,15 @@ if HAS_TORCH:
                             device=pred_gripper_state_logits.device,
                             dtype=pred_gripper_state_logits.dtype,
                         )
-                    loss_gripper_state = F.binary_cross_entropy_with_logits(
+                    per_step_gripper_state = F.binary_cross_entropy_with_logits(
                         pred_gripper_state_logits,
                         target_gripper_state,
                         pos_weight=pos_weight,
+                        reduction="none",
                     )
+                    per_step_gripper_state = per_step_gripper_state.mean(dim=-1)
 
+                loss_gripper_state = self._masked_temporal_mean(per_step_gripper_state, temporal_loss_mask)
                 result["loss_gripper_state"] = loss_gripper_state
                 total = (
                     self.lambda_gripper_state * loss_gripper_state
@@ -738,6 +853,8 @@ if HAS_TORCH:
             vlm_hidden: torch.Tensor,
             state: Optional[torch.Tensor] = None,
             initial_pose: Optional[Dict[str, torch.Tensor]] = None,
+            committed_prefix_invariants: Optional[torch.Tensor] = None,
+            committed_prefix_mask: Optional[torch.Tensor] = None,
         ) -> Dict[str, torch.Tensor]:
             """
             Inference: predict invariants and optionally decode to trajectory.
@@ -752,7 +869,12 @@ if HAS_TORCH:
                 dict with 'pred_invariants' and optionally 'positions', 'quaternions'
             """
             with torch.no_grad():
-                result = self.forward(vlm_hidden, state)
+                result = self.forward(
+                    vlm_hidden,
+                    state,
+                    committed_prefix_invariants=committed_prefix_invariants,
+                    committed_prefix_mask=committed_prefix_mask,
+                )
 
             # If action_head exists, pred_actions is already in result
             # (populated by forward())

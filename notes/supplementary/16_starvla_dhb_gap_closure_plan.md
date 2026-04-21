@@ -150,6 +150,98 @@ The updated ranking is therefore:
 6. only then add a lightweight auxiliary phase/status head if integrated
    manipulation still stalls
 
+### 2026-04-21 update: committed-prefix continuation path is now in code
+
+The external-repo-inspired continuation step is no longer just a plan item.
+The local DHB path now supports:
+
+- committed invariant prefix conditioning
+- suffix-only loss masking
+- optional continuation-prefix inputs at inference time
+
+The first experiment config is:
+
+- `configs/libero_dhbxr_qwen_continuation.yaml`
+
+Initial intended run policy:
+
+- warm-start from the old best reach checkpoint:
+  `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/checkpoints/steps_200_pytorch_model.pt`
+- keep the current corrected dataset and frozen-Qwen setup
+- benchmark only with the reach-only live sweep first
+
+This should be treated as the main model-side breakthrough attempt before
+reopening integrated gripper/manipulation work.
+
+### 2026-04-21 update: first continuation-conditioned warm-start is in flight
+
+The continuation-conditioned path is now implemented end to end:
+
+- `src/dhb_xr/integration/vla/action_head.py`
+- `vendor/starVLA/starVLA/model/modules/action_model/DHBActionHeader.py`
+- `vendor/starVLA/starVLA/model/framework/VLM4A/QwenDHB.py`
+- `configs/libero_dhbxr_qwen_continuation.yaml`
+
+What changed:
+
+- the DHB head can condition on a committed invariant prefix
+- training can mask the committed prefix out of the loss so only the suffix is
+  supervised
+- inference can optionally receive the committed prefix explicitly
+
+The first real run is:
+
+- run dir:
+  `_workspace/starvla_runs/dhb_starvla_qwen_continuation_short1`
+- warm-start source:
+  `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/checkpoints/steps_200_pytorch_model.pt`
+- training budget:
+  `200` steps
+
+Current interpretation:
+
+- this is the first model-side attempt that actually matches the
+  `vla_foundry`-style past-vs-future conditioning clue
+- it is therefore more meaningful than:
+  - another same-family warm-start
+  - another clamp / blend sweep
+  - another gripper-only tweak
+
+Final reach-only live-sweep result:
+
+- `steps_100`:
+  - `avg_min_bowl_xy_m = 0.2207`
+  - `avg_min_bowl_xyz_m = 0.3551`
+  - `avg_ik_fail_total = 13.5`
+- `steps_200`:
+  - `0.2320 / 0.3578 / 21.0`
+- `steps_50`:
+  - `0.2498 / 0.3739 / 78.0`
+- `steps_150`:
+  - `0.2502 / 0.3740 / 81.0`
+
+Comparison to the current reach-only control:
+
+- best existing control:
+  - `avg_min_bowl_xy_m = 0.1375`
+
+Interpretation:
+
+- continuation conditioning did not beat the current reach-only control
+- it did reduce IK failures sharply at the best checkpoint (`steps_100`), which
+  means the idea is not useless
+- but the main failure is still bowl approach quality, not just feasibility
+
+So the next most impactful technical step now shifts to:
+
+1. a matched `QwenOFT -> embodik` control
+2. a more centralized adapter-style benchmark contract for:
+   - history buffering
+   - reference handling
+   - gripper-state debouncing
+3. only then reopen more ambitious DHB-specific continuation / phase work if
+   the control comparison still shows a clear DHB-side opportunity
+
 ### 2026-04-19 update: first live-robustness augmentation result
 
 A first training-side robustness check was added after the live checkpoint sweep

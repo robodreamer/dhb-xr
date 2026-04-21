@@ -113,10 +113,13 @@ Interpretation:
 - [x] Test a rollout-grounded corrective augmentation warm-start (`reachcorr`) against the reach-only baseline
 - [x] Test a cleaner reach-phase oversampling warm-start (`reachphase`) against the reach-only baseline
 - [ ] Improve smooth bowl approach under offsets before returning to learned close/open timing
-- [ ] Try a more structural next change than same-family warm-start training:
-  - DHB continuation conditioning with a committed chunk prefix, or
-  - a lightweight auxiliary phase/status head once reach improves
-- [ ] Re-run the reach-only live checkpoint sweep after continuation-conditioned training
+- [x] Implement DHB continuation conditioning with a committed chunk prefix in the action head
+- [x] Add a continuation-trained StarVLA config and verify it with a real one-step train smoke
+- [x] Launch a short continuation-conditioned warm-start from `shorttrain1/steps_200`
+- [x] Finish the reach-only live checkpoint sweep on the continuation run and compare against the `0.1375` ramp+commit2 control
+- [x] If continuation still misses the reach-only control, shift the next benchmark-side work to:
+  - a matched `QwenOFT -> embodik` control, and
+  - a single adapter-style inference contract for history / reference handling
 - [ ] Only after reach improves, reintroduce the integrated benchmark through the phase-split bridge
 - [ ] Factor rollout buffering / reference adaptation into a tested adapter layer so live and offline loops share one contract
 
@@ -167,6 +170,34 @@ External repo checks now point in the same direction:
 - `TRI-LBM` suggests an auxiliary status signal can be trained jointly with the
   action generator, but this should come *after* reach-only continuation gains
   are real
+
+2026-04-21 continuation update:
+
+- the DHB head now supports:
+  - committed-prefix invariant conditioning
+  - suffix-only loss masking
+  - optional committed-prefix inputs at inference time
+- the first short continuation warm-start is:
+  - run dir:
+    `_workspace/starvla_runs/dhb_starvla_qwen_continuation_short1`
+  - warm-start source:
+    `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/checkpoints/steps_200_pytorch_model.pt`
+- the train smoke is valid and reports nonzero `continuation_prefix_steps`
+- final reach-only sweep ranking is:
+  - `steps_100`: `avg_min_bowl_xy_m = 0.2207`, `avg_min_bowl_xyz_m = 0.3551`,
+    `avg_ik_fail_total = 13.5`
+  - `steps_200`: `0.2320 / 0.3578 / 21.0`
+  - `steps_50`: `0.2498 / 0.3739 / 78.0`
+  - `steps_150`: `0.2502 / 0.3740 / 81.0`
+- continuation conditioning therefore did **not** beat the current reach-only
+  control:
+  - best control remains `avg_min_bowl_xy_m = 0.1375`
+- useful takeaway:
+  - the continuation-conditioned run reduces IK failures sharply at `steps_100`,
+    but it still does not approach the bowl closely enough
+  - so the next benchmark-side move should shift to:
+    - a matched `QwenOFT -> embodik` control
+    - a cleaner adapter-style rollout contract for history/reference buffering
 
 ## First StarVLA→EmbodiK End-To-End Result
 
@@ -848,6 +879,42 @@ Current default hysteresis for learned `gripper_state`:
 
 This is not the main reach breakthrough. It is a benchmark-contract cleanup that
 should reduce chatter once the model-side gripper-state path is revisited.
+
+### 2026-04-21 update: continuation-conditioned DHB training path is now implemented
+
+Borrowing the useful part of the `vla_foundry` design, the DHB training path now
+supports a committed-prefix continuation signal directly in the local DHB head:
+
+- `QwenDHB` can sample a random committed invariant prefix during training
+- the DHB head conditions each query on that committed prefix
+- losses can be restricted to the uncommitted suffix only
+
+Code path:
+
+- `src/dhb_xr/integration/vla/action_head.py`
+- `vendor/starVLA/starVLA/model/modules/action_model/DHBActionHeader.py`
+- `vendor/starVLA/starVLA/model/framework/VLM4A/QwenDHB.py`
+- config: `configs/libero_dhbxr_qwen_continuation.yaml`
+
+Current default continuation settings for the first experiment:
+
+- `continuation_conditioning_prob: 0.5`
+- `continuation_max_prefix_steps: 2`
+- `continuation_loss_on_suffix_only: true`
+
+Focused validation:
+
+- `pytest`: `28 passed`
+- StarVLA one-step train smoke on the continuation config succeeded and emitted:
+  - `continuation_prefix_steps: 2.0`
+  - `loss_inv: 0.3137`
+  - `loss_act: 0.5014`
+
+This is the first model-side implementation that directly matches the
+committed-prefix/continuation hypothesis suggested by the external repo review.
+The next benchmark step is to run a short continuation-conditioned warm-start
+from `shorttrain1/steps_200` and rank checkpoints with the existing reach-only
+live sweep before returning to the integrated manipulation stack.
 
 ### Reach-Only Handoff Baseline
 

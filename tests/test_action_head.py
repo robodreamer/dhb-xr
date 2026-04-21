@@ -324,6 +324,82 @@ class TestDHBActionHead:
         assert "loss_act" in result
         assert result["loss_act"].item() < 1e-5
 
+    def test_committed_prefix_conditioning_biases_marked_queries_only(self):
+        class ReturnQueries(nn.Module):
+            def forward(self, queries, memory):
+                return queries
+
+        head = DHBActionHead(
+            vlm_dim=16,
+            action_horizon=4,
+            invariant_dim=8,
+            hidden_dim=16,
+            num_heads=4,
+            num_layers=1,
+            dropout=0.0,
+        )
+        head.decoder = ReturnQueries()
+
+        with torch.no_grad():
+            head.vlm_proj.weight.zero_()
+            head.vlm_proj.bias.zero_()
+            head.query_embed.weight.zero_()
+            head.committed_prefix_proj.weight.zero_()
+            head.committed_prefix_proj.bias.zero_()
+            head.committed_prefix_proj.weight[:8, :8] = torch.eye(8)
+            head.committed_prefix_bias.zero_()
+            head.invariant_head.weight.zero_()
+            head.invariant_head.bias.zero_()
+            head.invariant_head.weight[:, :8] = torch.eye(8)
+
+        vlm_hidden = torch.randn(1, 3, 16)
+        committed_prefix = torch.zeros(1, 4, 8)
+        committed_prefix[:, 0, :] = 1.0
+        committed_prefix[:, 1, :] = 2.0
+        committed_mask = torch.tensor([[1.0, 1.0, 0.0, 0.0]])
+
+        result = head(
+            vlm_hidden,
+            committed_prefix_invariants=committed_prefix,
+            committed_prefix_mask=committed_mask,
+        )
+        pred = result["pred_invariants"]
+        assert torch.allclose(pred[:, 0, :], torch.ones(1, 8), atol=1e-6)
+        assert torch.allclose(pred[:, 1, :], torch.full((1, 8), 2.0), atol=1e-6)
+        assert torch.allclose(pred[:, 2:, :], torch.zeros(1, 2, 8), atol=1e-6)
+
+    def test_loss_mask_ignores_committed_prefix_steps(self):
+        class ReturnQueries(nn.Module):
+            def forward(self, queries, memory):
+                return queries
+
+        head = DHBActionHead(
+            vlm_dim=16,
+            action_horizon=4,
+            invariant_dim=8,
+            hidden_dim=16,
+            num_heads=4,
+            num_layers=1,
+            dropout=0.0,
+        )
+        head.decoder = ReturnQueries()
+
+        with torch.no_grad():
+            head.vlm_proj.weight.zero_()
+            head.vlm_proj.bias.zero_()
+            head.query_embed.weight.zero_()
+            head.invariant_head.weight.zero_()
+            head.invariant_head.bias.zero_()
+
+        vlm_hidden = torch.randn(1, 3, 16)
+        target_inv = torch.zeros(1, 4, 8)
+        target_inv[:, :2, :] = 5.0
+        loss_mask = torch.tensor([[0.0, 0.0, 1.0, 1.0]])
+
+        result = head(vlm_hidden, target_invariants=target_inv, loss_mask=loss_mask)
+        assert "loss_inv" in result
+        assert result["loss_inv"].item() < 1e-7
+
     def test_predict_invariants_only(self):
         """Predict mode returns invariants without gradients."""
         vlm_hidden = torch.randn(self.B, self.S, 128)
