@@ -234,12 +234,11 @@ Interpretation:
 
 So the next most impactful technical step now shifts to:
 
-1. a matched `QwenOFT -> embodik` control
-2. a more centralized adapter-style benchmark contract for:
+1. a more centralized adapter-style benchmark contract for:
    - history buffering
    - reference handling
    - gripper-state debouncing
-3. only then reopen more ambitious DHB-specific continuation / phase work if
+2. only then reopen more ambitious DHB-specific continuation / phase work if
    the control comparison still shows a clear DHB-side opportunity
 
 ### 2026-04-19 update: first live-robustness augmentation result
@@ -549,14 +548,47 @@ What it already shows:
 - on one matched sample, its chunk MAE is worse than `QwenDHB`
 - both direct-action rollouts still fail on the reference LIBERO task
 
-So this narrows the gap, but does **not** yet support the full claim that DHB is
-better than a regular head under a matched execution protocol.
+2026-04-21 update: the execution-level control is now done too.
+
+`QwenOFT` has now been run through the same downstream evaluator by:
+
+- unnormalizing the predicted delta-action chunk
+- integrating that chunk into EE waypoint poses
+- feeding those waypoints into the same `embodik` Stage 2/3 stack
+
+Bridge files:
+
+- `scripts/starvla_oft_embodik_stage1.py`
+- `src/dhb_xr/integration/vla/libero.py`
+
+Matched result under the same offline `0 cm / 3 cm / 3-seed` evaluator:
+
+| model | path | `0 cm` | `3 cm` |
+| --- | --- | ---: | ---: |
+| `QwenDHB` | canonical `predict_trajectory() -> embodik` | `1/3` | `1/3` |
+| `QwenOFT` | integrated delta-action chunk -> `embodik` | `0/3` | `0/3` |
+
+Important detail:
+
+- the `QwenOFT` control was not blocked by IK
+- all `6/6` cases were IK-feasible with mean FK error around `0.48 mm`
+
+So this is now a real matched execution-side result, not only a direct-rollout
+comparison.
 
 ### Claims this phase should answer
 
 - Does DHB reduce IK infeasibility?
 - Does DHB improve final placement geometry?
 - Does DHB improve closed-loop success under the same execution stack?
+
+Current answer:
+
+- yes, DHB currently improves closed-loop success over the matched `QwenOFT`
+  control under the same offline `embodik` stack
+- no, this is still not enough to claim broad superiority yet, because:
+  - the margin is still small (`1/3` vs `0/3`)
+  - it is not yet tested in a live / online matched comparison
 
 ### Exit criteria
 

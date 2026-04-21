@@ -15,10 +15,14 @@ Create the first matched regular-head control for the corrected StarVLA DHB work
   - `task_id=0`
   - `episode_idx=0`
 
-This does **not** yet close the full scientific comparison gap because the
-current DHB best path is `predict_trajectory() -> embodik`, while `QwenOFT`
-currently only has the direct-action path. It does establish the first honest
-control under the corrected StarVLA data / training contract.
+This note now covers two levels of control:
+
+1. direct-action rollout smoke
+2. matched `QwenOFT -> delta-action integration -> embodik` evaluation
+
+So it now closes the most important comparison gap that was still open on
+2026-04-19: `QwenOFT` has been run under the same `embodik` Stage 2/3 path as
+the DHB baseline.
 
 ## Control config
 
@@ -48,6 +52,14 @@ control under the corrected StarVLA data / training contract.
   - `_workspace/starvla_runs/qwenoft_starvla_qwen_shorttrain1/predict_smoke_summary_step200.json`
 - rollout video:
   - `_workspace/starvla_runs/qwenoft_starvla_qwen/rollout_steps_200_pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate_episode0_failure.mp4`
+- matched `embodik` stage-1 control chunks:
+  - `_workspace/starvla_runs/qwenoft_starvla_qwen_shorttrain1/embodik_stage1_ep0_step200.npz`
+  - `_workspace/starvla_runs/qwenoft_starvla_qwen_shorttrain1/embodik_stage1_ep1_step200.npz`
+  - `_workspace/starvla_runs/qwenoft_starvla_qwen_shorttrain1/embodik_stage1_ep10_step200.npz`
+- matched `embodik` sweep:
+  - `_workspace/starvla_runs/qwenoft_starvla_qwen_shorttrain1/embodik_step200_fullsweep_debug_ik.json`
+  - `_workspace/starvla_runs/qwenoft_starvla_qwen_shorttrain1/embodik_step200_fullsweep_debug_sim.json`
+  - `_workspace/validation_videos/qwenoft_embodik_step200_fullsweep`
 
 ### Reference DHB short-train run
 
@@ -88,8 +100,50 @@ Observations:
 - Neither short-trained direct-action path solves the task.
 - This is consistent with the broader StarVLA findings so far:
   - the direct controller path is not the strongest execution path
-  - the DHB trajectory path remains the more promising route for embodied
-    validation
+- the DHB trajectory path remains the more promising route for embodied
+  validation
+
+### Matched `embodik` control
+
+The direct-action comparison above was still weaker than the current DHB
+baseline, because DHB is strongest through:
+
+- `predict_trajectory()`
+- `embodik` IK
+- `JOINT_POSITION` sim
+
+So `QwenOFT` was also run through the same downstream evaluator by:
+
+- unnormalizing its predicted delta-action chunk
+- integrating that chunk into EE waypoints
+- feeding those waypoints into the same `embodik` Stage 2/3 stack
+
+Bridge files:
+
+- `scripts/starvla_oft_embodik_stage1.py`
+- `src/dhb_xr/integration/vla/libero.py`
+
+Result under the same offline `0 cm / 3 cm / 3-seed` evaluator:
+
+| model | path | `0 cm` | `3 cm` |
+| --- | --- | ---: | ---: |
+| `QwenDHB` | canonical `predict_trajectory() -> embodik` | `1/3` | `1/3` |
+| `QwenOFT` | integrated delta-action chunk -> `embodik` | `0/3` | `0/3` |
+
+Important details:
+
+- Stage 2 was clean for the `QwenOFT` control:
+  - all `6/6` cases were IK-feasible
+  - mean FK error stayed about `0.48 mm`
+- so the `0/3, 0/3` result is not an IK-contract artifact
+- it is a real matched execution-side baseline
+
+One qualitative nuance:
+
+- `offset=0 cm, seed 0` and `seed 2` each reached transient `reward=1.00`
+  during sim
+- but all runs still finished as `success=False`
+- so the honest benchmark summary remains `0/3` at both offsets
 
 ### First-action behavior on the rollout task
 
@@ -120,18 +174,20 @@ This closes one part of the gap:
 - it trains on the same corrected dataset
 - it can be rolled out and compared against the corrected DHB path
 
-What it does **not** close yet:
+What it still does **not** close:
 
-- `QwenDHB` vs `QwenOFT` under the same `embodik` evaluator
-- `0 cm / 3 cm / 3-seed` matched comparison
-- final claim strength over a regular action head
+- final claim strength over a regular action head at larger scale
+- live / online matched comparison
+- whether the DHB margin comes from representation quality alone or also from
+  the current execution design
 
 ## Immediate next step
 
 Keep using this `QwenOFT` setup as the regular-head reference while continuing
 to improve the canonical DHB -> `embodik` path. The next honest comparison
-target is not more direct-rollout tuning; it is a closer execution-level match:
+target is no longer “make the control fairer”; that is now done. The next gap
+is benchmark infrastructure quality:
 
-- either build a fairer `QwenOFT` comparison protocol
-- or finish stabilizing the canonical DHB path enough that the contrast against
-  the regular direct-action control is compelling
+- centralize the history/reference/gripper adapter contract
+- then carry both `QwenDHB` and `QwenOFT` through the same broader benchmark
+  plumbing

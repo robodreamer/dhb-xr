@@ -9,7 +9,9 @@ Note: obs/ee_ori contains Euler angles, not quaternions.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Dict, Iterator, Optional, Sequence, Tuple
 
 import numpy as np
@@ -85,6 +87,101 @@ def build_state_history_window(
     elif arr.shape[0] > history_window:
         arr = arr[-history_window:]
     return arr.astype(np.float32, copy=False)
+
+
+def _extract_action_stats(payload: dict, stats_path: Path) -> dict:
+    if not payload:
+        raise ValueError(f"Dataset statistics file is empty: {stats_path}")
+
+    if "action" in payload:
+        action_stats = payload["action"]
+    else:
+        first_key = next(iter(payload.keys()))
+        action_stats = payload[first_key]["action"]
+
+    required = {"min", "max"}
+    missing = required - set(action_stats.keys())
+    if missing:
+        raise KeyError(f"Dataset action stats missing required keys {sorted(missing)} in {stats_path}")
+    return action_stats
+
+
+def load_run_action_stats(output_dir: str | Path, *, checkpoint: str | None = None) -> dict:
+    output_dir = Path(output_dir)
+    candidate_paths = []
+    if checkpoint:
+        checkpoint_path = Path(checkpoint)
+        candidate_paths.append(checkpoint_path.parent.parent / "dataset_statistics.json")
+    candidate_paths.append(output_dir / "dataset_statistics.json")
+
+    seen = set()
+    for stats_path in candidate_paths:
+        if stats_path in seen:
+            continue
+        seen.add(stats_path)
+        if stats_path.exists():
+            payload = json.loads(stats_path.read_text())
+            return _extract_action_stats(payload, stats_path)
+
+    raise FileNotFoundError(
+        "Missing dataset statistics. Looked in: " + ", ".join(str(path) for path in candidate_paths)
+    )
+
+
+def unnormalize_actions(normalized_actions: np.ndarray, action_norm_stats: dict) -> np.ndarray:
+    normalized_actions = np.asarray(normalized_actions, dtype=np.float32).copy()
+    mask = np.asarray(
+        action_norm_stats.get("mask", np.ones_like(action_norm_stats["min"], dtype=bool)),
+        dtype=bool,
+    )
+    action_high = np.asarray(action_norm_stats["max"], dtype=np.float32)
+    action_low = np.asarray(action_norm_stats["min"], dtype=np.float32)
+    normalized_actions = np.clip(normalized_actions, -1.0, 1.0)
+    normalized_actions[:, 6] = np.where(normalized_actions[:, 6] < 0.5, 0.0, 1.0)
+    return np.where(
+        mask,
+        0.5 * (normalized_actions + 1.0) * (action_high - action_low) + action_low,
+        normalized_actions,
+    )
+
+
+def integrate_delta_action_chunk(
+    start_pos: np.ndarray,
+    start_quat_wxyz: np.ndarray,
+    raw_actions: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Integrate delta-EF actions into absolute EE waypoints.
+
+    Args:
+        start_pos: Current EE position in world frame.
+        start_quat_wxyz: Current EE quaternion in LIBERO `wxyz` convention.
+        raw_actions: Action chunk shaped `(T, 7)` with
+            `[dx, dy, dz, d_rx, d_ry, d_rz, next_open_gripper]`.
+
+    Returns:
+        positions: `(T, 3)` integrated EE positions.
+        quaternions_wxyz: `(T, 4)` integrated EE quaternions in `wxyz`.
+    """
+    actions = np.asarray(raw_actions, dtype=np.float32)
+    if actions.ndim != 2 or actions.shape[1] < 6:
+        raise ValueError(f"Expected raw action chunk shape (T, 7), got {tuple(actions.shape)}")
+
+    curr_pos = np.asarray(start_pos, dtype=np.float64).reshape(3).copy()
+    curr_quat_xyzw = libero_obs_quat_wxyz_to_xyzw(np.asarray(start_quat_wxyz, dtype=np.float64))
+    curr_quat_xyzw = curr_quat_xyzw / np.linalg.norm(curr_quat_xyzw)
+    curr_rot = Rotation.from_quat(curr_quat_xyzw)
+
+    positions = []
+    quaternions_wxyz = []
+    for action in actions:
+        curr_pos = curr_pos + np.asarray(action[:3], dtype=np.float64)
+        delta_rot = Rotation.from_rotvec(np.asarray(action[3:6], dtype=np.float64))
+        curr_rot = curr_rot * delta_rot
+        quat_xyzw = curr_rot.as_quat()
+        positions.append(curr_pos.astype(np.float32))
+        quaternions_wxyz.append(np.asarray([quat_xyzw[3], quat_xyzw[0], quat_xyzw[1], quat_xyzw[2]], dtype=np.float32))
+
+    return np.asarray(positions, dtype=np.float32), np.asarray(quaternions_wxyz, dtype=np.float32)
 
 
 def decode_contact_probs_to_gripper_cmds(

@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 from collections import deque
 import functools
-import json
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
@@ -17,7 +16,12 @@ from libero.libero.envs import OffScreenRenderEnv
 from omegaconf import OmegaConf
 from scipy.spatial.transform import Rotation
 
-from dhb_xr.integration.vla.libero import build_state_history_window, libero_obs_quat_to_axis_angle
+from dhb_xr.integration.vla.libero import (
+    build_state_history_window,
+    libero_obs_quat_to_axis_angle,
+    load_run_action_stats,
+    unnormalize_actions,
+)
 from starVLA.model.framework.base_framework import build_framework
 from starVLA.training.trainer_utils.config_tracker import wrap_config
 from starVLA.training.trainer_utils.trainer_tools import normalize_dotlist_args
@@ -57,59 +61,6 @@ def _checkpoint_tag(checkpoint: str | None) -> str:
     ckpt = Path(checkpoint)
     tag = ckpt.stem.replace("_pytorch_model", "")
     return tag.replace(" ", "_")
-
-
-def _extract_action_stats(payload: dict[str, Any], stats_path: Path) -> dict[str, Any]:
-    if not payload:
-        raise ValueError(f"Dataset statistics file is empty: {stats_path}")
-
-    if "action" in payload:
-        action_stats = payload["action"]
-    else:
-        first_key = next(iter(payload.keys()))
-        action_stats = payload[first_key]["action"]
-
-    required = {"min", "max"}
-    missing = required - set(action_stats.keys())
-    if missing:
-        raise KeyError(f"Dataset action stats missing required keys {sorted(missing)} in {stats_path}")
-    return action_stats
-
-
-def _load_action_norm_stats(cfg, output_dir: Path, checkpoint: str | None = None) -> dict[str, Any]:
-    candidate_paths = []
-    if checkpoint:
-        checkpoint_path = Path(checkpoint)
-        candidate_paths.append(checkpoint_path.parent.parent / "dataset_statistics.json")
-    candidate_paths.append(output_dir / "dataset_statistics.json")
-
-    seen = set()
-    for stats_path in candidate_paths:
-        if stats_path in seen:
-            continue
-        seen.add(stats_path)
-        if stats_path.exists():
-            payload = json.loads(stats_path.read_text())
-            return _extract_action_stats(payload, stats_path)
-
-    raise FileNotFoundError(
-        "Missing dataset statistics. Looked in: "
-        + ", ".join(str(path) for path in candidate_paths)
-    )
-
-
-def _unnormalize_actions(normalized_actions: np.ndarray, action_norm_stats: dict[str, Any]) -> np.ndarray:
-    normalized_actions = np.asarray(normalized_actions, dtype=np.float32).copy()
-    mask = np.asarray(action_norm_stats.get("mask", np.ones_like(action_norm_stats["min"], dtype=bool)), dtype=bool)
-    action_high = np.asarray(action_norm_stats["max"], dtype=np.float32)
-    action_low = np.asarray(action_norm_stats["min"], dtype=np.float32)
-    normalized_actions = np.clip(normalized_actions, -1.0, 1.0)
-    normalized_actions[:, 6] = np.where(normalized_actions[:, 6] < 0.5, 0.0, 1.0)
-    return np.where(
-        mask,
-        0.5 * (normalized_actions + 1.0) * (action_high - action_low) + action_low,
-        normalized_actions,
-    )
 
 
 def _uses_quantized_vlm(model) -> bool:
@@ -226,7 +177,7 @@ def main() -> None:
     output_dir = Path(cfg.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     state_history_window = _state_history_window(cfg)
-    action_norm_stats = None if args.gt_hdf5 else _load_action_norm_stats(cfg, output_dir, checkpoint=args.checkpoint)
+    action_norm_stats = None if args.gt_hdf5 else load_run_action_stats(output_dir, checkpoint=args.checkpoint)
 
     benchmark_dict = benchmark.get_benchmark_dict()
     task_suite = benchmark_dict[args.task_suite_name]()
@@ -320,7 +271,7 @@ def main() -> None:
                 with torch.inference_mode():
                     pred = model.predict_action([example])
                 normalized_chunk = pred["normalized_actions"][0]
-                raw_actions_chunk = _unnormalize_actions(normalized_chunk, action_norm_stats=action_norm_stats)
+                raw_actions_chunk = unnormalize_actions(normalized_chunk, action_norm_stats=action_norm_stats)
             raw_action = raw_actions_chunk[_step % len(raw_actions_chunk)]
         else:
             if _step >= len(raw_actions_gt):

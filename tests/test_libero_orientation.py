@@ -6,6 +6,7 @@ import h5py
 from dhb_xr.integration.vla.libero import (
     LiberoAdapter,
     decode_contact_probs_to_gripper_cmds,
+    integrate_delta_action_chunk,
     libero_obs_quat_to_axis_angle,
     libero_obs_quat_wxyz_to_xyzw,
 )
@@ -130,3 +131,32 @@ def test_decode_contact_probs_to_gripper_cmds_supports_hysteresis_for_gripper_st
         open_threshold=0.4,
     )
     np.testing.assert_allclose(cmds, [-1.0, -1.0, 1.0, 1.0, -1.0, -1.0], atol=1e-6)
+
+
+def test_integrate_delta_action_chunk_builds_absolute_waypoints():
+    start_pos = np.array([0.0, 0.0, 0.0], dtype=np.float32)
+    start_quat_wxyz = np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float32)
+    raw_actions = np.array(
+        [
+            [0.10, 0.00, 0.00, 0.0, 0.0, np.pi / 2.0, 1.0],
+            [0.00, 0.05, 0.00, 0.0, 0.0, np.pi / 2.0, 0.0],
+        ],
+        dtype=np.float32,
+    )
+
+    positions, quaternions_wxyz = integrate_delta_action_chunk(
+        start_pos,
+        start_quat_wxyz,
+        raw_actions,
+    )
+
+    np.testing.assert_allclose(
+        positions,
+        np.array([[0.10, 0.00, 0.00], [0.10, 0.05, 0.00]], dtype=np.float32),
+        atol=1e-6,
+    )
+    final_xyzw = quaternions_wxyz[-1, [1, 2, 3, 0]]
+    final_rot = Rotation.from_quat(final_xyzw)
+    target_rot = Rotation.from_rotvec(np.array([0.0, 0.0, np.pi], dtype=np.float32))
+    angle_err = (final_rot.inv() * target_rot).magnitude()
+    assert angle_err < 1e-5

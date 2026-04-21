@@ -488,7 +488,7 @@ Selected canonical baseline:
   - same frozen-Qwen `200`-step short-train budget
   - same direct LIBERO rollout smoke (`task_id=0`, `episode_idx=0`)
   - reference note: `_workspace/starvla_qwenoft_control_baseline.md`
-- [ ] Run a matched regular-head baseline (`QwenOFT` or equivalent) under the same evaluator and offsets
+- [x] Run a matched regular-head baseline (`QwenOFT` or equivalent) under the same evaluator and offsets
 - [ ] Build a comparison table for:
   - success rate
   - IK failure rate
@@ -502,11 +502,21 @@ Current status:
   checkpoint:
   - `QwenDHB`: `0.1545`
   - `QwenOFT`: `0.2626`
-- Both direct-action rollout smokes still fail on the reference LIBERO task, so
-  this only partially closes the claim gap.
+- The direct-action rollout smokes still fail on the reference LIBERO task.
+- The matched `embodik` control now closes the more important execution-level gap:
+  - `QwenDHB` canonical offline baseline: `1/3` at `0 cm`, `1/3` at `3 cm`
+  - `QwenOFT -> integrated delta-action chunk -> embodik`: `0/3` at `0 cm`, `0/3` at `3 cm`
+- The `QwenOFT` control was not blocked by IK:
+  - all `6/6` cases were IK-feasible
+  - mean FK error stayed about `0.48 mm`
+- So this is now a real matched execution-side result, not only a direct-rollout control.
 
 ### Phase 4: Scale out only after the canonical baseline is stable
 
+- [ ] Centralize the adapter-style rollout contract for:
+  - state/history buffering
+  - reference / scene-relative bookkeeping
+  - learned gripper-state debounce
 - [ ] Fix the harness-side action contract for `embodik` execution
 - [ ] Wire the canonical StarVLA->DHB->`embodik` path into the harness server
 - [ ] Re-run LIBERO harness smoke with the canonical path
