@@ -32,6 +32,9 @@ It is meant to answer:
 - StarVLA now has nonzero closed-loop success through `embodik`.
 - The closed-loop motion is substantially more continuous with short replanning
   plus overlap blending.
+- A reach-only benchmark now cleanly isolates bowl approach from gripper timing.
+- A phase-split execution bridge now recovers the integrated baseline after the
+  globally committed-handoff mode regressed it.
 
 ### What is already validated
 
@@ -51,6 +54,8 @@ It is meant to answer:
 - A matched regular-action-head baseline under the same evaluator.
 - Harness / benchmark integration using the correct StarVLA->DHB->`embodik`
   action contract.
+- A model-side continuation mechanism that knows which chunk prefix is already
+  committed / executed.
 
 ## Current Baselines
 
@@ -87,9 +92,59 @@ It is meant to answer:
 The right order is:
 
 1. Freeze the correct closed-loop semantics.
-2. Improve manipulation quality under that fixed loop.
-3. Run a matched baseline comparison.
-4. Only then scale to broader benchmark tools.
+2. Improve bowl approach under that fixed loop.
+3. Reintroduce integrated manipulation on top of the improved reach baseline.
+4. Run a matched baseline comparison.
+5. Only then scale to broader benchmark tools.
+
+### 2026-04-21 update: `vla_foundry` and `TRI-LBM` point to the same missing model-side cue
+
+Two external repos were checked against the current StarVLA + DHB plateau:
+
+- `TRI-ML/vla_foundry`
+- `lucidrains/TRI-LBM`
+
+The strongest new clue comes from `vla_foundry`:
+
+- their diffusion policy explicitly distinguishes committed / past actions from
+  future actions with `past_mask` / `future_mask`
+- their robotics inference stack uses a formal adapter for observation history,
+  action history, and reference-relative conversion instead of spreading those
+  assumptions across rollout scripts
+
+This matches the current local evidence:
+
+- execution-side committed handoff improves reach-only bowl approach
+- but the current `QwenDHB` model does not know which prefix is already
+  committed, so integrated performance does not improve with that execution hack
+  alone
+
+`TRI-LBM` adds a second useful clue:
+
+- action generation can benefit from a lightweight auxiliary status signal
+  predicted jointly with the action chunk
+
+In that repo the status signal is a generic `task_status`, but for this project
+the more relevant analogue is:
+
+- reach / near-contact / transport / placement phase
+- or, more minimally, a continuation / progress status for the current chunk
+
+What does **not** look like the next lever from these external repos:
+
+- framework replacement
+- generic longer training
+- direct-action-only evaluation simplification
+- typed action normalization as the primary fix
+
+The updated ranking is therefore:
+
+1. add DHB-specific continuation conditioning with a committed-prefix mask
+2. keep the reach-only benchmark as the main short-horizon target
+3. once reach improves, return to the integrated pipeline with the phase-split
+   bridge
+4. only then add a lightweight auxiliary phase/status head if integrated
+   manipulation still stalls
 
 ### 2026-04-19 update: first live-robustness augmentation result
 

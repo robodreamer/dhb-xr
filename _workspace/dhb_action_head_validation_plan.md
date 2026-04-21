@@ -114,8 +114,11 @@ Interpretation:
 - [x] Test a cleaner reach-phase oversampling warm-start (`reachphase`) against the reach-only baseline
 - [ ] Improve smooth bowl approach under offsets before returning to learned close/open timing
 - [ ] Try a more structural next change than same-family warm-start training:
-  - future-state / committed-tail chunk handoff, or
-  - history-aware continuation conditioning
+  - DHB continuation conditioning with a committed chunk prefix, or
+  - a lightweight auxiliary phase/status head once reach improves
+- [ ] Re-run the reach-only live checkpoint sweep after continuation-conditioned training
+- [ ] Only after reach improves, reintroduce the integrated benchmark through the phase-split bridge
+- [ ] Factor rollout buffering / reference adaptation into a tested adapter layer so live and offline loops share one contract
 
 Tracked note:
 - `_workspace/starvla_reach_only_findings.md`
@@ -155,6 +158,15 @@ Current interpretation:
 - the next likely improvement has to be more structural than:
   - synthetic target rewrite
   - small sampling-only rebiasing
+  - plain state-history retraining
+
+External repo checks now point in the same direction:
+
+- `vla_foundry` suggests explicit past-vs-future conditioning plus a tested
+  inference adapter for history / reference handling
+- `TRI-LBM` suggests an auxiliary status signal can be trained jointly with the
+  action generator, but this should come *after* reach-only continuation gains
+  are real
 
 ## First StarVLA→EmbodiK End-To-End Result
 
