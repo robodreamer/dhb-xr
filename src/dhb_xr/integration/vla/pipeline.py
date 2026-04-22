@@ -18,6 +18,7 @@ from typing import Dict, Iterable, List, Literal, Optional, Sequence
 import numpy as np
 
 from dhb_xr.core.types import DHBMethod, EncodingMethod
+from dhb_xr.decoder.dhb_dr import decode_dhb_dr
 from dhb_xr.encoder.dhb_dr import encode_dhb_dr
 from dhb_xr.tokenization.vqvae import DHBTokenizer
 
@@ -193,6 +194,101 @@ class DHBVLAPipeline:
                 prefix_keep_k=k,
             )
             outputs.append({"keep_k": k, "reconstruction": recon})
+        return outputs
+
+    @staticmethod
+    def _split_invariants(invariants: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        arr = np.asarray(invariants, dtype=np.float32)
+        if arr.ndim == 2:
+            if arr.shape[1] % 2 != 0:
+                raise ValueError(f"Expected even invariant dim, got {arr.shape}")
+            half = arr.shape[1] // 2
+            return arr[:, :half], arr[:, half:]
+        if arr.ndim == 3:
+            if arr.shape[2] % 2 != 0:
+                raise ValueError(f"Expected even invariant dim, got {arr.shape}")
+            half = arr.shape[2] // 2
+            return arr[:, :, :half], arr[:, :, half:]
+        raise ValueError(f"Unsupported invariant shape {arr.shape}")
+
+    def decode_invariants_to_trajectory(
+        self,
+        invariants: np.ndarray,
+        *,
+        initial_pose: Dict[str, np.ndarray],
+        robust_mode: bool = True,
+        return_diagnostics: bool = False,
+    ) -> Dict:
+        """Decode DHB invariants to a trajectory from an initial pose."""
+
+        linear_inv, angular_inv = self._split_invariants(invariants)
+        return decode_dhb_dr(
+            linear_inv,
+            angular_inv,
+            initial_pose=initial_pose,
+            method=self.config.method,
+            dhb_method=self.config.dhb_method,
+            robust_mode=robust_mode,
+            return_diagnostics=return_diagnostics,
+        )
+
+    def decode_tokens_to_trajectory(
+        self,
+        tokens: np.ndarray,
+        *,
+        invariant_dim: int,
+        horizon: int,
+        initial_pose: Dict[str, np.ndarray],
+        prefix_keep_k: Optional[int | Sequence[int]] = None,
+        robust_mode: bool = True,
+        return_diagnostics: bool = False,
+    ) -> Dict:
+        """Decode tokens directly to a DHB trajectory."""
+
+        invariants = self.detokenize_tokens(
+            tokens,
+            invariant_dim=invariant_dim,
+            horizon=horizon,
+            prefix_keep_k=prefix_keep_k,
+        )
+        if invariants.shape[0] != 1:
+            raise ValueError(
+                "decode_tokens_to_trajectory currently expects a single token sequence"
+            )
+        trajectory = self.decode_invariants_to_trajectory(
+            invariants[0],
+            initial_pose=initial_pose,
+            robust_mode=robust_mode,
+            return_diagnostics=return_diagnostics,
+        )
+        trajectory["invariants"] = invariants[0]
+        return trajectory
+
+    def decode_token_stream_to_trajectories(
+        self,
+        tokens: np.ndarray,
+        *,
+        invariant_dim: int,
+        horizon: int,
+        initial_pose: Dict[str, np.ndarray],
+        prefix_lengths: Sequence[int],
+        robust_mode: bool = True,
+        return_diagnostics: bool = False,
+    ) -> List[Dict[str, np.ndarray | int | Dict]]:
+        """Decode streamed token prefixes into executable trajectories."""
+
+        outputs: List[Dict[str, np.ndarray | int | Dict]] = []
+        for keep_k in prefix_lengths:
+            traj = self.decode_tokens_to_trajectory(
+                np.asarray(tokens)[: int(keep_k)],
+                invariant_dim=invariant_dim,
+                horizon=horizon,
+                initial_pose=initial_pose,
+                prefix_keep_k=int(keep_k),
+                robust_mode=robust_mode,
+                return_diagnostics=return_diagnostics,
+            )
+            outputs.append({"keep_k": int(keep_k), **traj})
         return outputs
 
     def process_dataset(self, episodes: Iterable[Dict]) -> List[Dict]:

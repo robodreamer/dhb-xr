@@ -81,10 +81,24 @@ for i, episode in enumerate(episodes):
             horizon=invariants.shape[0],
             prefix_lengths=[1, 2, len(tokens)],
         )
+        trajectories = pipeline.decode_token_stream_to_trajectories(
+            tokens,
+            invariant_dim=invariants.shape[1],
+            horizon=invariants.shape[0],
+            initial_pose=result["initial_pose"],
+            prefix_lengths=[1, 2, len(tokens)],
+            return_diagnostics=True,
+        )
         for item in stream:
             recon_k = item["reconstruction"][0]
             mse_k = float(np.mean((recon_k - invariants) ** 2))
             print(f"  Stream keep_k={item['keep_k']}: mse={mse_k:.6f}")
+        for traj in trajectories:
+            final_pos = np.round(traj["positions"][-1], 4).tolist()
+            print(
+                f"  Stream keep_k={traj['keep_k']}: decoded_steps={traj['positions'].shape[0]} "
+                f"final_pos={final_pos}"
+            )
 
         # Check for NaN or Inf
         if np.any(np.isnan(invariants)):

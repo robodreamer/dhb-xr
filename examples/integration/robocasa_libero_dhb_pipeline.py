@@ -53,12 +53,21 @@ def run_pipeline(
                 horizon=outputs[0]["invariants"].shape[0],
                 prefix_lengths=[1, 2, len(outputs[0]["tokens"])],
             )
-            for item in streamed:
+            trajectories = pipeline.decode_token_stream_to_trajectories(
+                outputs[0]["tokens"],
+                invariant_dim=outputs[0]["invariants"].shape[1],
+                horizon=outputs[0]["invariants"].shape[0],
+                initial_pose=outputs[0]["initial_pose"],
+                prefix_lengths=[1, 2, len(outputs[0]["tokens"])],
+                return_diagnostics=True,
+            )
+            for item, traj in zip(streamed, trajectories):
                 recon = item["reconstruction"][0]
                 mse = float(((recon - outputs[0]["invariants"]) ** 2).mean())
                 print(
                     f"[{name}] stream keep_k={item['keep_k']} "
-                    f"reconstruction shape={recon.shape} mse={mse:.6f}"
+                    f"reconstruction shape={recon.shape} mse={mse:.6f} "
+                    f"decoded_steps={traj['positions'].shape[0]}"
                 )
 
     # Minimal retrieval demo

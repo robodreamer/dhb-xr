@@ -5,6 +5,7 @@ This example demonstrates the validated DHB token streaming path for VLA:
 1. Encode a trajectory to DHB invariants
 2. Tokenize invariants with OAT
 3. Decode streamed token prefixes back to full-horizon invariant chunks
+4. Decode those invariant chunks into executable SE(3) waypoint trajectories
 
 This matches the intended chunked VLA execution contract more closely than the
 older VQ-only roundtrip because OAT supports anytime prefix decoding.
@@ -51,6 +52,7 @@ def run_example():
 
     print("\nEncoding to DHB-DR invariants...")
     out = pipeline.encode_trajectory(positions, quaternions)
+    initial_pose = out["initial_pose"]
     invariants = np.concatenate([
         out["linear_motion_invariants"],
         out["angular_motion_invariants"],
@@ -72,6 +74,14 @@ def run_example():
         horizon=invariants.shape[0],
         prefix_lengths=[1, 2, len(tokens)],
     )
+    trajectories = pipeline.decode_token_stream_to_trajectories(
+        tokens,
+        invariant_dim=invariants.shape[1],
+        horizon=invariants.shape[0],
+        initial_pose=initial_pose,
+        prefix_lengths=[1, 2, len(tokens)],
+        return_diagnostics=True,
+    )
 
     full_mse = float(np.mean((full_recon - invariants) ** 2))
     compression_ratio = float(invariants.shape[0] / len(tokens))
@@ -84,17 +94,30 @@ def run_example():
     print(f"  Temporal compression ratio: {compression_ratio:.2f}x")
     print(f"  Sample tokens: {tokens.tolist()}")
     print("  Streamed prefix reconstructions:")
-    for item in stream:
+    for item, traj in zip(stream, trajectories):
         keep_k = item["keep_k"]
         recon = item["reconstruction"][0]
         mse = float(np.mean((recon - invariants) ** 2))
-        print(f"    keep_k={keep_k}: mse={mse:.6f}, shape={recon.shape}")
+        final_pos = traj["positions"][-1]
+        diag = traj["diagnostics"]
+        print(
+            "    keep_k={keep_k}: mse={mse:.6f}, shape={shape}, "
+            "decoded_steps={steps}, final_pos={final_pos}, max_step={max_step:.4f}m".format(
+                keep_k=keep_k,
+                mse=mse,
+                shape=recon.shape,
+                steps=traj["positions"].shape[0],
+                final_pos=np.round(final_pos, 4).tolist(),
+                max_step=diag.max_step_size,
+            )
+        )
 
     return {
         "invariants": invariants,
         "tokens": tokens,
         "reconstructed": full_recon,
         "stream": stream,
+        "trajectories": trajectories,
         "loss": full_mse,
     }
 
