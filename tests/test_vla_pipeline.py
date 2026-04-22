@@ -121,3 +121,26 @@ class TestDHBVLAPipeline:
         assert out[0]["tokenizer_kind"] == "oat"
         assert out[0]["tokens"].shape == (4,)
         assert out[0]["invariants"].shape[1] == 8
+
+    def test_oat_pipeline_handles_variable_horizons_without_stale_cache(self):
+        pipeline = DHBVLAPipeline(
+            DHBVLAPipelineConfig(
+                tokenizer_kind="oat",
+                oat_num_registers=4,
+                oat_emb_dim=32,
+                oat_num_heads=4,
+                oat_encoder_depth=1,
+                oat_decoder_depth=1,
+            )
+        )
+
+        inv_a = _sample_invariants(T=12, D=8)
+        inv_b = _sample_invariants(T=9, D=8)
+
+        tokens_a = pipeline.tokenize_invariants(inv_a)
+        recon_a = pipeline.detokenize_tokens(tokens_a, invariant_dim=8, horizon=12)
+        assert recon_a.shape == (1, 12, 8)
+
+        tokens_b = pipeline.tokenize_invariants(inv_b)
+        recon_b = pipeline.detokenize_tokens(tokens_b, invariant_dim=8, horizon=9)
+        assert recon_b.shape == (1, 9, 8)

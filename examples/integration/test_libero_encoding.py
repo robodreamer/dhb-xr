@@ -30,11 +30,18 @@ print(f"Loaded {len(episodes)} episodes\n")
 config = DHBVLAPipelineConfig(
     dhb_method=DHBMethod.DOUBLE_REFLECTION,
     method=EncodingMethod.POSITION,
+    tokenizer_kind="oat",
+    oat_num_registers=8,
+    oat_emb_dim=64,
+    oat_num_heads=4,
+    oat_encoder_depth=2,
+    oat_decoder_depth=2,
 )
 pipeline = DHBVLAPipeline(config=config)
 print(f"Pipeline config:")
 print(f"  DHB method: {config.dhb_method}")
 print(f"  Encoding method: {config.method}")
+print(f"  Tokenizer kind: {config.tokenizer_kind}")
 print()
 
 # Process each episode
@@ -58,6 +65,26 @@ for i, episode in enumerate(episodes):
         print(f"  Angular invariants: shape={angular_inv.shape}")
         print(f"  Combined: shape={invariants.shape}")
         print(f"  Invariant stats: min={invariants.min():.3f}, max={invariants.max():.3f}, mean={invariants.mean():.3f}")
+
+        tokens = pipeline.tokenize_invariants(invariants)
+        recon = pipeline.detokenize_tokens(
+            tokens,
+            invariant_dim=invariants.shape[1],
+            horizon=invariants.shape[0],
+        )[0]
+        print(f"  Tokens: shape={tokens.shape}")
+        print(f"  Full token reconstruction MSE: {np.mean((recon - invariants) ** 2):.6f}")
+
+        stream = pipeline.decode_token_stream(
+            tokens,
+            invariant_dim=invariants.shape[1],
+            horizon=invariants.shape[0],
+            prefix_lengths=[1, 2, len(tokens)],
+        )
+        for item in stream:
+            recon_k = item["reconstruction"][0]
+            mse_k = float(np.mean((recon_k - invariants) ** 2))
+            print(f"  Stream keep_k={item['keep_k']}: mse={mse_k:.6f}")
 
         # Check for NaN or Inf
         if np.any(np.isnan(invariants)):

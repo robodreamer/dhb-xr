@@ -1,21 +1,13 @@
 """
-VLA Tokenization Example (DHB-Token)
+VLA Tokenization Example (DHB action token streaming)
 
-This example demonstrates VQ-VAE tokenization of DHB invariants for discrete
-action representations suitable for VLA (Vision-Language-Action) models.
+This example demonstrates the validated DHB token streaming path for VLA:
+1. Encode a trajectory to DHB invariants
+2. Tokenize invariants with OAT
+3. Decode streamed token prefixes back to full-horizon invariant chunks
 
-DHB-Token converts continuous DHB invariants into discrete tokens:
-1. Encode trajectory to DHB-DR invariants (8 values per timestep)
-2. Use VQ-VAE to quantize to discrete tokens
-3. Reconstruct invariants from tokens
-
-Benefits for VLA:
-- Discrete action space (like decision transformers)
-- Compression: many timesteps → few tokens
-- Autoregressive generation capabilities
-- Robust to noise and perturbations
-
-Requires: PyTorch (`pip install dhb_xr[gpu]`)
+This matches the intended chunked VLA execution contract more closely than the
+older VQ-only roundtrip because OAT supports anytime prefix decoding.
 """
 
 import numpy as np
@@ -23,14 +15,12 @@ import numpy as np
 
 def run_example():
     """Run the VLA tokenization example."""
-    print("DHB-XR VLA Tokenization (DHB-Token) Example")
-    print("=" * 45)
+    print("DHB-XR VLA Token Streaming Example")
+    print("=" * 38)
 
     try:
-        import torch
-        from dhb_xr.encoder.dhb_dr import encode_dhb_dr
         from dhb_xr.core.types import DHBMethod, EncodingMethod
-        from dhb_xr.tokenization.vqvae import DHBTokenizer
+        from dhb_xr.integration.vla.pipeline import DHBVLAPipeline, DHBVLAPipelineConfig
     except ImportError as e:
         print("❌ PyTorch required for tokenization")
         print(f"Install with: pip install dhb_xr[gpu]")
@@ -46,17 +36,21 @@ def run_example():
     print(f"Trajectory: {n} poses")
     print(f"Positions shape: {positions.shape}")
 
-    # Encode to DHB invariants
-    print("\nEncoding to DHB-DR invariants...")
-    out = encode_dhb_dr(
-        positions,
-        quaternions,
-        method=EncodingMethod.POSITION,
-        use_default_initial_frames=True,
-        dhb_method=DHBMethod.DOUBLE_REFLECTION,
+    pipeline = DHBVLAPipeline(
+        DHBVLAPipelineConfig(
+            dhb_method=DHBMethod.DOUBLE_REFLECTION,
+            method=EncodingMethod.POSITION,
+            tokenizer_kind="oat",
+            oat_num_registers=8,
+            oat_emb_dim=64,
+            oat_num_heads=4,
+            oat_encoder_depth=2,
+            oat_decoder_depth=2,
+        )
     )
 
-    # Combine linear and angular invariants
+    print("\nEncoding to DHB-DR invariants...")
+    out = pipeline.encode_trajectory(positions, quaternions)
     invariants = np.concatenate([
         out["linear_motion_invariants"],
         out["angular_motion_invariants"],
@@ -65,36 +59,43 @@ def run_example():
     print(f"Combined invariants shape: {invariants.shape}")
     print(f"Values per timestep: {invariants.shape[1]} (4 linear + 4 angular)")
 
-    # Convert to PyTorch tensor and add batch dimension
-    inv_batch = torch.from_numpy(invariants).unsqueeze(0)  # (T, 8) -> (1, T, 8)
-    print(f"Batch shape: {inv_batch.shape}")
+    print("\nTokenizing with OAT...")
+    tokens = pipeline.tokenize_invariants(invariants)
+    full_recon = pipeline.detokenize_tokens(
+        tokens,
+        invariant_dim=invariants.shape[1],
+        horizon=invariants.shape[0],
+    )[0]
+    stream = pipeline.decode_token_stream(
+        tokens,
+        invariant_dim=invariants.shape[1],
+        horizon=invariants.shape[0],
+        prefix_lengths=[1, 2, len(tokens)],
+    )
 
-    # Tokenize with VQ-VAE
-    print("\nTokenizing with VQ-VAE...")
-    model = DHBTokenizer(invariant_dim=8, latent_dim=16, codebook_size=64)
-    indices, reconstructed, z, z_q = model(inv_batch)
+    full_mse = float(np.mean((full_recon - invariants) ** 2))
+    compression_ratio = float(invariants.shape[0] / len(tokens))
 
-    print(f"✅ Tokenization complete")
-    print(f"Token indices shape: {indices.shape}")
-    print(f"Reconstructed shape: {reconstructed.shape}")
-
-    # Calculate reconstruction quality
-    rec_loss = torch.nn.functional.mse_loss(reconstructed, inv_batch)
-    compression_ratio = invariants.size / indices.numel()
-
-    print("
-Results:")
-    print(".4f")
-    print(".1f")
-
-    # Show some token examples
-    print(f"\nSample tokens: {indices[0, :10].tolist()}")
+    print("✅ Tokenization complete")
+    print(f"Token shape: {tokens.shape}")
+    print(f"Full reconstruction shape: {full_recon.shape}")
+    print("\nResults:")
+    print(f"  Full reconstruction MSE: {full_mse:.6f}")
+    print(f"  Temporal compression ratio: {compression_ratio:.2f}x")
+    print(f"  Sample tokens: {tokens.tolist()}")
+    print("  Streamed prefix reconstructions:")
+    for item in stream:
+        keep_k = item["keep_k"]
+        recon = item["reconstruction"][0]
+        mse = float(np.mean((recon - invariants) ** 2))
+        print(f"    keep_k={keep_k}: mse={mse:.6f}, shape={recon.shape}")
 
     return {
-        'invariants': invariants,
-        'tokens': indices,
-        'reconstructed': reconstructed,
-        'loss': rec_loss.item()
+        "invariants": invariants,
+        "tokens": tokens,
+        "reconstructed": full_recon,
+        "stream": stream,
+        "loss": full_mse,
     }
 
 

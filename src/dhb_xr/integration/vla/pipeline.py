@@ -50,11 +50,13 @@ class DHBVLAPipeline:
     def __init__(self, config: Optional[DHBVLAPipelineConfig] = None):
         self.config = config or DHBVLAPipelineConfig()
         self._tokenizer: Optional[object] = None
+        self._tokenizer_key: Optional[tuple] = None
 
     def _get_tokenizer(self, invariant_dim: int, horizon: Optional[int] = None) -> object:
         if not HAS_TORCH:
             raise ImportError("torch is required for tokenization (pip install dhb_xr[gpu]).")
-        if self._tokenizer is None:
+        key = (self.config.tokenizer_kind, invariant_dim, None if self.config.tokenizer_kind == "vq" else horizon)
+        if self._tokenizer is None or self._tokenizer_key != key:
             if self.config.tokenizer_kind == "vq":
                 self._tokenizer = DHBTokenizer(
                     invariant_dim=invariant_dim,
@@ -79,6 +81,7 @@ class DHBVLAPipeline:
                 )
             else:
                 raise ValueError(f"Unsupported tokenizer_kind={self.config.tokenizer_kind!r}")
+            self._tokenizer_key = key
         return self._tokenizer
 
     def encode_trajectory(self, positions: np.ndarray, quaternions: np.ndarray) -> Dict:
