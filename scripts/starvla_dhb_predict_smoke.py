@@ -56,6 +56,9 @@ def main() -> None:
     parser.add_argument("--config_yaml", required=True)
     parser.add_argument("--checkpoint", default=None)
     parser.add_argument("--save_json", default=None)
+    parser.add_argument("--use-discrete-tokens", action="store_true")
+    parser.add_argument("--emit-oat-tokens", action="store_true")
+    parser.add_argument("--token-prefix-keep-k", type=int, default=None)
     args, unknown = parser.parse_known_args()
 
     dotlist = normalize_dotlist_args(unknown)
@@ -91,7 +94,16 @@ def main() -> None:
     start.record()
     with torch.inference_mode():
         pred = model.predict_action(batch)
-        traj = model.predict_trajectory(batch) if hasattr(model, "predict_trajectory") else None
+        traj = (
+            model.predict_trajectory(
+                batch,
+                use_discrete_tokens=args.use_discrete_tokens,
+                emit_oat_tokens=args.emit_oat_tokens or args.use_discrete_tokens,
+                token_prefix_keep_k=args.token_prefix_keep_k,
+            )
+            if hasattr(model, "predict_trajectory")
+            else None
+        )
     end.record()
     torch.cuda.synchronize(device)
 
@@ -158,6 +170,15 @@ def main() -> None:
             summary["target_gripper_state"] = np.asarray(batch[0]["dhb.gripper_state"], dtype=np.int64)[
                 -actions.shape[1] :
             ].tolist()
+    if traj is not None and "pred_oat_tokens" in traj:
+        summary["pred_oat_tokens_shape"] = list(traj["pred_oat_tokens"].shape)
+        summary["pred_oat_tokens_first"] = traj["pred_oat_tokens"][0].tolist()
+    if traj is not None and "pred_invariants_token_recon" in traj:
+        summary["pred_invariants_token_recon_shape"] = list(traj["pred_invariants_token_recon"].shape)
+        summary["pred_invariants_execute_shape"] = list(traj["pred_invariants_execute"].shape)
+        summary["token_prefix_keep_k"] = (
+            traj["token_prefix_keep_k"].tolist() if "token_prefix_keep_k" in traj else None
+        )
 
     save_json = Path(args.save_json) if args.save_json else output_dir / "predict_smoke_summary.json"
     save_json.parent.mkdir(parents=True, exist_ok=True)

@@ -457,3 +457,41 @@ class TestDHBActionHead:
         result = head_oat(vlm_hidden, target_invariants=target_inv)
         assert "oat_loss" in result
         assert result["loss"].requires_grad
+
+    def test_predict_can_use_discrete_oat_tokens_for_execution(self):
+        head_oat = DHBActionHead(
+            vlm_dim=128,
+            action_horizon=8,
+            invariant_dim=8,
+            hidden_dim=64,
+            num_heads=4,
+            num_layers=2,
+            use_oat=True,
+            oat_num_registers=4,
+        )
+        if head_oat.oat is None:
+            pytest.skip("OAT tokenizer not available")
+
+        head_oat.eval()
+        vlm_hidden = torch.randn(self.B, self.S, 128)
+        initial_pose = {
+            "position": torch.zeros(self.B, 3),
+            "quaternion": torch.tensor([[1.0, 0, 0, 0]] * self.B),
+        }
+        result = head_oat.predict(
+            vlm_hidden,
+            initial_pose=initial_pose,
+            use_discrete_tokens=True,
+            token_prefix_keep_k=2,
+            emit_oat_tokens=True,
+        )
+        assert "pred_oat_tokens" in result
+        assert result["pred_oat_tokens"].shape == (self.B, 4)
+        assert "pred_invariants_token_recon" in result
+        assert result["pred_invariants_token_recon"].shape == (self.B, 8, 8)
+        assert "pred_invariants_execute" in result
+        assert torch.allclose(result["pred_invariants_execute"], result["pred_invariants_token_recon"])
+        assert "token_prefix_keep_k" in result
+        assert result["token_prefix_keep_k"].tolist() == [2] * self.B
+        assert "positions" in result
+        assert "quaternions" in result

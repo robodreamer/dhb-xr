@@ -855,6 +855,9 @@ if HAS_TORCH:
             initial_pose: Optional[Dict[str, torch.Tensor]] = None,
             committed_prefix_invariants: Optional[torch.Tensor] = None,
             committed_prefix_mask: Optional[torch.Tensor] = None,
+            use_discrete_tokens: bool = False,
+            token_prefix_keep_k: Optional[int | Sequence[int]] = None,
+            emit_oat_tokens: bool = False,
         ) -> Dict[str, torch.Tensor]:
             """
             Inference: predict invariants and optionally decode to trajectory.
@@ -876,13 +879,46 @@ if HAS_TORCH:
                     committed_prefix_mask=committed_prefix_mask,
                 )
 
+            pred_inv_for_decode = result["pred_invariants"]
+            if self.oat is not None and (use_discrete_tokens or emit_oat_tokens or token_prefix_keep_k is not None):
+                pred_inv_base = result["pred_invariants"].detach()
+                pred_tokens = self.oat.tokenize(pred_inv_base)
+                result["pred_oat_tokens"] = pred_tokens
+
+                if token_prefix_keep_k is None:
+                    keep_k = None
+                elif isinstance(token_prefix_keep_k, int):
+                    keep_k = [int(token_prefix_keep_k)] * pred_tokens.shape[0]
+                else:
+                    keep_k = [int(v) for v in token_prefix_keep_k]
+                    if len(keep_k) != pred_tokens.shape[0]:
+                        raise ValueError(
+                            f"Expected {pred_tokens.shape[0]} token prefix lengths, got {len(keep_k)}"
+                        )
+
+                pred_inv_token_recon = self.oat.detokenize(pred_tokens, eval_keep_k=keep_k).detach()
+                result["pred_invariants_token_recon"] = pred_inv_token_recon
+                if keep_k is not None:
+                    result["token_prefix_keep_k"] = torch.as_tensor(
+                        keep_k,
+                        device=pred_tokens.device,
+                        dtype=torch.long,
+                    )
+                if use_discrete_tokens:
+                    pred_inv_for_decode = pred_inv_token_recon
+                    result["pred_invariants_execute"] = pred_inv_token_recon
+                else:
+                    result["pred_invariants_execute"] = result["pred_invariants"]
+            else:
+                result["pred_invariants_execute"] = result["pred_invariants"]
+
             # If action_head exists, pred_actions is already in result
             # (populated by forward())
 
             if initial_pose is not None:
                 # Decode invariants to SE(3) trajectory from current pose
                 # This uses the numpy DHB decoder (not differentiable)
-                pred_inv = result["pred_invariants"]
+                pred_inv = pred_inv_for_decode
                 B = pred_inv.shape[0]
 
                 positions_list = []
