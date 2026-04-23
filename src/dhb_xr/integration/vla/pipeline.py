@@ -43,6 +43,7 @@ class DHBVLAPipelineConfig:
     oat_num_heads: int = 4
     oat_encoder_depth: int = 2
     oat_decoder_depth: int = 2
+    oat_init_seed: Optional[int] = None
 
 
 class DHBVLAPipeline:
@@ -69,17 +70,23 @@ class DHBVLAPipeline:
                     raise ValueError("OAT tokenization requires the invariant horizon.")
                 from dhb_xr.tokenization.oat_tokenizer import OATTokenizer
 
-                self._tokenizer = OATTokenizer(
-                    input_dim=invariant_dim,
-                    input_horizon=horizon,
-                    emb_dim=self.config.oat_emb_dim,
-                    latent_dim=4,
-                    num_registers=self.config.oat_num_registers,
-                    fsq_levels=self.config.oat_fsq_levels or [8, 5, 5, 5],
-                    encoder_depth=self.config.oat_encoder_depth,
-                    decoder_depth=self.config.oat_decoder_depth,
-                    num_heads=self.config.oat_num_heads,
-                )
+                tokenizer_kwargs = {
+                    "input_dim": invariant_dim,
+                    "input_horizon": horizon,
+                    "emb_dim": self.config.oat_emb_dim,
+                    "latent_dim": 4,
+                    "num_registers": self.config.oat_num_registers,
+                    "fsq_levels": self.config.oat_fsq_levels or [8, 5, 5, 5],
+                    "encoder_depth": self.config.oat_encoder_depth,
+                    "decoder_depth": self.config.oat_decoder_depth,
+                    "num_heads": self.config.oat_num_heads,
+                }
+                if self.config.oat_init_seed is None:
+                    self._tokenizer = OATTokenizer(**tokenizer_kwargs)
+                else:
+                    with torch.random.fork_rng(devices=[]):
+                        torch.manual_seed(int(self.config.oat_init_seed))
+                        self._tokenizer = OATTokenizer(**tokenizer_kwargs)
             else:
                 raise ValueError(f"Unsupported tokenizer_kind={self.config.tokenizer_kind!r}")
             self._tokenizer_key = key
@@ -113,6 +120,59 @@ class DHBVLAPipeline:
             return indices.squeeze(0).cpu().numpy()
         tokens = self._run_tokenizer_eval(tokenizer, lambda: tokenizer.tokenize(inv_batch))
         return tokens.squeeze(0).cpu().numpy()
+
+    def build_oat_token_targets(
+        self,
+        invariants: np.ndarray,
+        *,
+        chunk_horizon: int,
+    ) -> Dict[str, np.ndarray]:
+        """Tokenize step-aligned future DHB chunks for LeRobot export.
+
+        Each row `i` is tokenized from `invariants[i : i + h]`, where
+        `h = min(chunk_horizon, len(invariants) - i)`. This keeps the exported
+        token targets aligned with per-step future chunks while allowing the
+        horizon to shrink near the episode tail.
+        """
+        if self.config.tokenizer_kind != "oat":
+            raise ValueError("build_oat_token_targets requires tokenizer_kind='oat'")
+
+        arr = np.asarray(invariants, dtype=np.float32)
+        if arr.ndim != 2:
+            raise ValueError(f"Expected invariants shape (T, D), got {arr.shape}")
+
+        max_chunk_horizon = int(chunk_horizon)
+        if max_chunk_horizon <= 0:
+            raise ValueError(f"chunk_horizon must be positive, got {chunk_horizon}")
+
+        total_horizon = arr.shape[0]
+        token_ids = np.zeros((total_horizon, self.config.oat_num_registers), dtype=np.int64)
+        chunk_horizons = np.zeros(total_horizon, dtype=np.int32)
+        chunk_step_mask = np.zeros((total_horizon, max_chunk_horizon), dtype=np.float32)
+        if total_horizon == 0:
+            return {
+                "token_ids": token_ids,
+                "chunk_horizon": chunk_horizons,
+                "chunk_step_mask": chunk_step_mask,
+            }
+
+        for start in range(total_horizon):
+            horizon = min(max_chunk_horizon, total_horizon - start)
+            chunk_horizons[start] = horizon
+            chunk_step_mask[start, :horizon] = 1.0
+            tokens = np.asarray(self.tokenize_invariants(arr[start : start + horizon]), dtype=np.int64).reshape(-1)
+            if tokens.shape[0] != token_ids.shape[1]:
+                raise ValueError(
+                    "Expected fixed-width OAT token targets, got "
+                    f"{tokens.shape[0]} tokens for row {start}"
+                )
+            token_ids[start] = tokens
+
+        return {
+            "token_ids": token_ids,
+            "chunk_horizon": chunk_horizons,
+            "chunk_step_mask": chunk_step_mask,
+        }
 
     def detokenize_tokens(
         self,

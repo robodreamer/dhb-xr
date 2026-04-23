@@ -74,6 +74,9 @@ if HAS_TORCH:
             use_oat: bool = False,
             oat_num_registers: int = 8,
             oat_fsq_levels: Optional[list] = None,
+            supervise_oat_tokens: bool = False,
+            lambda_oat_token: float = 0.0,
+            train_with_discrete_oat_tokens: bool = False,
             action_dim: Optional[int] = None,
             terminal_loss_weight: float = 1.0,
             contact_dim: int = 0,
@@ -107,6 +110,9 @@ if HAS_TORCH:
             self.lambda_inv = lambda_inv
             self.use_oat = use_oat
             self.lambda_act = lambda_act
+            self.supervise_oat_tokens = bool(supervise_oat_tokens)
+            self.lambda_oat_token = float(lambda_oat_token)
+            self.train_with_discrete_oat_tokens = bool(train_with_discrete_oat_tokens)
             self.action_dim = action_dim
             self.terminal_loss_weight = terminal_loss_weight
             self.contact_dim = contact_dim
@@ -204,6 +210,32 @@ if HAS_TORCH:
                     )
                 except ImportError:
                     pass
+            if self.oat is None and (
+                self.supervise_oat_tokens or self.train_with_discrete_oat_tokens
+            ):
+                raise RuntimeError(
+                    "Supervised/discrete OAT training requires use_oat=True and an importable OATTokenizer"
+                )
+
+            self.oat_token_query = None
+            self.oat_token_decoder = None
+            self.oat_token_head = None
+            if self.oat is not None and (
+                self.supervise_oat_tokens or self.train_with_discrete_oat_tokens
+            ):
+                token_decoder_layer = nn.TransformerDecoderLayer(
+                    d_model=hidden_dim,
+                    nhead=num_heads,
+                    dim_feedforward=hidden_dim * 4,
+                    dropout=dropout,
+                    batch_first=True,
+                )
+                self.oat_token_query = nn.Embedding(self.oat.num_registers, hidden_dim)
+                self.oat_token_decoder = nn.TransformerDecoder(
+                    token_decoder_layer,
+                    num_layers=num_layers,
+                )
+                self.oat_token_head = nn.Linear(hidden_dim, self.oat.codebook_size)
 
             # Optional: direct action prediction head (dual-head mode)
             self.action_head = None
@@ -349,18 +381,171 @@ if HAS_TORCH:
             denom = mask.sum().clamp_min(1.0)
             return weighted.sum() / denom
 
+        def _normalize_token_prefix_keep_k(
+            self,
+            token_prefix_keep_k: Optional[int | Sequence[int]],
+            *,
+            batch_size: int,
+            device: torch.device,
+        ) -> Optional[list[int]]:
+            if token_prefix_keep_k is None:
+                return None
+            if self.oat is None:
+                raise ValueError("token_prefix_keep_k requires an initialized OAT tokenizer")
+
+            if isinstance(token_prefix_keep_k, int):
+                keep_k = [int(token_prefix_keep_k)] * batch_size
+            else:
+                keep_k = [int(v) for v in token_prefix_keep_k]
+                if len(keep_k) != batch_size:
+                    raise ValueError(
+                        f"Expected {batch_size} token prefix lengths, got {len(keep_k)}"
+                    )
+
+            max_tokens = int(self.oat.num_registers)
+            normalized = []
+            for value in keep_k:
+                if value < 1 or value > max_tokens:
+                    raise ValueError(
+                        f"token_prefix_keep_k values must be in [1, {max_tokens}], got {value}"
+                    )
+                normalized.append(value)
+            return normalized
+
+        def _decode_oat_latents(
+            self,
+            latents: torch.Tensor,
+            *,
+            token_prefix_keep_k: Optional[int | Sequence[int]] = None,
+        ) -> tuple[torch.Tensor, Optional[torch.Tensor]]:
+            if self.oat is None:
+                raise RuntimeError("OAT latent decode requires an initialized OAT tokenizer")
+
+            keep_k = self._normalize_token_prefix_keep_k(
+                token_prefix_keep_k,
+                batch_size=latents.shape[0],
+                device=latents.device,
+            )
+            if keep_k is not None:
+                masked_latents = latents.clone()
+                positions = torch.arange(masked_latents.shape[1], device=latents.device).unsqueeze(0)
+                keep_k_tensor = torch.as_tensor(keep_k, device=latents.device, dtype=torch.long)
+                mask = positions >= keep_k_tensor.unsqueeze(1)
+                mask_token = getattr(self.oat.nested_dropout, "mask_token", None)
+                if mask_token is None:
+                    masked_latents[mask] = 0
+                else:
+                    masked_latents[mask] = mask_token.to(device=latents.device, dtype=latents.dtype)
+            else:
+                masked_latents = latents
+                keep_k_tensor = None
+
+            recon = self.oat.decoder(masked_latents)
+            return recon, keep_k_tensor
+
+        def _decode_oat_tokens(
+            self,
+            tokens: torch.Tensor,
+            *,
+            token_prefix_keep_k: Optional[int | Sequence[int]] = None,
+        ) -> tuple[torch.Tensor, Optional[torch.Tensor]]:
+            if self.oat is None:
+                raise RuntimeError("OAT token decode requires an initialized OAT tokenizer")
+            latents = self.oat.quantizer.indices_to_embedding(tokens).to(
+                device=tokens.device,
+                dtype=self.query_embed.weight.dtype,
+            )
+            return self._decode_oat_latents(
+                latents,
+                token_prefix_keep_k=token_prefix_keep_k,
+            )
+
+        def _resolve_target_oat_tokens(
+            self,
+            target_oat_tokens: Optional[torch.Tensor],
+            target_invariants: Optional[torch.Tensor],
+            *,
+            device: torch.device,
+        ) -> Optional[torch.Tensor]:
+            if self.oat is None or self.oat_token_head is None:
+                return None
+
+            resolved = target_oat_tokens
+            if resolved is None and target_invariants is not None:
+                with torch.no_grad():
+                    resolved = self.oat.tokenize(target_invariants.detach())
+            if resolved is None:
+                return None
+
+            resolved = resolved.to(device=device)
+            if resolved.ndim == 3:
+                resolved = resolved.argmax(dim=-1)
+            if resolved.ndim != 2:
+                raise ValueError(
+                    "target_oat_tokens must have shape (B, K) or one-hot shape (B, K, V), "
+                    f"got {tuple(resolved.shape)}"
+                )
+            if resolved.shape[1] != self.oat.num_registers:
+                raise ValueError(
+                    f"Expected {self.oat.num_registers} OAT tokens per sample, got {resolved.shape[1]}"
+                )
+            return resolved.to(dtype=torch.long)
+
+        def _predict_oat_token_branch(
+            self,
+            decoded: torch.Tensor,
+            *,
+            token_prefix_keep_k: Optional[int | Sequence[int]] = None,
+        ) -> Dict[str, torch.Tensor]:
+            if self.oat is None or self.oat_token_head is None or self.oat_token_decoder is None:
+                return {}
+
+            batch_size = decoded.shape[0]
+            token_query_pos = torch.arange(self.oat.num_registers, device=decoded.device)
+            token_queries = self.oat_token_query(token_query_pos).unsqueeze(0).expand(batch_size, -1, -1)
+            token_features = self.oat_token_decoder(token_queries, decoded)
+            token_logits = self.oat_token_head(token_features)
+            token_probs = token_logits.softmax(dim=-1)
+            pred_tokens = token_logits.argmax(dim=-1)
+
+            hard_selector = F.one_hot(
+                pred_tokens,
+                num_classes=token_logits.shape[-1],
+            ).to(dtype=token_probs.dtype)
+            selector = token_probs + (hard_selector - token_probs).detach()
+            codebook = self.oat.quantizer.implicit_codebook.to(
+                device=token_logits.device,
+                dtype=token_logits.dtype,
+            )
+            token_latents = torch.einsum("bkv,vd->bkd", selector, codebook)
+            pred_inv_token_recon, keep_k_tensor = self._decode_oat_latents(
+                token_latents,
+                token_prefix_keep_k=token_prefix_keep_k,
+            )
+
+            result = {
+                "pred_oat_token_logits": token_logits,
+                "pred_oat_tokens": pred_tokens,
+                "pred_invariants_token_recon": pred_inv_token_recon,
+            }
+            if keep_k_tensor is not None:
+                result["token_prefix_keep_k"] = keep_k_tensor
+            return result
+
         def forward(
             self,
             vlm_hidden: torch.Tensor,
             state: Optional[torch.Tensor] = None,
             target_invariants: Optional[torch.Tensor] = None,
             target_actions: Optional[torch.Tensor] = None,
+            target_oat_tokens: Optional[torch.Tensor] = None,
             target_contact: Optional[torch.Tensor] = None,
             target_contact_phase: Optional[torch.Tensor] = None,
             target_gripper_state: Optional[torch.Tensor] = None,
             committed_prefix_invariants: Optional[torch.Tensor] = None,
             committed_prefix_mask: Optional[torch.Tensor] = None,
             loss_mask: Optional[torch.Tensor] = None,
+            token_prefix_keep_k: Optional[int | Sequence[int]] = None,
         ) -> Dict[str, torch.Tensor]:
             """
             Forward pass: predict DHB invariants from VLM hidden states.
@@ -438,7 +623,7 @@ if HAS_TORCH:
             if self.oat is not None and self.training:
                 oat_loss = self.oat(pred_inv)
                 tokens = self.oat.tokenize(pred_inv)
-                pred_inv_recon = self.oat.detokenize(tokens)
+                pred_inv_recon, _ = self._decode_oat_tokens(tokens)
             else:
                 oat_loss = None
                 pred_inv_recon = pred_inv
@@ -446,6 +631,13 @@ if HAS_TORCH:
             result = {"pred_invariants": pred_inv, "pred_invariants_recon": pred_inv_recon}
             if self.oat is not None:
                 result["oat_loss"] = oat_loss
+            token_result = self._predict_oat_token_branch(
+                decoded,
+                token_prefix_keep_k=token_prefix_keep_k,
+            )
+            if token_result:
+                result.update(token_result)
+            result["pred_invariants_execute"] = pred_inv
             if result_prefix_mask is not None:
                 result["committed_prefix_mask"] = result_prefix_mask
 
@@ -529,9 +721,18 @@ if HAS_TORCH:
             # geometric regularization) AND raw actions (for direct closed-loop execution).
             # The invariant loss ensures the internal representation is SE(3)-aware;
             # the action loss ensures the output is directly executable by the controller.
+            resolved_target_oat_tokens = self._resolve_target_oat_tokens(
+                target_oat_tokens,
+                target_invariants,
+                device=vlm_hidden.device,
+            )
+            pred_inv_for_loss = pred_inv
+            if self.train_with_discrete_oat_tokens and "pred_invariants_token_recon" in result:
+                pred_inv_for_loss = result["pred_invariants_token_recon"]
+
             total = None
             if target_invariants is not None:
-                per_step_mse = (pred_inv - target_invariants).pow(2).mean(dim=-1)
+                per_step_mse = (pred_inv_for_loss - target_invariants).pow(2).mean(dim=-1)
                 if self.terminal_loss_weight is not None and self.terminal_loss_weight > 1.0:
                     weights = torch.linspace(
                         1.0,
@@ -572,6 +773,22 @@ if HAS_TORCH:
                 loss_act = self._masked_temporal_mean(per_step_l1, temporal_loss_mask)
                 result["loss_act"] = loss_act
                 total = self.lambda_act * loss_act
+
+            if (
+                resolved_target_oat_tokens is not None
+                and "pred_oat_token_logits" in result
+            ):
+                token_logits = result["pred_oat_token_logits"]
+                loss_oat_token = F.cross_entropy(
+                    token_logits.reshape(-1, token_logits.shape[-1]),
+                    resolved_target_oat_tokens.reshape(-1),
+                )
+                result["loss_oat_token"] = loss_oat_token
+                total = (
+                    self.lambda_oat_token * loss_oat_token
+                    if total is None
+                    else total + self.lambda_oat_token * loss_oat_token
+                )
 
             if target_contact is not None and pred_contact_logits is not None:
                 if self.contact_loss_type == "cross_entropy":
@@ -877,40 +1094,34 @@ if HAS_TORCH:
                     state,
                     committed_prefix_invariants=committed_prefix_invariants,
                     committed_prefix_mask=committed_prefix_mask,
+                    token_prefix_keep_k=token_prefix_keep_k,
                 )
 
-            pred_inv_for_decode = result["pred_invariants"]
+            pred_inv_for_decode = result["pred_invariants"].detach()
             if self.oat is not None and (use_discrete_tokens or emit_oat_tokens or token_prefix_keep_k is not None):
-                pred_inv_base = result["pred_invariants"].detach()
-                pred_tokens = self.oat.tokenize(pred_inv_base)
-                result["pred_oat_tokens"] = pred_tokens
-
-                if token_prefix_keep_k is None:
-                    keep_k = None
-                elif isinstance(token_prefix_keep_k, int):
-                    keep_k = [int(token_prefix_keep_k)] * pred_tokens.shape[0]
-                else:
-                    keep_k = [int(v) for v in token_prefix_keep_k]
-                    if len(keep_k) != pred_tokens.shape[0]:
-                        raise ValueError(
-                            f"Expected {pred_tokens.shape[0]} token prefix lengths, got {len(keep_k)}"
-                        )
-
-                pred_inv_token_recon = self.oat.detokenize(pred_tokens, eval_keep_k=keep_k).detach()
-                result["pred_invariants_token_recon"] = pred_inv_token_recon
-                if keep_k is not None:
-                    result["token_prefix_keep_k"] = torch.as_tensor(
-                        keep_k,
-                        device=pred_tokens.device,
-                        dtype=torch.long,
+                if self.oat_token_head is None:
+                    pred_inv_base = result["pred_invariants"].detach()
+                    pred_tokens = self.oat.tokenize(pred_inv_base)
+                    result["pred_oat_tokens"] = pred_tokens
+                    pred_inv_token_recon, keep_k_tensor = self._decode_oat_tokens(
+                        pred_tokens,
+                        token_prefix_keep_k=token_prefix_keep_k,
                     )
+                    pred_inv_token_recon = pred_inv_token_recon.detach()
+                    result["pred_invariants_token_recon"] = pred_inv_token_recon
+                    if keep_k_tensor is not None:
+                        result["token_prefix_keep_k"] = keep_k_tensor
                 if use_discrete_tokens:
-                    pred_inv_for_decode = pred_inv_token_recon
-                    result["pred_invariants_execute"] = pred_inv_token_recon
+                    pred_inv_for_decode = result["pred_invariants_token_recon"].detach()
+                    result["pred_invariants_execute"] = pred_inv_for_decode
                 else:
-                    result["pred_invariants_execute"] = result["pred_invariants"]
+                    result["pred_invariants_execute"] = result["pred_invariants"].detach()
             else:
-                result["pred_invariants_execute"] = result["pred_invariants"]
+                for key in ("pred_oat_token_logits", "pred_oat_tokens", "pred_invariants_token_recon", "token_prefix_keep_k"):
+                    result.pop(key, None)
+                result["pred_invariants_execute"] = result["pred_invariants"].detach()
+
+            result.pop("pred_oat_token_logits", None)
 
             # If action_head exists, pred_actions is already in result
             # (populated by forward())

@@ -74,6 +74,7 @@ import pandas as pd
 from scipy.spatial.transform import Rotation
 
 from dhb_xr.encoder.dhb_dr import encode_dhb_dr
+from dhb_xr.integration.vla.pipeline import DHBVLAPipeline, DHBVLAPipelineConfig
 
 try:
     from libero.libero import benchmark, get_libero_path
@@ -122,6 +123,9 @@ LIBERO_CLOSE_GATE_Z_M = 0.05
 # supervision entirely.
 LIBERO_RELEASE_GATE_XY_M = 0.05
 LIBERO_RELEASE_GATE_Z_M = 0.06
+DEFAULT_DHB_OAT_ACTION_HORIZON = 8
+DEFAULT_DHB_OAT_NUM_REGISTERS = 8
+DEFAULT_DHB_OAT_INIT_SEED = 0
 
 
 # ============================================================================
@@ -632,6 +636,147 @@ def create_task_metadata(task_index: int, task_name: str) -> Dict:
     }
 
 
+def _normalize_temporal_feature(
+    values: np.ndarray | List,
+    length: int,
+    *,
+    key: str,
+    dtype: np.dtype,
+) -> np.ndarray:
+    arr = np.asarray(values, dtype=dtype)
+    if arr.ndim == 0:
+        raise ValueError(f"DHB feature '{key}' must have a temporal axis, got scalar {arr!r}")
+
+    current = arr.shape[0]
+    if current == length:
+        return arr
+    if current > length:
+        return arr[-length:]
+    if current == 0:
+        return np.zeros((length, *arr.shape[1:]), dtype=dtype)
+
+    pad_count = length - current
+    pad = np.repeat(arr[-1:], pad_count, axis=0)
+    return np.concatenate([arr, pad], axis=0)
+
+
+def _compute_inline_dhb_features(demo_data: Dict, length: int) -> Dict[str, np.ndarray]:
+    if length < 3:
+        lin = np.zeros((length, 4), dtype=np.float32)
+        ang = np.zeros((length, 4), dtype=np.float32)
+        return {
+            "linear_invariants": lin,
+            "angular_invariants": ang,
+        }
+
+    enc = encode_dhb_dr(
+        demo_data["ee_pos"].astype(np.float64),
+        demo_data["ee_quat"][:, [3, 0, 1, 2]].astype(np.float64),
+    )
+    lin = _normalize_temporal_feature(
+        enc["linear_motion_invariants"],
+        length,
+        key="linear_invariants",
+        dtype=np.float32,
+    )
+    ang = _normalize_temporal_feature(
+        enc["angular_motion_invariants"],
+        length,
+        key="angular_invariants",
+        dtype=np.float32,
+    )
+    return {
+        "linear_invariants": lin,
+        "angular_invariants": ang,
+    }
+
+
+def _resolve_dhb_features(
+    demo_data: Dict,
+    *,
+    episode_index: int,
+    length: int,
+    dhb_invariants: Optional[Dict] = None,
+) -> Dict[str, np.ndarray]:
+    source = dhb_invariants.get(episode_index) if dhb_invariants and episode_index in dhb_invariants else {}
+    resolved = {}
+
+    if "linear_invariants" in source and "angular_invariants" in source:
+        resolved["linear_invariants"] = _normalize_temporal_feature(
+            source["linear_invariants"],
+            length,
+            key="linear_invariants",
+            dtype=np.float32,
+        )
+        resolved["angular_invariants"] = _normalize_temporal_feature(
+            source["angular_invariants"],
+            length,
+            key="angular_invariants",
+            dtype=np.float32,
+        )
+    else:
+        resolved.update(_compute_inline_dhb_features(demo_data, length))
+
+    if "oat_token_ids" in source:
+        resolved["oat_token_ids"] = _normalize_temporal_feature(
+            source["oat_token_ids"],
+            length,
+            key="oat_token_ids",
+            dtype=np.int64,
+        )
+    if "oat_chunk_horizon" in source:
+        resolved["oat_chunk_horizon"] = _normalize_temporal_feature(
+            source["oat_chunk_horizon"],
+            length,
+            key="oat_chunk_horizon",
+            dtype=np.int32,
+        )
+    if "oat_chunk_step_mask" in source:
+        resolved["oat_chunk_step_mask"] = _normalize_temporal_feature(
+            source["oat_chunk_step_mask"],
+            length,
+            key="oat_chunk_step_mask",
+            dtype=np.float32,
+        )
+
+    return resolved
+
+
+def _resolve_dhb_oat_targets(
+    dhb_features: Dict[str, np.ndarray],
+    *,
+    dhb_oat_pipeline: Optional[DHBVLAPipeline],
+    dhb_oat_action_horizon: int,
+) -> Dict[str, np.ndarray]:
+    if {
+        "oat_token_ids",
+        "oat_chunk_horizon",
+        "oat_chunk_step_mask",
+    }.issubset(dhb_features):
+        return {
+            "oat_token_ids": dhb_features["oat_token_ids"],
+            "oat_chunk_horizon": dhb_features["oat_chunk_horizon"],
+            "oat_chunk_step_mask": dhb_features["oat_chunk_step_mask"],
+        }
+
+    if dhb_oat_pipeline is None:
+        return {}
+
+    invariants = np.concatenate(
+        [dhb_features["linear_invariants"], dhb_features["angular_invariants"]],
+        axis=1,
+    ).astype(np.float32, copy=False)
+    targets = dhb_oat_pipeline.build_oat_token_targets(
+        invariants,
+        chunk_horizon=dhb_oat_action_horizon,
+    )
+    return {
+        "oat_token_ids": targets["token_ids"],
+        "oat_chunk_horizon": targets["chunk_horizon"],
+        "oat_chunk_step_mask": targets["chunk_step_mask"],
+    }
+
+
 # ============================================================================
 # Parquet Data Generation Functions
 # ============================================================================
@@ -642,6 +787,8 @@ def create_episode_dataframe(
     task_index: int = 0,
     dhb_invariants: Optional[Dict] = None,
     geometry_labeler: Optional[_LiberoGeometryLabeler] = None,
+    dhb_oat_pipeline: Optional[DHBVLAPipeline] = None,
+    dhb_oat_action_horizon: int = DEFAULT_DHB_OAT_ACTION_HORIZON,
 ) -> pd.DataFrame:
     """Create a pandas DataFrame for an episode in LeRobot format.
     
@@ -650,6 +797,8 @@ def create_episode_dataframe(
         episode_index: Global episode index
         task_index: Task index for this episode
         dhb_invariants: Optional precomputed DHB features
+        dhb_oat_pipeline: Optional OAT pipeline used to export discrete token ids
+        dhb_oat_action_horizon: Step-aligned future chunk horizon for OAT targets
         
     Returns:
         DataFrame with columns for observation.state, action, etc.
@@ -700,41 +849,48 @@ def create_episode_dataframe(
         "task_index": np.full(length, task_index, dtype=np.int32),
     }
 
-    dhb_feats = None
-    if dhb_invariants and episode_index in dhb_invariants:
-        dhb_feats = dhb_invariants[episode_index]
-    else:
-        if length < 3:
-            lin = np.zeros((length, 4), dtype=np.float32)
-            ang = np.zeros((length, 4), dtype=np.float32)
-        else:
-            enc = encode_dhb_dr(
-                demo_data["ee_pos"].astype(np.float64),
-                demo_data["ee_quat"][:, [3, 0, 1, 2]].astype(np.float64),
-            )
-            lin = np.asarray(enc["linear_motion_invariants"], dtype=np.float32)
-            ang = np.asarray(enc["angular_motion_invariants"], dtype=np.float32)
-            if lin.shape[0] > length:
-                lin = lin[-length:]
-            if ang.shape[0] > length:
-                ang = ang[-length:]
-            if lin.shape[0] == length - 1:
-                lin = np.concatenate([lin, lin[-1:]], axis=0)
-            if ang.shape[0] == length - 1:
-                ang = np.concatenate([ang, ang[-1:]], axis=0)
-        dhb_feats = {
-            "linear_invariants": lin,
-            "angular_invariants": ang,
-        }
-
-    for key, values in dhb_feats.items():
-        arr = np.array(values, dtype=np.float32)
-        if len(arr) != length:
+    dhb_features = _resolve_dhb_features(
+        demo_data,
+        episode_index=episode_index,
+        length=length,
+        dhb_invariants=dhb_invariants,
+    )
+    for key in ("linear_invariants", "angular_invariants"):
+        arr = np.asarray(dhb_features[key], dtype=np.float32)
+        if arr.shape[0] != length:
             raise ValueError(
                 f"DHB invariant '{key}' length mismatch for episode {episode_index}: "
-                f"{len(arr)} != {length}"
+                f"{arr.shape[0]} != {length}"
             )
         data_dict[f"dhb.{key}"] = list(arr)
+
+    dhb_oat_targets = _resolve_dhb_oat_targets(
+        dhb_features,
+        dhb_oat_pipeline=dhb_oat_pipeline,
+        dhb_oat_action_horizon=dhb_oat_action_horizon,
+    )
+    if dhb_oat_targets:
+        token_ids = np.asarray(dhb_oat_targets["oat_token_ids"], dtype=np.int64)
+        chunk_horizon = np.asarray(dhb_oat_targets["oat_chunk_horizon"], dtype=np.int32)
+        chunk_step_mask = np.asarray(dhb_oat_targets["oat_chunk_step_mask"], dtype=np.float32)
+        if token_ids.shape[0] != length:
+            raise ValueError(
+                f"DHB OAT token length mismatch for episode {episode_index}: "
+                f"{token_ids.shape[0]} != {length}"
+            )
+        if chunk_horizon.shape[0] != length:
+            raise ValueError(
+                f"DHB OAT chunk-horizon length mismatch for episode {episode_index}: "
+                f"{chunk_horizon.shape[0]} != {length}"
+            )
+        if chunk_step_mask.shape[0] != length:
+            raise ValueError(
+                f"DHB OAT step-mask length mismatch for episode {episode_index}: "
+                f"{chunk_step_mask.shape[0]} != {length}"
+            )
+        data_dict["dhb.oat_token_ids"] = list(token_ids)
+        data_dict["dhb.oat_chunk_horizon"] = chunk_horizon.astype(np.int32).tolist()
+        data_dict["dhb.oat_chunk_step_mask"] = list(chunk_step_mask)
 
     data_dict["dhb.close_contact"] = close_contact.astype(np.float32).tolist()
     data_dict["dhb.open_contact"] = open_contact.astype(np.float32).tolist()
@@ -794,6 +950,9 @@ def convert_libero_to_lerobot(
     dhb_invariants: Optional[Dict] = None,
     demo_ids: Optional[List[int]] = None,
     episode_offset: int = 0,
+    dhb_oat_action_horizon: int = DEFAULT_DHB_OAT_ACTION_HORIZON,
+    dhb_oat_num_registers: int = DEFAULT_DHB_OAT_NUM_REGISTERS,
+    dhb_oat_init_seed: Optional[int] = DEFAULT_DHB_OAT_INIT_SEED,
 ) -> Tuple[int, int, List[Dict], Dict[int, str]]:
     """Convert a single LIBERO HDF5 file to LeRobot format.
     
@@ -804,6 +963,9 @@ def convert_libero_to_lerobot(
         task_index: Index of this task
         dhb_invariants: Optional precomputed DHB features
         demo_ids: List of demo IDs to convert (None = all)
+        dhb_oat_action_horizon: Step-aligned future horizon used for OAT targets
+        dhb_oat_num_registers: Number of OAT tokens per exported chunk
+        dhb_oat_init_seed: Optional deterministic seed for inline OAT init
         
     Returns:
         Tuple of (num_episodes_converted, total_frames)
@@ -828,6 +990,13 @@ def convert_libero_to_lerobot(
     all_tasks = {task_index: task_name}
     total_frames = 0
     geometry_labeler = None
+    dhb_oat_pipeline = DHBVLAPipeline(
+        DHBVLAPipelineConfig(
+            tokenizer_kind="oat",
+            oat_num_registers=dhb_oat_num_registers,
+            oat_init_seed=dhb_oat_init_seed,
+        )
+    )
 
     task_suite_name = libero_h5_path.parent.name
     if HAS_LIBERO and task_suite_name.startswith("libero_"):
@@ -864,6 +1033,8 @@ def convert_libero_to_lerobot(
                     task_index,
                     dhb_invariants,
                     geometry_labeler=geometry_labeler,
+                    dhb_oat_pipeline=dhb_oat_pipeline,
+                    dhb_oat_action_horizon=dhb_oat_action_horizon,
                 )
 
                 # Determine chunk index
@@ -1044,6 +1215,24 @@ Examples:
         help="Maximum demos to convert per task (for testing)",
     )
     parser.add_argument(
+        "--dhb-oat-action-horizon",
+        type=int,
+        default=DEFAULT_DHB_OAT_ACTION_HORIZON,
+        help="Future chunk horizon used to export per-step DHB OAT token ids",
+    )
+    parser.add_argument(
+        "--dhb-oat-num-registers",
+        type=int,
+        default=DEFAULT_DHB_OAT_NUM_REGISTERS,
+        help="Number of OAT register tokens exported per DHB chunk",
+    )
+    parser.add_argument(
+        "--dhb-oat-init-seed",
+        type=int,
+        default=DEFAULT_DHB_OAT_INIT_SEED,
+        help="Deterministic seed for inline OAT tokenizer initialization",
+    )
+    parser.add_argument(
         "--compute-stats",
         action="store_true",
         default=True,
@@ -1060,6 +1249,12 @@ Examples:
             dhb_invariants = pickle.load(f)
     else:
         logger.info("No DHB invariant pickle provided; computing invariants inline from EE trajectories.")
+    logger.info(
+        "Exporting DHB OAT token ids with action_horizon=%d num_registers=%d seed=%d",
+        args.dhb_oat_action_horizon,
+        args.dhb_oat_num_registers,
+        args.dhb_oat_init_seed,
+    )
     
     # Determine which tasks to convert
     libero_root = Path(args.libero_root)
@@ -1107,6 +1302,9 @@ Examples:
             dhb_invariants=dhb_invariants,
             demo_ids=demo_ids,
             episode_offset=total_episodes,
+            dhb_oat_action_horizon=args.dhb_oat_action_horizon,
+            dhb_oat_num_registers=args.dhb_oat_num_registers,
+            dhb_oat_init_seed=args.dhb_oat_init_seed,
         )
         
         total_episodes += num_eps

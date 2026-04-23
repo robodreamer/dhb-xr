@@ -145,6 +145,35 @@ class TestDHBVLAPipeline:
         recon_b = pipeline.detokenize_tokens(tokens_b, invariant_dim=8, horizon=9)
         assert recon_b.shape == (1, 9, 8)
 
+    def test_build_oat_token_targets_tracks_tail_horizons(self):
+        invariants = _sample_invariants(T=12, D=8)
+        pipeline = DHBVLAPipeline(
+            DHBVLAPipelineConfig(
+                tokenizer_kind="oat",
+                oat_num_registers=4,
+                oat_emb_dim=32,
+                oat_num_heads=4,
+                oat_encoder_depth=1,
+                oat_decoder_depth=1,
+                oat_init_seed=0,
+            )
+        )
+
+        targets = pipeline.build_oat_token_targets(invariants, chunk_horizon=5)
+
+        assert targets["token_ids"].shape == (12, 4)
+        assert targets["chunk_horizon"].shape == (12,)
+        assert targets["chunk_step_mask"].shape == (12, 5)
+        np.testing.assert_array_equal(
+            targets["chunk_horizon"],
+            np.array([5, 5, 5, 5, 5, 5, 5, 5, 4, 3, 2, 1], dtype=np.int32),
+        )
+        np.testing.assert_array_equal(
+            targets["chunk_step_mask"][-1],
+            np.array([1, 0, 0, 0, 0], dtype=np.float32),
+        )
+        assert np.issubdtype(targets["token_ids"].dtype, np.integer)
+
     def test_decode_token_stream_to_trajectories_returns_executable_shapes(self):
         T = 12
         positions = np.stack(

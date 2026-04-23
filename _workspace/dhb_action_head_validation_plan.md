@@ -1120,3 +1120,44 @@ The next highest-value move is now:
 - This is the benchmark-setup direction we want:
   - shared continuation / debounce / chunk policy in the adapter
   - task-specific geometry only in the evaluator
+
+### 2026-04-23 Update: Discrete DHB Token Pipeline Validation
+
+- The discrete-token infrastructure is now real end to end:
+  - inline OAT token export from the LIBERO -> LeRobot converter
+  - supervised OAT-token training path in the local DHB head and StarVLA wrapper
+  - held-out offline sweep script:
+    - [scripts/starvla_dhb_discrete_offline_sweep.py](/home/andypark/Projects/repos/dhb-xr/scripts/starvla_dhb_discrete_offline_sweep.py)
+- Focused contract validation passes:
+  - `python3 -m py_compile` on the updated pipeline / action-head / wrapper files
+  - `pixi run pytest tests/test_action_head.py tests/test_vla_pipeline.py tests/test_libero_to_lerobot.py -q`
+  - result: `32 passed`
+- One-batch supervised-token smoke on
+  - [configs/libero_dhbxr_qwen_discrete_supervised.yaml](/home/andypark/Projects/repos/dhb-xr/configs/libero_dhbxr_qwen_discrete_supervised.yaml)
+  succeeds and reports:
+  - `loss_oat_token`
+  - `oat_loss`
+  - standard action / invariant losses
+- Held-out sweep on the current best continuous checkpoint
+  - `_workspace/starvla_runs/dhb_starvla_qwen_invsup_shorttrain1/checkpoints/steps_200_pytorch_model.pt`
+  shows the current checkpoint is **not** a usable discrete policy yet:
+  - `avg_token_unique_count = 1.0`
+  - `collapsed_sample_fraction = 1.0`
+  - prefix `k=1,2,4,8` is not monotonic
+  - `k=8` / full decode is worst on position drift:
+    - `cont_disc_pos_mae_m = 0.1864`
+    - `endpoint_drift_m = 0.6738`
+  - prefix `k=4` is the least bad:
+    - `cont_disc_pos_mae_m = 0.1012`
+    - `endpoint_drift_m = 0.3476`
+- Interpretation:
+  - the new discrete path is **infrastructure-complete**
+  - the current `shorttrain1/steps_200` checkpoint is still only
+    tokenizer-regularized, not genuinely token-native
+  - do **not** spend more benchmark time on live discrete execution for this
+    checkpoint family
+- Next discrete-token step:
+  - rebuild / train with the supervised-token objective as the primary discrete
+    path
+  - use the held-out offline sweep as the gate before any integrated or live
+    rollout

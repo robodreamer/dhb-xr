@@ -2,6 +2,7 @@ from pathlib import Path
 
 import h5py
 import numpy as np
+import pytest
 from scipy.spatial.transform import Rotation
 
 from examples.integration.libero_to_lerobot import (
@@ -78,6 +79,95 @@ def test_create_episode_dataframe_uses_axis_angle_state_and_delta_actions(tmp_pa
     np.testing.assert_array_equal(gripper_state, [0, 0])
     np.testing.assert_array_equal(gripper_event, [2, 2])
     np.testing.assert_array_equal(gripper_phase, [2, 2])
+
+
+def test_create_episode_dataframe_exports_dhb_oat_token_targets(tmp_path: Path):
+    pytest.importorskip("torch")
+
+    from dhb_xr.integration.vla.pipeline import DHBVLAPipeline, DHBVLAPipelineConfig
+
+    h5_path = tmp_path / "demo_oat.hdf5"
+    with h5py.File(h5_path, "w") as f:
+        data = f.create_group("data")
+        demo = data.create_group("demo_0")
+
+        robot_states = np.zeros((5, 9), dtype=np.float32)
+        robot_states[:, 0] = np.array([0.0, 0.02, 0.02, 0.02, 0.02], dtype=np.float32)
+        robot_states[:, 2:5] = np.array(
+            [
+                [0.10, 0.20, 0.30],
+                [0.12, 0.22, 0.31],
+                [0.15, 0.23, 0.33],
+                [0.18, 0.24, 0.35],
+                [0.20, 0.26, 0.36],
+            ],
+            dtype=np.float32,
+        )
+
+        quat_xyzw = Rotation.from_euler(
+            "xyz",
+            [
+                [0.0, 0.0, 0.0],
+                [0.0, 0.0, np.deg2rad(5.0)],
+                [0.0, 0.0, np.deg2rad(10.0)],
+                [0.0, 0.0, np.deg2rad(15.0)],
+                [0.0, 0.0, np.deg2rad(20.0)],
+            ],
+        ).as_quat()
+        robot_states[:, 5:9] = quat_xyzw[:, [3, 0, 1, 2]]
+
+        demo.create_dataset("robot_states", data=robot_states)
+        demo.create_dataset("actions", data=np.zeros((5, 7), dtype=np.float32))
+
+        obs = demo.create_group("obs")
+        obs.create_dataset("agentview_rgb", data=np.zeros((5, 4, 4, 3), dtype=np.uint8))
+
+    demo_data = load_libero_demo(h5_path, 0)
+    pipeline = DHBVLAPipeline(
+        DHBVLAPipelineConfig(
+            tokenizer_kind="oat",
+            oat_num_registers=4,
+            oat_emb_dim=32,
+            oat_num_heads=4,
+            oat_encoder_depth=1,
+            oat_decoder_depth=1,
+            oat_init_seed=0,
+        )
+    )
+    df = create_episode_dataframe(
+        demo_data,
+        episode_index=0,
+        dhb_oat_pipeline=pipeline,
+        dhb_oat_action_horizon=4,
+    )
+
+    assert "dhb.oat_token_ids" in df.columns
+    assert "dhb.oat_chunk_horizon" in df.columns
+    assert "dhb.oat_chunk_step_mask" in df.columns
+
+    combined = np.stack(
+        [
+            np.concatenate(
+                [
+                    np.asarray(df.iloc[i]["dhb.linear_invariants"], dtype=np.float32),
+                    np.asarray(df.iloc[i]["dhb.angular_invariants"], dtype=np.float32),
+                ]
+            )
+            for i in range(len(df))
+        ],
+        axis=0,
+    )
+    expected = pipeline.build_oat_token_targets(combined, chunk_horizon=4)
+
+    token_ids = np.stack(df["dhb.oat_token_ids"].map(lambda x: np.asarray(x, dtype=np.int64)), axis=0)
+    chunk_horizon = np.asarray(df["dhb.oat_chunk_horizon"], dtype=np.int32)
+    step_mask = np.stack(df["dhb.oat_chunk_step_mask"].map(lambda x: np.asarray(x, dtype=np.float32)), axis=0)
+
+    np.testing.assert_array_equal(token_ids, expected["token_ids"])
+    np.testing.assert_array_equal(chunk_horizon, np.array([4, 4, 3, 2, 1], dtype=np.int32))
+    np.testing.assert_array_equal(chunk_horizon, expected["chunk_horizon"])
+    np.testing.assert_array_equal(step_mask, expected["chunk_step_mask"])
+    np.testing.assert_array_equal(step_mask[-1], np.array([1, 0, 0, 0], dtype=np.float32))
 
 
 def test_event_transition_labels_mark_close_and_open_windows():
