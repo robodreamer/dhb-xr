@@ -685,6 +685,26 @@ if HAS_TORCH:
             denom = combined.sum().clamp_min(1.0)
             return (values * combined).sum() / denom
 
+        @staticmethod
+        def _closed_binary_target(
+            target: torch.Tensor,
+            logits: torch.Tensor,
+        ) -> torch.Tensor:
+            """Normalize gripper-state targets for single-logit BCE heads.
+
+            Dataset labels are usually categorical open/closed IDs with shape
+            `(B, T)`. A BCE gripper-state head predicts the closed probability
+            with shape `(B, T, 1)`, so categorical labels must be converted to a
+            float closed-indicator channel before loss computation.
+            """
+            if logits.shape[-1] != 1:
+                return target
+            if target.ndim == logits.ndim - 1:
+                return target.unsqueeze(-1)
+            if target.ndim == logits.ndim and target.shape[-1] == 2:
+                return target[..., 1:2]
+            return target
+
         def _align_action_loss_inputs(
             self,
             pred_actions: torch.Tensor,
@@ -1660,6 +1680,13 @@ if HAS_TORCH:
                         pred_gripper_state_logits.shape[1],
                     )
                 else:
+                    target_gripper_state_bce = self._closed_binary_target(
+                        target_gripper_state,
+                        pred_gripper_state_logits,
+                    ).to(
+                        device=pred_gripper_state_logits.device,
+                        dtype=pred_gripper_state_logits.dtype,
+                    )
                     pos_weight_values = None
                     if not isinstance(self.gripper_state_pos_weight, (str, bytes)):
                         try:
@@ -1690,7 +1717,7 @@ if HAS_TORCH:
                         )
                     per_step_gripper_state = F.binary_cross_entropy_with_logits(
                         pred_gripper_state_logits,
-                        target_gripper_state,
+                        target_gripper_state_bce,
                         pos_weight=pos_weight,
                         reduction="none",
                     )

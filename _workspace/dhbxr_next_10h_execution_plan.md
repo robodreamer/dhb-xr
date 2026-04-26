@@ -849,3 +849,46 @@ Next most impactful actions:
 5. For storytelling, claim robust offset reach and a reach-preserving path
    toward learned contact; do not claim full pick-place until reopen/transport
    succeeds without object-specific gates.
+
+## 2026-04-26 Follow-Up: BCE Gripper-State Head Narrows the Gap
+
+Implementation update:
+
+- fixed the backend so a single-logit BCE gripper-state head can consume the
+  existing categorical `dhb.gripper_state` labels by converting them to a
+  closed-indicator target
+- added a regression test for categorical labels flowing into the BCE
+  gripper-state loss
+- config:
+  `configs/libero_dhbxr_qwen_fresh_actionres_closed_gripbce.yaml`
+- run:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_closed_gripbce_fromgripcal600`
+- warm start:
+  `dhb_starvla_qwen_fresh_actionres_closed_gripcal_fromhard300/steps_600`
+- checkpoint:
+  `steps_800_pytorch_model.pt`
+
+Validation:
+
+- smoke: `scripts/starvla_dhb_train_step_smoke.py` passed for the BCE config
+- unit test: `tests/test_action_head.py -q` passed (`36 passed`)
+- corrected 5-case reach gate: `5/5`, average dynamic bowl XY `41.4 mm`,
+  `0` IK failures
+
+Full-task no-gate diagnostics on task `0`, episode `1`, offset `+3 cm`:
+
+- threshold `0.50`: no close; max learned close probability about `0.421`
+- threshold `0.35`: closes at step `109`; close relative to bowl is about
+  `[35.5, -31.8, 11.7] mm`; still no reopen or successful transport/release
+
+Interpretation:
+
+- BCE improves the learned close-probability scale compared with the CE
+  branch (`~0.42` max instead of `~0.39`) and preserves reach.
+- It does not change the behavioral failure mode. Once close is triggered at
+  a plausible bowl-relative pose, the policy still lacks reliable post-contact
+  transport and release.
+- Do not spend more time only lowering thresholds or swapping CE/BCE losses.
+  The next meaningful work must train a post-contact residual/action module
+  that is active after physical gripper closure while preserving the base
+  reach behavior.

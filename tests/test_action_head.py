@@ -333,6 +333,31 @@ class TestDHBActionHead:
         assert "loss_gripper_state" in result
         assert result["loss_gripper_state"].item() > 0.0
 
+    def test_bce_gripper_state_accepts_categorical_closed_labels(self):
+        head = DHBActionHead(
+            vlm_dim=128,
+            action_horizon=8,
+            invariant_dim=8,
+            hidden_dim=64,
+            num_heads=4,
+            num_layers=2,
+            gripper_state_dim=1,
+            lambda_gripper_state=1.0,
+            gripper_state_loss_type="bce",
+            gripper_state_pos_weight=3.0,
+        )
+        vlm_hidden = torch.randn(self.B, self.S, 128)
+        target_gripper_state = torch.zeros(self.B, 8, dtype=torch.long)
+        target_gripper_state[:, 4:] = 1
+
+        result = head(vlm_hidden, target_gripper_state=target_gripper_state)
+
+        assert result["pred_gripper_state_logits"].shape == (self.B, 8, 1)
+        assert result["pred_gripper_state_probs"].shape == (self.B, 8, 1)
+        assert "loss_gripper_state" in result
+        assert torch.isfinite(result["loss_gripper_state"])
+        assert result["loss_gripper_state"].item() > 0.0
+
     def test_action_loss_can_ignore_gripper_dim(self):
         head = DHBActionHead(
             vlm_dim=128,

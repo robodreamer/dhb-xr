@@ -529,3 +529,25 @@ Next most impactful work:
    matched-head evaluator is frozen.
 4. Keep discrete-token work focused on factorized/trimmed targets until
    endpoint drift becomes competitive with the continuous branch.
+
+2026-04-26 BCE gripper-head update:
+
+- The BCE gripper-state path is now implemented and tested. This matters
+  because it lets the model learn a single closed-probability logit from the
+  same categorical `dhb.gripper_state` labels used by the current data export.
+- The BCE branch preserves the corrected reach result: `5/5` reach successes,
+  average minimum dynamic bowl XY `41.4 mm`, and `0` IK failures.
+- It improves probability scale only modestly. The full-task no-gate trace has
+  max close probability about `0.421`, still below a natural `0.5` threshold.
+- With a calibrated generic threshold of `0.35`, the model closes at step
+  `109` near the bowl, but still fails transport and release.
+
+Story implication:
+
+- This is useful negative evidence. It shows the remaining gap is not caused
+  by a missing BCE loss path or gripper-command polarity. The bottleneck is
+  learned post-contact behavior after the close event.
+- The stronger story should now emphasize the validated reach/adaptation
+  backbone plus a concrete, isolated post-contact training gap. Full pick-place
+  should not be claimed until a physically closed-state residual can move the
+  object toward the plate and reopen without object-specific gates.
