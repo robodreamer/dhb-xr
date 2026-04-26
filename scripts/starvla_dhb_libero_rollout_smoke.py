@@ -120,6 +120,15 @@ def _max_steps_for_suite(name: str) -> int:
     }[name]
 
 
+def _preprocess_libero_image(image: np.ndarray, orientation: str) -> np.ndarray:
+    image = np.asarray(image, dtype=np.uint8)
+    if orientation == "raw":
+        return np.ascontiguousarray(image)
+    if orientation == "flipudlr":
+        return np.ascontiguousarray(image[::-1, ::-1])
+    raise ValueError(f"Unsupported image orientation: {orientation}")
+
+
 def _load_libero_demo_actions(hdf5_path: str, demo_id: int, action_mode: str) -> np.ndarray:
     demo_key = f"demo_{demo_id}"
     with h5py.File(hdf5_path, "r") as f:
@@ -164,6 +173,12 @@ def main() -> None:
     parser.add_argument("--gt_hdf5", default=None)
     parser.add_argument("--gt_demo_id", type=int, default=0)
     parser.add_argument("--gt_action_mode", choices=("absolute", "delta"), default="delta")
+    parser.add_argument(
+        "--image-orientation",
+        choices=("raw", "flipudlr"),
+        default="raw",
+        help="Use raw for the local LeRobot export; flipudlr matches upstream StarVLA LIBERO examples.",
+    )
     parser.add_argument("--save_json", default=None)
     args, unknown = parser.parse_known_args()
 
@@ -233,8 +248,8 @@ def main() -> None:
         start.record()
 
     for _step in range(max_steps):
-        img = np.ascontiguousarray(obs["agentview_image"][::-1, ::-1])
-        wrist_img = np.ascontiguousarray(obs["robot0_eye_in_hand_image"][::-1, ::-1])
+        img = _preprocess_libero_image(obs["agentview_image"], args.image_orientation)
+        wrist_img = _preprocess_libero_image(obs["robot0_eye_in_hand_image"], args.image_orientation)
         replay_images.append(img)
 
         state = build_libero_state_vector_from_obs(obs)
@@ -320,6 +335,7 @@ def main() -> None:
         "task_language": task.language,
         "success": bool(done),
         "state_history_window": int(state_history_window),
+        "image_orientation": args.image_orientation,
         "num_steps": len(actions),
         "rollout_time_ms": round(start.elapsed_time(end), 2) if device is not None else None,
         "gpu_name": torch.cuda.get_device_name(device) if device is not None else None,

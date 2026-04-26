@@ -287,6 +287,7 @@ class ChunkRolloutConfig:
     delta_continuation_alpha: float = 0.0
     delta_continuation_steps: int = 0
     gripper_source: str = "demo"
+    model_gripper_decode_source: str = "auto"
     gripper_threshold: float = 0.5
     gripper_close_threshold: float | None = 0.6
     gripper_open_threshold: float | None = 0.4
@@ -367,6 +368,7 @@ class TrajectoryChunkRunner:
                 close_threshold=cfg.gripper_close_threshold,
                 open_threshold=cfg.gripper_open_threshold,
                 transition_debounce_steps=max(1, int(cfg.gripper_transition_debounce_steps)),
+                decode_source=cfg.model_gripper_decode_source,
             )
 
         self._prev_chunk_pos = chunk_pos_stable.copy()

@@ -19,15 +19,28 @@ framework:
     hidden_dim: 1024
     action_dim: 7
     state_dim: 8
+    state_history_window: 4
     invariant_dim: 8
     num_oat_tokens: 8
     future_action_window_size: 7
     past_action_window_size: 0
     action_horizon: 8
     use_oat_quantizer: true
+    oat_emb_dim: 256
+    oat_encoder_depth: 2
+    oat_decoder_depth: 2
+    oat_num_heads: 8
+    oat_checkpoint_path: /home/andypark/Projects/repos/dhb-xr/_workspace/starvla_runs/oat_tokenizer_gate1/oat_tokenizer.pt
+    freeze_oat: true
     supervise_oat_tokens: true
     lambda_oat_token: 1.0
-    train_with_discrete_oat_tokens: true
+    lambda_oat_autoencode: 0.0
+    lambda_oat_register_diversity: 0.0
+    oat_autoencode_target: target
+    train_with_discrete_oat_tokens: false
+    use_exported_oat_tokens: false
+    oat_token_prefix_train_prob: 0.25
+    oat_token_prefix_min_k: 4
     lambda_invariant: 1.0
     lambda_action: 1.0
 
@@ -37,6 +50,8 @@ datasets:
     data_root_dir: /home/andypark/Projects/data
     data_mix: libero_spatial_dhbxr
     include_state: true
+    state_history_window: 4
+    recompute_dhb_invariants_from_actions: true
     action_type: delta_qpos
     sequential_step_sampling: false
     CoT_prompt: "Your task is {instruction}. To identify the key objects for your task. Locate their bounding boxes in [x1,y1,x2,y2] format."

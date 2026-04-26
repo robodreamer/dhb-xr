@@ -54,6 +54,12 @@ def _run_case(
     gripper_close_threshold: float,
     gripper_open_threshold: float,
     gripper_transition_debounce_steps: int,
+    image_orientation: str,
+    trajectory_source: str,
+    direct_action_xyz_scale: tuple[float, float, float],
+    direct_action_xyz_bias_mm: tuple[float, float, float],
+    state_history_update_rate: str,
+    max_policy_steps: int,
     settle_steps: int,
     reach_only: bool,
     reach_threshold_xy_m: float,
@@ -112,6 +118,22 @@ def _run_case(
         str(gripper_open_threshold),
         "--gripper-transition-debounce-steps",
         str(gripper_transition_debounce_steps),
+        "--image-orientation",
+        image_orientation,
+        "--trajectory-source",
+        trajectory_source,
+        "--direct-action-xyz-scale",
+        str(direct_action_xyz_scale[0]),
+        str(direct_action_xyz_scale[1]),
+        str(direct_action_xyz_scale[2]),
+        "--direct-action-xyz-bias-mm",
+        str(direct_action_xyz_bias_mm[0]),
+        str(direct_action_xyz_bias_mm[1]),
+        str(direct_action_xyz_bias_mm[2]),
+        "--state-history-update-rate",
+        state_history_update_rate,
+        "--max-policy-steps",
+        str(max_policy_steps),
         "--settle-steps",
         str(settle_steps),
         "--save_json",
@@ -135,7 +157,14 @@ def _run_case(
     env.setdefault("WANDB_MODE", "disabled")
     env.setdefault("MUJOCO_GL", "egl")
     subprocess.run(cmd, cwd=REPO_ROOT, check=True, env=env)
-    return json.loads(summary_path.read_text())
+    summary = json.loads(summary_path.read_text())
+    chunks = summary.get("chunks")
+    if isinstance(chunks, list):
+        summary["chunks"] = f"<{len(chunks)} chunks saved to {summary_path}>"
+    step_trace = summary.get("step_trace")
+    if isinstance(step_trace, list):
+        summary["step_trace"] = f"<{len(step_trace)} entries saved to {summary_path}>"
+    return summary
 
 
 def _aggregate(rows: list[dict]) -> dict:
@@ -184,6 +213,13 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config_yaml", default="configs/libero_dhbxr_qwen.yaml")
     parser.add_argument("--run-dir", default=str(DEFAULT_RUN_DIR))
+    parser.add_argument(
+        "--checkpoint-step",
+        type=int,
+        action="append",
+        default=None,
+        help="Only evaluate checkpoints with these step numbers. Repeatable.",
+    )
     parser.add_argument("--task_suite_name", default="libero_spatial")
     parser.add_argument("--task_id", type=int, default=0)
     parser.add_argument("--case", action="append", default=None, help="EPISODE_IDX:OFFSET_CM, repeatable")
@@ -204,11 +240,57 @@ def main() -> None:
     parser.add_argument("--gripper-close-threshold", type=float, default=0.6)
     parser.add_argument("--gripper-open-threshold", type=float, default=0.4)
     parser.add_argument("--gripper-transition-debounce-steps", type=int, default=1)
+    parser.add_argument("--image-orientation", choices=("raw", "flipudlr"), default="raw")
+    parser.add_argument("--trajectory-source", choices=("dhb", "direct_action"), default="dhb")
+    parser.add_argument(
+        "--state-history-update-rate",
+        choices=("policy", "substep"),
+        default="policy",
+        help=(
+            "Timing contract for policy state history: one update per VLA action "
+            "step, or every low-level controller substep for streaming proprioception."
+        ),
+    )
+    parser.add_argument(
+        "--direct-action-xyz-scale",
+        type=float,
+        nargs=3,
+        default=(1.0, 1.0, 1.0),
+        metavar=("SX", "SY", "SZ"),
+        help="Task-agnostic XYZ delta scale for --trajectory-source direct_action.",
+    )
+    parser.add_argument(
+        "--direct-action-xyz-bias-mm",
+        type=float,
+        nargs=3,
+        default=(0.0, 0.0, 0.0),
+        metavar=("BX", "BY", "BZ"),
+        help="Task-agnostic per-step XYZ delta bias in millimeters for direct-action deltas.",
+    )
+    parser.add_argument(
+        "--max-policy-steps",
+        type=int,
+        default=0,
+        help=(
+            "Closed-loop policy execution cap passed to the rollout script. "
+            "0 preserves the episode demo length; use a larger value for delayed "
+            "offset-adaptation rollouts."
+        ),
+    )
     parser.add_argument("--settle-steps", type=int, default=60)
     parser.add_argument("--reach-only", action="store_true")
     parser.add_argument("--reach-threshold-xy-m", type=float, default=0.05)
     parser.add_argument("--reach-threshold-z-m", type=float, default=0.08)
     parser.add_argument("--reach-stop-on-success", action="store_true")
+    parser.add_argument(
+        "--sweep-name",
+        default=None,
+        help=(
+            "Optional child-output subdirectory under live_checkpoint_sweep. "
+            "When omitted and --output-json is set, the output JSON stem is used "
+            "so reruns with different protocols do not overwrite per-case files."
+        ),
+    )
     parser.add_argument("--output-json", default=None)
     parser.add_argument("--output-md", default=None)
     args = parser.parse_args()
@@ -217,10 +299,22 @@ def main() -> None:
     parsed_cases = [_parse_case(c) for c in cases]
     run_dir = Path(args.run_dir)
     checkpoints = sorted(run_dir.glob("checkpoints/steps_*_pytorch_model.pt"), key=_step_num)
+    if args.checkpoint_step:
+        wanted_steps = {int(step) for step in args.checkpoint_step}
+        checkpoints = [path for path in checkpoints if _step_num(path) in wanted_steps]
     if not checkpoints:
         raise RuntimeError(f"No checkpoints found under {run_dir}")
 
+    sweep_name = args.sweep_name
+    if sweep_name is None and args.output_json:
+        sweep_name = Path(args.output_json).stem
     sweep_dir = run_dir / "live_checkpoint_sweep"
+    if sweep_name:
+        safe_sweep_name = "".join(
+            ch if ch.isalnum() or ch in "._-" else "_" for ch in sweep_name
+        ).strip("_")
+        if safe_sweep_name:
+            sweep_dir = sweep_dir / safe_sweep_name
     sweep_dir.mkdir(parents=True, exist_ok=True)
 
     results = []
@@ -255,6 +349,12 @@ def main() -> None:
                 gripper_close_threshold=float(args.gripper_close_threshold),
                 gripper_open_threshold=float(args.gripper_open_threshold),
                 gripper_transition_debounce_steps=max(1, int(args.gripper_transition_debounce_steps)),
+                image_orientation=args.image_orientation,
+                trajectory_source=args.trajectory_source,
+                direct_action_xyz_scale=tuple(float(v) for v in args.direct_action_xyz_scale),
+                direct_action_xyz_bias_mm=tuple(float(v) for v in args.direct_action_xyz_bias_mm),
+                state_history_update_rate=args.state_history_update_rate,
+                max_policy_steps=int(args.max_policy_steps),
                 settle_steps=args.settle_steps,
                 reach_only=args.reach_only,
                 reach_threshold_xy_m=args.reach_threshold_xy_m,
@@ -275,6 +375,7 @@ def main() -> None:
     payload = {
         "config_yaml": args.config_yaml,
         "run_dir": str(run_dir),
+        "checkpoint_steps": None if not args.checkpoint_step else [int(s) for s in args.checkpoint_step],
         "task_suite_name": args.task_suite_name,
         "task_id": int(args.task_id),
         "cases": [{"episode_idx": ep, "offset_cm": offset} for ep, offset in parsed_cases],
@@ -295,7 +396,13 @@ def main() -> None:
             "gripper_close_threshold": float(args.gripper_close_threshold),
             "gripper_open_threshold": float(args.gripper_open_threshold),
             "gripper_transition_debounce_steps": int(args.gripper_transition_debounce_steps),
+            "image_orientation": args.image_orientation,
+            "trajectory_source": args.trajectory_source,
+            "state_history_update_rate": args.state_history_update_rate,
+            "direct_action_xyz_scale": [float(v) for v in args.direct_action_xyz_scale],
+            "direct_action_xyz_bias_mm": [float(v) for v in args.direct_action_xyz_bias_mm],
             "init_state_source": args.init_state_source,
+            "max_policy_steps": int(args.max_policy_steps),
             "settle_steps": int(args.settle_steps),
             "reach_only": bool(args.reach_only),
             "reach_threshold_xy_m": float(args.reach_threshold_xy_m),

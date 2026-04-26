@@ -238,6 +238,90 @@ Current result:
   - `_workspace/starvla_runs/dhb_starvla_qwen/embodik_step200_debug_sim.json`
 - videos:
   - `_workspace/validation_videos/starvla_embodik_step200/offset_0.0cm_seed_0.mp4`
+
+## Discrete DHB Token Validation State
+
+- [x] Add a standalone OAT tokenizer pretrain/eval gate for DHB invariant chunks
+- [x] Train a non-collapsed frozen OAT tokenizer on LIBERO DHB chunks
+- [x] Load frozen OAT weights and normalization stats in the StarVLA DHB action head
+- [x] Fix offline GT-token derivation to use the same normalized tokenizer path as training
+- [x] Add token sequence-collapse metrics to the offline sweep
+- [x] Add teacher-forced GT-token codec evaluation through DHB trajectory decode
+- [x] Add a token-warmup training mode that keeps continuous invariant loss on the continuous head while supervising token CE
+- [x] Run a tiny token-head overfit probe before spending more GPU time on long token-policy training
+- [x] Run longer token-warmup sweeps after the overfit probe passes
+- [x] Add a reduced-cardinality token target before more same-objective token training
+- [x] Run a token-only warmup with the continuous trajectory branch frozen
+- [ ] Add a factorized or trimmed token target that excludes low-information registers from token CE
+- [ ] Run embodied discrete rollout only after offline token-policy gates pass
+
+Current validated representation/codec result:
+
+- standalone OAT tokenizer gate:
+  - `_workspace/starvla_runs/oat_tokenizer_gate1/oat_tokenizer_pretrain_eval.json`
+  - `R2 = 0.294061`
+  - `MAE = 0.06094`
+  - `unique_token_count = 550`
+  - `effective_num_tokens = 306.131`
+  - `collapsed_sample_fraction = 0.0`
+- teacher-forced GT-token codec:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_discrete_frozen_oat1/discrete_offline_sweep_step300_normfix_gtcodec.json`
+  - `gt_codec_inv_mae = 0.055538`
+  - `gt_codec_pos_mae_m = 0.004207`
+  - `gt_codec_endpoint_drift_m = 0.016274`
+
+Current token-policy state:
+
+- failed frozen-OAT policy control:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_discrete_frozen_oat1/steps_300`
+  - predicted unique token sequences: `1 / 24`
+  - repeated-sequence fraction: `0.958333`
+  - full endpoint drift: `1.614899 m`
+- partial token-warmup recovery:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_discrete_tokenwarm1/steps_1000`
+  - predicted unique token sequences: `5 / 24`
+  - repeated-sequence fraction: `0.791667`
+  - token accuracy beats majority baseline: `0.052083 > 0.03125`
+  - full continuous-vs-discrete position MAE: `0.046055 m`
+  - full endpoint drift: `0.180139 m`
+- token-branch overfit gate:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_discrete_tokenwarm1/token_overfit_probe_4ex_step300.json`
+  - final token accuracy: `1.0`
+  - final sequence accuracy: `1.0`
+  - final token loss: `0.000123`
+- longer token-warmup follow-up:
+  - `_workspace/starvla_runs/dhb_starvla_qwen_discrete_tokenwarm2`
+  - `steps_1000`: `8 / 24` unique predicted sequences,
+    `0.083333 / 0.03125` token accuracy vs majority,
+    `0.479050 m` full endpoint drift
+  - `steps_2000`: `11 / 24` unique predicted sequences,
+    `0.072917 / 0.03125` token accuracy vs majority,
+    `0.295894 m` full endpoint drift
+  - `steps_3000`: `9 / 24` unique predicted sequences,
+    `0.067708 / 0.03125` token accuracy vs majority,
+    `0.189869 m` full endpoint drift
+
+Discrete-token interpretation:
+
+- the tokenizer and GT-token codec are validated enough to support an invariant
+  compression/reconstruction claim
+- the token branch can memorize diverse labels, so the current failure is not a
+  decode or normalization hard bug
+- held-out token prediction is now non-collapsed but still not aligned enough
+  with executable trajectory fidelity
+- the best executable discrete checkpoint remains
+  `tokenwarm1/steps_1000`, and no token-native checkpoint is ready for a
+  closed-loop success claim
+
+Claim discipline:
+
+- safe: DHB invariant trajectories can be compressed into discrete OAT tokens
+  and decoded back into executable trajectories with millimeter-scale position
+  error on held-out demo chunks.
+- safe: the direct StarVLA token policy is no longer a total fixed-sequence
+  failure after token warmup.
+- not safe yet: discrete token-native execution improves closed-loop task
+  success or should replace the continuous DHB policy in the headline results.
   - `_workspace/validation_videos/starvla_embodik_step200/offset_0.0cm_seed_0_high_gains.mp4`
 
 Interpretation:
@@ -1161,3 +1245,154 @@ The next highest-value move is now:
     path
   - use the held-out offline sweep as the gate before any integrated or live
     rollout
+
+### 2026-04-24 Update: Corrected Supervision Still Reveals OAT Token Collapse
+
+- The old supervised-token bug is fixed:
+  - windowed exported token targets are ignored by default
+  - labels are derived from the active action-head OAT tokenizer
+  - ambiguous float `(B, T, K)` token windows are rejected
+- Corrected short runs:
+  - `dhb_starvla_qwen_discrete_supervised_short2`
+  - `dhb_starvla_qwen_discrete_supervised_short3`
+- New offline-sweep result:
+  - predicted OAT tokens collapse to all ID `7`
+  - derived GT OAT tokens also collapse to all ID `7`
+  - `avg_token_accuracy = 1.0` is therefore a degenerate match, not evidence
+    of useful token prediction
+- Interpretation:
+  - the current blocker is the OAT tokenizer itself, not the closed-loop
+    controller
+  - do not run embodied discrete-token rollout until standalone tokenizer
+    diversity gates pass
+- New model-side support:
+  - tokenizer diagnostics now report token histogram, global/per-position
+    diversity, collapse fraction, entropy, and prefix reconstruction metrics
+  - the action head exposes `lambda_oat_register_diversity` for differentiable
+    anti-collapse pressure during the next discrete retrain
+- Standalone gate smoke:
+  - tiny CPU run loads `libero_lerobot` successfully and writes tokenizer JSON /
+    checkpoint artifacts
+  - with strict defaults, the smoke correctly fails the gate because it has
+    only `7` unique tokens and negative reconstruction `R2`
+  - this is expected for a two-step smoke and confirms the gate no longer
+    accepts average-prior reconstructions
+- Standalone gate result:
+  - run directory:
+    `_workspace/starvla_runs/oat_tokenizer_gate1`
+  - command used normalized DHB chunks, `emb_dim=256`, depth `2`, `1000`
+    tokenizer-only train steps, and `lambda_register_diversity=0.01`
+  - held-out eval:
+    - `num_eval_chunks = 256`
+    - reconstruction `R2 = 0.2941`
+    - reconstruction `MAE = 0.06094`
+    - `unique_token_count = 550`
+    - `effective_num_tokens = 306.13`
+    - `collapsed_sample_fraction = 0.0`
+    - per-position unique counts:
+      `[175, 169, 141, 155, 141, 130, 131, 16]`
+  - strict gate passed
+- Next discrete-token step:
+  - integrate the frozen tokenizer source from `oat_tokenizer_gate1` into the
+    StarVLA discrete action head / label path
+  - avoid moving-tokenizer self-labeling during StarVLA fine-tuning
+  - only return to embodied discrete execution after both standalone tokenizer
+    and StarVLA offline sweep gates pass
+
+### 2026-04-24 Update: Frozen OAT Policy Recovery And Remaining Gap
+
+- Frozen tokenizer integration is now in place:
+  - StarVLA loads `oat_tokenizer_gate1` weights and normalization stats
+  - offline GT-token derivation uses the same normalized backend path as
+    training
+  - teacher-forced GT-token codec remains strong:
+    - `gt_codec_pos_mae_m = 0.004207`
+    - `gt_codec_endpoint_drift_m = 0.016274`
+- The first frozen-OAT supervised policy still collapsed:
+  - `dhb_starvla_qwen_discrete_frozen_oat1/steps_300`
+  - `1 / 24` unique predicted token sequences
+  - `1.614899 m` full endpoint drift
+- `tokenwarm1/steps_1000` is the current best executable discrete offline
+  checkpoint:
+  - `5 / 24` unique predicted token sequences
+  - `10` predicted global token IDs
+  - `0.052083 / 0.03125` token accuracy vs majority baseline
+  - `0.046055 m` full position MAE
+  - `0.180139 m` full endpoint drift
+- The token branch overfit probe passed on four fixed examples:
+  - final token accuracy `1.0`
+  - final sequence accuracy `1.0`
+  - final token loss `0.000123`
+  - predicted global token IDs matched target count `30 / 30`
+- Longer `tokenwarm2` training improves diversity but not executable fidelity
+  enough:
+  - `steps_1000`: `8 / 24` unique sequences, `0.479050 m` endpoint drift
+  - `steps_2000`: `11 / 24` unique sequences, `0.295894 m` endpoint drift
+  - `steps_3000`: `9 / 24` unique sequences, `0.189869 m` endpoint drift
+- Harness-agent review found a generic trainer risk:
+  - the completed tokenwarm runs used `train_starvla.py`, which backprops only
+    `action_loss` and logs component metrics detached
+  - `train_unified.py` could backprop every returned tensor, including
+    component metrics, so it has been patched to optimize only true loss keys
+    and log metrics separately
+- Warm-start loader now preserves configured frozen OAT tokenizers when the
+  checkpoint codebook shape changes:
+  - if `action_model.backend.oat.quantizer.implicit_codebook` shape differs,
+    all old `action_model.backend.oat.*` tensors are skipped
+  - if `oat_token_head` shape differs, all old `oat_token_*` tensors are
+    skipped so the token branch starts fresh for the new codebook
+- Reduced-codebook OAT probes:
+  - `fsq4x4x4x4`: 256-way codebook, 8 registers, `R2 = 0.244400`,
+    `218` unique IDs, failed because final-register unique count is `1`
+  - `fsq4x4x4x4_k7`: 256-way codebook, 7 registers, `R2 = 0.209199`,
+    `220` unique IDs, failed because final-register unique count is `1`
+- First reduced-codebook StarVLA policy warmup:
+  - run directory:
+    `_workspace/starvla_runs/dhb_starvla_qwen_discrete_fsq4_tokenwarm1`
+  - warm-started from `tokenwarm1/steps_1000`, while preserving the new
+    configured 256-way frozen OAT tokenizer and reinitializing incompatible
+    token-head weights
+  - offline sweep:
+    - `8 / 24` unique predicted token sequences
+    - `13` predicted global token IDs
+    - `0.104167 / 0.067708` token accuracy vs majority baseline
+    - `0.097732 m` full position MAE
+    - `0.357411 m` full endpoint drift
+    - GT-token codec remains strong:
+      `0.003903 m` position MAE and `0.015620 m` endpoint drift
+  - discrete predict smoke passed with emitted token sequence and
+    `pred_invariants_execute_shape = [1, 8, 8]`
+- Token-only reduced-codebook follow-up:
+  - run directory:
+    `_workspace/starvla_runs/dhb_starvla_qwen_discrete_fsq4_tokenonly1`
+  - warm-started from `fsq4_tokenwarm1/steps_1000`
+  - froze Qwen, the VLA-to-trajectory decoder, state projection, invariant
+    head, and action head; optimized token CE only
+  - offline sweep:
+    - `8 / 24` unique predicted token sequences
+    - `13` predicted global token IDs
+    - `0.114583 / 0.067708` token accuracy vs majority baseline
+    - `0.098059 m` full position MAE
+    - `0.358955 m` full endpoint drift
+    - GT-token codec unchanged:
+      `0.003903 m` position MAE and `0.015620 m` endpoint drift
+  - discrete predict smoke passed with emitted token sequence and
+    `pred_invariants_execute_shape = [1, 8, 8]`
+
+Interpretation:
+
+- the discrete invariant codec is now a valid representation result
+- direct token-policy learning is real but remains a policy gap
+- exact token CE over the current 1000-way FSQ label space appears too
+  high-cardinality for the current low-data warmup
+- token-only warmup is now tested: it improves token accuracy slightly but does
+  not recover endpoint fidelity
+- a naive smaller global codebook is promising but insufficient because it
+  produces a static tail register; the target should be trimmed/factorized by
+  position
+- the 256-way policy probe clears a loose offline token-learning gate, but it
+  still loses to `tokenwarm1/steps_1000` on full endpoint drift
+- the next discrete-token experiment should be factorized/trimmed token CE,
+  not more same-objective CE-only training
+- do not make a closed-loop token-native success claim until a checkpoint beats
+  `tokenwarm1/steps_1000` on full endpoint drift and passes embodied smoke

@@ -25,9 +25,29 @@ framework:
     future_action_window_size: 7
     past_action_window_size: 0
     action_horizon: 8
-    use_oat_quantizer: true
+    use_oat_quantizer: false
+    lambda_oat_autoencode: 0.0
     lambda_invariant: 1.0
-    lambda_action: 1.0
+    # Live execution decodes DHB invariants. Keep a small raw-action loss as an
+    # auxiliary grounding term so the shared temporal features stay tied to the
+    # demonstrated EE displacement direction/scale. Keep the target shift off by
+    # default: the shift=1 ablation reduced IK failures but regressed bowl reach.
+    lambda_action: 0.1
+    action_loss_target_shift: 0
+    terminal_loss_weight: 1.0
+    prefix_loss_steps: 4
+    prefix_loss_weight: 2.0
+    # Robust p95 absolute channel scales measured from 512 sampled LIBERO chunks.
+    # This prevents small translational DHB magnitude channels from disappearing
+    # inside raw MSE dominated by curvature/angular channels.
+    invariant_loss_channel_scale: [0.0131, 0.6738, 0.9503, 1.5458, 0.0211, 0.3344, 0.5446, 1.5968]
+    # Match temporal differences as well as values so constant invariant chunks
+    # are penalized directly.
+    lambda_invariant_delta: 2.0
+    # Feed each learned timestep query directly to the prediction heads. The
+    # Transformer decoder alone can collapse all chunk slots to the same feature
+    # when training with frozen VLM context; this keeps timestep identity visible.
+    head_query_residual_scale: 0.1
 
 datasets:
   vla_data:
@@ -36,7 +56,11 @@ datasets:
     data_mix: libero_spatial_dhbxr
     include_state: true
     state_history_window: 4
+    recompute_dhb_invariants_from_actions: true
     action_type: delta_qpos
+    action_mode: abs  # Converter action columns already store EE deltas; do not delta them again.
+    action_window_size: 8
+    terminal_chunk_prob: 0.0
     sequential_step_sampling: false
     CoT_prompt: "Your task is {instruction}. To identify the key objects for your task. Locate their bounding boxes in [x1,y1,x2,y2] format."
     CoT_answer: bbox

@@ -33,8 +33,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from dhb_xr.integration.vla.chunk_rollout import compute_motion_metrics
-
 LIBERO_GRIPPER_OPEN_QPOS_THRESHOLD = 0.015
 
 LIBERO_IMPORT_CANDIDATES = [
@@ -72,6 +70,32 @@ DEFAULT_CHECKPOINT = str(Path(__file__).with_name("dhb_head_e2e_fix_smoke.pt"))
 # Inter-stage data files
 POSES_NPZ = "/tmp/dhb_embodik_poses.npz"
 JOINTS_NPZ = "/tmp/dhb_embodik_joints.npz"
+
+
+def poses_npz_path(args):
+    return getattr(args, "poses_npz", POSES_NPZ)
+
+
+def joints_npz_path(args):
+    return getattr(args, "joints_npz", JOINTS_NPZ)
+
+
+def demo_key_sort_key(key):
+    match = re.fullmatch(r"demo_(\d+)", str(key))
+    if match:
+        return (0, int(match.group(1)))
+    return (1, str(key))
+
+
+def sorted_demo_keys(hdf5_group):
+    return sorted(hdf5_group.keys(), key=demo_key_sort_key)
+
+
+def demo_key_for_episode(demo_keys, episode_idx):
+    candidate = f"demo_{int(episode_idx)}"
+    if candidate in demo_keys:
+        return candidate
+    return demo_keys[int(episode_idx) % len(demo_keys)]
 
 
 def build_stage_summary_path(args, stage_name):
@@ -212,8 +236,9 @@ def stage_encode_gt(args):
     gripper_cmd = np.where(grip_qpos > LIBERO_GRIPPER_OPEN_QPOS_THRESHOLD, -1.0, 1.0)
 
     # Save
+    poses_path = poses_npz_path(args)
     np.savez(
-        POSES_NPZ,
+        poses_path,
         **all_trajectories,
         gripper=gripper_cmd,
         init_state=init_state,
@@ -222,7 +247,7 @@ def stage_encode_gt(args):
         seeds=np.array([seeds]),
         source="gt_roundtrip",
     )
-    print(f"\nSaved {len(all_trajectories)//2} trajectories to {POSES_NPZ}")
+    print(f"\nSaved {len(all_trajectories)//2} trajectories to {poses_path}")
     print("Next: run --stage ik in pixi env")
 
 
@@ -268,7 +293,7 @@ def stage_predict(args):
 
     # Load ALL demos for multi-seed evaluation
     f = h5py.File(DEMO_HDF5, "r")
-    demo_keys = sorted(f["data"].keys())
+    demo_keys = sorted_demo_keys(f["data"])
     n_available = len(demo_keys)
     f.close()
 
@@ -430,8 +455,9 @@ def stage_predict(args):
         all_grippers[f"gripper_seed{seed}"] = gripper_cmd
         all_init_states[f"init_state_seed{seed}"] = init_state
 
+    poses_path = poses_npz_path(args)
     np.savez(
-        POSES_NPZ,
+        poses_path,
         **all_trajectories,
         **all_grippers,
         **all_init_states,
@@ -440,7 +466,7 @@ def stage_predict(args):
         seeds=np.array([seeds]),
         source="predicted_multidemo",
     )
-    print(f"\nSaved {len(all_trajectories)//2} trajectories to {POSES_NPZ}")
+    print(f"\nSaved {len(all_trajectories)//2} trajectories to {poses_path}")
     write_debug_summary(build_stage_summary_path(args, "predict"), {
         "stage": "predict",
         "checkpoint": args.checkpoint,
@@ -468,7 +494,7 @@ def stage_ik(args):
     print("=" * 70)
 
     # Load poses from stage 1
-    data = np.load(POSES_NPZ, allow_pickle=True)
+    data = np.load(poses_npz_path(args), allow_pickle=True)
     offsets_cm = data["offsets_cm"]
     seeds = int(data["seeds"][0])
     source = str(data["source"])
@@ -504,18 +530,27 @@ def stage_ik(args):
         q_traj = np.zeros((len(ee_positions), robot.nq))
         q_current = q0_seed.copy()
         errors = []
+        primary_failures = 0
+        fallback_repairs = 0
+        fallback_alphas = []
 
-        for t in range(len(ee_positions)):
-            target_pos = ee_positions[t] - base_offset_seed
+        robot.update_configuration(q_current)
+        prev_reachable_local = np.array(robot.get_frame_pose("panda_hand_tcp").translation, dtype=float)
 
-            # Build target pose with current orientation for continuity
-            robot.update_configuration(q_current)
+        def solve_one(start_q, target_world):
+            target_pos = target_world - base_offset_seed
+
+            # Build target pose with current orientation for continuity.
+            robot.update_configuration(start_q)
             current_rot = np.array(robot.get_frame_pose("panda_hand_tcp").rotation, dtype=float)
             target_T = np.eye(4, order="F")
             target_T[:3, :3] = current_rot
             target_T[:3, 3] = target_pos
+            return solver.solve_position(start_q, target_T, "panda_hand_tcp", ik_opts)
 
-            result = solver.solve_position(q_current, target_T, "panda_hand_tcp", ik_opts)
+        for t in range(len(ee_positions)):
+            desired_world = ee_positions[t]
+            result = solve_one(q_current, desired_world)
             if result.status == embodik.SolverStatus.SUCCESS:
                 q_solution = np.array(result.q_solution)
                 q_traj[t] = q_solution
@@ -524,13 +559,40 @@ def stage_ik(args):
                 # Verify FK
                 robot.update_configuration(q_solution)
                 fk = np.array(robot.get_frame_pose("panda_hand_tcp").translation, dtype=float)
+                prev_reachable_local = fk.copy()
                 fk_world = fk + base_offset_seed
                 err = np.linalg.norm(fk_world - ee_positions[t]) * 1000
                 errors.append(err)
             else:
-                print(f"  WARNING: IK failed at t={t}, status={result.status}")
-                q_traj[t] = q_current.copy()
-                errors.append(float("nan"))
+                primary_failures += 1
+                repaired = False
+                if args.ik_line_search_fallback:
+                    prev_world = prev_reachable_local + base_offset_seed
+                    for alpha in np.linspace(
+                        1.0,
+                        max(0.0, float(args.ik_line_search_min_alpha)),
+                        max(2, int(args.ik_line_search_steps)),
+                    )[1:]:
+                        candidate_world = prev_world + float(alpha) * (desired_world - prev_world)
+                        fallback_result = solve_one(q_current, candidate_world)
+                        if fallback_result.status == embodik.SolverStatus.SUCCESS:
+                            q_solution = np.array(fallback_result.q_solution)
+                            q_traj[t] = q_solution
+                            q_current = q_solution.copy()
+                            robot.update_configuration(q_solution)
+                            fk = np.array(robot.get_frame_pose("panda_hand_tcp").translation, dtype=float)
+                            prev_reachable_local = fk.copy()
+                            fk_world = fk + base_offset_seed
+                            err = np.linalg.norm(fk_world - desired_world) * 1000
+                            errors.append(err)
+                            fallback_repairs += 1
+                            fallback_alphas.append(float(alpha))
+                            repaired = True
+                            break
+                if not repaired:
+                    print(f"  WARNING: IK failed at t={t}, status={result.status}")
+                    q_traj[t] = q_current.copy()
+                    errors.append(float("nan"))
 
             if t % 20 == 0 or t == len(ee_positions) - 1:
                 robot.update_configuration(q_traj[t])
@@ -540,8 +602,18 @@ def stage_ik(args):
 
         errors = np.array(errors)
         print(f"  {label} IK: mean_err={np.nanmean(errors):.2f}mm, max_err={np.nanmax(errors):.2f}mm, "
-              f"failures={np.sum(np.isnan(errors))}/{len(errors)}")
-        return q_traj, errors
+              f"failures={np.sum(np.isnan(errors))}/{len(errors)}, "
+              f"primary_failures={primary_failures}, fallback_repairs={fallback_repairs}")
+        return q_traj, errors, {
+            "ik_primary_failures": int(primary_failures),
+            "ik_fallback_repairs": int(fallback_repairs),
+            "ik_fallback_alpha_mean": (
+                float(np.mean(fallback_alphas)) if fallback_alphas else None
+            ),
+            "ik_fallback_alpha_min": (
+                float(np.min(fallback_alphas)) if fallback_alphas else None
+            ),
+        }
 
     # Solve IK for all trajectories
     all_joints = {}
@@ -553,10 +625,10 @@ def stage_ik(args):
     for seed in range(seeds):
         episode_key = f"episode_idx_seed{seed}"
         if episode_key in data:
-            demo_idx = int(np.asarray(data[episode_key]).reshape(-1)[0]) % len(demo_keys)
+            episode_idx = int(np.asarray(data[episode_key]).reshape(-1)[0])
         else:
-            demo_idx = seed % len(demo_keys)
-        demo_key = demo_keys[demo_idx]
+            episode_idx = seed
+        demo_key = demo_key_for_episode(demo_keys, episode_idx)
         demo_joint = all_demo_joints[demo_key]
         demo_ee = all_demo_ee_pos[demo_key]
 
@@ -567,7 +639,7 @@ def stage_ik(args):
         base_offset_seed = demo_ee[0] - fk_tcp_t0
         seed_ik_configs[seed] = (q0_seed, base_offset_seed)
         print(
-            f"  Seed {seed} ({demo_key}, episode_idx={demo_idx}): "
+            f"  Seed {seed} ({demo_key}, episode_idx={episode_idx}): "
             f"base_offset_Z={base_offset_seed[2]:.3f}"
         )
 
@@ -579,7 +651,7 @@ def stage_ik(args):
             label = f"offset={offset_cm}cm seed={seed}"
             print(f"\n--- {label} ({len(ee_pos)} steps) ---")
 
-            q_traj, errors = solve_trajectory(ee_pos, q0_seed, base_offset_seed, label)
+            q_traj, errors, repair_stats = solve_trajectory(ee_pos, q0_seed, base_offset_seed, label)
             all_joints[f"{key}_joints"] = q_traj
             all_errors[f"{key}_ik_errors"] = errors
             debug_rows.append({
@@ -589,6 +661,7 @@ def stage_ik(args):
                 "ik_mean_err_mm": float(np.nanmean(errors)),
                 "ik_max_err_mm": float(np.nanmax(errors)),
                 "ik_failures": int(np.sum(np.isnan(errors))),
+                **repair_stats,
             })
 
     # Pass through per-seed grippers and init states
@@ -598,8 +671,9 @@ def stage_ik(args):
             extra[k] = data[k]
 
     # Save (use seed 0's base_offset as reference)
+    joints_path = joints_npz_path(args)
     np.savez(
-        JOINTS_NPZ,
+        joints_path,
         **all_joints,
         **all_errors,
         **extra,
@@ -610,7 +684,7 @@ def stage_ik(args):
         seeds=np.array([seeds]),
         source=source,
     )
-    print(f"\nSaved joint trajectories to {JOINTS_NPZ}")
+    print(f"\nSaved joint trajectories to {joints_path}")
     write_debug_summary(build_stage_summary_path(args, "ik"), {
         "stage": "ik",
         "offsets_cm": list(map(float, offsets_cm)),
@@ -633,13 +707,14 @@ def stage_sim(args):
     import h5py
     import imageio.v2 as imageio
     from libero.libero.envs.env_wrapper import OffScreenRenderEnv
+    from dhb_xr.integration.vla.chunk_rollout import compute_motion_metrics
 
     print("=" * 70)
     print("STAGE 3: LIBERO sim execution (JOINT_POSITION)")
     print("=" * 70)
 
     # Load joint trajectories
-    data = np.load(JOINTS_NPZ, allow_pickle=True)
+    data = np.load(joints_npz_path(args), allow_pickle=True)
     offsets_cm = data["offsets_cm"]
     seeds = int(data["seeds"][0])
     gripper_default = data["gripper"]
@@ -653,7 +728,7 @@ def stage_sim(args):
         "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate_demo.hdf5"
     )
     with h5py.File(dpath) as f:
-        demo_keys = sorted(f["data"].keys())
+        demo_keys = sorted_demo_keys(f["data"])
         all_init_states = [np.array(f["data"][k]["states"][0])
                           for k in demo_keys]
 
@@ -990,10 +1065,13 @@ def stage_sim(args):
 
     # Run all trajectories
     results_summary = {}
+    default_results_summary = {}
+    retry_assisted_summary = {}
     sim_rows = []
     for offset_cm in offsets_cm:
         offset_m = offset_cm / 100.0
-        successes = 0
+        default_successes = 0
+        retry_assisted_successes = 0
         total = 0
 
         for seed in range(seeds):
@@ -1011,7 +1089,12 @@ def stage_sim(args):
                 init_state = data[seed_init_key]
             else:
                 init_state = init_state_base
-            demo_key = demo_keys[seed] if seed < len(demo_keys) else f"seed_{seed}"
+            episode_key = f"episode_idx_seed{seed}"
+            if episode_key in data:
+                episode_idx = int(np.asarray(data[episode_key]).reshape(-1)[0])
+                demo_key = demo_key_for_episode(demo_keys, episode_idx)
+            else:
+                demo_key = demo_keys[seed] if seed < len(demo_keys) else f"seed_{seed}"
             # Use per-seed gripper if available
             gripper_key = f"gripper_seed{seed}"
             gripper = data[gripper_key] if gripper_key in data else gripper_default
@@ -1046,7 +1129,8 @@ def stage_sim(args):
             })
 
             if result["success"]:
-                successes += 1
+                default_successes += 1
+                retry_assisted_successes += 1
             total += 1
 
             # If first attempt fails, try higher gains
@@ -1079,13 +1163,28 @@ def stage_sim(args):
                     **result2,
                 })
                 if result2["success"]:
-                    successes += 1  # Count the retry success
-                    # Undo the failure count
-                    successes = successes  # Already incremented above
+                    retry_assisted_successes += 1
 
-        rate = successes / max(total, 1) * 100
-        results_summary[f"{offset_cm}cm"] = {"successes": successes, "total": total, "rate": rate}
-        print(f"\n  === offset={offset_cm}cm: {successes}/{total} = {rate:.0f}% ===")
+        default_rate = default_successes / max(total, 1) * 100
+        retry_rate = retry_assisted_successes / max(total, 1) * 100
+        key = f"{offset_cm}cm"
+        default_results_summary[key] = {
+            "successes": default_successes,
+            "total": total,
+            "rate": default_rate,
+        }
+        retry_assisted_summary[key] = {
+            "successes": retry_assisted_successes,
+            "total": total,
+            "rate": retry_rate,
+        }
+        # Keep the legacy field as default-attempt success for headline tables.
+        results_summary[key] = default_results_summary[key]
+        print(
+            f"\n  === offset={offset_cm}cm: default {default_successes}/{total} = "
+            f"{default_rate:.0f}%, retry-assisted {retry_assisted_successes}/{total} = "
+            f"{retry_rate:.0f}% ==="
+        )
 
     # Final summary
     print("\n" + "=" * 70)
@@ -1098,6 +1197,8 @@ def stage_sim(args):
         "stage": "sim",
         "source": source,
         "summary": results_summary,
+        "default_summary": default_results_summary,
+        "retry_assisted_summary": retry_assisted_summary,
         "runs": sim_rows,
     })
 
@@ -1123,6 +1224,16 @@ if __name__ == "__main__":
                         help="Base path for per-stage debug JSON summaries")
     parser.add_argument("--video-dir", default="_workspace/validation_videos",
                         help="Directory for saved sim-stage videos")
+    parser.add_argument("--poses-npz", default=POSES_NPZ,
+                        help="Inter-stage pose NPZ path for encode_gt/predict output and IK input")
+    parser.add_argument("--joints-npz", default=JOINTS_NPZ,
+                        help="Inter-stage joint NPZ path for IK output and sim input")
+    parser.add_argument("--ik-line-search-fallback", action="store_true",
+                        help="Repair infeasible IK targets by backing off along the last-reachable to desired target segment.")
+    parser.add_argument("--ik-line-search-steps", type=int, default=8,
+                        help="Number of alpha samples for IK line-search fallback.")
+    parser.add_argument("--ik-line-search-min-alpha", type=float, default=0.0,
+                        help="Minimum segment fraction to try for IK line-search fallback.")
     parser.add_argument("--close-gate-xy-m", type=float, default=0.05,
                         help="Only allow first close when EE XY is within this distance of the bowl")
     parser.add_argument("--close-gate-z-m", type=float, default=0.05,

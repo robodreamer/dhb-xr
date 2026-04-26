@@ -51,6 +51,46 @@ def _load_rollout_checkpoint(model, checkpoint_path: str) -> None:
     model.load_state_dict(state_dict, strict=True)
 
 
+def _extract_target_invariants(example: dict, horizon: int):
+    linear = example.get("dhb.linear_invariants")
+    angular = example.get("dhb.angular_invariants")
+    if linear is None or angular is None:
+        direct = example.get("dhb_invariants") or example.get("invariants") or example.get("gt_invariants")
+        if direct is None:
+            return None
+        target = torch.as_tensor(direct, dtype=torch.float32)
+    else:
+        target = torch.cat(
+            [
+                torch.as_tensor(linear, dtype=torch.float32),
+                torch.as_tensor(angular, dtype=torch.float32),
+            ],
+            dim=-1,
+        )
+    return target[-horizon:]
+
+
+def _finite_stats(arr):
+    import numpy as np
+
+    values = np.asarray(arr, dtype=np.float32)
+    return {
+        "mean": float(values.mean()),
+        "std": float(values.std()),
+        "min": float(values.min()),
+        "max": float(values.max()),
+    }
+
+
+def _temporal_l2_mean(arr):
+    import numpy as np
+
+    values = np.asarray(arr, dtype=np.float32)
+    if values.shape[0] < 2:
+        return 0.0
+    return float(np.linalg.norm(np.diff(values, axis=0), axis=-1).mean())
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config_yaml", required=True)
@@ -104,6 +144,7 @@ def main() -> None:
             if hasattr(model, "predict_trajectory")
             else None
         )
+        forward_metrics = model.forward(batch)
     end.record()
     torch.cuda.synchronize(device)
 
@@ -154,6 +195,13 @@ def main() -> None:
         summary["target_first_action"] = target_arr[0].tolist()
         summary["target_last_action"] = target_arr[-1].tolist()
         summary["chunk_mae"] = float(np.abs(pred_arr - target_arr).mean())
+        pred_action_delta_l2 = _temporal_l2_mean(pred_arr)
+        target_action_delta_l2 = _temporal_l2_mean(target_arr)
+        summary["pred_action_step_delta_l2_mean"] = pred_action_delta_l2
+        summary["target_action_step_delta_l2_mean"] = target_action_delta_l2
+        summary["action_temporal_l2_ratio"] = float(
+            pred_action_delta_l2 / max(target_action_delta_l2, 1e-8)
+        )
         if batch and "dhb.close_contact" in batch[0]:
             summary["target_close_contact"] = np.asarray(batch[0]["dhb.close_contact"], dtype=np.float32)[
                 -actions.shape[1] :
@@ -170,6 +218,76 @@ def main() -> None:
             summary["target_gripper_state"] = np.asarray(batch[0]["dhb.gripper_state"], dtype=np.int64)[
                 -actions.shape[1] :
             ].tolist()
+        if batch and "dhb.action_valid_mask" in batch[0]:
+            valid_mask = np.asarray(batch[0]["dhb.action_valid_mask"], dtype=np.float32)[-actions.shape[1] :]
+            summary["target_action_valid_mask"] = valid_mask.tolist()
+            summary["valid_action_fraction"] = float(valid_mask.mean())
+    if traj is not None and "pred_invariants" in traj:
+        import numpy as np
+
+        pred_inv = np.asarray(traj["pred_invariants"][0], dtype=np.float32)
+        summary["pred_invariants_shape"] = list(traj["pred_invariants"].shape)
+        summary["pred_inv_first"] = pred_inv[0].tolist()
+        summary["pred_inv_last"] = pred_inv[-1].tolist()
+        summary["pred_inv_stats"] = _finite_stats(pred_inv)
+        summary["pred_inv_step_delta_l2_mean"] = _temporal_l2_mean(pred_inv)
+        summary["pred_inv_temporal_std_mean"] = float(pred_inv.std(axis=0).mean())
+        summary["pred_inv_first_last_l2"] = float(np.linalg.norm(pred_inv[-1] - pred_inv[0]))
+        target_inv = _extract_target_invariants(batch[0], pred_inv.shape[0])
+        if target_inv is not None:
+            target_inv_arr = target_inv.numpy().astype(np.float32)
+            inv_abs = np.abs(pred_inv - target_inv_arr)
+            inv_l2 = np.linalg.norm(pred_inv - target_inv_arr, axis=-1)
+            summary["target_inv_first"] = target_inv_arr[0].tolist()
+            summary["target_inv_last"] = target_inv_arr[-1].tolist()
+            summary["target_inv_stats"] = _finite_stats(target_inv_arr)
+            target_inv_delta_l2 = _temporal_l2_mean(target_inv_arr)
+            summary["target_inv_step_delta_l2_mean"] = target_inv_delta_l2
+            summary["target_inv_temporal_std_mean"] = float(target_inv_arr.std(axis=0).mean())
+            summary["target_inv_first_last_l2"] = float(np.linalg.norm(target_inv_arr[-1] - target_inv_arr[0]))
+            summary["inv_temporal_l2_ratio"] = float(
+                summary["pred_inv_step_delta_l2_mean"] / max(target_inv_delta_l2, 1e-8)
+            )
+            summary["inv_temporal_std_ratio"] = float(
+                summary["pred_inv_temporal_std_mean"]
+                / max(summary["target_inv_temporal_std_mean"], 1e-8)
+            )
+            summary["inv_mae"] = float(inv_abs.mean())
+            summary["inv_max_abs"] = float(inv_abs.max())
+            summary["inv_l2_per_step_mean"] = float(inv_l2.mean())
+            summary["inv_l2_per_step_max"] = float(inv_l2.max())
+            if batch and "dhb.action_valid_mask" in batch[0]:
+                valid_mask = np.asarray(batch[0]["dhb.action_valid_mask"], dtype=np.float32)[-pred_inv.shape[0] :]
+                valid = valid_mask > 0.5
+                if bool(valid.any()):
+                    summary["valid_inv_mae"] = float(inv_abs[valid].mean())
+                    summary["valid_inv_l2_per_step_mean"] = float(inv_l2[valid].mean())
+                    summary["valid_target_inv_stats"] = _finite_stats(target_inv_arr[valid])
+                    summary["valid_pred_inv_stats"] = _finite_stats(pred_inv[valid])
+                    if int(valid.sum()) > 1:
+                        valid_pred_delta_l2 = _temporal_l2_mean(pred_inv[valid])
+                        valid_target_delta_l2 = _temporal_l2_mean(target_inv_arr[valid])
+                        summary["valid_pred_inv_step_delta_l2_mean"] = valid_pred_delta_l2
+                        summary["valid_target_inv_step_delta_l2_mean"] = valid_target_delta_l2
+                        summary["valid_inv_temporal_l2_ratio"] = float(
+                            valid_pred_delta_l2 / max(valid_target_delta_l2, 1e-8)
+                        )
+    for key in (
+        "action_loss",
+        "loss_inv",
+        "loss_inv_raw",
+        "loss_inv_delta",
+        "loss_act",
+        "loss_contact",
+        "loss_contact_phase",
+        "loss_gripper_state",
+        "oat_loss",
+        "loss_oat_token",
+    ):
+        if key in forward_metrics:
+            value = forward_metrics[key]
+            if value is not None:
+                summary[f"forward_{key}"] = float(value.detach().float().cpu().item())
     if traj is not None and "pred_oat_tokens" in traj:
         summary["pred_oat_tokens_shape"] = list(traj["pred_oat_tokens"].shape)
         summary["pred_oat_tokens_first"] = traj["pred_oat_tokens"][0].tolist()

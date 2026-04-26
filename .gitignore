@@ -91,5 +91,10 @@ _workspace/*.log
 _workspace/validation_videos/
 _workspace/*_debug*.json
 _workspace/*_sweep*.json
+_workspace/starvla_runs/
+_workspace/paper_eval/
+_workspace/starvla_example_videos/
+results/
+.remember/
 .codex
 .codex/

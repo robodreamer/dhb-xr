@@ -19,6 +19,7 @@ framework:
     hidden_dim: 1024
     action_dim: 7
     state_dim: 8
+    state_history_window: 4
     invariant_dim: 8
     contact_dim: 2
     num_oat_tokens: 8
@@ -41,6 +42,8 @@ datasets:
     data_root_dir: /home/andypark/Projects/data
     data_mix: libero_spatial_dhbxr
     include_state: true
+    state_history_window: 4
+    recompute_dhb_invariants_from_actions: true
     action_type: delta_qpos
     sequential_step_sampling: false
     terminal_chunk_prob: 0.2

@@ -74,11 +74,30 @@ if HAS_TORCH:
             use_oat: bool = False,
             oat_num_registers: int = 8,
             oat_fsq_levels: Optional[list] = None,
+            oat_emb_dim: Optional[int] = None,
+            oat_latent_dim: int = 4,
+            oat_encoder_depth: int = 2,
+            oat_decoder_depth: int = 2,
+            oat_num_heads: Optional[int] = None,
+            oat_init_seed: Optional[int] = None,
+            oat_checkpoint_path: Optional[str] = None,
+            freeze_oat: bool = False,
             supervise_oat_tokens: bool = False,
             lambda_oat_token: float = 0.0,
+            lambda_oat_autoencode: float = 0.1,
+            lambda_oat_register_diversity: float = 0.0,
+            oat_autoencode_target: str = "pred",
             train_with_discrete_oat_tokens: bool = False,
+            use_exported_oat_tokens: bool = False,
+            oat_token_prefix_train_prob: float = 0.0,
+            oat_token_prefix_min_k: int = 1,
             action_dim: Optional[int] = None,
             terminal_loss_weight: float = 1.0,
+            prefix_loss_steps: int = 0,
+            prefix_loss_weight: float = 1.0,
+            invariant_loss_channel_scale: Optional[Sequence[float]] = None,
+            lambda_invariant_delta: float = 0.0,
+            head_query_residual_scale: float = 0.0,
             contact_dim: int = 0,
             lambda_contact: float = 0.0,
             contact_pos_weight: float | Sequence[float] = 1.0,
@@ -100,6 +119,21 @@ if HAS_TORCH:
             contact_condition_on_phase: bool = False,
             gripper_state_condition_on_phase: bool = False,
             action_loss_ignore_gripper: bool = False,
+            action_loss_target_shift: int = 0,
+            action_loss_channel_weight: Optional[Sequence[float]] = None,
+            use_action_residual_adapter: bool = False,
+            action_residual_hidden_dim: Optional[int] = None,
+            action_residual_scale: float = 1.0,
+            lambda_action_residual_l2: float = 0.0,
+            use_action_closed_residual_adapter: bool = False,
+            action_closed_residual_hidden_dim: Optional[int] = None,
+            action_closed_residual_scale: float = 1.0,
+            action_closed_residual_gate_source: str = "state_gripper",
+            action_closed_residual_gripper_threshold: float = 0.015,
+            action_closed_residual_gate_temperature: float = 0.003,
+            action_closed_residual_hard_gate: bool = False,
+            action_closed_residual_zero_gripper_dim: bool = True,
+            lambda_action_closed_residual_l2: float = 0.0,
         ):
             super().__init__()
 
@@ -112,9 +146,20 @@ if HAS_TORCH:
             self.lambda_act = lambda_act
             self.supervise_oat_tokens = bool(supervise_oat_tokens)
             self.lambda_oat_token = float(lambda_oat_token)
+            self.lambda_oat_autoencode = float(lambda_oat_autoencode)
+            self.lambda_oat_register_diversity = float(lambda_oat_register_diversity)
+            self.oat_autoencode_target = str(oat_autoencode_target)
             self.train_with_discrete_oat_tokens = bool(train_with_discrete_oat_tokens)
+            self.use_exported_oat_tokens = bool(use_exported_oat_tokens)
+            self.oat_token_prefix_train_prob = float(oat_token_prefix_train_prob)
+            self.oat_token_prefix_min_k = int(oat_token_prefix_min_k)
+            self.freeze_oat = bool(freeze_oat)
             self.action_dim = action_dim
             self.terminal_loss_weight = terminal_loss_weight
+            self.prefix_loss_steps = max(0, int(prefix_loss_steps))
+            self.prefix_loss_weight = float(prefix_loss_weight)
+            self.lambda_invariant_delta = float(lambda_invariant_delta)
+            self.head_query_residual_scale = float(head_query_residual_scale)
             self.contact_dim = contact_dim
             self.lambda_contact = lambda_contact
             self.contact_pos_weight = contact_pos_weight
@@ -136,9 +181,86 @@ if HAS_TORCH:
             self.contact_condition_on_phase = contact_condition_on_phase
             self.gripper_state_condition_on_phase = gripper_state_condition_on_phase
             self.action_loss_ignore_gripper = action_loss_ignore_gripper
+            self.action_loss_target_shift = max(0, int(action_loss_target_shift))
+            self.use_action_residual_adapter = bool(use_action_residual_adapter)
+            self.action_residual_scale = float(action_residual_scale)
+            self.lambda_action_residual_l2 = float(lambda_action_residual_l2)
+            self.use_action_closed_residual_adapter = bool(use_action_closed_residual_adapter)
+            self.action_closed_residual_scale = float(action_closed_residual_scale)
+            self.action_closed_residual_gate_source = str(action_closed_residual_gate_source)
+            self.action_closed_residual_gripper_threshold = float(action_closed_residual_gripper_threshold)
+            self.action_closed_residual_gate_temperature = max(
+                float(action_closed_residual_gate_temperature),
+                1e-6,
+            )
+            self.action_closed_residual_hard_gate = bool(action_closed_residual_hard_gate)
+            self.action_closed_residual_zero_gripper_dim = bool(action_closed_residual_zero_gripper_dim)
+            self.lambda_action_closed_residual_l2 = float(lambda_action_closed_residual_l2)
+            if action_loss_channel_weight is None:
+                action_loss_weights = torch.ones(1, dtype=torch.float32)
+                self.action_loss_uses_channel_weight = False
+            else:
+                action_loss_weights = torch.as_tensor(
+                    list(action_loss_channel_weight),
+                    dtype=torch.float32,
+                )
+                if action_loss_weights.ndim != 1:
+                    raise ValueError("action_loss_channel_weight must be a 1D sequence")
+                if action_dim is not None and action_loss_weights.numel() not in {
+                    action_dim,
+                    max(action_dim - 1, 1),
+                }:
+                    raise ValueError(
+                        "action_loss_channel_weight must match action_dim or action_dim - 1 "
+                        f"when gripper is ignored; got {action_loss_weights.numel()} values "
+                        f"for action_dim={action_dim}"
+                    )
+                if torch.any(action_loss_weights < 0):
+                    raise ValueError("action_loss_channel_weight values must be non-negative")
+                if float(action_loss_weights.sum()) <= 0.0:
+                    raise ValueError("action_loss_channel_weight must contain at least one positive value")
+                self.action_loss_uses_channel_weight = True
+            self.register_buffer(
+                "action_loss_channel_weight",
+                action_loss_weights.view(1, 1, -1),
+            )
+            self.register_buffer(
+                "oat_norm_mean",
+                torch.zeros(1, 1, invariant_dim),
+            )
+            self.register_buffer(
+                "oat_norm_std",
+                torch.ones(1, 1, invariant_dim),
+            )
+            if invariant_loss_channel_scale is None:
+                inv_loss_scale = torch.ones(1, 1, invariant_dim)
+                self.invariant_loss_uses_channel_scale = False
+            else:
+                inv_loss_scale = torch.as_tensor(
+                    list(invariant_loss_channel_scale),
+                    dtype=torch.float32,
+                )
+                if inv_loss_scale.numel() != invariant_dim:
+                    raise ValueError(
+                        "invariant_loss_channel_scale must match invariant_dim="
+                        f"{invariant_dim}, got {inv_loss_scale.numel()} values"
+                    )
+                inv_loss_scale = inv_loss_scale.reshape(1, 1, invariant_dim).clamp_min(1e-6)
+                self.invariant_loss_uses_channel_scale = True
+            self.register_buffer("invariant_loss_channel_scale", inv_loss_scale)
+            self.oat_uses_normalization = False
 
             if self.contact_mode not in {"event", "gripper_state"}:
                 raise ValueError(f"Unsupported contact_mode={self.contact_mode!r}")
+            if self.action_closed_residual_gate_source not in {"none", "state_gripper"}:
+                raise ValueError(
+                    "action_closed_residual_gate_source must be 'none' or 'state_gripper', "
+                    f"got {self.action_closed_residual_gate_source!r}"
+                )
+            if self.oat_autoencode_target not in {"pred", "target", "both"}:
+                raise ValueError(
+                    "oat_autoencode_target must be 'pred', 'target', or 'both'"
+                )
             if self.contact_mode == "gripper_state":
                 if contact_loss_type == "cross_entropy" and contact_dim not in {0, 2}:
                     raise ValueError(
@@ -197,17 +319,61 @@ if HAS_TORCH:
             if use_oat:
                 try:
                     from dhb_xr.tokenization.oat_tokenizer import OATTokenizer
-                    self.oat = OATTokenizer(
-                        input_dim=invariant_dim,
-                        input_horizon=action_horizon,
-                        emb_dim=hidden_dim,
-                        latent_dim=4,
-                        num_registers=oat_num_registers,
-                        fsq_levels=oat_fsq_levels or [8, 5, 5, 5],
-                        encoder_depth=2,
-                        decoder_depth=2,
-                        num_heads=num_heads,
+                    oat_checkpoint = None
+                    if oat_checkpoint_path:
+                        oat_checkpoint = torch.load(oat_checkpoint_path, map_location="cpu")
+                    tokenizer_meta = (
+                        oat_checkpoint.get("tokenizer", {})
+                        if isinstance(oat_checkpoint, dict)
+                        else {}
                     )
+                    ckpt_normalization = (
+                        oat_checkpoint.get("normalization")
+                        if isinstance(oat_checkpoint, dict)
+                        else None
+                    )
+                    ckpt_input_dim = tokenizer_meta.get("input_dim")
+                    ckpt_input_horizon = tokenizer_meta.get("input_horizon")
+                    if ckpt_input_dim is not None and int(ckpt_input_dim) != invariant_dim:
+                        raise ValueError(
+                            f"OAT checkpoint input_dim={ckpt_input_dim} does not match invariant_dim={invariant_dim}"
+                        )
+                    if ckpt_input_horizon is not None and int(ckpt_input_horizon) != action_horizon:
+                        raise ValueError(
+                            "OAT checkpoint input_horizon="
+                            f"{ckpt_input_horizon} does not match action_horizon={action_horizon}"
+                        )
+                    tokenizer_kwargs = {
+                        "input_dim": invariant_dim,
+                        "input_horizon": action_horizon,
+                        "emb_dim": int(tokenizer_meta.get("emb_dim", oat_emb_dim or hidden_dim)),
+                        "latent_dim": int(tokenizer_meta.get("latent_dim", oat_latent_dim)),
+                        "num_registers": int(tokenizer_meta.get("num_registers", oat_num_registers)),
+                        "fsq_levels": tokenizer_meta.get("fsq_levels", oat_fsq_levels or [8, 5, 5, 5]),
+                        "encoder_depth": int(tokenizer_meta.get("encoder_depth", oat_encoder_depth)),
+                        "decoder_depth": int(tokenizer_meta.get("decoder_depth", oat_decoder_depth)),
+                        "num_heads": int(tokenizer_meta.get("num_heads", oat_num_heads or num_heads)),
+                    }
+                    if oat_init_seed is None:
+                        self.oat = OATTokenizer(**tokenizer_kwargs)
+                    else:
+                        with torch.random.fork_rng(devices=[]):
+                            torch.manual_seed(int(oat_init_seed))
+                            self.oat = OATTokenizer(**tokenizer_kwargs)
+                    if oat_checkpoint is not None:
+                        state_dict = (
+                            oat_checkpoint.get("model_state_dict")
+                            if isinstance(oat_checkpoint, dict)
+                            else None
+                        )
+                        if state_dict is None:
+                            state_dict = oat_checkpoint
+                        self.oat.load_state_dict(state_dict, strict=True)
+                        if ckpt_normalization is not None:
+                            self._set_oat_normalization(ckpt_normalization)
+                    if self.freeze_oat:
+                        self.oat.requires_grad_(False)
+                        self.oat.eval()
                 except ImportError:
                     pass
             if self.oat is None and (
@@ -220,6 +386,7 @@ if HAS_TORCH:
             self.oat_token_query = None
             self.oat_token_decoder = None
             self.oat_token_head = None
+            self.oat_token_context_proj = None
             if self.oat is not None and (
                 self.supervise_oat_tokens or self.train_with_discrete_oat_tokens
             ):
@@ -236,11 +403,43 @@ if HAS_TORCH:
                     num_layers=num_layers,
                 )
                 self.oat_token_head = nn.Linear(hidden_dim, self.oat.codebook_size)
+                self.oat_token_context_proj = nn.Sequential(
+                    nn.LayerNorm(hidden_dim),
+                    nn.Linear(hidden_dim, hidden_dim),
+                )
+                nn.init.zeros_(self.oat_token_context_proj[-1].weight)
+                nn.init.zeros_(self.oat_token_context_proj[-1].bias)
 
             # Optional: direct action prediction head (dual-head mode)
             self.action_head = None
+            self.action_residual_adapter = None
+            self.action_closed_residual_adapter = None
             if action_dim is not None:
                 self.action_head = nn.Linear(hidden_dim, action_dim)
+                if self.use_action_residual_adapter:
+                    residual_hidden_dim = int(action_residual_hidden_dim or max(64, hidden_dim // 4))
+                    self.action_residual_adapter = nn.Sequential(
+                        nn.LayerNorm(hidden_dim),
+                        nn.Linear(hidden_dim, residual_hidden_dim),
+                        nn.GELU(),
+                        nn.Linear(residual_hidden_dim, action_dim),
+                    )
+                    nn.init.zeros_(self.action_residual_adapter[-1].weight)
+                    nn.init.zeros_(self.action_residual_adapter[-1].bias)
+                if self.use_action_closed_residual_adapter:
+                    closed_residual_hidden_dim = int(
+                        action_closed_residual_hidden_dim or max(64, hidden_dim // 4)
+                    )
+                    self.action_closed_residual_adapter = nn.Sequential(
+                        nn.LayerNorm(hidden_dim),
+                        nn.Linear(hidden_dim, closed_residual_hidden_dim),
+                        nn.GELU(),
+                        nn.Linear(closed_residual_hidden_dim, action_dim),
+                    )
+                    nn.init.zeros_(self.action_closed_residual_adapter[-1].weight)
+                    nn.init.zeros_(self.action_closed_residual_adapter[-1].bias)
+            elif self.use_action_residual_adapter or self.use_action_closed_residual_adapter:
+                raise ValueError("action residual adapters require action_dim to be set")
 
             self.contact_head = None
             self.contact_phase_head = None
@@ -289,6 +488,50 @@ if HAS_TORCH:
                     nn.Linear(hidden_dim, gripper_state_dim),
                 ) if gripper_state_dim and gripper_state_dim > 0 else None
 
+        def train(self, mode: bool = True):
+            super().train(mode)
+            if getattr(self, "freeze_oat", False) and self.oat is not None:
+                self.oat.eval()
+            return self
+
+        def _set_oat_normalization(self, normalization: dict) -> None:
+            if not normalization:
+                return
+            mean = torch.as_tensor(normalization["mean"], dtype=self.oat_norm_mean.dtype)
+            std = torch.as_tensor(normalization["std"], dtype=self.oat_norm_std.dtype)
+            if mean.numel() != self.invariant_dim or std.numel() != self.invariant_dim:
+                raise ValueError(
+                    "OAT normalization stats must match invariant_dim="
+                    f"{self.invariant_dim}, got mean={mean.numel()} std={std.numel()}"
+                )
+            self.oat_norm_mean.copy_(mean.reshape(1, 1, -1))
+            self.oat_norm_std.copy_(std.reshape(1, 1, -1).clamp_min(1e-8))
+            self.oat_uses_normalization = True
+
+        def _normalize_oat_invariants(self, invariants: torch.Tensor) -> torch.Tensor:
+            if not self.oat_uses_normalization:
+                return invariants
+            mean = self.oat_norm_mean.to(device=invariants.device, dtype=invariants.dtype)
+            std = self.oat_norm_std.to(device=invariants.device, dtype=invariants.dtype)
+            return (invariants - mean) / std
+
+        def _denormalize_oat_invariants(self, invariants: torch.Tensor) -> torch.Tensor:
+            if not self.oat_uses_normalization:
+                return invariants
+            mean = self.oat_norm_mean.to(device=invariants.device, dtype=invariants.dtype)
+            std = self.oat_norm_std.to(device=invariants.device, dtype=invariants.dtype)
+            return invariants * std + mean
+
+        def _tokenize_oat_invariants(self, invariants: torch.Tensor) -> torch.Tensor:
+            if self.oat is None:
+                raise RuntimeError("OAT tokenization requires an initialized OAT tokenizer")
+            oat_input = self._normalize_oat_invariants(invariants)
+            if self.freeze_oat:
+                self.oat.eval()
+                with torch.no_grad():
+                    return self.oat.tokenize(oat_input)
+            return self.oat.tokenize(oat_input)
+
         def _flatten_state_history(self, state: torch.Tensor) -> torch.Tensor:
             """Flatten state history to a fixed-size token input.
 
@@ -324,9 +567,40 @@ if HAS_TORCH:
                 state = state[:, -self.state_history_window :, :]
             return state.reshape(B, self.state_dim * self.state_history_window)
 
+        def _closed_residual_gate(
+            self,
+            state_flat: Optional[torch.Tensor],
+            *,
+            batch_size: int,
+            device: torch.device,
+            dtype: torch.dtype,
+        ) -> torch.Tensor:
+            """Return a `(B, 1, 1)` gate for post-grasp residual corrections.
+
+            The default gate uses the latest gripper qpos in the canonical state
+            vector. It is intentionally object-agnostic: the adapter only sees
+            whether the robot gripper is physically closed, not where any named
+            object is in the scene.
+            """
+            if self.action_closed_residual_gate_source == "none":
+                return torch.ones(batch_size, 1, 1, device=device, dtype=dtype)
+            if state_flat is None:
+                return torch.zeros(batch_size, 1, 1, device=device, dtype=dtype)
+
+            latest_gripper_qpos = state_flat[:, -1].to(device=device, dtype=dtype)
+            if self.action_closed_residual_hard_gate:
+                return (
+                    latest_gripper_qpos <= float(self.action_closed_residual_gripper_threshold)
+                ).to(dtype=dtype).view(batch_size, 1, 1)
+            closed_logit = (
+                float(self.action_closed_residual_gripper_threshold) - latest_gripper_qpos
+            ) / float(self.action_closed_residual_gate_temperature)
+            return torch.sigmoid(closed_logit).view(batch_size, 1, 1)
+
         def _invariant_loss(self, pred_inv: torch.Tensor, target_invariants: torch.Tensor) -> torch.Tensor:
             """Compute invariant loss with optional terminal-step upweighting."""
-            per_step_mse = (pred_inv - target_invariants).pow(2).mean(dim=-1)  # (B, T)
+            residual = self._scaled_invariant_residual(pred_inv, target_invariants)
+            per_step_mse = residual.pow(2).mean(dim=-1)  # (B, T)
             if self.terminal_loss_weight is None or self.terminal_loss_weight <= 1.0:
                 return per_step_mse.mean()
 
@@ -339,6 +613,20 @@ if HAS_TORCH:
             )
             weights = weights / weights.mean()
             return (per_step_mse * weights.unsqueeze(0)).mean()
+
+        def _scaled_invariant_residual(
+            self,
+            pred_inv: torch.Tensor,
+            target_invariants: torch.Tensor,
+        ) -> torch.Tensor:
+            residual = pred_inv - target_invariants
+            if not self.invariant_loss_uses_channel_scale:
+                return residual
+            scale = self.invariant_loss_channel_scale.to(
+                device=residual.device,
+                dtype=residual.dtype,
+            )
+            return residual / scale
 
         @staticmethod
         def _normalize_temporal_mask(
@@ -380,6 +668,95 @@ if HAS_TORCH:
             weighted = values * mask
             denom = mask.sum().clamp_min(1.0)
             return weighted.sum() / denom
+
+        @staticmethod
+        def _masked_weighted_temporal_mean(
+            values: torch.Tensor,
+            mask: Optional[torch.Tensor],
+            weights: Optional[torch.Tensor],
+        ) -> torch.Tensor:
+            if weights is None:
+                return DHBActionHead._masked_temporal_mean(values, mask)
+
+            weights = weights.to(device=values.device, dtype=values.dtype)
+            while weights.ndim < values.ndim:
+                weights = weights.unsqueeze(0)
+            combined = weights if mask is None else weights * mask
+            denom = combined.sum().clamp_min(1.0)
+            return (values * combined).sum() / denom
+
+        def _align_action_loss_inputs(
+            self,
+            pred_actions: torch.Tensor,
+            target_actions: torch.Tensor,
+            temporal_loss_mask: Optional[torch.Tensor],
+            temporal_loss_weights: Optional[torch.Tensor],
+        ) -> tuple[torch.Tensor, torch.Tensor, Optional[torch.Tensor], Optional[torch.Tensor]]:
+            """Align auxiliary direct-action loss to DHB decode query slots.
+
+            DHB-DR decode drops padded prefix frames, so decoded waypoint 0 is
+            produced after consuming earlier invariant slots.  A positive shift
+            supervises action target k on prediction slot k + shift and ignores
+            the leading prediction slots for the auxiliary action loss.
+            """
+            shift = self.action_loss_target_shift
+            pred_horizon = pred_actions.shape[1]
+            target_horizon = target_actions.shape[1]
+            if shift >= pred_horizon:
+                raise ValueError(
+                    "action_loss_target_shift must be smaller than the predicted action horizon "
+                    f"({shift} >= {pred_horizon})"
+                )
+            aligned_horizon = min(pred_horizon - shift, target_horizon)
+            if aligned_horizon <= 0:
+                raise ValueError(
+                    "No overlapping timesteps remain after action loss alignment: "
+                    f"pred_horizon={pred_horizon}, target_horizon={target_horizon}, shift={shift}"
+                )
+
+            pred_for_loss = pred_actions[:, shift : shift + aligned_horizon, :]
+            target_for_loss = target_actions[:, :aligned_horizon, :]
+            mask_for_loss = (
+                temporal_loss_mask[:, :aligned_horizon]
+                if temporal_loss_mask is not None
+                else None
+            )
+            weights_for_loss = (
+                temporal_loss_weights[:aligned_horizon]
+                if temporal_loss_weights is not None
+                else None
+            )
+            return pred_for_loss, target_for_loss, mask_for_loss, weights_for_loss
+
+        def _action_l1_per_step(
+            self,
+            pred_actions: torch.Tensor,
+            target_actions: torch.Tensor,
+        ) -> torch.Tensor:
+            """Return per-step action L1 with optional channel weighting."""
+            diff = (pred_actions - target_actions).abs()
+            channel_weight = None
+            if self.action_loss_uses_channel_weight:
+                channel_weight = self.action_loss_channel_weight.to(
+                    device=diff.device,
+                    dtype=diff.dtype,
+                )
+
+            if self.action_loss_ignore_gripper and diff.shape[-1] >= 7:
+                diff = diff[..., :6]
+                if channel_weight is not None and channel_weight.shape[-1] > diff.shape[-1]:
+                    channel_weight = channel_weight[..., :6]
+
+            if channel_weight is None:
+                return diff.mean(dim=-1)
+
+            if channel_weight.shape[-1] != diff.shape[-1]:
+                raise ValueError(
+                    "action_loss_channel_weight length must match the action dimensions used "
+                    f"for loss; got {channel_weight.shape[-1]} weights for {diff.shape[-1]} dims"
+                )
+            denom = channel_weight.sum(dim=-1).clamp_min(torch.finfo(diff.dtype).eps)
+            return (diff * channel_weight).sum(dim=-1) / denom
 
         def _normalize_token_prefix_keep_k(
             self,
@@ -440,7 +817,7 @@ if HAS_TORCH:
                 masked_latents = latents
                 keep_k_tensor = None
 
-            recon = self.oat.decoder(masked_latents)
+            recon = self._denormalize_oat_invariants(self.oat.decoder(masked_latents))
             return recon, keep_k_tensor
 
         def _decode_oat_tokens(
@@ -470,16 +847,40 @@ if HAS_TORCH:
             if self.oat is None or self.oat_token_head is None:
                 return None
 
-            resolved = target_oat_tokens
+            resolved = target_oat_tokens if self.use_exported_oat_tokens else None
             if resolved is None and target_invariants is not None:
                 with torch.no_grad():
-                    resolved = self.oat.tokenize(target_invariants.detach())
+                    resolved = self._tokenize_oat_invariants(target_invariants.detach())
             if resolved is None:
                 return None
 
             resolved = resolved.to(device=device)
             if resolved.ndim == 3:
-                resolved = resolved.argmax(dim=-1)
+                if not resolved.dtype.is_floating_point:
+                    if resolved.shape[-1] != self.oat.num_registers:
+                        raise ValueError(
+                            "integer target_oat_tokens with shape (B, T, K) must use K="
+                            f"{self.oat.num_registers}, got {tuple(resolved.shape)}"
+                        )
+                    resolved = resolved[:, 0, :]
+                else:
+                    if resolved.shape[-1] == self.oat.num_registers:
+                        raise ValueError(
+                            "floating target_oat_tokens shaped like a windowed tensor (B, T, K) "
+                            "is ambiguous. Pass integer token IDs, one-hot (B, K, V), or omit "
+                            "exported tokens so labels are derived from target_invariants."
+                        )
+                    if (
+                        resolved.shape[1] == self.oat.num_registers
+                        and resolved.shape[-1] == self.oat.codebook_size
+                    ):
+                        resolved = resolved.argmax(dim=-1)
+                    else:
+                        raise ValueError(
+                            "floating target_oat_tokens must be one-hot with shape "
+                            f"(B, K, {self.oat.codebook_size}), "
+                            f"got {tuple(resolved.shape)}"
+                        )
             if resolved.ndim != 2:
                 raise ValueError(
                     "target_oat_tokens must have shape (B, K) or one-hot shape (B, K, V), "
@@ -503,6 +904,9 @@ if HAS_TORCH:
             batch_size = decoded.shape[0]
             token_query_pos = torch.arange(self.oat.num_registers, device=decoded.device)
             token_queries = self.oat_token_query(token_query_pos).unsqueeze(0).expand(batch_size, -1, -1)
+            if self.oat_token_context_proj is not None:
+                token_context = self.oat_token_context_proj(decoded.mean(dim=1))
+                token_queries = token_queries + token_context.unsqueeze(1)
             token_features = self.oat_token_decoder(token_queries, decoded)
             token_logits = self.oat_token_head(token_features)
             token_probs = token_logits.softmax(dim=-1)
@@ -531,6 +935,30 @@ if HAS_TORCH:
             if keep_k_tensor is not None:
                 result["token_prefix_keep_k"] = keep_k_tensor
             return result
+
+        def _sample_oat_train_prefix_keep_k(
+            self,
+            *,
+            batch_size: int,
+            device: torch.device,
+            explicit_keep_k: Optional[int | Sequence[int]],
+        ) -> Optional[int | Sequence[int] | torch.Tensor]:
+            if explicit_keep_k is not None:
+                return explicit_keep_k
+            if (
+                self.oat is None
+                or not self.training
+                or self.oat_token_prefix_train_prob <= 0.0
+                or torch.rand((), device=device).item() >= self.oat_token_prefix_train_prob
+            ):
+                return None
+            min_k = max(1, min(int(self.oat_token_prefix_min_k), int(self.oat.num_registers)))
+            return torch.randint(
+                low=min_k,
+                high=int(self.oat.num_registers) + 1,
+                size=(batch_size,),
+                device=device,
+            )
 
         def forward(
             self,
@@ -571,7 +999,8 @@ if HAS_TORCH:
 
             # Build query sequence
             query_pos = torch.arange(self.action_horizon, device=vlm_hidden.device)
-            queries = self.query_embed(query_pos).unsqueeze(0).expand(B, -1, -1)
+            base_queries = self.query_embed(query_pos).unsqueeze(0).expand(B, -1, -1)
+            queries = base_queries
 
             temporal_loss_mask = self._normalize_temporal_mask(
                 loss_mask,
@@ -583,6 +1012,7 @@ if HAS_TORCH:
 
             # Optionally condition on current state
             state_feat = None
+            state_flat = None
             if state is not None:
                 state_flat = self._flatten_state_history(state)
                 state_feat = self.state_proj(state_flat).unsqueeze(1)  # (B, 1, hidden_dim)
@@ -615,25 +1045,66 @@ if HAS_TORCH:
 
             # Cross-attention decode
             decoded = self.decoder(queries, memory)  # (B, T, hidden_dim)
+            head_features = decoded
+            if self.head_query_residual_scale != 0.0:
+                head_features = head_features + base_queries * self.head_query_residual_scale
 
             # Project to invariant space
-            pred_inv = self.invariant_head(decoded)  # (B, T, 8)
+            pred_inv = self.invariant_head(head_features)  # (B, T, 8)
 
             # Optional OAT tokenization: compress to discrete tokens
-            if self.oat is not None and self.training:
-                oat_loss = self.oat(pred_inv)
-                tokens = self.oat.tokenize(pred_inv)
+            if self.oat is not None and self.training and self.lambda_oat_autoencode > 0.0:
+                oat_loss_terms = []
+                if self.oat_autoencode_target in {"pred", "both"}:
+                    oat_loss_terms.append(self.oat(self._normalize_oat_invariants(pred_inv)))
+                if self.oat_autoencode_target in {"target", "both"} and target_invariants is not None:
+                    oat_loss_terms.append(
+                        self.oat(
+                            self._normalize_oat_invariants(
+                                target_invariants.detach().to(dtype=pred_inv.dtype)
+                            )
+                        )
+                    )
+                oat_loss = sum(oat_loss_terms) / len(oat_loss_terms) if oat_loss_terms else None
+                tokens = self._tokenize_oat_invariants(pred_inv)
                 pred_inv_recon, _ = self._decode_oat_tokens(tokens)
             else:
                 oat_loss = None
                 pred_inv_recon = pred_inv
 
+            oat_register_diversity_loss = None
+            if self.oat is not None and self.training and self.lambda_oat_register_diversity > 0.0:
+                diversity_terms = []
+                if self.oat_autoencode_target in {"pred", "both"}:
+                    diversity_terms.append(
+                        self.oat.register_diversity_loss(
+                            self._normalize_oat_invariants(pred_inv)
+                        )
+                    )
+                if self.oat_autoencode_target in {"target", "both"} and target_invariants is not None:
+                    diversity_terms.append(
+                        self.oat.register_diversity_loss(
+                            self._normalize_oat_invariants(
+                                target_invariants.detach().to(dtype=pred_inv.dtype)
+                            )
+                        )
+                    )
+                if diversity_terms:
+                    oat_register_diversity_loss = sum(diversity_terms) / len(diversity_terms)
+
             result = {"pred_invariants": pred_inv, "pred_invariants_recon": pred_inv_recon}
             if self.oat is not None:
                 result["oat_loss"] = oat_loss
+                if oat_register_diversity_loss is not None:
+                    result["loss_oat_register_diversity"] = oat_register_diversity_loss
+            train_token_prefix_keep_k = self._sample_oat_train_prefix_keep_k(
+                batch_size=B,
+                device=vlm_hidden.device,
+                explicit_keep_k=token_prefix_keep_k,
+            )
             token_result = self._predict_oat_token_branch(
-                decoded,
-                token_prefix_keep_k=token_prefix_keep_k,
+                head_features,
+                token_prefix_keep_k=train_token_prefix_keep_k,
             )
             if token_result:
                 result.update(token_result)
@@ -643,18 +1114,59 @@ if HAS_TORCH:
 
             # Optional: predict raw actions via action_head
             pred_actions = None
+            pred_action_residual = None
+            pred_action_closed_residual = None
+            pred_action_closed_residual_raw = None
             if self.action_head is not None:
-                pred_actions = self.action_head(decoded)  # (B, T, action_dim)
+                pred_actions_base = self.action_head(head_features)  # (B, T, action_dim)
+                pred_actions = pred_actions_base
+                if (
+                    self.action_residual_adapter is not None
+                    or self.action_closed_residual_adapter is not None
+                ):
+                    result["pred_actions_base"] = pred_actions_base
+                if self.action_residual_adapter is not None:
+                    pred_action_residual = (
+                        self.action_residual_adapter(head_features) * self.action_residual_scale
+                    )
+                    pred_actions = pred_actions_base + pred_action_residual
+                    result["pred_action_residual"] = pred_action_residual
+                if self.action_closed_residual_adapter is not None:
+                    closed_gate = self._closed_residual_gate(
+                        state_flat,
+                        batch_size=B,
+                        device=head_features.device,
+                        dtype=head_features.dtype,
+                    )
+                    pred_action_closed_residual_raw = (
+                        self.action_closed_residual_adapter(head_features)
+                        * self.action_closed_residual_scale
+                    )
+                    if (
+                        self.action_closed_residual_zero_gripper_dim
+                        and pred_action_closed_residual_raw.shape[-1] >= 7
+                    ):
+                        pred_action_closed_residual_raw = pred_action_closed_residual_raw.clone()
+                        pred_action_closed_residual_raw[..., 6] = 0.0
+                    pred_action_closed_residual = pred_action_closed_residual_raw * closed_gate
+                    pred_actions = pred_actions + pred_action_closed_residual
+                    result["pred_action_closed_residual_raw"] = pred_action_closed_residual_raw
+                    result["pred_action_closed_residual"] = pred_action_closed_residual
+                    result["action_closed_residual_gate"] = closed_gate.expand(
+                        -1,
+                        self.action_horizon,
+                        -1,
+                    )
                 result["pred_actions"] = pred_actions
 
             pred_contact_logits = None
             pred_contact_phase_logits = None
             pred_gripper_state_logits = None
             if self.contact_head is not None or self.contact_phase_head is not None or self.gripper_state_head is not None:
-                contact_inputs = [decoded]
+                contact_inputs = [head_features]
                 if self.contact_use_vlm_context:
                     contact_vlm_ctx, _ = self.contact_cross_attn(
-                        decoded,
+                        head_features,
                         memory_vlm,
                         memory_vlm,
                         need_weights=False,
@@ -732,47 +1244,159 @@ if HAS_TORCH:
 
             total = None
             if target_invariants is not None:
-                per_step_mse = (pred_inv_for_loss - target_invariants).pow(2).mean(dim=-1)
-                if self.terminal_loss_weight is not None and self.terminal_loss_weight > 1.0:
-                    weights = torch.linspace(
-                        1.0,
-                        float(self.terminal_loss_weight),
-                        self.action_horizon,
-                        device=pred_inv.device,
-                        dtype=pred_inv.dtype,
-                    )
-                    weights = weights / weights.mean()
-                    per_step_mse = per_step_mse * weights.unsqueeze(0)
-                loss_inv = self._masked_temporal_mean(per_step_mse, temporal_loss_mask)
+                invariant_residual = self._scaled_invariant_residual(
+                    pred_inv_for_loss,
+                    target_invariants,
+                )
+                per_step_mse = invariant_residual.pow(2).mean(dim=-1)
+                temporal_loss_weights = None
+                uses_terminal_weights = self.terminal_loss_weight is not None and self.terminal_loss_weight > 1.0
+                uses_prefix_weights = self.prefix_loss_steps > 0 and self.prefix_loss_weight != 1.0
+                if uses_terminal_weights or uses_prefix_weights:
+                    if uses_terminal_weights:
+                        temporal_loss_weights = torch.linspace(
+                            1.0,
+                            float(self.terminal_loss_weight),
+                            self.action_horizon,
+                            device=pred_inv.device,
+                            dtype=pred_inv.dtype,
+                        )
+                    else:
+                        temporal_loss_weights = torch.ones(
+                            self.action_horizon,
+                            device=pred_inv.device,
+                            dtype=pred_inv.dtype,
+                        )
+                    if uses_prefix_weights:
+                        prefix_steps = min(self.prefix_loss_steps, self.action_horizon)
+                        temporal_loss_weights[:prefix_steps] *= self.prefix_loss_weight
+                    temporal_loss_weights = temporal_loss_weights / temporal_loss_weights.mean()
+                loss_inv = self._masked_weighted_temporal_mean(
+                    per_step_mse,
+                    temporal_loss_mask,
+                    temporal_loss_weights,
+                )
                 result["loss_inv"] = loss_inv
+                with torch.no_grad():
+                    raw_per_step_mse = (pred_inv_for_loss - target_invariants).pow(2).mean(dim=-1)
+                    result["loss_inv_raw"] = self._masked_weighted_temporal_mean(
+                        raw_per_step_mse,
+                        temporal_loss_mask,
+                        temporal_loss_weights,
+                    )
                 total = self.lambda_inv * loss_inv
+                loss_inv_delta = None
+                if self.lambda_invariant_delta > 0.0 and self.action_horizon > 1:
+                    pred_delta = pred_inv_for_loss[:, 1:, :] - pred_inv_for_loss[:, :-1, :]
+                    target_delta = target_invariants[:, 1:, :] - target_invariants[:, :-1, :]
+                    delta_residual = self._scaled_invariant_residual(pred_delta, target_delta)
+                    per_step_delta_mse = delta_residual.pow(2).mean(dim=-1)
+                    delta_mask = None
+                    if temporal_loss_mask is not None:
+                        delta_mask = temporal_loss_mask[:, 1:] * temporal_loss_mask[:, :-1]
+                    delta_weights = temporal_loss_weights[1:] if temporal_loss_weights is not None else None
+                    loss_inv_delta = self._masked_weighted_temporal_mean(
+                        per_step_delta_mse,
+                        delta_mask,
+                        delta_weights,
+                    )
+                    result["loss_inv_delta"] = loss_inv_delta
+                    total = total + self.lambda_invariant_delta * loss_inv_delta
                 if oat_loss is not None:
-                    total = total + 0.1 * oat_loss
+                    total = total + self.lambda_oat_autoencode * oat_loss
+                if oat_register_diversity_loss is not None:
+                    total = total + self.lambda_oat_register_diversity * oat_register_diversity_loss
 
                 if target_actions is not None and pred_actions is not None:
                     # Dual-head mode: L1 action loss + invariant regularization
-                    if self.action_loss_ignore_gripper and pred_actions.shape[-1] >= 7:
-                        per_step_l1 = (pred_actions[..., :6] - target_actions[..., :6]).abs().mean(dim=-1)
-                    else:
-                        per_step_l1 = (pred_actions - target_actions).abs().mean(dim=-1)
-                    loss_act = self._masked_temporal_mean(per_step_l1, temporal_loss_mask)
+                    (
+                        pred_actions_for_loss,
+                        target_actions_for_loss,
+                        action_loss_mask,
+                        action_loss_weights,
+                    ) = self._align_action_loss_inputs(
+                        pred_actions,
+                        target_actions,
+                        temporal_loss_mask,
+                        temporal_loss_weights,
+                    )
+                    per_step_l1 = self._action_l1_per_step(
+                        pred_actions_for_loss,
+                        target_actions_for_loss,
+                    )
+                    loss_act = self._masked_weighted_temporal_mean(
+                        per_step_l1,
+                        action_loss_mask,
+                        action_loss_weights,
+                    )
                     result["loss_act"] = loss_act
                     total = self.lambda_act * loss_act + self.lambda_inv * loss_inv
+                    if loss_inv_delta is not None:
+                        total = total + self.lambda_invariant_delta * loss_inv_delta
                     if oat_loss is not None:
-                        total = total + 0.1 * oat_loss
+                        total = total + self.lambda_oat_autoencode * oat_loss
+                    if oat_register_diversity_loss is not None:
+                        total = total + self.lambda_oat_register_diversity * oat_register_diversity_loss
                 elif target_actions is not None:
                     # Legacy path: no action_head, placeholder loss
                     loss_act = torch.tensor(0.0, device=vlm_hidden.device)
                     result["loss_act"] = loss_act
 
             elif target_actions is not None and pred_actions is not None:
-                if self.action_loss_ignore_gripper and pred_actions.shape[-1] >= 7:
-                    per_step_l1 = (pred_actions[..., :6] - target_actions[..., :6]).abs().mean(dim=-1)
-                else:
-                    per_step_l1 = (pred_actions - target_actions).abs().mean(dim=-1)
-                loss_act = self._masked_temporal_mean(per_step_l1, temporal_loss_mask)
+                (
+                    pred_actions_for_loss,
+                    target_actions_for_loss,
+                    action_loss_mask,
+                    _,
+                ) = self._align_action_loss_inputs(
+                    pred_actions,
+                    target_actions,
+                    temporal_loss_mask,
+                    None,
+                )
+                per_step_l1 = self._action_l1_per_step(
+                    pred_actions_for_loss,
+                    target_actions_for_loss,
+                )
+                loss_act = self._masked_temporal_mean(per_step_l1, action_loss_mask)
                 result["loss_act"] = loss_act
                 total = self.lambda_act * loss_act
+                if oat_register_diversity_loss is not None:
+                    total = total + self.lambda_oat_register_diversity * oat_register_diversity_loss
+
+            if (
+                pred_action_residual is not None
+                and self.lambda_action_residual_l2 > 0.0
+                and target_actions is not None
+            ):
+                per_step_residual_l2 = pred_action_residual.pow(2).mean(dim=-1)
+                loss_action_residual_l2 = self._masked_temporal_mean(
+                    per_step_residual_l2,
+                    temporal_loss_mask,
+                )
+                result["loss_action_residual_l2"] = loss_action_residual_l2
+                total = (
+                    self.lambda_action_residual_l2 * loss_action_residual_l2
+                    if total is None
+                    else total + self.lambda_action_residual_l2 * loss_action_residual_l2
+                )
+
+            if (
+                pred_action_closed_residual_raw is not None
+                and self.lambda_action_closed_residual_l2 > 0.0
+                and target_actions is not None
+            ):
+                per_step_closed_residual_l2 = pred_action_closed_residual_raw.pow(2).mean(dim=-1)
+                loss_action_closed_residual_l2 = self._masked_temporal_mean(
+                    per_step_closed_residual_l2,
+                    temporal_loss_mask,
+                )
+                result["loss_action_closed_residual_l2"] = loss_action_closed_residual_l2
+                total = (
+                    self.lambda_action_closed_residual_l2 * loss_action_closed_residual_l2
+                    if total is None
+                    else total + self.lambda_action_closed_residual_l2 * loss_action_closed_residual_l2
+                )
 
             if (
                 resolved_target_oat_tokens is not None
@@ -784,6 +1408,26 @@ if HAS_TORCH:
                     resolved_target_oat_tokens.reshape(-1),
                 )
                 result["loss_oat_token"] = loss_oat_token
+                pred_oat_tokens = result.get("pred_oat_tokens")
+                if pred_oat_tokens is not None:
+                    with torch.no_grad():
+                        token_matches = (pred_oat_tokens == resolved_target_oat_tokens).to(dtype=token_logits.dtype)
+                        result["oat_token_accuracy"] = token_matches.mean()
+                        result["oat_pred_unique_count"] = torch.as_tensor(
+                            float(torch.unique(pred_oat_tokens).numel()),
+                            device=token_logits.device,
+                            dtype=token_logits.dtype,
+                        )
+                        result["oat_target_unique_count"] = torch.as_tensor(
+                            float(torch.unique(resolved_target_oat_tokens).numel()),
+                            device=token_logits.device,
+                            dtype=token_logits.dtype,
+                        )
+                        result["oat_pred_unique_sequence_count"] = torch.as_tensor(
+                            float(torch.unique(pred_oat_tokens, dim=0).shape[0]),
+                            device=token_logits.device,
+                            dtype=token_logits.dtype,
+                        )
                 total = (
                     self.lambda_oat_token * loss_oat_token
                     if total is None
@@ -1075,6 +1719,7 @@ if HAS_TORCH:
             use_discrete_tokens: bool = False,
             token_prefix_keep_k: Optional[int | Sequence[int]] = None,
             emit_oat_tokens: bool = False,
+            tokenize_continuous_head: bool = False,
         ) -> Dict[str, torch.Tensor]:
             """
             Inference: predict invariants and optionally decode to trajectory.
@@ -1099,9 +1744,9 @@ if HAS_TORCH:
 
             pred_inv_for_decode = result["pred_invariants"].detach()
             if self.oat is not None and (use_discrete_tokens or emit_oat_tokens or token_prefix_keep_k is not None):
-                if self.oat_token_head is None:
+                if self.oat_token_head is None or tokenize_continuous_head:
                     pred_inv_base = result["pred_invariants"].detach()
-                    pred_tokens = self.oat.tokenize(pred_inv_base)
+                    pred_tokens = self._tokenize_oat_invariants(pred_inv_base)
                     result["pred_oat_tokens"] = pred_tokens
                     pred_inv_token_recon, keep_k_tensor = self._decode_oat_tokens(
                         pred_tokens,

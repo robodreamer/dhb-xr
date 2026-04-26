@@ -24,6 +24,9 @@ from dhb_xr.integration.vla.libero import (
     build_libero_state_vector_from_obs,
     build_state_history_window,
     get_state_history_window,
+    integrate_delta_action_chunk,
+    load_run_action_stats,
+    unnormalize_actions,
 )
 from starVLA.model.framework.base_framework import build_framework
 from starVLA.training.trainer_utils.config_tracker import wrap_config
@@ -183,15 +186,47 @@ def _capture_scene_refs(env):
     }
 
 
-def _relative_snapshot(ee_pos, refs):
+def _resolve_scene_ref_pos(env, ref, fallback):
+    if env is None or not ref:
+        return fallback
+    try:
+        kind, name = ref.split(":", 1)
+        sim = env.env.sim
+        model = sim.model
+        data = sim.data
+        if kind == "body":
+            return np.array(data.body_xpos[model.body_name2id(name)])
+        if kind == "site":
+            return np.array(data.site_xpos[model.site_name2id(name)])
+        if kind == "geom":
+            return np.array(data.geom_xpos[model.geom_name2id(name)])
+    except Exception:
+        return fallback
+    return fallback
+
+
+def _relative_snapshot(ee_pos, refs, env=None):
     snap = {"ee_pos": np.asarray(ee_pos, dtype=np.float32).tolist()}
-    bowl_pos = refs.get("bowl_pos")
-    plate_pos = refs.get("plate_pos")
+    bowl_pos = _resolve_scene_ref_pos(env, refs.get("bowl_ref"), refs.get("bowl_pos"))
+    plate_pos = _resolve_scene_ref_pos(env, refs.get("plate_ref"), refs.get("plate_pos"))
     if bowl_pos is not None:
+        snap["bowl_pos"] = np.asarray(bowl_pos, dtype=np.float32).tolist()
         snap["ee_minus_bowl"] = (np.asarray(ee_pos) - bowl_pos).tolist()
     if plate_pos is not None:
+        snap["plate_pos"] = np.asarray(plate_pos, dtype=np.float32).tolist()
         snap["ee_minus_plate"] = (np.asarray(ee_pos) - plate_pos).tolist()
+    if bowl_pos is not None and plate_pos is not None:
+        snap["bowl_minus_plate"] = (np.asarray(bowl_pos) - np.asarray(plate_pos)).tolist()
     return snap
+
+
+def _preprocess_libero_image(image: np.ndarray, orientation: str) -> np.ndarray:
+    image = np.asarray(image, dtype=np.uint8)
+    if orientation == "raw":
+        return np.ascontiguousarray(image)
+    if orientation == "flipudlr":
+        return np.ascontiguousarray(image[::-1, ::-1])
+    raise ValueError(f"Unsupported image orientation: {orientation}")
 
 
 def main() -> None:
@@ -218,11 +253,61 @@ def main() -> None:
     parser.add_argument("--approach-bowl-xy-m", type=float, default=0.10)
     parser.add_argument("--approach-bowl-z-m", type=float, default=0.10)
     parser.add_argument("--gripper-source", choices=("demo", "model"), default="demo")
+    parser.add_argument(
+        "--model-gripper-decode-source",
+        choices=("auto", "gripper_state", "contact_phase", "contact", "normalized_action"),
+        default="auto",
+        help=(
+            "Model-gripper decoder used when --gripper-source=model. "
+            "auto preserves the existing preference order."
+        ),
+    )
     parser.add_argument("--init-state-source", choices=("demo", "benchmark"), default="demo")
     parser.add_argument("--gripper-threshold", type=float, default=0.5)
     parser.add_argument("--gripper-close-threshold", type=float, default=0.6)
     parser.add_argument("--gripper-open-threshold", type=float, default=0.4)
     parser.add_argument("--gripper-transition-debounce-steps", type=int, default=1)
+    parser.add_argument(
+        "--image-orientation",
+        choices=("raw", "flipudlr"),
+        default="raw",
+        help=(
+            "Preprocessing for live LIBERO images before policy inference. "
+            "Use raw for the local LeRobot export; flipudlr matches upstream "
+            "StarVLA LIBERO examples trained with 180-degree-rotated images."
+        ),
+    )
+    parser.add_argument(
+        "--trajectory-source",
+        choices=("dhb", "direct_action"),
+        default="dhb",
+        help=(
+            "Use DHB-decoded absolute waypoints, or integrate the auxiliary "
+            "normalized action head into EE waypoints for an execution-control ablation."
+        ),
+    )
+    parser.add_argument(
+        "--direct-action-xyz-scale",
+        type=float,
+        nargs=3,
+        default=(1.0, 1.0, 1.0),
+        metavar=("SX", "SY", "SZ"),
+        help=(
+            "Global calibration applied to direct-action XYZ deltas before integration. "
+            "This is task-agnostic and does not use object positions."
+        ),
+    )
+    parser.add_argument(
+        "--direct-action-xyz-bias-mm",
+        type=float,
+        nargs=3,
+        default=(0.0, 0.0, 0.0),
+        metavar=("BX", "BY", "BZ"),
+        help=(
+            "Task-agnostic per-step XYZ delta bias in millimeters applied after "
+            "--direct-action-xyz-scale."
+        ),
+    )
     parser.add_argument("--close-gate-xy-m", type=float, default=0.05)
     parser.add_argument("--close-gate-z-m", type=float, default=0.05)
     parser.add_argument("--release-gate-xy-m", type=float, default=0.04)
@@ -232,10 +317,39 @@ def main() -> None:
     parser.add_argument("--reach-threshold-xy-m", type=float, default=0.05)
     parser.add_argument("--reach-threshold-z-m", type=float, default=0.08)
     parser.add_argument("--reach-stop-on-success", action="store_true")
+    parser.add_argument(
+        "--max-policy-steps",
+        type=int,
+        default=0,
+        help=(
+            "Closed-loop policy execution cap. The default 0 preserves the old "
+            "demo-length cap; set this above the demo length to let offset-adapted "
+            "rollouts continue after delayed reach/close events."
+        ),
+    )
     parser.add_argument("--output-max", type=float, default=0.5)
     parser.add_argument("--kp", type=float, default=150.0)
     parser.add_argument("--substeps", type=int, default=3)
     parser.add_argument("--settle-steps", type=int, default=100)
+    parser.add_argument(
+        "--record-step-trace",
+        action="store_true",
+        help=(
+            "Store per-policy-step dynamic EE/object snapshots in the JSON summary. "
+            "This is diagnostic instrumentation only and does not alter policy actions."
+        ),
+    )
+    parser.add_argument(
+        "--state-history-update-rate",
+        choices=("policy", "substep"),
+        default="policy",
+        help=(
+            "Timing contract for the short state history passed to the policy. "
+            "'policy' appends one post-action observation per VLA action step; "
+            "'substep' appends every low-level controller observation, matching "
+            "a streaming deployment with faster proprioception than VLA replans."
+        ),
+    )
     parser.add_argument("--save_json", default=None)
     parser.add_argument("--save_video", default=None)
     parser.add_argument("--no-video", action="store_true")
@@ -250,6 +364,9 @@ def main() -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     video_dir = output_dir / "live_rollout_videos"
     video_dir.mkdir(parents=True, exist_ok=True)
+    action_norm_stats = None
+    if args.trajectory_source == "direct_action":
+        action_norm_stats = load_run_action_stats(output_dir, checkpoint=args.checkpoint)
 
     if not torch.cuda.is_available():
         raise RuntimeError("CUDA is required for StarVLA live embodik rollout.")
@@ -267,6 +384,8 @@ def main() -> None:
 
     demo = _load_demo_episode(args.task_suite_name, task.name, args.episode_idx)
     num_demo_steps = len(demo["ee_pos"])
+    rollout_steps = int(args.max_policy_steps) if int(args.max_policy_steps) > 0 else num_demo_steps
+    rollout_steps = max(1, rollout_steps)
 
     task_bddl_file = Path(get_libero_path("bddl_files")) / task.problem_folder / task.bddl_file
     env = OffScreenRenderEnv(
@@ -347,6 +466,7 @@ def main() -> None:
         delta_continuation_alpha=float(args.delta_continuation_alpha),
         delta_continuation_steps=max(0, args.delta_continuation_steps),
         gripper_source=args.gripper_source,
+        model_gripper_decode_source=args.model_gripper_decode_source,
         gripper_threshold=float(args.gripper_threshold),
         gripper_close_threshold=float(args.gripper_close_threshold),
         gripper_open_threshold=float(args.gripper_open_threshold),
@@ -371,6 +491,7 @@ def main() -> None:
             delta_continuation_alpha=chunk_cfg.delta_continuation_alpha,
             delta_continuation_steps=chunk_cfg.delta_continuation_steps,
             gripper_source=chunk_cfg.gripper_source,
+            model_gripper_decode_source=chunk_cfg.model_gripper_decode_source,
             gripper_threshold=chunk_cfg.gripper_threshold,
             gripper_close_threshold=chunk_cfg.gripper_close_threshold,
             gripper_open_threshold=chunk_cfg.gripper_open_threshold,
@@ -395,9 +516,10 @@ def main() -> None:
     min_plate_xy_m = float("inf")
     min_plate_xyz_m = float("inf")
     ee_trace = [np.asarray(robot.controller.ee_pos, dtype=np.float32).copy()]
+    step_trace = []
 
     def reach_ready(ee_pos_xyz: np.ndarray) -> bool:
-        rel = _relative_snapshot(ee_pos_xyz, scene_refs)
+        rel = _relative_snapshot(ee_pos_xyz, scene_refs, env=env)
         if "ee_minus_bowl" not in rel:
             return False
         ee_minus_bowl = np.asarray(rel["ee_minus_bowl"], dtype=np.float32)
@@ -408,7 +530,7 @@ def main() -> None:
 
     def update_min_dists(ee_pos_xyz: np.ndarray) -> None:
         nonlocal min_bowl_xy_m, min_bowl_xyz_m, min_plate_xy_m, min_plate_xyz_m
-        rel = _relative_snapshot(ee_pos_xyz, scene_refs)
+        rel = _relative_snapshot(ee_pos_xyz, scene_refs, env=env)
         if "ee_minus_bowl" in rel:
             ee_minus_bowl = np.asarray(rel["ee_minus_bowl"], dtype=np.float32)
             min_bowl_xy_m = min(min_bowl_xy_m, float(np.linalg.norm(ee_minus_bowl[:2])))
@@ -418,10 +540,40 @@ def main() -> None:
             min_plate_xy_m = min(min_plate_xy_m, float(np.linalg.norm(ee_minus_plate[:2])))
             min_plate_xyz_m = min(min_plate_xyz_m, float(np.linalg.norm(ee_minus_plate)))
 
+    def record_step_trace(
+        *,
+        step: int,
+        phase: str,
+        desired_grip: float,
+        effective_grip: float,
+        reward_value: float,
+        success_value: bool,
+        ee_pos_xyz: np.ndarray,
+        state_vector: np.ndarray | None = None,
+        close_ready: bool | None = None,
+        release_ready: bool | None = None,
+    ) -> None:
+        if not args.record_step_trace:
+            return
+        entry = {
+            "step": int(step),
+            "phase": phase,
+            "desired_grip": float(desired_grip),
+            "effective_grip": float(effective_grip),
+            "reward": float(reward_value),
+            "success": bool(success_value),
+            "close_ready": None if close_ready is None else bool(close_ready),
+            "release_ready": None if release_ready is None else bool(release_ready),
+            **_relative_snapshot(ee_pos_xyz, scene_refs, env=env),
+        }
+        if state_vector is not None and len(state_vector) > 0:
+            entry["state_gripper"] = float(np.asarray(state_vector, dtype=np.float32)[-1])
+        step_trace.append(entry)
+
     update_min_dists(np.asarray(robot.controller.ee_pos, dtype=np.float32))
 
     t = 0
-    while t < num_demo_steps:
+    while t < rollout_steps:
         ee_pos_live = np.asarray(obs["robot0_eef_pos"], dtype=np.float32)
         state = build_libero_state_vector_from_obs(obs)
         if not state_history or not np.allclose(state_history[-1], state):
@@ -430,8 +582,8 @@ def main() -> None:
             list(state_history),
             history_window=state_history_window,
         )
-        agentview = np.ascontiguousarray(obs["agentview_image"][::-1, ::-1])
-        wrist = np.ascontiguousarray(obs["robot0_eye_in_hand_image"][::-1, ::-1])
+        agentview = _preprocess_libero_image(obs["agentview_image"], args.image_orientation)
+        wrist = _preprocess_libero_image(obs["robot0_eye_in_hand_image"], args.image_orientation)
         example = {
             "image": [agentview, wrist],
             "lang": task.language,
@@ -441,8 +593,42 @@ def main() -> None:
         with torch.inference_mode():
             result = model.predict_trajectory([example])
 
-        n_use = min(args.replan_every, len(result["positions"][0]), num_demo_steps - t)
-        rel_live = _relative_snapshot(ee_pos_live, scene_refs)
+        if args.trajectory_source == "direct_action":
+            normalized_actions = result.get("normalized_actions")
+            if normalized_actions is None:
+                raise RuntimeError(
+                    "Requested --trajectory-source direct_action, but the model did not "
+                    "return normalized_actions from predict_trajectory()."
+                )
+            raw_actions = unnormalize_actions(normalized_actions[0], action_norm_stats)
+            xyz_scale = np.asarray(args.direct_action_xyz_scale, dtype=np.float32).reshape(1, 3)
+            xyz_bias_m = (
+                np.asarray(args.direct_action_xyz_bias_mm, dtype=np.float32).reshape(1, 3)
+                / 1000.0
+            )
+            if not np.allclose(xyz_scale, 1.0) or not np.allclose(xyz_bias_m, 0.0):
+                raw_actions = raw_actions.copy()
+                raw_actions[:, :3] = raw_actions[:, :3] * xyz_scale + xyz_bias_m
+            positions, quaternions = integrate_delta_action_chunk(
+                start_pos=ee_pos_live,
+                start_quat_wxyz=np.asarray(obs["robot0_eef_quat"], dtype=np.float32),
+                raw_actions=raw_actions,
+            )
+            result = dict(result)
+            result["positions"] = positions[None]
+            result["quaternions"] = quaternions[None]
+
+        decoded_horizon = len(result["positions"][0])
+        requested_horizon = min(args.replan_every, rollout_steps - t)
+        if decoded_horizon < requested_horizon:
+            raise RuntimeError(
+                "Decoded DHB trajectory is shorter than the requested rollout chunk "
+                f"({decoded_horizon} < {requested_horizon}). DHB-DR position decode "
+                "drops two padded frames, so use action_horizon >= replan_every + 2 "
+                "or lower --replan_every."
+            )
+        n_use = min(args.replan_every, decoded_horizon, rollout_steps - t)
+        rel_live = _relative_snapshot(ee_pos_live, scene_refs, env=env)
         active_phase = "default"
         if approach_cfg is not None and "ee_minus_bowl" in rel_live:
             ee_minus_bowl_live = np.asarray(rel_live["ee_minus_bowl"], dtype=np.float32)
@@ -451,13 +637,33 @@ def main() -> None:
                 or float(ee_minus_bowl_live[2]) > args.approach_bowl_z_m
             ):
                 active_phase = "approach"
+        demo_gripper_chunk = None
+        if t < num_demo_steps:
+            demo_gripper_chunk = np.asarray(
+                demo["gripper_cmd"][t : min(t + n_use, num_demo_steps)],
+                dtype=np.float32,
+            )
+        if demo_gripper_chunk is None or len(demo_gripper_chunk) < n_use:
+            pad_value = (
+                float(demo_gripper_chunk[-1])
+                if demo_gripper_chunk is not None and len(demo_gripper_chunk) > 0
+                else float(last_effective_grip)
+            )
+            prefix = (
+                np.asarray([], dtype=np.float32)
+                if demo_gripper_chunk is None
+                else demo_gripper_chunk.astype(np.float32)
+            )
+            demo_gripper_chunk = np.concatenate(
+                [prefix, np.full((n_use - len(prefix),), pad_value, dtype=np.float32)]
+            )
         prepared = phase_runner.prepare_chunk(
             result,
             anchor_pos=ee_pos_live,
             current_start=t,
             n_use=n_use,
             initial_gripper_cmd=last_effective_grip,
-            demo_gripper_chunk=demo["gripper_cmd"][t : t + n_use],
+            demo_gripper_chunk=demo_gripper_chunk,
             phase_name=active_phase,
         )
         chunk_pos_stable = prepared["positions_full"]
@@ -483,19 +689,29 @@ def main() -> None:
         gripper_cmds = prepared["gripper_cmds"]
         gripper_debug = prepared["debug"]
 
-        gt_chunk = demo["ee_pos"][t : t + n_use]
-        pos_err_mm = np.linalg.norm(chunk_pos_stable[:n_use] - gt_chunk, axis=1) * 1000.0
+        gt_count = max(0, min(n_use, num_demo_steps - t))
+        gt_chunk = demo["ee_pos"][t : t + gt_count] if gt_count > 0 else None
+        if gt_count > 0:
+            pos_err_mm = np.linalg.norm(chunk_pos_stable[:gt_count] - gt_chunk, axis=1) * 1000.0
+            chunk_mean_err_mm = float(np.mean(pos_err_mm))
+            chunk_max_err_mm = float(np.max(pos_err_mm))
+            first_gt_pos = gt_chunk[0].tolist()
+        else:
+            chunk_mean_err_mm = None
+            chunk_max_err_mm = None
+            first_gt_pos = None
         debug_chunks.append(
             {
                 "t_start": int(t),
                 "n_use": int(n_use),
                 "ik_failures": int(ik_failures),
-                "chunk_mean_err_mm": float(np.mean(pos_err_mm)),
-                "chunk_max_err_mm": float(np.max(pos_err_mm)),
+                "chunk_mean_err_mm": chunk_mean_err_mm,
+                "chunk_max_err_mm": chunk_max_err_mm,
                 "first_live_ee_pos": ee_pos_live.tolist(),
                 "first_pred_pos": prepared["first_pred_pos"],
                 "first_stabilized_pos": prepared["first_stabilized_pos"],
-                "first_gt_pos": gt_chunk[0].tolist(),
+                "first_gt_pos": first_gt_pos,
+                "trajectory_source": args.trajectory_source,
                 **gripper_debug,
             }
         )
@@ -507,7 +723,7 @@ def main() -> None:
             desired_grip = -1.0 if args.reach_only else float(gripper_cmds[i])
             ee_pos_pre = np.asarray(robot.controller.ee_pos, dtype=np.float32)
             effective_grip = desired_grip
-            rel_pre = _relative_snapshot(ee_pos_pre, scene_refs)
+            rel_pre = _relative_snapshot(ee_pos_pre, scene_refs, env=env)
             ee_minus_bowl = np.asarray(rel_pre.get("ee_minus_bowl", [np.inf, np.inf, np.inf]), dtype=np.float32)
             ee_minus_plate = np.asarray(rel_pre.get("ee_minus_plate", [np.inf, np.inf, np.inf]), dtype=np.float32)
             close_ready = (
@@ -543,24 +759,46 @@ def main() -> None:
                 append_frame(writer, obs)
                 ee_now = np.asarray(robot.controller.ee_pos, dtype=np.float32)
                 ee_trace.append(ee_now.copy())
-                state_history.append(build_libero_state_vector_from_obs(obs))
                 update_min_dists(ee_now)
+                if args.state_history_update_rate == "substep":
+                    substep_state = build_libero_state_vector_from_obs(obs)
+                    if not state_history or not np.allclose(state_history[-1], substep_state):
+                        state_history.append(substep_state)
+
+            executed_state = build_libero_state_vector_from_obs(obs)
+            if (
+                args.state_history_update_rate == "policy"
+                and (not state_history or not np.allclose(state_history[-1], executed_state))
+            ):
+                state_history.append(executed_state)
 
             prev_grip = last_effective_grip
             last_effective_grip = float(effective_grip)
             ee_pos = np.asarray(robot.controller.ee_pos, dtype=np.float32)
             if close_step is None and effective_grip > 0 and prev_grip <= 0:
                 close_step = t + i
-                close_snapshot = _relative_snapshot(ee_pos, scene_refs)
+                close_snapshot = _relative_snapshot(ee_pos, scene_refs, env=env)
             if reopen_step is None and effective_grip <= 0 and prev_grip > 0:
                 reopen_step = t + i
-                reopen_snapshot = _relative_snapshot(ee_pos, scene_refs)
+                reopen_snapshot = _relative_snapshot(ee_pos, scene_refs, env=env)
 
             success = env.check_success()
             if success and success_at is None:
                 success_at = t + i
             if args.reach_only and success_at is None and reach_ready(ee_pos):
                 success_at = t + i
+            record_step_trace(
+                step=t + i,
+                phase=active_phase,
+                desired_grip=desired_grip,
+                effective_grip=effective_grip,
+                reward_value=reward,
+                success_value=success,
+                ee_pos_xyz=ee_pos,
+                state_vector=executed_state,
+                close_ready=close_ready,
+                release_ready=release_ready,
+            )
             if args.reach_only and args.reach_stop_on_success and success_at is not None:
                 break
 
@@ -581,14 +819,25 @@ def main() -> None:
             ee_trace.append(ee_now.copy())
             success = env.check_success()
             if success and success_at is None:
-                success_at = num_demo_steps + i
+                success_at = rollout_steps + i
             if args.reach_only and success_at is None and reach_ready(ee_now):
-                success_at = num_demo_steps + i
+                success_at = rollout_steps + i
+            record_step_trace(
+                step=rollout_steps + i,
+                phase="settle",
+                desired_grip=settle_grip,
+                effective_grip=settle_grip,
+                reward_value=reward,
+                success_value=success,
+                ee_pos_xyz=ee_now,
+                state_vector=build_libero_state_vector_from_obs(obs),
+            )
             append_frame(writer, obs)
 
     final_success = bool(success_at is not None) if args.reach_only else env.check_success()
     ee_final = np.asarray(robot.controller.ee_pos, dtype=np.float32)
     motion_metrics = compute_motion_metrics(np.asarray(ee_trace, dtype=np.float32))
+    final_snapshot = _relative_snapshot(ee_final, scene_refs, env=env)
     writer.close()
     env.close()
 
@@ -600,6 +849,9 @@ def main() -> None:
         "episode_idx": int(args.episode_idx),
         "offset_cm": float(args.offset_cm),
         "task_language": task.language,
+        "num_demo_steps": int(num_demo_steps),
+        "max_policy_steps": int(args.max_policy_steps),
+        "rollout_steps": int(rollout_steps),
         "replan_every": int(args.replan_every),
         "max_first_offset_mm": float(args.max_first_offset_mm),
         "max_step_mm": float(args.max_step_mm),
@@ -617,10 +869,16 @@ def main() -> None:
         "approach_bowl_z_m": float(args.approach_bowl_z_m),
         "state_history_window": int(state_history_window),
         "gripper_source": args.gripper_source,
+        "model_gripper_decode_source": args.model_gripper_decode_source,
         "gripper_threshold": float(args.gripper_threshold),
         "gripper_close_threshold": float(args.gripper_close_threshold),
         "gripper_open_threshold": float(args.gripper_open_threshold),
         "gripper_transition_debounce_steps": int(args.gripper_transition_debounce_steps),
+        "image_orientation": args.image_orientation,
+        "trajectory_source": args.trajectory_source,
+        "direct_action_xyz_scale": [float(v) for v in args.direct_action_xyz_scale],
+        "direct_action_xyz_bias_mm": [float(v) for v in args.direct_action_xyz_bias_mm],
+        "state_history_update_rate": args.state_history_update_rate,
         "init_state_source": args.init_state_source,
         "init_state_l2_diff": float(np.linalg.norm(demo_init_state - benchmark_init_state)),
         "close_gate_xy_m": float(args.close_gate_xy_m),
@@ -630,6 +888,7 @@ def main() -> None:
         "reach_threshold_xy_m": float(args.reach_threshold_xy_m),
         "reach_threshold_z_m": float(args.reach_threshold_z_m),
         "reach_stop_on_success": bool(args.reach_stop_on_success),
+        "record_step_trace": bool(args.record_step_trace),
         "success": bool(final_success),
         "success_at": None if success_at is None else int(success_at),
         "reward": float(reward),
@@ -640,7 +899,7 @@ def main() -> None:
         "reopen_step": None if reopen_step is None else int(reopen_step),
         "close_snapshot": close_snapshot,
         "reopen_snapshot": reopen_snapshot,
-        "final_snapshot": _relative_snapshot(ee_final, scene_refs),
+        "final_snapshot": final_snapshot,
         "min_bowl_xy_m": None if not np.isfinite(min_bowl_xy_m) else float(min_bowl_xy_m),
         "min_bowl_xyz_m": None if not np.isfinite(min_bowl_xyz_m) else float(min_bowl_xyz_m),
         "min_plate_xy_m": None if not np.isfinite(min_plate_xy_m) else float(min_plate_xy_m),
@@ -648,15 +907,26 @@ def main() -> None:
         "scene_refs": {
             "bowl_ref": scene_refs.get("bowl_ref"),
             "plate_ref": scene_refs.get("plate_ref"),
+            "initial_bowl_pos": None
+            if scene_refs.get("bowl_pos") is None
+            else np.asarray(scene_refs.get("bowl_pos"), dtype=np.float32).tolist(),
+            "initial_plate_pos": None
+            if scene_refs.get("plate_pos") is None
+            else np.asarray(scene_refs.get("plate_pos"), dtype=np.float32).tolist(),
         },
         "motion_metrics": motion_metrics,
         "chunks": debug_chunks,
+        "step_trace": step_trace if args.record_step_trace else None,
         "video_path": None if video_path is None else str(video_path),
         "overrides": dotlist,
     }
     save_json = Path(args.save_json) if args.save_json else output_dir / f"{label}_summary.json"
     save_json.write_text(json.dumps(summary, indent=2))
-    print(json.dumps(summary, indent=2))
+    printed_summary = dict(summary)
+    printed_summary["chunks"] = f"<{len(debug_chunks)} chunks saved to {save_json}>"
+    if args.record_step_trace:
+        printed_summary["step_trace"] = f"<{len(step_trace)} entries saved to {save_json}>"
+    print(json.dumps(printed_summary, indent=2))
 
 
 if __name__ == "__main__":

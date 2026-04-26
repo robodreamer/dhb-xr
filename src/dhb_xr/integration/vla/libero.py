@@ -316,15 +316,24 @@ def decode_model_gripper_cmds(
     close_threshold: float | None = None,
     open_threshold: float | None = None,
     transition_debounce_steps: int = 1,
+    decode_source: str = "auto",
 ) -> Tuple[np.ndarray, Dict[str, object]]:
     """Decode model output into controller gripper commands.
 
     Preference order:
     1. learned dense gripper-state probabilities
-    2. learned close/open contact probabilities from the DHB contact head
-    3. fallback binary open predictions from normalized action dim 6
+    2. learned close/open contact-phase probabilities from the DHB contact head
+    3. learned close/open contact probabilities from the DHB contact head
+    4. fallback binary open predictions from normalized action dim 6
     """
-    if "pred_gripper_state_probs" in result and result["pred_gripper_state_probs"] is not None:
+    valid_sources = {"auto", "gripper_state", "contact_phase", "contact", "normalized_action"}
+    if decode_source not in valid_sources:
+        raise ValueError(
+            f"Unsupported model gripper decode source {decode_source!r}; "
+            f"expected one of {sorted(valid_sources)}"
+        )
+
+    if decode_source in {"auto", "gripper_state"} and "pred_gripper_state_probs" in result and result["pred_gripper_state_probs"] is not None:
         gripper_state_probs = np.asarray(result["pred_gripper_state_probs"][0, :n_use], dtype=np.float32)
         cmds = decode_contact_probs_to_gripper_cmds(
             gripper_state_probs,
@@ -343,16 +352,43 @@ def decode_model_gripper_cmds(
             open_probs = 1.0 - closed_probs
         return cmds, {
             "source": "gripper_state_probs",
+            "decode_source": decode_source,
             "state_probs": gripper_state_probs.tolist(),
             "close_probs": closed_probs.tolist(),
             "open_probs": open_probs.tolist(),
+            "contact_phase_probs": (
+                np.asarray(result["pred_contact_phase_probs"][0, :n_use], dtype=np.float32).tolist()
+                if "pred_contact_phase_probs" in result and result["pred_contact_phase_probs"] is not None
+                else None
+            ),
             "threshold": float(threshold),
             "close_threshold": None if close_threshold is None else float(close_threshold),
             "open_threshold": None if open_threshold is None else float(open_threshold),
             "transition_debounce_steps": int(transition_debounce_steps),
         }
 
-    if "pred_contact_probs" in result and result["pred_contact_probs"] is not None:
+    if decode_source in {"auto", "contact_phase"} and "pred_contact_phase_probs" in result and result["pred_contact_phase_probs"] is not None:
+        phase_probs = np.asarray(result["pred_contact_phase_probs"][0, :n_use], dtype=np.float32)
+        cmds = decode_contact_probs_to_gripper_cmds(
+            phase_probs,
+            initial_gripper_cmd=initial_gripper_cmd,
+            threshold=threshold,
+            contact_mode="event",
+            close_threshold=close_threshold,
+            open_threshold=open_threshold,
+            transition_debounce_steps=transition_debounce_steps,
+        )
+        return cmds, {
+            "source": "contact_phase_probs",
+            "decode_source": decode_source,
+            "phase_probs": phase_probs.tolist(),
+            "close_probs": phase_probs[:, 1].tolist() if phase_probs.shape[-1] >= 2 else [],
+            "open_probs": phase_probs[:, 2].tolist() if phase_probs.shape[-1] >= 3 else [],
+            "threshold": float(threshold),
+            "transition_debounce_steps": int(transition_debounce_steps),
+        }
+
+    if decode_source in {"auto", "contact"} and "pred_contact_probs" in result and result["pred_contact_probs"] is not None:
         contact_probs = np.asarray(result["pred_contact_probs"][0, :n_use], dtype=np.float32)
         contact_mode = str(result.get("contact_mode", "event"))
         cmds = decode_contact_probs_to_gripper_cmds(
@@ -373,6 +409,7 @@ def decode_model_gripper_cmds(
                 open_probs = 1.0 - closed_probs
             return cmds, {
                 "source": "gripper_state_probs",
+                "decode_source": decode_source,
                 "state_probs": contact_probs.tolist(),
                 "close_probs": closed_probs.tolist(),
                 "open_probs": open_probs.tolist(),
@@ -383,6 +420,7 @@ def decode_model_gripper_cmds(
             }
         return cmds, {
             "source": "contact_probs",
+            "decode_source": decode_source,
             "event_probs": contact_probs.tolist(),
             "close_probs": (
                 contact_probs[:, 1].tolist() if contact_probs.shape[-1] >= 3 else
@@ -397,14 +435,20 @@ def decode_model_gripper_cmds(
         }
 
     normalized_actions = np.asarray(result.get("normalized_actions", []), dtype=np.float32)
-    if normalized_actions.size:
+    if decode_source in {"auto", "normalized_action"} and normalized_actions.size:
         open_vals = normalized_actions[0, :n_use, 6]
         cmds = np.where(open_vals > 0.5, -1.0, 1.0).astype(np.float32)
         return cmds, {
             "source": "normalized_actions",
+            "decode_source": decode_source,
             "open_vals": open_vals.tolist(),
         }
 
+    if decode_source != "auto":
+        raise ValueError(
+            f"Requested model gripper decode source {decode_source!r}, but the model "
+            "result did not contain the required probabilities."
+        )
     return np.full(n_use, -1.0, dtype=np.float32), {"source": "default_open"}
 
 
