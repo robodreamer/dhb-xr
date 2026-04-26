@@ -464,3 +464,68 @@ augmentation budgets, seeds, and same evaluator.
 This is the experiment that would support the strongest final thesis:
 
 > DHB-XR makes small real robot datasets reusable at larger scale.
+
+## 2026-04-26 Story Status
+
+Story completeness is about `70%` for a strong CoRL narrative.
+
+The clean story is now:
+
+- DHB-XR provides a structured geometric action interface for low-data VLA
+  execution.
+- The corrected closed-loop evaluator shows robust non-zero-offset reaching
+  under benchmark initialization, raw LIBERO observations, long enough horizons,
+  and dynamic object-relative metrics.
+- The strongest current embodied evidence is the calibrated direct-action
+  DHB-trained StarVLA path: `5/5` reach successes across the current
+  episode/offset gate with `0` IK failures.
+- Naive full-action/contact fine-tuning breaks the reach backbone, while the
+  zero-initialized residual and gripper-calibration branches preserve reach.
+  This strengthens the engineering story because it shows why the staged
+  reach-preserving design is necessary.
+- Discrete invariant tokens are validated as a codec and partial policy path,
+  but not yet as the primary closed-loop success path.
+
+The open claim gaps are:
+
+- Full pick-place is not yet solved without object-specific rollout gates.
+- The learned close probability is under-calibrated under delayed offset reach;
+  it peaks around the correct late phase but remains below a natural `0.5`
+  decision threshold.
+- The policy still lacks reliable post-contact transport/release after close.
+- The big scaling claim still needs seed-size and augmentation ablations.
+
+Latest full-task diagnostic:
+
+- config:
+  `configs/libero_dhbxr_qwen_fresh_actionres_closed_gripcal.yaml`
+- run:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_closed_gripcal_fromhard300`
+- checkpoint: `steps_600_pytorch_model.pt`
+- reach gate:
+  `5/5`, average minimum dynamic bowl XY `41.5 mm`, `0` IK failures
+- full-task no-gate threshold `0.37`:
+  close at step `109`, close relative to bowl about
+  `[35.7, -31.8, 11.6] mm`, no reopen, no successful placement
+
+Current paper-safe boundary:
+
+- Safe to claim: robust offset reach under the corrected evaluator, clean
+  implementation fixes, and evidence that reach-preserving residual structures
+  are the right path for learned contact.
+- Safe to claim: DHB invariant tokens can be encoded/decoded with strong
+  teacher-forced codec fidelity and can be integrated into streaming
+  prediction code paths.
+- Not safe yet: full pick-place success, broad benchmark superiority, or
+  closed-loop discrete-token superiority.
+
+Next most impactful work:
+
+1. Train delayed-offset gripper calibration and post-contact transport/release
+   without modifying the validated base reach field.
+2. Convert the current reach result into paper-grade videos and compact tables
+   with matched QwenOFT controls.
+3. Run a small multi-seed or small-data ablation only after the full-task or
+   matched-head evaluator is frozen.
+4. Keep discrete-token work focused on factorized/trimmed targets until
+   endpoint drift becomes competitive with the continuous branch.

@@ -768,3 +768,84 @@ Regression smoke:
 - first predicted token sequence:
   `[39, 106, 35, 107, 106, 43, 35, 170]`
 - chunk action MAE on the smoke batch: `0.177422`
+
+## 2026-04-26 Morning Update: Reach-Preserving Gripper Calibration
+
+Repository checkpoints:
+
+- main repo commit: `778a3a9` (`Validate DHB-XR reach protocol and gripper gaps`)
+- nested `vendor/starVLA` commit: `02580df`
+  (`Add DHB-XR action and token training support`)
+- regression tests before the checkpoint commit:
+  `59 passed` across the action-head, chunk-rollout, OAT-tokenizer, and DHB
+  chunk-target tests
+
+The corrected reach protocol changed the interpretation of the
+closed-transport residual branch. Under the paper-safe contract
+(`benchmark` init, raw LIBERO images, direct-action source, `1.0,1.35,1.15`
+XYZ scale, policy-rate state history, and `140` policy steps), the branch
+actually preserves reach:
+
+- config:
+  `configs/libero_dhbxr_qwen_fresh_actionres_closed_transport_hardgate.yaml`
+- run:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_closed_transport_hardgate_fromcontact400`
+- artifact:
+  `live_reach_corrected_raw_max140_5case.json`
+- result: `5/5` reach successes at both checked checkpoints, with average
+  minimum dynamic bowl XY about `41.4 mm` and `0` IK failures
+
+The earlier apparent reach regression was therefore another evaluation-contract
+artifact, not a true model regression.
+
+The new grip-calibration branch freezes the validated reach/action field and
+trains only generic gripper/contact heads plus the physical-gripper-state-gated
+closed residual:
+
+- config:
+  `configs/libero_dhbxr_qwen_fresh_actionres_closed_gripcal.yaml`
+- run:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_closed_gripcal_fromhard300`
+- warm start:
+  `actionres_closed_transport_hardgate_fromcontact400/steps_300`
+- trainable parameters during training: about `11.8M`
+- final checkpoint: `steps_600_pytorch_model.pt`
+- reach gate:
+  `live_reach_corrected_raw_max140_5case.json`
+- reach result: `5/5`, average minimum dynamic bowl XY `41.5 mm`, average
+  minimum dynamic bowl XYZ `77.3 mm`, and `0` IK failures
+
+Full-task no-gate diagnostics on `libero_spatial` task `0`, episode `1`,
+offset `+3 cm`:
+
+- threshold `0.50`: no close; max learned close probability is about `0.392`.
+- threshold `0.38`: still no close with two-step debounce because the
+  probability spikes are too short.
+- threshold `0.37`: closes at step `109`, with EE relative to the dynamic bowl
+  about `[35.7, -31.8, 11.6] mm`, but still no reopen or successful
+  transport/release.
+
+Interpretation:
+
+- The gripper polarity, basic reach, IK feasibility, and object-specific gate
+  avoidance are no longer the primary blockers.
+- The learned close signal is under-calibrated but peaks at the right late
+  phase under delayed offset reach.
+- The remaining full-task failure is post-contact transport/release and
+  delayed-observation gripper calibration, not a scalar object-distance gate.
+
+Next most impactful actions:
+
+1. Keep the calibrated direct-action reach branch as the current clean
+   embodied evidence.
+2. Use the grip-calibration branch as the active full-task diagnostic branch
+   because it preserves reach while exposing the real post-contact gap.
+3. Do not add environment/object-specific close gates to the policy. If object
+   geometry is used, keep it restricted to offline label generation or
+   diagnostics.
+4. The next training run should add delayed-offset or rollout-prefix gripper
+   supervision and a post-contact transport/release objective while preserving
+   the frozen base reach field.
+5. For storytelling, claim robust offset reach and a reach-preserving path
+   toward learned contact; do not claim full pick-place until reopen/transport
+   succeeds without object-specific gates.

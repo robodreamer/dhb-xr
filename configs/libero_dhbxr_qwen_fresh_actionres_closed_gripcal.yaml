@@ -1,0 +1,131 @@
+run_id: dhb_starvla_qwen_fresh_actionres_closed_gripcal_fromhard300
+run_root_dir: /home/andypark/Projects/repos/dhb-xr/_workspace/starvla_runs
+seed: 47
+trackers: [jsonl]
+wandb_entity: offline
+wandb_project: dhb_xr_corl2026
+is_debug: false
+
+framework:
+  name: QwenDHB
+  qwenvl:
+    base_vlm: /home/andypark/Projects/repos/dhb-xr/vendor/starVLA/playground/Pretrained_models/Qwen2.5-VL-3B-Instruct
+    attn_implementation: sdpa
+    load_in_8bit: true
+    device_map: auto
+  action_model:
+    action_model_type: DHB
+    action_hidden_dim: 2048
+    hidden_dim: 1024
+    action_dim: 7
+    state_dim: 8
+    state_history_window: 4
+    invariant_dim: 8
+    contact_phase_dim: 3
+    gripper_state_dim: 2
+    num_oat_tokens: 8
+    future_action_window_size: 7
+    past_action_window_size: 0
+    action_horizon: 8
+    use_oat_quantizer: false
+    lambda_oat_autoencode: 0.0
+    # Preserve the validated reach/direct-action field. Only the generic
+    # perception/state gripper heads and the physical-gripper-gated closed
+    # residual are trained, so object positions never enter the policy path.
+    lambda_invariant: 0.0
+    lambda_action: 0.25
+    action_loss_target_shift: 0
+    action_loss_ignore_gripper: true
+    action_loss_channel_weight: [1.0, 1.8, 4.5, 0.1, 0.1, 0.1, 0.0]
+    use_action_residual_adapter: true
+    action_residual_hidden_dim: 256
+    action_residual_scale: 0.20
+    lambda_action_residual_l2: 0.0
+    use_action_closed_residual_adapter: true
+    action_closed_residual_hidden_dim: 256
+    action_closed_residual_scale: 0.25
+    action_closed_residual_gate_source: state_gripper
+    action_closed_residual_gripper_threshold: 0.015
+    action_closed_residual_gate_temperature: 0.003
+    action_closed_residual_hard_gate: true
+    action_closed_residual_zero_gripper_dim: true
+    lambda_action_closed_residual_l2: 12.0
+    terminal_loss_weight: 1.5
+    prefix_loss_steps: 0
+    prefix_loss_weight: 1.0
+    invariant_loss_channel_scale: [0.0131, 0.6738, 0.9503, 1.5458, 0.0211, 0.3344, 0.5446, 1.5968]
+    lambda_invariant_delta: 0.0
+    head_query_residual_scale: 0.1
+    lambda_contact_phase: 0.20
+    contact_phase_loss_type: cross_entropy
+    contact_phase_class_weight: [0.8, 2.5, 1.5]
+    lambda_gripper_state: 1.25
+    gripper_state_loss_type: cross_entropy
+    gripper_state_class_weight: [1.0, 1.25]
+    contact_use_vlm_context: true
+    contact_use_state: true
+    gripper_state_condition_on_phase: true
+
+datasets:
+  vla_data:
+    dataset_py: lerobot_datasets
+    data_root_dir: /home/andypark/Projects/data
+    data_mix: libero_spatial_dhbxr
+    include_state: true
+    state_history_window: 4
+    recompute_dhb_invariants_from_actions: true
+    action_type: delta_qpos
+    action_mode: abs
+    action_window_size: 8
+    terminal_chunk_prob: 0.20
+    gripper_event_chunk_prob: 0.25
+    gripper_phase_chunk_prob: 0.45
+    gripper_close_chunk_prob: 0.40
+    # Put close labels late in the chunk so dense gripper-state decoding does
+    # not learn to close immediately at every replan.
+    gripper_event_target_pos: 6
+    sequential_step_sampling: false
+    CoT_prompt: "Your task is {instruction}. To identify the key objects for your task. Locate their bounding boxes in [x1,y1,x2,y2] format."
+    CoT_answer: bbox
+    default_image_resolution: [3, 224, 224]
+    per_device_batch_size: 1
+    num_workers: 0
+    load_all_data_for_training: true
+    obs: ["image_0"]
+    video_backend: torchvision_av
+
+trainer:
+  epochs: 100
+  max_train_steps: 600
+  num_warmup_steps: 50
+  save_interval: 300
+  eval_interval: 300
+  learning_rate:
+    base: 2.0e-05
+    qwen_vl_interface: 2.0e-05
+    action_model: 3.0e-05
+  lr_scheduler_type: constant
+  scheduler_specific_kwargs:
+    min_lr: 1.0e-06
+  freeze_modules: qwen_vl_interface,action_model.backend.query_embed,action_model.backend.vlm_proj,action_model.backend.decoder,action_model.backend.invariant_head,action_model.backend.committed_prefix_proj,action_model.backend.state_proj,action_model.backend.action_head,action_model.backend.action_residual_adapter
+  loss_scale:
+    vla: 1.0
+    vlm: 1.0
+  max_grad_norm: 1.0
+  warmup_ratio: 0.1
+  weight_decay: 0.0
+  logging_frequency: 50
+  gradient_clipping: 1.0
+  gradient_accumulation_steps: 1
+  optimizer:
+    name: AdamW
+    betas: [0.9, 0.95]
+    eps: 1.0e-08
+    weight_decay: 1.0e-08
+  save_format: pt
+  is_resume: false
+  resume_epoch: null
+  resume_step: null
+  pretrained_checkpoint: _workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_closed_transport_hardgate_fromcontact400/checkpoints/steps_300_pytorch_model.pt
+  enable_gradient_checkpointing: true
+  enable_mixed_precision_training: true
