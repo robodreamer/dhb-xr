@@ -84,6 +84,10 @@ Immediate next actions:
 3. Retrain event/contact heads with better side-affordance close calibration
    and explicit release/object-target supervision. The current contact-phase
    head is not usable even after fixing thresholded 3-class event decoding.
+   The event-BCE continuation from the gripper step-800 checkpoint is also a
+   negative result: `0.55` closes at step `3` with `339.3 mm` close-vector
+   error, while stricter generic thresholds `0.80-0.90` delay close to
+   `74-75` but still leave `76-80 mm` close-vector error and no release.
 4. Preserve the reach gate before every full-task claim: `5/5`, average bowl
    XY near `38-40 mm`, and `0` IK failures under benchmark init/raw images.
 5. Treat full pick-place as unclaimed until a no-gate run passes both

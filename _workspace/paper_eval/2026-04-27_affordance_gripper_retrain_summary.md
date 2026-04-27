@@ -48,6 +48,25 @@ That is now fixed so close/release require thresholded event confidence. After
 the fix, the current contact-phase head still closes too early (`step 39`,
 `205.6 mm` close-vector error), so the decoder was necessary but not sufficient.
 
+An event-BCE continuation was then trained from the gripper step-800 checkpoint
+to test whether treating the contact phase as independent thresholded close/open
+events would fix the timing:
+
+`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_eventbce.yaml`
+
+`_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_eventbce_fromgrip800/checkpoints/steps_800_pytorch_model.pt`
+
+The training run completed, but the live no-gate contact-phase rollouts remain
+negative. With `close_threshold=0.55`, the model closes at step `3`, with
+`339.3 mm` close-vector error. Higher generic thresholds delay closure and
+remove IK failures, but still miss the side-grasp affordance: `0.80` closes at
+step `74` with `79.7 mm` close-vector error, and `0.90` closes at step `75`
+with `76.3 mm` close-vector error. None of these runs reopens or reaches
+object-target placement. The trace shows close probability ramping inside
+nearly every chunk, so the event head is still learning a relative-in-chunk
+close prior rather than a sufficiently perception/state-conditioned contact
+event.
+
 ## Interpretation
 
 The current evidence is positive for the specific claim that learned gripper
@@ -56,7 +75,8 @@ positive for full pick-place. The active blocker is now more specific:
 
 - pre-contact reach is stable and smooth enough for paper evidence;
 - learned gripper-state can close without object-distance heuristics;
-- contact-phase event logits are still poorly calibrated;
+- contact-phase event logits are still poorly calibrated and overfit to
+  chunk-relative timing even under BCE event training;
 - the policy does not yet learn the demo side-grasp affordance tightly enough;
 - post-close transport and release remain unvalidated.
 

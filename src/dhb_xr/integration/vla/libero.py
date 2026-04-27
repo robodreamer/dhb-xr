@@ -433,6 +433,8 @@ def decode_model_gripper_cmds(
             "close_probs": phase_probs[:, 1].tolist() if phase_probs.shape[-1] >= 2 else [],
             "open_probs": phase_probs[:, 2].tolist() if phase_probs.shape[-1] >= 3 else [],
             "threshold": float(threshold),
+            "close_threshold": None if close_threshold is None else float(close_threshold),
+            "open_threshold": None if open_threshold is None else float(open_threshold),
             "transition_debounce_steps": int(transition_debounce_steps),
             "debounce_pending_target": None if decode_state is None else decode_state.pending_target,
             "debounce_pending_count": None if decode_state is None else int(decode_state.pending_count),
@@ -484,6 +486,8 @@ def decode_model_gripper_cmds(
                 contact_probs[:, 1].tolist() if contact_probs.shape[-1] >= 2 else []
             ),
             "threshold": float(threshold),
+            "close_threshold": None if close_threshold is None else float(close_threshold),
+            "open_threshold": None if open_threshold is None else float(open_threshold),
             "transition_debounce_steps": int(transition_debounce_steps),
             "debounce_pending_target": None if decode_state is None else decode_state.pending_target,
             "debounce_pending_count": None if decode_state is None else int(decode_state.pending_count),

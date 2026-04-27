@@ -91,6 +91,38 @@ def test_runner_decodes_three_way_contact_probs_to_persistent_gripper_cmds():
     assert prepared["gripper_cmds"].tolist() == [-1.0, 1.0, -1.0]
 
 
+def test_runner_records_event_gripper_thresholds_in_debug():
+    runner = TrajectoryChunkRunner(
+        ChunkRolloutConfig(
+            gripper_source="model",
+            model_gripper_decode_source="contact_phase",
+            gripper_close_threshold=0.7,
+            gripper_open_threshold=0.6,
+        )
+    )
+    prepared = runner.prepare_chunk(
+        {
+            "positions": np.array([[[0.00, 0.00, 0.00], [0.01, 0.00, 0.00]]], dtype=np.float32),
+            "quaternions": np.array([[[1.0, 0.0, 0.0, 0.0]] * 2], dtype=np.float32),
+            "pred_contact_phase_probs": np.array(
+                [[
+                    [0.95, 0.04, 0.01],
+                    [0.20, 0.75, 0.05],
+                ]],
+                dtype=np.float32,
+            ),
+        },
+        anchor_pos=np.zeros(3, dtype=np.float32),
+        current_start=0,
+        n_use=2,
+        initial_gripper_cmd=-1.0,
+    )
+
+    assert prepared["debug"]["gripper_source_used"] == "contact_phase_probs"
+    assert prepared["debug"]["gripper_close_threshold"] == 0.7
+    assert prepared["debug"]["gripper_open_threshold"] == 0.6
+
+
 def test_runner_debounces_dense_gripper_state_predictions():
     runner = TrajectoryChunkRunner(
         ChunkRolloutConfig(

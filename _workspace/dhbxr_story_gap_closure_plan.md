@@ -241,6 +241,12 @@ images, language, state history, DHB/action tokens, and learned heads.
   requires thresholded close/open confidence instead of toggling by argmax.
   After the fix, the current contact-phase head still closes too early, so the
   remaining issue is event calibration/supervision, not only decode logic.
+- The event-BCE continuation confirms the same boundary. It trains cleanly, but
+  no-gate contact-phase rollout still fails: threshold `0.55` closes at step
+  `3` with `339.3 mm` close-vector error, while thresholds `0.80-0.90` delay
+  closure to steps `74-75` but still miss the side-grasp affordance by
+  `76-80 mm` and never release. The trace shows close probabilities ramping
+  within chunks, so the head is still too chunk-time-biased.
 
 Story implication: the claim boundary improves but remains honest. We can say
 that learned gripper state from DHB/observation context is better than demo

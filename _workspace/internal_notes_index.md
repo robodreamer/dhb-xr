@@ -164,6 +164,17 @@ Latest active result to preserve:
   covered in `tests/test_libero_orientation.py`. The current trained
   contact-phase head still closes too early after the fix, so the model needs
   better event calibration rather than another rollout heuristic.
+- Latest event-BCE result:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_eventbce.yaml`
+  trains thresholded close/open contact-phase logits from the gripper step-800
+  checkpoint, with the action path and dense gripper-state head frozen. It
+  trains cleanly, but no-gate contact-phase rollout is still negative:
+  threshold `0.55` closes at step `3` with `339.3 mm` close-vector error;
+  thresholds `0.80-0.90` delay close to steps `74-75` with `76-80 mm`
+  close-vector error, `0` IK failures, and no release. This is now evidence
+  that the event head is chunk-time-biased, not just decoder-bugged. Debug
+  traces now also record the event close/open thresholds per chunk; see
+  `tests/test_chunk_rollout.py`.
 
 Historical diagnostics were moved to:
 
