@@ -788,3 +788,45 @@ closed-loop-calibration problem: preserve the calibrated reach profile, train
 contact confidence on true rollout-positive side-grasp states, and improve
 post-grasp transport/release. Deployment remains object-gate-free; the only
 thresholds used above are learned probability thresholds.
+
+## Rollout-Positive Shuffle Follow-Up
+
+The future-aligned contact baseline was used to collect calibrated no-gate
+policy traces with the validated direct-action scale
+`x=0.85, y=1.55, z=1.15`, fixed `rollout_seed=70`, cases `0:0 cm` and
+`1:3 cm`. Both traces reached the bowl without issuing a close: minimum bowl XY
+was `22.9 mm` for case `0` and `7.0 mm` for the `3 cm` offset case. Mining
+with the original strict `30 mm` positive tolerance found no rollout positives;
+relaxing only the offline annotation tolerance to `45 mm` produced `111`
+missed-positive supervised steps from the offset trace and no new hard
+negatives.
+
+An implementation issue was also found in the StarVLA policy-trace dataloader:
+the training loader was deterministic because the upstream `shuffle=True` line
+was commented out. For short continuation runs, appended rollout-positive rows
+could be skipped entirely. The dataloader now honors
+`policy_trace_shuffle: true`, and the active rollout-positive config repeats
+the newly mined positives first while still shuffling the dataset.
+
+Corrected run:
+
+`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_rolloutpos_tol45_balanced.yaml`
+
+`_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_rolloutposfirst_shuffle_tol45_fromfuturealign300`
+
+The `steps_400` checkpoint proves the learned contact token is now active under
+true no-gate deployment. At close threshold `0.50`, case `0` closes at step
+`87` with close snapshot EE-minus-bowl about `[-29.1, +0.5, +61.5] mm`; the
+`3 cm` offset case closes at step `99` with about `[-8.8, -15.3, +29.2] mm`.
+Average minimum bowl XY is `16.4 mm` and average IK failures drop to `21`, but
+the task still does not complete. At threshold `0.55`, the offset case improves
+to a close snapshot of about `[+3.7, -5.7, +19.3] mm`, while case `0` worsens
+to a high close; no full success is observed.
+
+Interpretation: the token path is now trainable and object-gate-free, and the
+offset example is close to a plausible side-grasp close in XY/Z. The remaining
+gap is label quality and post-grasp behavior. A `45 mm` rollout-positive gate
+is useful for bootstrapping, but it is too broad for claim-level grasp
+precision; the next dataset should add side-grasp-ready positives and explicit
+near-bowl-but-too-high/too-central negatives, still using geometry only for
+offline supervision and not for deployment gating.

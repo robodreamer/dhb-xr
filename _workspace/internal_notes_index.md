@@ -452,3 +452,22 @@ explicitly references them. They are kept for provenance only.
 - Next active gap: generate balanced rollout-positive contact states and then
   revisit post-grasp transport/release. Do not evaluate main examples with
   neutral direct-action scaling unless explicitly testing calibration.
+
+2026-04-27 rollout-positive/shuffled contact-token status:
+
+- New active config:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_rolloutpos_tol45_balanced.yaml`.
+- New active run:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_rolloutposfirst_shuffle_tol45_fromfuturealign300`.
+- StarVLA policy-trace contact datasets now honor
+  `policy_trace_shuffle: true`; this fixed short continuation runs that could
+  miss appended rollout-positive rows.
+- `steps_400` makes the learned contact token active under true no-gate
+  deployment with calibrated direct-action scale `0.85, 1.55, 1.15`.
+  Threshold `0.55` gives the current best non-zero-offset close snapshot:
+  about `6.8 mm` XY and `19.3 mm` Z from the bowl, but no full pick-place
+  success.
+- Current interpretation: the learned token path works, but final results need
+  stricter side-grasp-ready offline positives plus near-bowl/high-or-center
+  hard negatives, followed by post-grasp transport/release training. The
+  deployment policy must remain learned-token/no-gate.

@@ -91,6 +91,42 @@ def _temporal_l2_mean(arr):
     return float(np.linalg.norm(np.diff(values, axis=0), axis=-1).mean())
 
 
+def _add_probability_summary(summary: dict, traj: dict | None) -> None:
+    """Record gripper/contact probability heads with rollout decoder semantics."""
+    if traj is None:
+        return
+
+    if "pred_gripper_state_probs" in traj:
+        state_probs = traj["pred_gripper_state_probs"]
+        if state_probs.shape[-1] >= 2:
+            summary["pred_open_probs_head"] = state_probs[0, :, 0].tolist()
+            summary["pred_close_probs_head"] = state_probs[0, :, 1].tolist()
+        else:
+            summary["pred_close_probs_head"] = state_probs[0, :, 0].tolist()
+        return
+
+    if "pred_contact_probs" not in traj:
+        return
+
+    contact_probs = traj["pred_contact_probs"]
+    contact_mode = str(traj.get("contact_mode", "event"))
+    summary["pred_contact_mode"] = contact_mode
+    if contact_mode == "gripper_state":
+        if contact_probs.shape[-1] >= 2:
+            summary["pred_open_probs_head"] = contact_probs[0, :, 0].tolist()
+            summary["pred_close_probs_head"] = contact_probs[0, :, 1].tolist()
+        else:
+            summary["pred_close_probs_head"] = contact_probs[0, :, 0].tolist()
+    elif contact_probs.shape[-1] >= 3:
+        summary["pred_hold_probs_head"] = contact_probs[0, :, 0].tolist()
+        summary["pred_close_probs_head"] = contact_probs[0, :, 1].tolist()
+        summary["pred_open_probs_head"] = contact_probs[0, :, 2].tolist()
+    else:
+        summary["pred_close_probs_head"] = contact_probs[0, :, 0].tolist()
+        if contact_probs.shape[-1] > 1:
+            summary["pred_open_probs_head"] = contact_probs[0, :, 1].tolist()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config_yaml", required=True)
@@ -167,26 +203,7 @@ def main() -> None:
         "pred_first_action": actions[0, 0].tolist(),
         "pred_last_action": actions[0, -1].tolist(),
     }
-    if traj is not None and "pred_gripper_state_probs" in traj:
-        state_probs = traj["pred_gripper_state_probs"]
-        summary["pred_open_probs_head"] = state_probs[0, :, 0].tolist()
-        if state_probs.shape[-1] > 1:
-            summary["pred_close_probs_head"] = state_probs[0, :, 1].tolist()
-    elif traj is not None and "pred_contact_probs" in traj:
-        contact_probs = traj["pred_contact_probs"]
-        contact_mode = str(traj.get("contact_mode", "event"))
-        if contact_mode == "gripper_state":
-            summary["pred_open_probs_head"] = contact_probs[0, :, 0].tolist()
-            if contact_probs.shape[-1] > 1:
-                summary["pred_close_probs_head"] = contact_probs[0, :, 1].tolist()
-        elif contact_probs.shape[-1] >= 3:
-            summary["pred_hold_probs_head"] = contact_probs[0, :, 0].tolist()
-            summary["pred_close_probs_head"] = contact_probs[0, :, 1].tolist()
-            summary["pred_open_probs_head"] = contact_probs[0, :, 2].tolist()
-        else:
-            summary["pred_close_probs_head"] = contact_probs[0, :, 0].tolist()
-            if contact_probs.shape[-1] > 1:
-                summary["pred_open_probs_head"] = contact_probs[0, :, 1].tolist()
+    _add_probability_summary(summary, traj)
     if target is not None:
         import numpy as np
 

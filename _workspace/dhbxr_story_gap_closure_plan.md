@@ -1395,3 +1395,38 @@ Story implication:
   staged result showing calibrated reach under offsets, future-aligned learned
   contact supervision, and a clearly diagnosed remaining gap: rollout-positive
   contact-state generation plus post-grasp transport.
+
+2026-04-27 rollout-positive contact-token update:
+
+- A calibrated no-gate future-aligned baseline produced two useful policy
+  traces that reach the bowl without closing. The `3 cm` offset trace reaches
+  `7.0 mm` minimum bowl XY, which is strong evidence that trajectory execution
+  is no longer the only blocker.
+- Offline contact mining at `45 mm` tolerance found `111` rollout-positive
+  missed-close steps. This made it possible to train on actual deployment
+  observations rather than only nominal demo positives and hard negatives.
+- The policy-trace dataloader now supports `policy_trace_shuffle`; this fixed
+  a practical training issue where short continuations could miss appended
+  rollout-positive samples.
+- The shuffled rollout-positive continuation activates the learned contact
+  token under true no-gate deployment. At threshold `0.55`, the non-zero-offset
+  case closes near the object (`~6.8 mm` XY, `~19.3 mm` Z). This is the
+  strongest current evidence that the learned DHB contact token can become a
+  deployment signal instead of an object-distance heuristic.
+- It still does not solve full pick-place. Case `0` calibration is inconsistent
+  and post-grasp transport/release remains weak. The `45 mm` offline positive
+  tolerance is too broad for final grasp claims because it can include high
+  near-bowl states.
+
+Story implication:
+
+- The paper-safe claim is now staged, not binary. We have a compelling
+  progression from spatially calibrated DHB-XR reaching, to future-aligned
+  learned contact-token training, to no-gate close activation on rollout
+  observations. The remaining gap directly motivates the manuscript's core
+  augmentation thesis: generate side-grasp-ready positives and hard negatives
+  from simulator/world-model rollouts, then train the compact DHB-XR token
+  interface on that spatially diverse distribution.
+- Do not overclaim success yet. The current result supports "learned contact
+  token is trainable and can fire near the object without deployment geometry
+  gates"; it does not yet support "full pick-place solved under offsets."

@@ -2050,3 +2050,35 @@ Updated next actions:
    on rollout observations, not plumbing.
 4. Revisit post-grasp transport/release after close timing is consistently
    within about `15-20 mm` XY and `20-30 mm` Z under non-zero offsets.
+
+Rollout-positive shuffled continuation:
+
+- Calibrated no-gate traces from the future-aligned baseline reached the bowl
+  without closing: `22.9 mm` minimum XY at `0 cm`, `7.0 mm` at `3 cm`.
+- Strict `30 mm` rollout-positive mining produced no positives; offline
+  `45 mm` tolerance produced `111` missed-positive steps from the `3 cm`
+  trace. This is a bootstrapping label only, not a deployment gate.
+- A StarVLA dataloader bug/limitation was fixed: `policy_trace_shuffle: true`
+  now actually shuffles policy-trace contact datasets, so short continuations
+  can see appended rollout-positive rows.
+- The new run
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_rolloutposfirst_shuffle_tol45_fromfuturealign300`
+  trains to `steps_400` and makes the learned contact token active under true
+  no-gate rollout.
+- Threshold `0.50`: close at step `87` for case `0` and step `99` for `3 cm`;
+  average minimum bowl XY `16.4 mm`, average IK failures `21`, no success.
+- Threshold `0.55`: the `3 cm` case closes at about `6.8 mm` XY and `19.3 mm`
+  Z, but case `0` closes too high and full transport/release still fails.
+
+Revised unattended priority:
+
+1. Preserve this checkpoint as the current learned-token baseline because it
+   demonstrates object-gate-free close activation on rollout observations.
+2. Build a stricter side-grasp-ready contact manifest from policy traces and
+   simulator replay: positives should be close to the demo side-grasp vector,
+   while negatives should include near-bowl-but-too-high and near-center
+   states.
+3. Retrain contact calibration with the same shuffled policy-trace loader, then
+   evaluate the two fixed cases with thresholds `0.50`, `0.55`, and `0.60`.
+4. Only return to post-grasp transport/release after both fixed cases close
+   within roughly `15 mm` XY and `25 mm` Z without deployment object gates.
