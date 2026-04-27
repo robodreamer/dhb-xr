@@ -630,3 +630,16 @@ Story implication:
 - These videos should be used as visual evidence for robust offset reaching
   only. They are not full pick-place evidence because the gripper is held open
   and rollout stops on reach success.
+
+2026-04-26 contact-gap packaging update:
+
+- Added a consolidated contact-gap table:
+  `_workspace/paper_eval/2026-04-26_contact_gap_summary.md`.
+- The table separates the best current contact signal from the remaining
+  failure. Y-scale `1.55` improves close-time lateral error to `25.5 mm`, and
+  a delayed threshold can reach `17.1 mm` dynamic bowl XY, but both still fail
+  learned release and incur IK failures.
+- New claim gate: a full-task branch must preserve `5/5` reach, close before
+  step `120` at `<=20 mm` dynamic bowl XY, move the object at least as much as
+  the current best diagnostic, and learn a plate-side reopen without
+  object-specific gates.
