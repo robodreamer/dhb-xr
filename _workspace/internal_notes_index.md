@@ -209,6 +209,24 @@ Latest active result to preserve:
   `93`, before transport (`57.6 mm` close-vector error, `129.2 mm` release
   target XY). This is the clearest remaining blocker: learned phase persistence
   after close, not missing release labels or gripper polarity.
+- Latest phase-persistence branch:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_phasepersistent.yaml`
+  adds dense gripper-state margin supervision. It is the current best
+  learned-gripper sequence under true no-gate evaluation: close at step `80`,
+  reopen at step `197`, `0` IK failures, and `2.3 mm` minimum bowl XY. It still
+  fails full pick-place because close happens before physical side-grasp
+  contact (`60.2 mm` close-vector error) and release remains far from the plate
+  (`118.1 mm` bowl-plate XY). Raising close threshold to `0.85` only moves
+  close to step `83`; contact-phase decoding closes at step `2`.
+- Latest negative calibration branch:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_precontactopen.yaml`
+  oversamples close labels at the horizon tail to teach open-before-contact
+  negatives. It improves close-vector error to `42.1 mm` but immediately
+  reopens (`87 -> 89`) and introduces `72` IK failures. Its heavy checkpoint
+  and final-model artifacts were deleted to recover disk; keep the config and
+  score summaries as a negative result. The next model change should add a
+  learned contact-ready supervision path, not more threshold/sampler-only
+  sweeps.
 
 Historical diagnostics were moved to:
 

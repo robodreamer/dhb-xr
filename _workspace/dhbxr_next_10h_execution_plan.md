@@ -1449,3 +1449,58 @@ Important harness correction:
   model can produce release without object gates, but it releases before object
   transport. Next work should train/regularize a hold-transport phase rather
   than only changing scalar gripper thresholds.
+
+## 2026-04-27 Phase-Persistence Result
+
+The phase-persistence branch has now been executed:
+
+- config:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_phasepersistent.yaml`
+- checkpoint:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_phasepersistent_fromcoupled600/checkpoints/steps_300_pytorch_model.pt`
+- true no-gate diagnostic:
+  close step `80`, reopen step `197`, close-vector error `60.2 mm`, reopen
+  bowl-plate XY `118.1 mm`, final bowl-plate XY `116.8 mm`, and `0` IK
+  failures
+- threshold diagnostic:
+  `close=0.85/open=0.40` closes at step `83` with `51.6 mm` close-vector
+  error and no reopen
+- contact-phase decode diagnostic:
+  closes at step `2` with `343.3 mm` close-vector error
+
+Interpretation: phase persistence improved the learned gripper sequence, but
+close is still a phase prior rather than a contact-ready decision. The robot
+physically reaches the bowl around steps `136-148`; the model closes around
+steps `80-83`.
+
+## 2026-04-27 Pre-Contact-Open Negative Result
+
+The pre-contact-open branch has also been executed:
+
+- config:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_precontactopen.yaml`
+- purpose:
+  keep the motion heads frozen and oversample close phases at horizon position
+  `7` to create hard open-before-contact negatives
+- result:
+  close step `87`, reopen step `89`, close-vector error `42.1 mm`, minimum
+  bowl XY `9.3 mm`, final bowl-plate XY `122.2 mm`, and `72` IK failures
+
+Interpretation: sampler-only hard negatives are insufficient. They improve the
+close-vector score but destabilize phase persistence and IK. The heavy
+checkpoint/final-model artifacts were deleted; lightweight summaries and score
+JSONs remain.
+
+Updated next unattended target:
+
+1. Do not continue threshold-only sweeps or sampler-only gripper branches.
+2. Keep the phase-persistence checkpoint as the current best learned-gripper
+   evidence.
+3. Add a contact-ready supervision path that is offline-geometry-derived for
+   training, but object-free at deployment. The target should be sparse around
+   the demo side-grasp affordance and should explicitly penalize early close on
+   pre-contact approach frames.
+4. Preserve post-close hold/transport persistence separately from close-event
+   timing so the model does not collapse back to immediate close/open pulses.
+5. Re-evaluate every new branch with the affordance scorer and true
+   `"disable_gripper_gates": true` JSON verification.

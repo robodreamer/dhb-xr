@@ -145,3 +145,46 @@ The next most useful work is not more scalar threshold sweeping. It should
 train a better event representation for side-affordance close and object-target
 release, with a reach-preservation gate and an affordance-score gate after each
 run.
+
+## Phase-Persistence And Pre-Contact-Open Follow-Up
+
+A phase-persistence continuation was trained from the coupled post-contact
+checkpoint:
+
+`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_phasepersistent.yaml`
+
+The implementation adds a dense gripper-state margin loss on top of the
+target-aware smoothness loss. With true gripper gates disabled and generic
+`close=0.55/open=0.40` hysteresis, step `300` gives the best learned-gripper
+sequence so far: close at step `80`, reopen at step `197`, `0` IK failures,
+and minimum bowl XY `2.3 mm`. The score is still not a full-task pass:
+close-vector error is `60.2 mm`, close XY is `64.7 mm`, reopen target XY is
+`118.1 mm`, and final target XY is `116.8 mm`.
+
+The diagnostic trace explains the remaining failure. The arm physically reaches
+the bowl around steps `136-148`, but the dense closed probability becomes high
+from step `80` onward. Raising the generic close threshold to `0.85` only
+delays close to step `83` and still misses the side-grasp affordance
+(`51.6 mm` close-vector error). Decoding from the contact-phase head is worse:
+it closes at step `2` with `343.3 mm` close-vector error. Therefore the
+current blocker is not gripper polarity, missing release labels, or another
+execution threshold. It is learned contact-readiness calibration.
+
+A follow-up pre-contact-open branch tested whether close-phase oversampling at
+the end of the action horizon would provide enough hard open-before-contact
+negatives:
+
+`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_precontactopen.yaml`
+
+This is a useful negative result. It improves the scored close-vector error to
+`42.1 mm` and reaches `9.3 mm` minimum bowl XY, but immediately reopens
+(`87 -> 89`) and introduces `72` IK failures. The heavy checkpoint/final-model
+artifacts were removed to preserve disk; the lightweight rollout summaries and
+score JSON remain for provenance.
+
+Updated interpretation: the phase-persistence branch is the current best
+learned-gripper evidence because it demonstrates a no-gate close-hold-reopen
+sequence. The next model change should not be a scalar threshold or a sampler
+only. It should create a contact-ready target that keeps approach open until
+the predicted/observed state is truly at the grasp affordance, while separately
+maintaining post-close hold/transport persistence.

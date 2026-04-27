@@ -966,3 +966,38 @@ Story implication:
   gate.
 - For paper evidence, any future "no-gate" table must explicitly verify
   `"disable_gripper_gates": true` in the JSON artifacts.
+
+2026-04-27 phase-persistence and pre-contact-open update:
+
+- The phase-persistence branch
+  (`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_phasepersistent.yaml`)
+  adds dense gripper-state margin supervision on top of target-aware
+  smoothness. With true gripper gates disabled and generic
+  `close=0.55/open=0.40` hysteresis, step `300` is the current best
+  learned-gripper sequence: close step `80`, reopen step `197`, `0` IK
+  failures, and `2.3 mm` minimum bowl XY.
+- It still fails the affordance/full-task gates. Close-vector error is
+  `60.2 mm`, close XY is `64.7 mm`, reopen target XY is `118.1 mm`, and final
+  target XY is `116.8 mm`.
+- The trace shows why: the arm reaches the bowl physically around steps
+  `136-148`, but the dense closed-state probability is already high from step
+  `80`. A stricter generic close threshold (`0.85`) only moves close to step
+  `83` and still has `51.6 mm` close-vector error. Contact-phase decoding is
+  worse, closing at step `2`.
+- The pre-contact-open sampling branch
+  (`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_precontactopen.yaml`)
+  is a negative result. It improves close-vector error to `42.1 mm`, but
+  immediately reopens (`87 -> 89`) and introduces `72` IK failures. Its heavy
+  checkpoints were deleted; summaries and scores are retained.
+
+Story implication:
+
+- Learned gripper control is now paper-usable as a partial result: it clearly
+  beats demo replay and can produce a no-gate close-hold-reopen sequence.
+- The remaining full-task blocker is contact-readiness calibration. The model
+  currently predicts "the task is in the grasp phase" before the robot is at
+  the side-grasp affordance.
+- The next compelling result should use learned/perception-conditioned
+  contact-ready supervision, not deployment-time object gates or threshold
+  sweeps. The story should frame this as the remaining bridge from DHB-XR
+  geometric adaptation to full object-level manipulation.
