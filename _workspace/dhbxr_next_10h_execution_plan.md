@@ -1034,3 +1034,23 @@ Active constrained config:
 This should be the next branch to train/evaluate if we revisit contact
 precision. It must still pass the corrected `5/5` reach gate before any
 full-task rollout.
+
+Evaluation result:
+
+- run:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_contactprecision_cumsum_fromrelease600`
+- checkpoint: `steps_400_pytorch_model.pt`
+- corrected reach gate: `5/5`, average dynamic bowl XY `39.5 mm`, average
+  dynamic bowl XYZ `78.3 mm`, and `0` IK failures
+- full-task no-gate diagnostic with Y-scale `1.55` and gripper-state threshold
+  `0.90`: no success, close at step `101`, close geometry `22.3 mm` XY /
+  `33.6 mm` 3D, minimum dynamic bowl distance `18.9 mm` XY / `33.3 mm` 3D,
+  bowl motion `98.5 mm`, `29` IK failures, no reopen
+- threshold `0.92` delays close to step `129`, worsens close XY to `35.8 mm`,
+  and raises IK failures to `39`
+
+Interpretation: the cumulative base-action constraint fixes the reach
+preservation failure of the unconstrained contact-precision branch and reaches
+the strict contact-ready regime. It still does not solve release or late
+placement IK. The next training target should be post-contact transport and
+learned reopen, not more close-threshold sweeps.

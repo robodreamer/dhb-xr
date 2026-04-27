@@ -643,3 +643,29 @@ Story implication:
   step `120` at `<=20 mm` dynamic bowl XY, move the object at least as much as
   the current best diagnostic, and learn a plate-side reopen without
   object-specific gates.
+
+2026-04-26 constrained residual update:
+
+- Added and validated a cumulative base-action preservation loss for residual
+  adapters. The intent is to prevent the exact failure seen in the previous
+  contact-precision branch, where small per-step residuals accumulated into
+  endpoint drift.
+- The constrained branch
+  (`configs/libero_dhbxr_qwen_fresh_actionres_contactprecision_cumsum.yaml`,
+  `steps_400`) restores reach preservation: `5/5` corrected reach successes,
+  average dynamic bowl XY `39.5 mm`, and `0` IK failures.
+- Its best full-task no-gate diagnostic reaches the strict contact-ready
+  regime: minimum dynamic bowl XY `18.9 mm`, minimum dynamic bowl 3D
+  `33.3 mm`, close at step `101` with `22.3 mm` XY / `33.6 mm` 3D close
+  geometry, and bowl motion `98.5 mm`.
+- It still does not solve full pick-place: no reopen, `29` IK failures, and
+  final bowl-plate XY remains about `140 mm`.
+
+Story implication:
+
+- This is the strongest partial progress since the reach result. The narrative
+  can now say the remaining gap was narrowed from robust reach to
+  contact-ready grasp geometry, while the unresolved blocker is post-contact
+  transport and release.
+- Do not continue scalar close-threshold sweeps. Threshold `0.92` delayed
+  close, worsened close XY to `35.8 mm`, and increased IK failures to `39`.
