@@ -689,3 +689,50 @@ rollout states, not only nominal demo negatives, if we want learned gripper
 timing without deployment object gates. The next training intervention should
 capture or reconstruct observation/state samples from rollout states and train
 a contrastive or DAgger-style close-readiness objective against those states.
+
+## Policy-Trace Hard-Negative Dataloader Follow-Up
+
+The rollout trace export is now connected back into StarVLA training through a
+new dataset path:
+
+`vendor/starVLA/starVLA/dataloader/policy_trace_contact_datasets.py`
+
+The loader reads contact-miner policy manifests plus saved per-replan NPZ
+chunks and returns normal `QwenDHB` samples: agent-view image, language,
+state-history window, dummy action chunk, `dhb.close_contact`, and
+`dhb.action_valid_mask`. It can either train only from policy traces or mix
+those traces with the existing LeRobot demo dataset. The configured training
+branch is:
+
+`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_policytrace_hardneg.yaml`
+
+Validation passed:
+
+- policy-trace dataset unit tests pass;
+- `pytest tests/test_policy_trace_contact_dataset.py tests/test_libero_rollout_contact_miner.py tests/test_action_head.py -q`
+  passes (`46 passed`);
+- the actual QwenDHB train-step smoke passes and logs both `loss_contact` and
+  `loss_contact_margin`;
+- the compact 300-step continuation trains under the non-DeepSpeed
+  `train_starvla.py` path because this machine lacks `CUDA_HOME`/`nvcc`.
+
+The fixed-seed, true-no-gate h240 sweep is a useful negative result:
+
+- `steps_150`: no close at `0 cm` or `3 cm`; average minimum bowl XY
+  `63.1 mm`; average IK failures `75`.
+- `steps_300`: no close at `0 cm` or `3 cm`; average minimum bowl XY
+  `63.1 mm`; average IK failures `75`.
+- rollout close confidence is suppressed by construction: max close probability
+  is about `0.15` at step `150` and below `0.03` at step `300`.
+
+Interpretation: the new data path works, but the current manifest content is
+one-sided. The two exported policy traces provide `242` hard-negative
+supervised steps and `0` closed-loop positive steps. Mixing them with nominal
+demo positives is not enough to preserve a real close trigger, because the
+closed-loop negative observations dominate the deployment distribution. The
+next dataset must include true or near-true closed-loop positive contact states,
+either by collecting traces that actually pass the close-affordance gate or by
+simulator/world-model perturbation around demo close-affordance states. This is
+now the most concrete version of the paper story: use simulation/replay to
+populate the missing spatially diverse positive and negative contact states,
+then train the learned DHB contact token without deployment object gates.

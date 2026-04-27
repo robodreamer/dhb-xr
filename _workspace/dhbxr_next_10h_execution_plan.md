@@ -1983,3 +1983,33 @@ Policy-trace smoke:
   another `60` NPZ chunks (`8.5M`). Mining reports `171` hard negatives and
   best close-affordance error `54.3 mm`, saved to
   `_workspace/paper_eval/2026-04-27_policy_trace_case1_offset3_contact_manifest.jsonl`.
+
+Policy-trace hard-negative training:
+
+- Added `policy_trace_contact_datasets`, a StarVLA dataloader that converts
+  saved policy-trace NPZ chunks plus contact-miner manifests into normal
+  QwenDHB samples. It can mix closed-loop policy samples with the LeRobot demo
+  dataset, so the policy can learn from rollout observations without adding
+  object-distance gates to deployment.
+- Added
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_policytrace_hardneg.yaml`.
+  It trains the close-readiness contact path from currentready/current-phase
+  while preserving the trajectory and release path.
+- Validation passed: unit tests for the dataset, the contact miner, and the
+  action head pass (`46 passed`), and the actual train-step smoke logs active
+  `loss_contact` and `loss_contact_margin`.
+- The 300-step continuation completed using `train_starvla.py` with
+  `STARVLA_USE_DEEPSPEED=false`; `train_unified.py` is not usable on this
+  machine because it unconditionally initializes DeepSpeed and `CUDA_HOME` is
+  absent.
+- The result is negative but informative. Both `steps_150` and `steps_300`
+  never close at the default learned threshold on the fixed-seed `0 cm` and
+  `3 cm` h240 true-no-gate sweep. Average minimum bowl XY is still about
+  `63.1 mm`, average IK failures are `75`, and max rollout close probability
+  drops from about `0.15` at `steps_150` to below `0.03` at `steps_300`.
+- Diagnosis: the currently exported policy manifests have `242` hard-negative
+  supervised steps and `0` closed-loop positive steps. Demo positives alone do
+  not counterbalance those deployment-state negatives. The next high-impact
+  task is to generate closed-loop positive contact traces or replay/simulate
+  positive off-manifold contact states, then retrain the same dataloader path
+  with a balanced positive/negative rollout-state set.

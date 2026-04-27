@@ -408,6 +408,21 @@ Latest active result to preserve:
   next bridge into a closed-loop correction dataloader. A matching non-zero
   offset trace for `episode=1`, `offset=3cm` produced another `60` chunks and
   `171` hard negatives.
+- Latest policy-trace hard-negative dataloader follow-up:
+  StarVLA now has `policy_trace_contact_datasets`, which mixes LeRobot demo
+  samples with saved closed-loop policy-trace NPZ chunks and their mined
+  `dhb.close_contact`/`dhb.action_valid_mask` labels. The new config is
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_policytrace_hardneg.yaml`.
+  Unit tests, action-head/contact-miner regressions, and an actual QwenDHB
+  train-step smoke pass. The 300-step continuation is a controlled negative:
+  both `steps_150` and `steps_300` never close on fixed-seed true-no-gate
+  `0 cm`/`3 cm` h240 sweeps. Max close probability is suppressed to about
+  `0.15` at step 150 and below `0.03` at step 300. This proves the loader
+  works but the data is one-sided: current manifests contain `242`
+  hard-negative supervised steps and `0` closed-loop positive steps. Next
+  breakthrough work should generate positive closed-loop contact states through
+  successful/near-success traces or simulator replay around demo affordance
+  states, then reuse this dataloader with a balanced rollout-state set.
 
 Historical diagnostics were moved to:
 

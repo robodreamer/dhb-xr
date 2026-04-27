@@ -1337,3 +1337,30 @@ Story implication:
   breakthrough experiment a direct test of the central thesis: closed-loop
   rollout-state augmentation should improve calibrated contact decisions
   without adding object-distance gates at deployment.
+
+2026-04-27 policy-trace hard-negative dataset update:
+
+- The policy-trace bridge has now been implemented end-to-end. Saved rollout
+  images/state windows and contact-miner manifests can be loaded as QwenDHB
+  training samples and mixed with the normal LeRobot demo dataset. This closes
+  an important infrastructure gap: closed-loop observations are no longer just
+  diagnostics; they can directly supervise the learned DHB contact token.
+- The first training run with this bridge is negative but clarifying. The two
+  available policy-trace manifests contain `242` hard-negative supervised steps
+  and no closed-loop positive steps. Training on these hard negatives plus demo
+  positives suppresses close confidence: both `steps_150` and `steps_300`
+  never close on fixed-seed true-no-gate `0 cm`/`3 cm` h240 sweeps.
+- This result is exactly the expected failure if the augmentation set is
+  one-sided. It proves the data path and the hard-negative concept, but it also
+  shows that the missing data is now positive off-manifold contact states, not
+  another gripper decoder or threshold.
+
+Story implication:
+
+- The strongest next experiment is now concrete and story-aligned: generate a
+  balanced rollout-state contact dataset with both near-miss hard negatives
+  and successful/near-success side-grasp positives. Sources can be successful
+  policy traces, simulator replay around demo close-affordance poses, or a
+  world-model/contact-state generator. This directly realizes the manuscript's
+  claim that simulation/world-model augmentation plus DHB-XR invariants can
+  turn minimum teleop data into spatially robust manipulation behavior.
