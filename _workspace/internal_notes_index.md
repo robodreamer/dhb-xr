@@ -405,7 +405,9 @@ Latest active result to preserve:
   `rollout_seed=70`; it produced `60` NPZ chunks / `8.6M` total and mines to
   `191` hard negatives. The contact miner now emits a policy-manifest JSONL
   with `target_close`, `train_mask`, and `hard_negative_mask`, which is the
-  next bridge into a closed-loop correction dataloader.
+  next bridge into a closed-loop correction dataloader. A matching non-zero
+  offset trace for `episode=1`, `offset=3cm` produced another `60` chunks and
+  `171` hard negatives.
 
 Historical diagnostics were moved to:
 

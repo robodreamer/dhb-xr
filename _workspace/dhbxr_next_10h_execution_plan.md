@@ -1979,3 +1979,7 @@ Policy-trace smoke:
   NPZ to horizon-aligned `target_close`, `train_mask`, and
   `hard_negative_mask` arrays. The smoke manifest has `60` rows at
   `_workspace/paper_eval/2026-04-27_policy_trace_case0_contact_manifest.jsonl`.
+- A non-zero-offset trace was also generated for `episode=1, offset=3cm` with
+  another `60` NPZ chunks (`8.5M`). Mining reports `171` hard negatives and
+  best close-affordance error `54.3 mm`, saved to
+  `_workspace/paper_eval/2026-04-27_policy_trace_case1_offset3_contact_manifest.jsonl`.
