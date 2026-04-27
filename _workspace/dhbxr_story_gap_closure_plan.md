@@ -221,6 +221,34 @@ the method is not using object-distance gates at rollout. It uses simulator
 geometry only to produce better offline training labels, then deploys from
 images, language, state history, DHB/action tokens, and learned heads.
 
+2026-04-27 affordance-gripper retrain update:
+
+- The side-affordance action residual branch preserves the corrected 5-case
+  reach result: `5/5`, average dynamic bowl XY `38.2 mm`, and `0` IK failures.
+  This means the offline affordance-label data path did not break the
+  paper-safe reach/adaptation evidence.
+- The gripper-only continuation is the first no-gate learned gripper result
+  that closes reliably near the bowl under the delayed +3 cm rollout. At
+  `steps_800` with generic dense-state hysteresis threshold `0.55`, it closes
+  at step `83`, reaches minimum bowl XY `6.7 mm`, and has `0` IK failures.
+- The same run still fails the side-grasp affordance metric: close-vector
+  error is `51.8 mm`; a generic `0.70` close threshold improves it to
+  `42.3 mm` but still does not pass. The best possible close-vector error in
+  the trace is about `25 mm`, later than the actual close.
+- Demo gripper replay remains clearly worse for non-zero offsets: it closes at
+  step `42`, with `194.8 mm` close-vector error and `112` IK failures.
+- A real event-decoder bug was fixed: 3-class contact-phase decoding now
+  requires thresholded close/open confidence instead of toggling by argmax.
+  After the fix, the current contact-phase head still closes too early, so the
+  remaining issue is event calibration/supervision, not only decode logic.
+
+Story implication: the claim boundary improves but remains honest. We can say
+that learned gripper state from DHB/observation context is better than demo
+timing replay and works without object-distance gates. We still cannot claim
+full pick-place. The remaining gap is compact and specific: learn the
+side-affordance close event and object-target release/transport tightly enough
+to pass the affordance scorer.
+
 Transport residual update:
 
 - A transport-focused residual continuation

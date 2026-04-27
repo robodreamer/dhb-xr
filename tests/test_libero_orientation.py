@@ -91,6 +91,25 @@ def test_decode_contact_probs_to_gripper_cmds_supports_three_way_events():
     np.testing.assert_allclose(cmds, [-1.0, 1.0, 1.0, -1.0, -1.0], atol=1e-6)
 
 
+def test_decode_contact_probs_to_gripper_cmds_thresholds_three_way_events():
+    contact_probs = np.array(
+        [
+            [0.34, 0.36, 0.30],  # close is argmax but below threshold
+            [0.20, 0.62, 0.18],  # confident close
+            [0.20, 0.44, 0.36],  # stay closed
+            [0.30, 0.20, 0.50],  # open argmax but below open threshold
+            [0.10, 0.10, 0.80],  # confident open
+        ],
+        dtype=np.float32,
+    )
+    cmds = decode_contact_probs_to_gripper_cmds(
+        contact_probs,
+        initial_gripper_cmd=-1.0,
+        threshold=0.55,
+    )
+    np.testing.assert_allclose(cmds, [-1.0, 1.0, 1.0, 1.0, -1.0], atol=1e-6)
+
+
 def test_decode_contact_probs_to_gripper_cmds_supports_dense_gripper_state():
     contact_probs = np.array(
         [

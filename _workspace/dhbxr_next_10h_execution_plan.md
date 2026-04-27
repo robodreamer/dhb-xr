@@ -51,6 +51,44 @@ Immediate next actions:
 4. Do not add object-distance gripper gates to the policy path; use them only
    as diagnostics or offline supervision for regenerated training data.
 
+## 2026-04-27 Update: Learned Gripper State Works, Full Task Still Fails Affordance/Release
+
+The affordance-labeled branch has now been trained and evaluated:
+
+- action residual run:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_fromxy500`
+- gripper-only continuation:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_grip_fromaff500`
+- concise summary:
+  `_workspace/paper_eval/2026-04-27_affordance_gripper_retrain_summary.md`
+
+The result is mixed but useful. The action residual preserves the corrected
+5-case reach gate at `5/5`, average dynamic bowl XY `38.2 mm`, and `0` IK
+failures. The gripper-only continuation makes learned gripper state actionable
+without object-distance gates: `steps_800` closes at step `83` with `0` IK
+failures and minimum bowl XY `6.7 mm`. Demo gripper replay is much worse
+(`194.8 mm` close-vector error and `112` IK failures), so the learned gripper
+path is the right direction.
+
+The remaining blocker is still not solved. The learned close happens too high
+and not tightly enough at the demo side-grasp affordance. Best current
+close-vector error is `42.3 mm` with generic threshold `0.70`; the pass target
+is materially lower. The run also never reopens and remains about `116-128 mm`
+from the plate at final placement.
+
+Immediate next actions:
+
+1. Keep the affordance action-residual branch as the active reach-safe branch.
+2. Do not use object-distance gates in rollout. Use the affordance scorer as
+   the gate and simulator geometry only for offline labels/diagnostics.
+3. Retrain event/contact heads with better side-affordance close calibration
+   and explicit release/object-target supervision. The current contact-phase
+   head is not usable even after fixing thresholded 3-class event decoding.
+4. Preserve the reach gate before every full-task claim: `5/5`, average bowl
+   XY near `38-40 mm`, and `0` IK failures under benchmark init/raw images.
+5. Treat full pick-place as unclaimed until a no-gate run passes both
+   close-vector affordance and object-target release metrics.
+
 ## 2026-04-25 Late Update: Reach Is Now Validated, Full Task Is Phase-Limited
 
 The current highest-confidence executable result is no longer the older

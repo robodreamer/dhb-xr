@@ -143,6 +143,27 @@ Latest active result to preserve:
   `libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp.yaml` then
   `libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_grip.yaml` for
   the next branch.
+- Latest 2026-04-27 branch status:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_fromxy500`
+  preserves the corrected 5-case reach gate at `5/5`, average dynamic bowl XY
+  `38.2 mm`, and `0` IK failures. The gripper-only continuation
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_grip_fromaff500`
+  makes the learned gripper-state signal actionable without object-distance
+  gates: `steps_800`, threshold `0.55`, closes at step `83` with `0` IK
+  failures and minimum bowl XY `6.7 mm`. It still misses the demo side-grasp
+  affordance (`51.8 mm` close-vector error; best possible `25.0 mm` at step
+  `113`), never reopens, and ends about `116 mm` bowl-plate XY from target.
+  A generic threshold `0.70` delays close to step `87` and improves close
+  vector error to `42.3 mm`, but still fails. Demo gripper replay is much
+  worse (`194.8 mm` close-vector error, `112` IK failures). Current summary:
+  `_workspace/paper_eval/2026-04-27_affordance_gripper_retrain_summary.md`.
+- Latest implementation fix:
+  3-class contact-phase event decoding now respects configured close/open
+  thresholds instead of toggling by argmax alone. The fix prevents weak
+  close/release event logits from becoming hard gripper commands, and is
+  covered in `tests/test_libero_orientation.py`. The current trained
+  contact-phase head still closes too early after the fix, so the model needs
+  better event calibration rather than another rollout heuristic.
 
 Historical diagnostics were moved to:
 

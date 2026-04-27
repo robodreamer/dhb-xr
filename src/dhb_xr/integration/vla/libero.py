@@ -319,11 +319,14 @@ def decode_contact_probs_to_gripper_cmds(
         return cmds
 
     if probs.shape[-1] >= 3:
-        event_ids = probs.argmax(axis=-1)
-        for i, event_id in enumerate(event_ids):
-            if int(event_id) == 1:
+        close_thr = float(threshold if close_threshold is None else close_threshold)
+        open_thr = float(threshold if open_threshold is None else open_threshold)
+        close_probs = probs[:, 1]
+        open_probs = probs[:, 2]
+        for i, (close_p, open_p) in enumerate(zip(close_probs, open_probs)):
+            if close_p >= close_thr and close_p >= open_p:
                 is_closed = True
-            elif int(event_id) == 2:
+            elif open_p >= open_thr and open_p > close_p:
                 is_closed = False
             cmds[i] = 1.0 if is_closed else -1.0
         if decode_state is not None:
