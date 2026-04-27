@@ -1793,3 +1793,48 @@ with fixed `rollout_seed=70`, true `--disable-gripper-gates`, and
 `--model-gripper-decode-source contact_gripper_state`. The claim gate is
 whether release/hold improves without losing the currentready close score or
 reintroducing open-close flicker.
+
+## 2026-04-27 Current-Phase Release Decoder Update
+
+Implemented and tested a stricter learned gripper contract:
+
+- close source: currentready contact probability
+- open source: current-aligned `dhb.object_release_phase` class `2`
+- deployment inputs: image, language, state history, DHB/action context, and
+  learned head outputs only
+- no deployment object-distance gates
+
+The decoder path is `contact_release_phase` and is covered by
+`tests/test_chunk_rollout.py`. The current-phase continuation config is:
+
+`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentready_objectrelease_currentphase.yaml`
+
+Important evidence under fixed `rollout_seed=70`, true no-gate, h240:
+
+- `steps_300`, `close=0.55/open=0.55/debounce=2`: reaches `6.4 mm` minimum
+  bowl XY, closes at step `83`, never reopens, final target XY `111.8 mm`,
+  and has `6` IK failures.
+- `steps_300`, `close=0.60/open=0.55/debounce=2`: delays close to step `99`,
+  improves actual close to `16.8 mm` XY / `35.8 mm` vector error, but final
+  target XY worsens to `140.3 mm` with `28` IK failures.
+- `steps_300`, `close=0.62/open=0.55/debounce=2`: becomes too strict and never
+  closes despite `6.7 mm` minimum bowl XY.
+
+Interpretation: the release class is not the primary bug anymore. A traced run
+shows release probability remains effectively zero while the object is still
+far from the plate, which is the correct learned behavior. The full-task gap is
+now close-affordance precision plus closed-object transport. The next branch
+should not add object-distance rollout gates or more release-threshold sweeps.
+
+Next most impactful branch:
+
+1. Preserve the currentready contact head and `contact_release_phase` decoder.
+2. Train close-affordance precision directly, with current-aligned labels that
+   distinguish "near bowl but too high/side-offset" from true grasp-ready
+   states.
+3. Train closed-object transport on post-close chunks using the existing
+   object-hold/transport labels, but treat release as a consequence of reaching
+   target, not as a separately forced open event.
+4. Gate progress on actual close-vector error below `30 mm`, final
+   object-target XY below `40 mm`, low IK failures, and no deployment
+   object-distance gates.

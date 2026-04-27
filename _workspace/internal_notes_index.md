@@ -346,6 +346,21 @@ Latest active result to preserve:
   remains `110.6 mm` and IK failures rise to `64`. Direct `contact_phase`
   decoding is worse. Treat this as a validated no-gate learned close/reopen
   partial, not a solved full-task result.
+- Latest current-phase release decoder:
+  `src/dhb_xr/integration/vla/libero.py` now has
+  `contact_release_phase`, which closes from the currentready contact head and
+  opens from the learned object-release phase class. The current-phase
+  continuation config is
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentready_objectrelease_currentphase.yaml`.
+  Under fixed `rollout_seed=70`, true no-gate, h240, step `300` reaches
+  `6.4 mm` minimum bowl XY with `close=0.55`, but closes too early/high
+  (`49.1 mm` close-vector error), never reopens, and finishes `111.8 mm` from
+  the target. Raising close threshold to `0.60` improves close geometry
+  (`16.8 mm` XY, `35.8 mm` vector error) but worsens transport and IK. A trace
+  shows release probability remains near zero while the bowl is still far from
+  the plate, which is conceptually correct. The active blocker is now
+  close-affordance precision plus held-object transport, not release-class
+  plumbing.
 
 Historical diagnostics were moved to:
 

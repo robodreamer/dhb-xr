@@ -1232,3 +1232,35 @@ Story implication:
   `110-120 mm` toward the scorer gate while preserving learned close
   affordance and avoiding IK failures. More threshold sweeps or direct
   `contact_phase` decoding are not the main path.
+
+2026-04-27 current-phase release decoder update:
+
+- A new deployment decoder, `contact_release_phase`, now separates learned
+  close and learned open more cleanly: currentready contact probability closes
+  the gripper, while the current-aligned object-release phase class opens it.
+  This keeps the live policy object-free and preserves the manuscript claim
+  boundary.
+- The current-phase release continuation validates the interface but not the
+  full task. At `steps_300`, `close=0.55/open=0.55/debounce=2` reaches
+  `6.4 mm` minimum bowl XY, but actual close is still too early/high
+  (`49.1 mm` vector error), no release occurs, and final target XY is
+  `111.8 mm`. A stricter learned close threshold (`0.60`) improves close to
+  `35.8 mm` vector error and `16.8 mm` XY, but increases IK failures and
+  worsens final target XY. At `0.62`, the model never closes.
+- The release head is behaving conceptually correctly in the trace: release
+  probability stays near zero while the object is far from the plate. That
+  means the next missing result is not "make open fire"; it is precise
+  side-grasp close and stable held-object transport so the learned release head
+  has a valid target-arrival state to detect.
+
+Story implication:
+
+- The strongest story remains DHB-XR as a compact geometric action/state token
+  that enables spatial adaptation, plus offline simulation-derived labels for
+  phase semantics. The current evidence supports this as an architecture and
+  evaluation story, but the full success video still requires solving the
+  closed-object transport gap.
+- For paper risk control, separate claims into "validated now" and "pending
+  final result": reach/offset adaptation, no-gate learned close, and
+  object-release label contract are validated; full pick-place success and
+  bowl-to-plate release are pending.

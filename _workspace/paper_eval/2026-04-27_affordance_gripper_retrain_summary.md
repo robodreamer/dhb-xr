@@ -535,3 +535,53 @@ held-object transport and release calibration. The next model should preserve
 the currentready close-readiness path, keep the hybrid decoder, and strengthen
 post-close transport/release supervision rather than switching to
 `contact_phase` decoding or relying on scalar threshold sweeps.
+
+## Current-Phase Release Decoder Result
+
+The latest implementation adds an object-free hybrid decoder:
+
+`--model-gripper-decode-source contact_release_phase`
+
+This decoder closes from the already-validated currentready contact head and
+opens only from the learned release class of `pred_contact_phase_probs`. It is
+not an object-distance gate; object geometry is used only in offline labels and
+affordance scoring.
+
+The current-phase release continuation was trained from:
+
+`_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_currentready_objectrelease_fromtransport200/checkpoints/steps_300_pytorch_model.pt`
+
+with config:
+
+`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentready_objectrelease_currentphase.yaml`
+
+It freezes the trajectory, currentready contact, and dense gripper-state paths,
+then trains the release phase head against current-aligned
+`dhb.object_release_phase`. The corrected fixed-seed, true-no-gate,
+long-horizon sweep gives:
+
+- `close=0.55/open=0.55/debounce=2`, step `150`: close step `87`, no reopen,
+  minimum bowl XY `32.2 mm`, close-vector error `40.0 mm`, final target XY
+  `126.7 mm`, and `0` IK failures.
+- `close=0.55/open=0.55/debounce=2`, step `300`: close step `83`, no reopen,
+  minimum bowl XY `6.4 mm`, close-vector error `49.1 mm`, final target XY
+  `111.8 mm`, and `6` IK failures.
+- `close=0.60/open=0.55/debounce=2`, step `300`: close step `99`, no reopen,
+  close XY `16.8 mm`, close-vector error `35.8 mm`, final target XY
+  `140.3 mm`, and `28` IK failures.
+- `close=0.62/open=0.55/debounce=2`, step `300`: no close, minimum bowl XY
+  `6.7 mm`, and `88` IK failures.
+
+The trace diagnostic explains why the release decoder does not reopen: the
+learned release probability remains near zero (`max ~= 1.4e-4`) while the bowl
+is still more than `110 mm` from the plate. That is conceptually the right
+behavior for a release-ready head. The remaining blocker is now precise
+side-grasp closure plus stable closed-object transport. The release head should
+not be forced to open until the transported object actually reaches the target
+region in the learned state.
+
+Updated claim boundary: we have a validated learned no-gate close/reopen
+mechanism and a validated release-label contract, but the current full-task
+result is still a partial. The next breakthrough should optimize close
+affordance precision and held-object transport before further release-head
+work.

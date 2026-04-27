@@ -441,6 +441,90 @@ def decode_hybrid_contact_gripper_state_cmds(
     return cmds
 
 
+def decode_hybrid_contact_release_phase_cmds(
+    contact_probs: np.ndarray,
+    contact_phase_probs: np.ndarray,
+    *,
+    initial_gripper_cmd: float = -1.0,
+    threshold: float = 0.5,
+    contact_mode: str = "gripper_state",
+    close_threshold: float | None = None,
+    open_threshold: float | None = None,
+    transition_debounce_steps: int = 1,
+    decode_state: GripperDecodeState | None = None,
+) -> np.ndarray:
+    """Close from current contact readiness and open from learned release phase."""
+    ready_probs = np.asarray(contact_probs, dtype=np.float32)
+    phase_probs = np.asarray(contact_phase_probs, dtype=np.float32)
+    if ready_probs.ndim != 2 or ready_probs.shape[-1] < 1:
+        raise ValueError(f"Expected (T, C) contact readiness probs, got shape {ready_probs.shape}")
+    if phase_probs.ndim != 2 or phase_probs.shape[-1] < 1:
+        raise ValueError(f"Expected (T, C) contact-phase probs, got shape {phase_probs.shape}")
+    if ready_probs.shape[0] != phase_probs.shape[0]:
+        raise ValueError(
+            "Hybrid contact/release-phase decode requires equal horizons, got "
+            f"{ready_probs.shape[0]} and {phase_probs.shape[0]}"
+        )
+
+    if contact_mode == "gripper_state":
+        ready_closed_probs = ready_probs[:, 1] if ready_probs.shape[-1] >= 2 else ready_probs[:, 0]
+    else:
+        ready_closed_probs = (
+            ready_probs[:, 1]
+            if ready_probs.shape[-1] >= 3
+            else ready_probs[:, 0]
+        )
+    release_open_probs = (
+        phase_probs[:, 2]
+        if phase_probs.shape[-1] >= 3
+        else phase_probs[:, -1]
+    )
+
+    is_closed = float(initial_gripper_cmd) > 0.0
+    if decode_state is not None:
+        decode_state.sync_closed(is_closed)
+        is_closed = decode_state.is_closed
+
+    close_thr = float(threshold if close_threshold is None else close_threshold)
+    open_thr = float(threshold if open_threshold is None else open_threshold)
+    debounce_steps = max(1, int(transition_debounce_steps))
+    pending_target: bool | None = (
+        None if decode_state is None else decode_state.pending_target
+    )
+    pending_count = 0 if decode_state is None else int(decode_state.pending_count)
+    cmds = np.empty(len(ready_closed_probs), dtype=np.float32)
+
+    for i, (ready_closed, release_open) in enumerate(zip(ready_closed_probs, release_open_probs)):
+        target_closed: bool | None = None
+        if is_closed:
+            if float(release_open) >= open_thr:
+                target_closed = False
+        else:
+            if float(ready_closed) >= close_thr:
+                target_closed = True
+
+        if target_closed is None or target_closed == is_closed:
+            pending_target = None
+            pending_count = 0
+        else:
+            if pending_target is None or pending_target != target_closed:
+                pending_target = target_closed
+                pending_count = 1
+            else:
+                pending_count += 1
+            if pending_count >= debounce_steps:
+                is_closed = target_closed
+                pending_target = None
+                pending_count = 0
+        cmds[i] = 1.0 if is_closed else -1.0
+
+    if decode_state is not None:
+        decode_state.is_closed = bool(is_closed)
+        decode_state.pending_target = pending_target
+        decode_state.pending_count = int(pending_count)
+    return cmds
+
+
 def decode_model_gripper_cmds(
     result: Dict,
     *,
@@ -467,6 +551,7 @@ def decode_model_gripper_cmds(
         "contact_phase",
         "contact",
         "contact_gripper_state",
+        "contact_release_phase",
         "normalized_action",
     }
     if decode_source not in valid_sources:
@@ -551,6 +636,48 @@ def decode_model_gripper_cmds(
             "close_probs": ready_closed_probs.tolist(),
             "open_probs": (1.0 - state_closed_probs).tolist(),
             "state_close_probs": state_closed_probs.tolist(),
+            "threshold": float(threshold),
+            "close_threshold": None if close_threshold is None else float(close_threshold),
+            "open_threshold": None if open_threshold is None else float(open_threshold),
+            "transition_debounce_steps": int(transition_debounce_steps),
+            "debounce_pending_target": None if decode_state is None else decode_state.pending_target,
+            "debounce_pending_count": None if decode_state is None else int(decode_state.pending_count),
+        }
+
+    if (
+        decode_source == "contact_release_phase"
+        and "pred_contact_probs" in result
+        and result["pred_contact_probs"] is not None
+        and "pred_contact_phase_probs" in result
+        and result["pred_contact_phase_probs"] is not None
+    ):
+        contact_probs = np.asarray(result["pred_contact_probs"][0, :n_use], dtype=np.float32)
+        phase_probs = np.asarray(result["pred_contact_phase_probs"][0, :n_use], dtype=np.float32)
+        contact_mode = str(result.get("contact_mode", "gripper_state"))
+        cmds = decode_hybrid_contact_release_phase_cmds(
+            contact_probs,
+            phase_probs,
+            initial_gripper_cmd=initial_gripper_cmd,
+            threshold=threshold,
+            contact_mode=contact_mode,
+            close_threshold=close_threshold,
+            open_threshold=open_threshold,
+            transition_debounce_steps=transition_debounce_steps,
+            decode_state=decode_state,
+        )
+        if contact_mode == "gripper_state":
+            ready_closed_probs = contact_probs[:, 1] if contact_probs.shape[-1] >= 2 else contact_probs[:, 0]
+        else:
+            ready_closed_probs = contact_probs[:, 1] if contact_probs.shape[-1] >= 3 else contact_probs[:, 0]
+        release_open_probs = phase_probs[:, 2] if phase_probs.shape[-1] >= 3 else phase_probs[:, -1]
+        return cmds, {
+            "source": "contact_release_phase_probs",
+            "decode_source": decode_source,
+            "contact_mode": contact_mode,
+            "ready_probs": contact_probs.tolist(),
+            "phase_probs": phase_probs.tolist(),
+            "close_probs": ready_closed_probs.tolist(),
+            "open_probs": release_open_probs.tolist(),
             "threshold": float(threshold),
             "close_threshold": None if close_threshold is None else float(close_threshold),
             "open_threshold": None if open_threshold is None else float(open_threshold),

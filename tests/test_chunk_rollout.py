@@ -211,6 +211,63 @@ def test_runner_hybrid_contact_ready_closes_and_dense_state_reopens():
     assert prepared["debug"]["gripper_open_threshold"] == 0.4
 
 
+def test_runner_hybrid_contact_ready_closes_and_release_phase_reopens():
+    runner = TrajectoryChunkRunner(
+        ChunkRolloutConfig(
+            gripper_source="model",
+            model_gripper_decode_source="contact_release_phase",
+            gripper_close_threshold=0.6,
+            gripper_open_threshold=0.7,
+            gripper_transition_debounce_steps=2,
+        )
+    )
+    prepared = runner.prepare_chunk(
+        {
+            "positions": np.array(
+                [[[0.00, 0.00, 0.00], [0.01, 0.00, 0.00], [0.02, 0.00, 0.00], [0.03, 0.00, 0.00], [0.04, 0.00, 0.00]]],
+                dtype=np.float32,
+            ),
+            "quaternions": np.array([[[1.0, 0.0, 0.0, 0.0]] * 5], dtype=np.float32),
+            "contact_mode": "gripper_state",
+            "pred_contact_probs": np.array(
+                [[
+                    [0.90, 0.10],
+                    [0.35, 0.65],
+                    [0.34, 0.66],
+                    [0.95, 0.05],
+                    [0.95, 0.05],
+                ]],
+                dtype=np.float32,
+            ),
+            "pred_contact_phase_probs": np.array(
+                [[
+                    [0.95, 0.04, 0.01],
+                    [0.90, 0.08, 0.02],
+                    [0.85, 0.12, 0.03],
+                    [0.18, 0.10, 0.72],
+                    [0.15, 0.05, 0.80],
+                ]],
+                dtype=np.float32,
+            ),
+        },
+        anchor_pos=np.zeros(3, dtype=np.float32),
+        current_start=0,
+        n_use=5,
+        initial_gripper_cmd=-1.0,
+    )
+
+    assert prepared["debug"]["gripper_source_used"] == "contact_release_phase_probs"
+    assert prepared["gripper_cmds"].tolist() == [-1.0, -1.0, 1.0, 1.0, -1.0]
+    assert np.allclose(
+        prepared["debug"]["close_probs"], [0.1, 0.65, 0.66, 0.05, 0.05]
+    )
+    assert np.allclose(
+        prepared["debug"]["open_probs"], [0.01, 0.02, 0.03, 0.72, 0.8]
+    )
+    assert prepared["debug"]["gripper_close_threshold"] == 0.6
+    assert prepared["debug"]["gripper_open_threshold"] == 0.7
+
+
 def test_runner_applies_temporal_debounce_to_gripper_state_predictions():
     runner = TrajectoryChunkRunner(
         ChunkRolloutConfig(
