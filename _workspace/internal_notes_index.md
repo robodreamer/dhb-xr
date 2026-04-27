@@ -93,6 +93,21 @@ Latest active result to preserve:
   not continue this scalar transport fine-tune for claims; the next model
   change should separate post-contact transport adaptation from the pre-contact
   close signal.
+- Latest implementation fix:
+  command-state gripper conditioning is now supported in rollout and dataset
+  loading. Use `--state-gripper-source commanded` and
+  `datasets.vla_data.state_gripper_source: commanded` for branches that train
+  or execute closed-residual behavior. This avoids the observed LIBERO qpos lag
+  disabling closed residuals after a close command.
+- Latest branch status:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_transport_fromrelease600`
+  preserves the corrected 5-case reach gate at `5/5`, average dynamic bowl XY
+  `40.3 mm`, and `0` IK failures. The follow-up XY closed residual branch
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_transport_xy_fromcommand800`
+  removes full-task IK failures in the best diagnostic, but still closes at
+  about `29.2 mm` XY from the bowl after a best approach of about `19.2 mm`.
+  Treat the remaining gap as contact-centered approach and learned close timing
+  before returning to release/placement.
 
 Historical diagnostics were moved to:
 

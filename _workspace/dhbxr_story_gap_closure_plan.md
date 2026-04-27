@@ -734,3 +734,37 @@ Story implication:
   transport and release.
 - Do not continue scalar close-threshold sweeps. Threshold `0.92` delayed
   close, worsened close XY to `35.8 mm`, and increased IK failures to `39`.
+
+2026-04-26 command-state transport update:
+
+- The latest implementation gap was the gripper state used for closed-loop
+  conditioning. Live rollout commanded the gripper closed, but the observed
+  physical qpos stayed open for many policy steps. The closed residual was
+  therefore disabled during the intended grasp/transport phase.
+- Rollout and dataset loading now support a commanded gripper-state proxy.
+  This is a general streaming VLA convention, not an environment-specific
+  object-distance heuristic: the policy conditions on its own command history
+  when actuator observations lag.
+- A command-state transport branch preserves the corrected reach gate:
+  `5/5`, average dynamic bowl XY `40.3 mm`, and `0` IK failures.
+- A command-state XY closed residual branch gives the cleanest integrated
+  behavior so far: no late IK failures in the full-task diagnostic, but still
+  no pick-place success.
+- The remaining miss is now sharply localized. The arm reaches about
+  `19.2 mm` dynamic bowl XY before close, but the learned close fires later at
+  about `29.2 mm` XY. The likely physical grasp tolerance is closer to
+  `<=15 mm`, so the unresolved gap is contact-centered approach and learned
+  close timing, not broad arm smoothness or gripper polarity.
+
+Story implication:
+
+- The story is now around 80-85% complete for a strong paper narrative. The
+  validated pieces are robust offset reach, correct streaming DHB/token
+  mechanics, reach-preserving residual design, and a clear explanation of why
+  naive gripper/release training fails under delayed offset rollout.
+- The missing 15-20% is one clean integrated success result or a stronger
+  matched-control table that makes the partial result scientifically decisive.
+  Full pick-place should still not be claimed.
+- The next breakthrough path is contact-centering under the command-state
+  streaming convention, followed by release/placement after close geometry is
+  physically graspable.

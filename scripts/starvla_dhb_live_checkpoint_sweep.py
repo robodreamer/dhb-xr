@@ -59,6 +59,7 @@ def _run_case(
     direct_action_xyz_scale: tuple[float, float, float],
     direct_action_xyz_bias_mm: tuple[float, float, float],
     state_history_update_rate: str,
+    state_gripper_source: str,
     max_policy_steps: int,
     settle_steps: int,
     reach_only: bool,
@@ -132,6 +133,8 @@ def _run_case(
         str(direct_action_xyz_bias_mm[2]),
         "--state-history-update-rate",
         state_history_update_rate,
+        "--state-gripper-source",
+        state_gripper_source,
         "--max-policy-steps",
         str(max_policy_steps),
         "--settle-steps",
@@ -252,6 +255,11 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--state-gripper-source",
+        choices=("observed", "commanded"),
+        default="observed",
+    )
+    parser.add_argument(
         "--direct-action-xyz-scale",
         type=float,
         nargs=3,
@@ -354,6 +362,7 @@ def main() -> None:
                 direct_action_xyz_scale=tuple(float(v) for v in args.direct_action_xyz_scale),
                 direct_action_xyz_bias_mm=tuple(float(v) for v in args.direct_action_xyz_bias_mm),
                 state_history_update_rate=args.state_history_update_rate,
+                state_gripper_source=args.state_gripper_source,
                 max_policy_steps=int(args.max_policy_steps),
                 settle_steps=args.settle_steps,
                 reach_only=args.reach_only,
@@ -399,6 +408,7 @@ def main() -> None:
             "image_orientation": args.image_orientation,
             "trajectory_source": args.trajectory_source,
             "state_history_update_rate": args.state_history_update_rate,
+            "state_gripper_source": args.state_gripper_source,
             "direct_action_xyz_scale": [float(v) for v in args.direct_action_xyz_scale],
             "direct_action_xyz_bias_mm": [float(v) for v in args.direct_action_xyz_bias_mm],
             "init_state_source": args.init_state_source,

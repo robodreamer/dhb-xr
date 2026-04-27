@@ -1113,3 +1113,68 @@ Updated next action:
 3. Treat release as a training/data problem: the release head must become
    stable across replans from post-contact observations, not merely produce a
    chunk-tail open prior.
+
+## 2026-04-26 Late Update: Command-State Gripper Alignment
+
+The latest closed-transport failure had an implementation-level cause: the
+policy conditioned closed residuals on observed physical gripper qpos, while
+the live controller commands close immediately but the observed LIBERO qpos
+lags for many policy steps. In deployment terms, the policy should be allowed
+to condition on the command stream it just issued, not only the delayed
+actuator measurement.
+
+Implemented fixes:
+
+1. `scripts/starvla_dhb_embodik_live_rollout.py` now supports
+   `--state-gripper-source observed|commanded`.
+2. `scripts/starvla_dhb_live_checkpoint_sweep.py` forwards the same option.
+3. `vendor/starVLA/starVLA/dataloader/gr00t_lerobot/datasets.py` supports
+   `datasets.vla_data.state_gripper_source: commanded` so training and live
+   streaming use the same state convention.
+4. The trace records both the policy-state gripper value and the observed qpos
+   so future diagnostics can detect this mismatch directly.
+
+Validated branches:
+
+- Release-stable from the cumsum checkpoint trains generic gripper/contact
+  heads without a fixed chunk slot. It removes the earlier fixed-slot artifact
+  but is under-confident and still fails full pick-place.
+- Commanded transport from the release-stable checkpoint preserves the
+  corrected reach gate at `5/5` with `0` IK failures.
+- Commanded transport XY trains only the closed residual and reaches the
+  strongest post-close stability so far: full-task diagnostic has `0` IK
+  failures, but still no success.
+
+Current best full-task diagnostic:
+
+- run:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_transport_xy_fromcommand800`
+- checkpoint: `steps_500_pytorch_model.pt`
+- state convention: commanded gripper proxy
+- threshold/open/debounce: `0.45 / 0.05 / 2`
+- close step: `121`
+- close geometry: about `29.2 mm` XY and `15.3 mm` vertical offset from the
+  bowl
+- best approach: about `19.2 mm` dynamic bowl XY near step `97`
+- IK failures: `0`
+- outcome: no placement success, no stable release
+
+Interpretation: this is meaningful progress because the late IK-collapse
+failure is mostly gone. It is not yet the breakthrough because the learned
+close happens after the best approach and still outside the likely physical
+grasp tolerance. The next compute should not be another transport residual
+sweep. It should improve contact-centered approach and close timing while
+preserving the command-state reach gate.
+
+Next unattended target:
+
+1. Train a contact-centering residual from the command-state XY checkpoint or
+   command-state transport checkpoint.
+2. Preserve the base reach field with cumulative base-action loss and a strict
+   corrected 5-case reach gate.
+3. Oversample close/contact approach chunks, but avoid a fixed gripper event
+   slot because that previously created chunk-position artifacts.
+4. Use the objective gate `<=15-20 mm` dynamic bowl XY at learned close before
+   returning to release/placement training.
+5. After contact close is physically plausible, revisit integrated gripper
+   release and matched QwenDHB/QwenOFT comparisons for the paper table.

@@ -102,6 +102,53 @@ chunk-relative gripper supervision or insufficient post-contact/release state
 coverage. The next release attempt should train a release signal that is stable
 across replans, not rely on lowering debounce to accept one-slot tail spikes.
 
+## Command-State Transport Update
+
+The latest root-cause check found a training/deployment mismatch in the
+closed-residual gate. The closed transport residual was conditioned on the
+observed physical gripper qpos, but during live LIBERO rollout the commanded
+close is delayed in the observed qpos for dozens of policy steps. This meant
+the transport residual often did not activate during the intended grasp and
+post-grasp window.
+
+Two generic fixes were added:
+
+1. The rollout can feed a commanded gripper-state proxy into the policy state
+   with `--state-gripper-source commanded`.
+2. The dataset loader can train the state history the same way with
+   `datasets.vla_data.state_gripper_source: commanded`.
+
+This is not object-specific. It aligns the policy state with the command stream
+used by a receding-horizon VLA controller, rather than with delayed actuator
+qpos.
+
+New branch results:
+
+| Branch | State gripper | Close threshold | Close step | Close EE-bowl offset | Min bowl XY | Min plate XY | IK fails | Outcome |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| Release-stable | commanded | `0.60` | `93` | near contact, no reopen | `~19 mm` | `~86 mm` | `48` | improves IK timing, no success |
+| Commanded transport | commanded | `0.45` | `109` | `24.4 mm` XY / `18.3 mm` Z | `19.2 mm` | `80.1 mm` | `40` | better IK, no placement |
+| Commanded transport XY | commanded | `0.45` | `121` | `29.2 mm` XY / `15.3 mm` Z | `19.2 mm` | `88.2 mm` | `0` | stable post-close, no success |
+| Commanded transport XY + closed calibration | commanded | `0.45` | `121` | `29.2 mm` XY / `15.3 mm` Z | `19.2 mm` | `81.7 mm` | `16` | diagnostic only, no success |
+
+The commanded transport branch preserves reach:
+
+- run:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_transport_fromrelease600`
+- checkpoint: `steps_800_pytorch_model.pt`
+- corrected 5-case reach gate:
+  `5/5`, average dynamic bowl XYZ `78.1 mm`, average dynamic bowl XY
+  `40.3 mm`, and `0` IK failures
+
+The XY-only closed residual branch then removes the late IK collapse in the
+full-task diagnostic, but it still does not complete the task. The learned
+close fires after the best approach point: the best EE-bowl XY is about
+`19.2 mm` near step `97`, while the learned close fires at step `121` at about
+`29.2 mm` XY. LIBERO bowl grasping appears to require roughly `<=15 mm` XY
+contact precision, so the current blocker has narrowed to contact-centered
+approach and close timing. More post-close transport tuning is lower leverage
+until the close pose becomes physically graspable.
+
 ## Next Claim Gate
 
 Do not call a new branch promising unless it passes all of these checks:

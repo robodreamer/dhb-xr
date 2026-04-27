@@ -57,6 +57,8 @@ except ImportError:
 
 LIBERO_DATA_ROOT = Path("/home/andypark/Projects/data/libero")
 LIBERO_GRIPPER_OPEN_QPOS_THRESHOLD = 0.015
+LIBERO_COMMAND_OPEN_QPOS = 0.04
+LIBERO_COMMAND_CLOSED_QPOS = 0.0
 LIBERO_ENV_RESOLUTION = 256
 
 
@@ -145,6 +147,23 @@ def _load_demo_episode(task_suite_name: str, task_name: str, episode_idx: int) -
         "gripper_cmd": gripper_cmd,
         "init_state": init_state,
     }
+
+
+def _policy_state_with_gripper_source(
+    obs: dict,
+    *,
+    gripper_cmd: float,
+    gripper_source: str,
+) -> np.ndarray:
+    state = build_libero_state_vector_from_obs(obs)
+    if gripper_source == "commanded":
+        state = state.copy()
+        state[-1] = (
+            LIBERO_COMMAND_CLOSED_QPOS
+            if float(gripper_cmd) > 0.0
+            else LIBERO_COMMAND_OPEN_QPOS
+        )
+    return state
 
 
 def _make_video_path(video_dir: Path, label: str, suffix: str = "mp4") -> Path:
@@ -308,6 +327,28 @@ def main() -> None:
             "--direct-action-xyz-scale."
         ),
     )
+    parser.add_argument(
+        "--closed-direct-action-xyz-scale",
+        type=float,
+        nargs=3,
+        default=(1.0, 1.0, 1.0),
+        metavar=("SX", "SY", "SZ"),
+        help=(
+            "Additional task-agnostic XYZ delta scale applied only while the "
+            "executed gripper command is closed."
+        ),
+    )
+    parser.add_argument(
+        "--closed-direct-action-xyz-bias-mm",
+        type=float,
+        nargs=3,
+        default=(0.0, 0.0, 0.0),
+        metavar=("BX", "BY", "BZ"),
+        help=(
+            "Additional per-step XYZ delta bias in millimeters applied only "
+            "while the executed gripper command is closed."
+        ),
+    )
     parser.add_argument("--close-gate-xy-m", type=float, default=0.05)
     parser.add_argument("--close-gate-z-m", type=float, default=0.05)
     parser.add_argument("--release-gate-xy-m", type=float, default=0.04)
@@ -350,6 +391,16 @@ def main() -> None:
             "a streaming deployment with faster proprioception than VLA replans."
         ),
     )
+    parser.add_argument(
+        "--state-gripper-source",
+        choices=("observed", "commanded"),
+        default="observed",
+        help=(
+            "Gripper component placed in the policy state token. 'observed' uses "
+            "the simulator qpos; 'commanded' uses the executed gripper command so "
+            "closed-phase heads are not delayed by gripper actuator settling."
+        ),
+    )
     parser.add_argument("--save_json", default=None)
     parser.add_argument("--save_video", default=None)
     parser.add_argument("--no-video", action="store_true")
@@ -386,6 +437,7 @@ def main() -> None:
     num_demo_steps = len(demo["ee_pos"])
     rollout_steps = int(args.max_policy_steps) if int(args.max_policy_steps) > 0 else num_demo_steps
     rollout_steps = max(1, rollout_steps)
+    last_effective_grip = float(demo["gripper_cmd"][0]) if len(demo["gripper_cmd"]) else -1.0
 
     task_bddl_file = Path(get_libero_path("bddl_files")) / task.problem_folder / task.bddl_file
     env = OffScreenRenderEnv(
@@ -417,7 +469,13 @@ def main() -> None:
 
     scene_refs = _capture_scene_refs(env)
     state_history: deque[np.ndarray] = deque(
-        [build_libero_state_vector_from_obs(obs)],
+        [
+            _policy_state_with_gripper_source(
+                obs,
+                gripper_cmd=last_effective_grip,
+                gripper_source=args.state_gripper_source,
+            )
+        ],
         maxlen=state_history_window,
     )
 
@@ -506,7 +564,6 @@ def main() -> None:
     reopen_step = None
     close_snapshot = None
     reopen_snapshot = None
-    last_effective_grip = float(demo["gripper_cmd"][0]) if len(demo["gripper_cmd"]) else -1.0
     reward = 0.0
     success_at = None
     ik_fail_total = 0
@@ -550,6 +607,7 @@ def main() -> None:
         success_value: bool,
         ee_pos_xyz: np.ndarray,
         state_vector: np.ndarray | None = None,
+        observed_state_vector: np.ndarray | None = None,
         close_ready: bool | None = None,
         release_ready: bool | None = None,
     ) -> None:
@@ -568,6 +626,10 @@ def main() -> None:
         }
         if state_vector is not None and len(state_vector) > 0:
             entry["state_gripper"] = float(np.asarray(state_vector, dtype=np.float32)[-1])
+        if observed_state_vector is not None and len(observed_state_vector) > 0:
+            entry["observed_state_gripper"] = float(
+                np.asarray(observed_state_vector, dtype=np.float32)[-1]
+            )
         step_trace.append(entry)
 
     update_min_dists(np.asarray(robot.controller.ee_pos, dtype=np.float32))
@@ -575,7 +637,11 @@ def main() -> None:
     t = 0
     while t < rollout_steps:
         ee_pos_live = np.asarray(obs["robot0_eef_pos"], dtype=np.float32)
-        state = build_libero_state_vector_from_obs(obs)
+        state = _policy_state_with_gripper_source(
+            obs,
+            gripper_cmd=last_effective_grip,
+            gripper_source=args.state_gripper_source,
+        )
         if not state_history or not np.allclose(state_history[-1], state):
             state_history.append(state.copy())
         state_window = build_state_history_window(
@@ -609,6 +675,21 @@ def main() -> None:
             if not np.allclose(xyz_scale, 1.0) or not np.allclose(xyz_bias_m, 0.0):
                 raw_actions = raw_actions.copy()
                 raw_actions[:, :3] = raw_actions[:, :3] * xyz_scale + xyz_bias_m
+            if last_effective_grip > 0.0:
+                closed_xyz_scale = np.asarray(
+                    args.closed_direct_action_xyz_scale,
+                    dtype=np.float32,
+                ).reshape(1, 3)
+                closed_xyz_bias_m = (
+                    np.asarray(args.closed_direct_action_xyz_bias_mm, dtype=np.float32).reshape(1, 3)
+                    / 1000.0
+                )
+                if (
+                    not np.allclose(closed_xyz_scale, 1.0)
+                    or not np.allclose(closed_xyz_bias_m, 0.0)
+                ):
+                    raw_actions = raw_actions.copy()
+                    raw_actions[:, :3] = raw_actions[:, :3] * closed_xyz_scale + closed_xyz_bias_m
             positions, quaternions = integrate_delta_action_chunk(
                 start_pos=ee_pos_live,
                 start_quat_wxyz=np.asarray(obs["robot0_eef_quat"], dtype=np.float32),
@@ -761,11 +842,20 @@ def main() -> None:
                 ee_trace.append(ee_now.copy())
                 update_min_dists(ee_now)
                 if args.state_history_update_rate == "substep":
-                    substep_state = build_libero_state_vector_from_obs(obs)
+                    substep_state = _policy_state_with_gripper_source(
+                        obs,
+                        gripper_cmd=effective_grip,
+                        gripper_source=args.state_gripper_source,
+                    )
                     if not state_history or not np.allclose(state_history[-1], substep_state):
                         state_history.append(substep_state)
 
-            executed_state = build_libero_state_vector_from_obs(obs)
+            observed_executed_state = build_libero_state_vector_from_obs(obs)
+            executed_state = _policy_state_with_gripper_source(
+                obs,
+                gripper_cmd=effective_grip,
+                gripper_source=args.state_gripper_source,
+            )
             if (
                 args.state_history_update_rate == "policy"
                 and (not state_history or not np.allclose(state_history[-1], executed_state))
@@ -796,6 +886,7 @@ def main() -> None:
                 success_value=success,
                 ee_pos_xyz=ee_pos,
                 state_vector=executed_state,
+                observed_state_vector=observed_executed_state,
                 close_ready=close_ready,
                 release_ready=release_ready,
             )
@@ -822,6 +913,12 @@ def main() -> None:
                 success_at = rollout_steps + i
             if args.reach_only and success_at is None and reach_ready(ee_now):
                 success_at = rollout_steps + i
+            observed_settle_state = build_libero_state_vector_from_obs(obs)
+            settle_state = _policy_state_with_gripper_source(
+                obs,
+                gripper_cmd=settle_grip,
+                gripper_source=args.state_gripper_source,
+            )
             record_step_trace(
                 step=rollout_steps + i,
                 phase="settle",
@@ -830,7 +927,8 @@ def main() -> None:
                 reward_value=reward,
                 success_value=success,
                 ee_pos_xyz=ee_now,
-                state_vector=build_libero_state_vector_from_obs(obs),
+                state_vector=settle_state,
+                observed_state_vector=observed_settle_state,
             )
             append_frame(writer, obs)
 
@@ -878,7 +976,14 @@ def main() -> None:
         "trajectory_source": args.trajectory_source,
         "direct_action_xyz_scale": [float(v) for v in args.direct_action_xyz_scale],
         "direct_action_xyz_bias_mm": [float(v) for v in args.direct_action_xyz_bias_mm],
+        "closed_direct_action_xyz_scale": [
+            float(v) for v in args.closed_direct_action_xyz_scale
+        ],
+        "closed_direct_action_xyz_bias_mm": [
+            float(v) for v in args.closed_direct_action_xyz_bias_mm
+        ],
         "state_history_update_rate": args.state_history_update_rate,
+        "state_gripper_source": args.state_gripper_source,
         "init_state_source": args.init_state_source,
         "init_state_l2_diff": float(np.linalg.norm(demo_init_state - benchmark_init_state)),
         "close_gate_xy_m": float(args.close_gate_xy_m),
