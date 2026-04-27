@@ -619,3 +619,14 @@ Story implication:
 - Until that result exists, the paper narrative should emphasize that DHB-XR
   exposes and preserves geometric reach structure, while full grasping needs a
   separate contact-quality module rather than naive action-head fine-tuning.
+
+2026-04-26 video packaging update:
+
+- Added a reach video manifest:
+  `_workspace/paper_eval/2026-04-26_reach_video_manifest.md`.
+- The manifest points to three non-zero-offset successful reach videos under
+  the canonical contract: episode `0,-3 cm`, episode `0,+3 cm`, and episode
+  `1,+3 cm`.
+- These videos should be used as visual evidence for robust offset reaching
+  only. They are not full pick-place evidence because the gripper is held open
+  and rollout stops on reach success.
