@@ -1013,3 +1013,36 @@ Story implication:
   contact-ready supervision, not deployment-time object gates or threshold
   sweeps. The story should frame this as the remaining bridge from DHB-XR
   geometric adaptation to full object-level manipulation.
+
+2026-04-27 current-alignment update:
+
+- Explicit target-alignment controls were added for the StarVLA DHB contact and
+  gripper heads. The default remains future chunk supervision; `current`
+  broadcasts the first timestep label through the chunk for current-observation
+  phase classification. Unit tests cover future/default behavior, current
+  broadcast, multi-channel targets, and invalid modes.
+- The fully current-aligned gripper branch is a useful negative/diagnostic
+  result. It delays close to near actual bowl contact (`close_step=127`,
+  `6.9 mm` minimum bowl XY, close snapshot about `[14.9, -3.1, 17.0] mm`
+  EE-minus-bowl), but it immediately reopens at step `129` and creates `81`
+  IK failures. This shows that current labels suppress the premature phase
+  prior, but destroy persistent hold/transport state when applied to the dense
+  gripper target.
+- The hybrid current-phase branch keeps dense gripper-state labels
+  future-aligned and current-aligns only contact/contact-phase targets. It is
+  stable but not solved: true no-gate rollout has `0` IK failures, close step
+  `77`, reopen step `233`, `4.7 mm` minimum bowl XY, and `0.75` path
+  efficiency. It still closes too early for the side-grasp affordance
+  (`69.6 mm` actual close-vector error), while the same trajectory reaches a
+  `25.9 mm` best close-affordance opportunity at step `122`.
+
+Story implication:
+
+- The root cause is now narrower than "gripper timing." The model needs two
+  separable signals: a current-state contact-ready/open-before-contact signal
+  for the next executed prefix, and a future/phase-persistent gripper-state
+  signal for hold, transport, and release.
+- This strengthens the method story because DHB-XR can expose a compact
+  geometric phase structure, but the manuscript should not claim full
+  manipulation until this current-ready versus persistent-hold split is
+  validated in no-gate rollouts.

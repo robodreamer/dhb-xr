@@ -218,3 +218,52 @@ step `123`. Therefore the arm trajectory already contains a substantially
 better grasp opportunity than the learned gripper uses. The immediate model
 gap is contact-readiness calibration from current perception/proprioception,
 not another execution threshold or object-distance deployment gate.
+
+## Current-Aligned Gripper Target Follow-Up
+
+The StarVLA wrapper now supports explicit temporal alignment for contact and
+gripper targets:
+
+- `contact_target_alignment`
+- `contact_phase_target_alignment`
+- `gripper_state_target_alignment`
+
+The default remains `future`, matching the action chunk horizon. A new
+`current` mode broadcasts the first label in the sampled window across the
+chunk, which tests whether the learned gripper/contact heads should classify
+the current observation phase instead of learning future demo phase timing.
+This implementation is covered by `tests/test_qwendhb_target_alignment.py`.
+
+The fully current-aligned branch:
+
+`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentgrip.yaml`
+
+delayed closure to the real bowl-contact region. With true gripper gates
+disabled, it closed at step `127`, reached `6.9 mm` minimum bowl XY, and the
+close snapshot was only about `[14.9, -3.1, 17.0] mm` EE-minus-bowl. However,
+it immediately reopened at step `129`, introduced `81` IK failures, and still
+failed the affordance score (`50.5 mm` close-vector error, `118.1 mm` reopen
+target XY). This is an informative negative result: current-state labels fix
+the early-close prior, but they convert the dense gripper state into a
+short-lived close pulse instead of a persistent hold signal.
+
+The hybrid current-phase branch:
+
+`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentphase.yaml`
+
+keeps dense gripper-state supervision future-aligned while making only the
+contact/contact-phase targets current-aligned. This preserves no-gate
+stability better than full current alignment: the rollout closes at step `77`,
+reopens at step `233`, has `0` IK failures, reaches `4.7 mm` minimum bowl XY,
+and has path efficiency `0.75`. It still closes too early for the
+side-affordance metric: actual close-vector error is `69.6 mm`, while the same
+trajectory later reaches a `25.9 mm` best close-affordance opportunity at step
+`122`.
+
+Updated conclusion: current observation conditioning is necessary, but the
+target design must decouple "open now because we are not contact-ready" from
+"stay closed after contact through transport." The next training change should
+keep future-aligned dense gripper-state labels for hold/release persistence
+while adding a current-aligned open/contact-ready margin over the actually
+executed prefix of each chunk. Full current broadcast is too destructive; pure
+future labels fire too early.

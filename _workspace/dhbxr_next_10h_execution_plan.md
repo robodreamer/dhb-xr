@@ -1537,3 +1537,43 @@ Updated next unattended target:
    timing so the model does not collapse back to immediate close/open pulses.
 5. Re-evaluate every new branch with the affordance scorer and true
    `"disable_gripper_gates": true` JSON verification.
+
+## 2026-04-27 Current-Alignment Result And Next Target
+
+The current-alignment implementation and two follow-up branches have now been
+tested:
+
+- implementation:
+  `vendor/starVLA/starVLA/models/backbones/QwenDHB.py`
+- tests:
+  `tests/test_qwendhb_target_alignment.py`
+- full current branch:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentgrip.yaml`
+- hybrid current-phase branch:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentphase.yaml`
+
+Result summary:
+
+- Full current alignment makes close timing more state-dependent but loses
+  hold persistence. The no-gate rollout closes near bowl contact at step `127`
+  and reaches `6.9 mm` minimum bowl XY, but reopens at step `129`, has `81` IK
+  failures, and does not improve the close-vector score enough.
+- Hybrid current-phase alignment preserves stability but does not fix early
+  close. The no-gate rollout has close step `77`, reopen step `233`, `0` IK
+  failures, `4.7 mm` minimum bowl XY, and `69.6 mm` close-vector error. The
+  same trace reaches a `25.9 mm` best close-affordance opportunity at step
+  `122`.
+
+Next implementation target:
+
+1. Keep dense `dhb.gripper_state` future-aligned for closed-state persistence.
+2. Add a current-aligned pre-contact open/contact-ready margin that applies
+   only to the prefix actually executed before the next replan, not to the
+   whole action horizon.
+3. Avoid deployment-time object-distance gates. Offline simulator geometry may
+   continue to define labels and scores, but rollout decisions must come from
+   the learned heads, images, language, proprioception, history, and DHB/action
+   context.
+4. Gate the next branch on three metrics simultaneously: actual close-vector
+   error below the current `42.1 mm` best learned no-gate score, no immediate
+   close/open pulse, and low IK failures.

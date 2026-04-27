@@ -241,6 +241,30 @@ Latest active result to preserve:
   remain. This rules out simply switching to the existing sparse event head.
   The next breakthrough needs contact-ready supervision/calibration tied to
   current visual/proprioceptive state.
+- Latest current-alignment implementation:
+  `vendor/starVLA/starVLA/models/backbones/QwenDHB.py` now supports
+  `contact_target_alignment`, `contact_phase_target_alignment`, and
+  `gripper_state_target_alignment` with default `future` behavior and optional
+  `current` broadcast behavior. Coverage lives in
+  `tests/test_qwendhb_target_alignment.py`. This is for training target
+  alignment only; deployment still uses learned predictions without
+  object-distance gates.
+- Latest current-aligned gripper result:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentgrip.yaml`
+  delays actual close to the bowl-contact region (`close_step=127`,
+  `6.9 mm` minimum bowl XY, close snapshot about `[14.9, -3.1, 17.0] mm`
+  EE-minus-bowl), but reopens two steps later and introduces `81` IK failures.
+  Treat it as evidence that fully current-aligned dense gripper labels are too
+  pulse-like for persistent hold/transport.
+- Latest hybrid current-phase result:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentphase.yaml`
+  keeps dense gripper-state labels future-aligned and current-aligns only
+  contact/contact-phase targets. True no-gate rollout has close step `77`,
+  reopen step `233`, `0` IK failures, `4.7 mm` minimum bowl XY, and `69.6 mm`
+  actual close-vector error; the same trace reaches a `25.9 mm` best
+  close-affordance opportunity at step `122`. Next target is a prefix-scoped
+  current open/contact-ready margin plus future-aligned hold persistence, not
+  another threshold sweep.
 
 Historical diagnostics were moved to:
 
