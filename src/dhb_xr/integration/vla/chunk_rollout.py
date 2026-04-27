@@ -18,7 +18,7 @@ from typing import Any
 
 import numpy as np
 
-from dhb_xr.integration.vla.libero import decode_model_gripper_cmds
+from dhb_xr.integration.vla.libero import GripperDecodeState, decode_model_gripper_cmds
 
 
 def clip_vector_norm(vec: np.ndarray, max_norm: float) -> np.ndarray:
@@ -307,11 +307,13 @@ class TrajectoryChunkRunner:
         self._prev_chunk_pos: np.ndarray | None = None
         self._prev_chunk_start: int | None = None
         self._prev_tail_step: np.ndarray | None = None
+        self._gripper_decode_state = GripperDecodeState()
 
     def reset(self) -> None:
         self._prev_chunk_pos = None
         self._prev_chunk_start = None
         self._prev_tail_step = None
+        self._gripper_decode_state = GripperDecodeState()
 
     def prepare_chunk(
         self,
@@ -369,6 +371,7 @@ class TrajectoryChunkRunner:
                 open_threshold=cfg.gripper_open_threshold,
                 transition_debounce_steps=max(1, int(cfg.gripper_transition_debounce_steps)),
                 decode_source=cfg.model_gripper_decode_source,
+                decode_state=self._gripper_decode_state,
             )
 
         self._prev_chunk_pos = chunk_pos_stable.copy()
@@ -391,6 +394,8 @@ class TrajectoryChunkRunner:
                 "gripper_close_threshold": gripper_debug.get("close_threshold"),
                 "gripper_open_threshold": gripper_debug.get("open_threshold"),
                 "gripper_transition_debounce_steps": gripper_debug.get("transition_debounce_steps"),
+                "gripper_debounce_pending_target": gripper_debug.get("debounce_pending_target"),
+                "gripper_debounce_pending_count": gripper_debug.get("debounce_pending_count"),
                 "overlap_steps": int(overlap_steps),
                 "commit_prefix_steps": int(commit_steps),
                 "blend_mode": cfg.blend_mode,

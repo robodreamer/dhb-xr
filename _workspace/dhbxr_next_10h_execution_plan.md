@@ -1087,3 +1087,29 @@ relative to the cumsum full-task diagnostic, but it worsens contact quality and
 does not learn release. Treat it as neutral/negative. The next transport
 attempt needs better post-contact state distribution or explicit release-phase
 supervision, not simply more closed-residual training from demo chunks.
+
+## 2026-04-26 Streaming Gripper Decoder Check
+
+The receding-horizon gripper decoder now preserves hysteresis/debounce state
+across replanned chunks. This fixes a generic streaming-policy issue: if a
+learned close/open transition begins at the end of one predicted chunk and
+continues in the next chunk, the debounce counter should carry across the
+chunk boundary instead of resetting every replan.
+
+Targeted tests pass for this cross-chunk transition case. However, replaying
+the strongest saved full-task traces through the fixed decoder does not expose
+a hidden reopen. The current learned gripper-state signal has a repeated
+chunk-slot artifact: the first three executed slots of each chunk predict
+closed, while the final executed slot often predicts open. The next chunk then
+returns to closed immediately. With proper hysteresis this is not a stable
+release decision, so the saved no-reopen diagnosis remains valid.
+
+Updated next action:
+
+1. Keep the streaming decoder fix because it is conceptually correct for VLA
+   execution and prevents future cross-chunk debounce bugs.
+2. Do not lower debounce just to accept one-slot release spikes; that recreates
+   the observed open-close-open jitter.
+3. Treat release as a training/data problem: the release head must become
+   stable across replans from post-contact observations, not merely produce a
+   chunk-tail open prior.

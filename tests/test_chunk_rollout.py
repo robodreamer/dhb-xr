@@ -162,6 +162,65 @@ def test_runner_applies_temporal_debounce_to_gripper_state_predictions():
     assert prepared["debug"]["gripper_transition_debounce_steps"] == 2
 
 
+def test_runner_carries_gripper_debounce_across_replanned_chunks():
+    runner = TrajectoryChunkRunner(
+        ChunkRolloutConfig(
+            gripper_source="model",
+            gripper_close_threshold=0.6,
+            gripper_open_threshold=0.4,
+            gripper_transition_debounce_steps=2,
+        )
+    )
+    first = runner.prepare_chunk(
+        {
+            "positions": np.array(
+                [[[0.00, 0.00, 0.00], [0.01, 0.00, 0.00], [0.02, 0.00, 0.00]]],
+                dtype=np.float32,
+            ),
+            "quaternions": np.array([[[1.0, 0.0, 0.0, 0.0]] * 3], dtype=np.float32),
+            "pred_gripper_state_probs": np.array(
+                [[
+                    [0.35, 0.65],  # close evidence 1
+                    [0.34, 0.66],  # close evidence 2 -> close
+                    [0.70, 0.30],  # open evidence 1
+                ]],
+                dtype=np.float32,
+            ),
+        },
+        anchor_pos=np.zeros(3, dtype=np.float32),
+        current_start=0,
+        n_use=3,
+        initial_gripper_cmd=-1.0,
+    )
+    second = runner.prepare_chunk(
+        {
+            "positions": np.array(
+                [[[0.03, 0.00, 0.00], [0.04, 0.00, 0.00], [0.05, 0.00, 0.00]]],
+                dtype=np.float32,
+            ),
+            "quaternions": np.array([[[1.0, 0.0, 0.0, 0.0]] * 3], dtype=np.float32),
+            "pred_gripper_state_probs": np.array(
+                [[
+                    [0.72, 0.28],  # open evidence 2 -> reopen across chunk boundary
+                    [0.45, 0.55],
+                    [0.44, 0.56],
+                ]],
+                dtype=np.float32,
+            ),
+        },
+        anchor_pos=np.array([0.02, 0.0, 0.0], dtype=np.float32),
+        current_start=3,
+        n_use=3,
+        initial_gripper_cmd=float(first["gripper_cmds"][-1]),
+    )
+
+    assert first["gripper_cmds"].tolist() == [-1.0, 1.0, 1.0]
+    assert first["debug"]["gripper_debounce_pending_count"] == 1
+    assert first["debug"]["gripper_debounce_pending_target"] is False
+    assert second["gripper_cmds"].tolist() == [-1.0, -1.0, -1.0]
+    assert second["debug"]["gripper_debounce_pending_count"] == 0
+
+
 def test_phase_aware_runner_applies_phase_override_with_shared_state():
     runner = PhaseAwareChunkRunner(
         ChunkRolloutConfig(gripper_source="demo"),

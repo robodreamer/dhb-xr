@@ -81,6 +81,27 @@ Training only a physical-gripper-gated residual from the same demo chunks keeps
 open-gripper reach intact, but it does not provide the missing post-contact
 state coverage or release timing needed for success.
 
+## Gripper Streaming Decoder Check
+
+The gripper decoder now carries hysteresis/debounce state across replanned
+chunks, which is the correct streaming behavior for VLA execution. Targeted
+tests cover the case where transition evidence begins at the end of one chunk
+and completes in the next.
+
+Replaying the saved cumsum and contact-ready transport traces through the
+fixed streaming decoder does not create a hidden reopen. The learned
+gripper-state head emits a repeated slot-position pattern: high closed
+probability in the first three executed slots of each chunk, then a sharp open
+spike in the last executed slot. The next replan returns immediately to high
+closed probability, so a real hysteresis decoder correctly treats this as an
+isolated tail artifact rather than a stable release decision.
+
+Interpretation: the no-reopen failure is not an object-specific gate bug. It is
+a model/training issue in the learned release signal, likely caused by
+chunk-relative gripper supervision or insufficient post-contact/release state
+coverage. The next release attempt should train a release signal that is stable
+across replans, not rely on lowering debounce to accept one-slot tail spikes.
+
 ## Next Claim Gate
 
 Do not call a new branch promising unless it passes all of these checks:

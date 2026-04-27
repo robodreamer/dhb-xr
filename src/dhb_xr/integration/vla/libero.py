@@ -216,6 +216,23 @@ def integrate_delta_action_chunk(
     return np.asarray(positions, dtype=np.float32), np.asarray(quaternions_wxyz, dtype=np.float32)
 
 
+@dataclass
+class GripperDecodeState:
+    """Streaming state for learned gripper hysteresis/debounce decoding."""
+
+    is_closed: bool = False
+    pending_target: bool | None = None
+    pending_count: int = 0
+
+    def sync_closed(self, is_closed: bool) -> None:
+        """Align with the executed gripper state, resetting stale transitions."""
+        is_closed = bool(is_closed)
+        if self.is_closed != is_closed:
+            self.is_closed = is_closed
+            self.pending_target = None
+            self.pending_count = 0
+
+
 def decode_contact_probs_to_gripper_cmds(
     contact_probs: np.ndarray,
     *,
@@ -225,6 +242,7 @@ def decode_contact_probs_to_gripper_cmds(
     close_threshold: float | None = None,
     open_threshold: float | None = None,
     transition_debounce_steps: int = 1,
+    decode_state: GripperDecodeState | None = None,
 ) -> np.ndarray:
     """Decode close/open event probabilities into persistent gripper commands.
 
@@ -240,6 +258,9 @@ def decode_contact_probs_to_gripper_cmds(
         raise ValueError(f"Expected (T, 2+) contact probs, got shape {probs.shape}")
 
     if contact_mode == "gripper_state":
+        if decode_state is not None:
+            decode_state.sync_closed(is_closed)
+            is_closed = decode_state.is_closed
         if probs.shape[-1] >= 2:
             closed_probs = probs[:, 1]
         else:
@@ -247,7 +268,12 @@ def decode_contact_probs_to_gripper_cmds(
         debounce_steps = max(1, int(transition_debounce_steps))
         if close_threshold is None and open_threshold is None:
             if debounce_steps == 1:
-                return np.where(closed_probs >= threshold, 1.0, -1.0).astype(np.float32)
+                cmds = np.where(closed_probs >= threshold, 1.0, -1.0).astype(np.float32)
+                if decode_state is not None and len(cmds):
+                    decode_state.is_closed = bool(cmds[-1] > 0.0)
+                    decode_state.pending_target = None
+                    decode_state.pending_count = 0
+                return cmds
             close_thr = float(threshold)
             open_thr = float(threshold)
         else:
@@ -259,8 +285,10 @@ def decode_contact_probs_to_gripper_cmds(
                     f"open_threshold={open_thr} close_threshold={close_thr}"
                 )
 
-        pending_target: bool | None = None
-        pending_count = 0
+        pending_target: bool | None = (
+            None if decode_state is None else decode_state.pending_target
+        )
+        pending_count = 0 if decode_state is None else int(decode_state.pending_count)
 
         for i, closed_prob in enumerate(closed_probs):
             target_closed: bool | None = None
@@ -284,6 +312,10 @@ def decode_contact_probs_to_gripper_cmds(
                     pending_target = None
                     pending_count = 0
             cmds[i] = 1.0 if is_closed else -1.0
+        if decode_state is not None:
+            decode_state.is_closed = bool(is_closed)
+            decode_state.pending_target = pending_target
+            decode_state.pending_count = int(pending_count)
         return cmds
 
     if probs.shape[-1] >= 3:
@@ -294,6 +326,10 @@ def decode_contact_probs_to_gripper_cmds(
             elif int(event_id) == 2:
                 is_closed = False
             cmds[i] = 1.0 if is_closed else -1.0
+        if decode_state is not None:
+            decode_state.is_closed = bool(is_closed)
+            decode_state.pending_target = None
+            decode_state.pending_count = 0
         return cmds
 
     close_probs = probs[:, 0]
@@ -304,6 +340,10 @@ def decode_contact_probs_to_gripper_cmds(
         elif open_p >= threshold and open_p > close_p:
             is_closed = False
         cmds[i] = 1.0 if is_closed else -1.0
+    if decode_state is not None:
+        decode_state.is_closed = bool(is_closed)
+        decode_state.pending_target = None
+        decode_state.pending_count = 0
     return cmds
 
 
@@ -317,6 +357,7 @@ def decode_model_gripper_cmds(
     open_threshold: float | None = None,
     transition_debounce_steps: int = 1,
     decode_source: str = "auto",
+    decode_state: GripperDecodeState | None = None,
 ) -> Tuple[np.ndarray, Dict[str, object]]:
     """Decode model output into controller gripper commands.
 
@@ -343,6 +384,7 @@ def decode_model_gripper_cmds(
             close_threshold=close_threshold,
             open_threshold=open_threshold,
             transition_debounce_steps=transition_debounce_steps,
+            decode_state=decode_state,
         )
         if gripper_state_probs.shape[-1] >= 2:
             closed_probs = gripper_state_probs[:, 1]
@@ -365,6 +407,8 @@ def decode_model_gripper_cmds(
             "close_threshold": None if close_threshold is None else float(close_threshold),
             "open_threshold": None if open_threshold is None else float(open_threshold),
             "transition_debounce_steps": int(transition_debounce_steps),
+            "debounce_pending_target": None if decode_state is None else decode_state.pending_target,
+            "debounce_pending_count": None if decode_state is None else int(decode_state.pending_count),
         }
 
     if decode_source in {"auto", "contact_phase"} and "pred_contact_phase_probs" in result and result["pred_contact_phase_probs"] is not None:
@@ -377,6 +421,7 @@ def decode_model_gripper_cmds(
             close_threshold=close_threshold,
             open_threshold=open_threshold,
             transition_debounce_steps=transition_debounce_steps,
+            decode_state=decode_state,
         )
         return cmds, {
             "source": "contact_phase_probs",
@@ -386,6 +431,8 @@ def decode_model_gripper_cmds(
             "open_probs": phase_probs[:, 2].tolist() if phase_probs.shape[-1] >= 3 else [],
             "threshold": float(threshold),
             "transition_debounce_steps": int(transition_debounce_steps),
+            "debounce_pending_target": None if decode_state is None else decode_state.pending_target,
+            "debounce_pending_count": None if decode_state is None else int(decode_state.pending_count),
         }
 
     if decode_source in {"auto", "contact"} and "pred_contact_probs" in result and result["pred_contact_probs"] is not None:
@@ -399,6 +446,7 @@ def decode_model_gripper_cmds(
             close_threshold=close_threshold,
             open_threshold=open_threshold,
             transition_debounce_steps=transition_debounce_steps,
+            decode_state=decode_state,
         )
         if contact_mode == "gripper_state":
             if contact_probs.shape[-1] >= 2:
@@ -417,6 +465,8 @@ def decode_model_gripper_cmds(
                 "close_threshold": None if close_threshold is None else float(close_threshold),
                 "open_threshold": None if open_threshold is None else float(open_threshold),
                 "transition_debounce_steps": int(transition_debounce_steps),
+                "debounce_pending_target": None if decode_state is None else decode_state.pending_target,
+                "debounce_pending_count": None if decode_state is None else int(decode_state.pending_count),
             }
         return cmds, {
             "source": "contact_probs",
@@ -432,6 +482,8 @@ def decode_model_gripper_cmds(
             ),
             "threshold": float(threshold),
             "transition_debounce_steps": int(transition_debounce_steps),
+            "debounce_pending_target": None if decode_state is None else decode_state.pending_target,
+            "debounce_pending_count": None if decode_state is None else int(decode_state.pending_count),
         }
 
     normalized_actions = np.asarray(result.get("normalized_actions", []), dtype=np.float32)

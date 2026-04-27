@@ -548,6 +548,18 @@ The open claim gaps are:
   post-contact training distribution, a learned release gate, or a stronger
   matched-baseline/scaling experiment.
 
+Streaming gripper decoder update:
+
+- The chunk runner now carries learned gripper debounce state across replans,
+  which is the correct closed-loop semantics for VLA execution.
+- Replaying the saved full-task traces with the fixed decoder does not reveal a
+  hidden release. The model repeatedly predicts closed in the first executed
+  slots of each chunk and open in the final executed slot, then returns to
+  closed on the next replan.
+- Therefore the release gap is not an evaluator gate hiding a valid open
+  command. It is a learned chunk-slot artifact and post-contact/release data
+  coverage problem.
+
 Latest full-task diagnostic:
 
 - config:
