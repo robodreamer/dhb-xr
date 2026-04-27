@@ -30,6 +30,7 @@ PYTHONPATH=vendor/starVLA:src:${PYTHONPATH:-} WANDB_MODE=disabled MUJOCO_GL=egl 
   --checkpoint-step 400 \
   --task_suite_name libero_spatial --task_id 0 \
   --case 0:0 --case 0:3 --case 0:-3 --case 1:3 --case 1:-3 \
+  --rollout-seed 70 \
   --replan_every 4 --max-first-offset-mm 35 --max-step-mm 20 \
   --smooth-window 3 --blend-overlap-alpha 0.6 --blend-mode constant \
   --commit-prefix-steps 0 --adaptive-commit-threshold-mm 0 --adaptive-commit-max-steps 0 \
@@ -45,6 +46,9 @@ Gate:
 
 - Pass: `5/5` reach successes, `0` IK failures, and no object-specific gripper
   gates in the policy path.
+- Always set and report `--rollout-seed` for claim-level live rollouts. The
+  live evaluator records both `config_seed` and `rollout_seed`; old single-run
+  gripper traces without this field are diagnostics, not final evidence.
 - Current pass artifact:
   `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionxyz_from2000/live_reach_step400_calib_y135_z115_5case_benchmark_raw_max140.json`.
 - Do not reuse the older demo-init/raw-image artifact as the paper-safe live

@@ -4,6 +4,7 @@ import argparse
 from collections import deque
 import functools
 import json
+import random
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -68,6 +69,14 @@ class _NullWriter:
 
     def close(self):
         return None
+
+
+def _seed_rollout(seed: int) -> None:
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
 
 
 @contextmanager
@@ -256,6 +265,15 @@ def main() -> None:
     parser.add_argument("--task_id", type=int, default=0)
     parser.add_argument("--episode_idx", type=int, default=0)
     parser.add_argument("--offset-cm", type=float, default=0.0)
+    parser.add_argument(
+        "--rollout-seed",
+        type=int,
+        default=None,
+        help=(
+            "Evaluation-only seed for Python, NumPy, Torch, CUDA, and LIBERO. "
+            "Defaults to the config seed when omitted."
+        ),
+    )
     parser.add_argument("--replan_every", type=int, default=4)
     parser.add_argument("--max-first-offset-mm", type=float, default=35.0)
     parser.add_argument("--max-step-mm", type=float, default=20.0)
@@ -410,6 +428,8 @@ def main() -> None:
     cfg = OmegaConf.load(args.config_yaml)
     cfg = OmegaConf.merge(cfg, OmegaConf.from_dotlist(dotlist))
     cfg = wrap_config(cfg, cli_overrides=dotlist)
+    rollout_seed = int(cfg.seed if args.rollout_seed is None else args.rollout_seed)
+    _seed_rollout(rollout_seed)
 
     output_dir = _default_output_dir(cfg)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -446,7 +466,7 @@ def main() -> None:
         camera_heights=LIBERO_ENV_RESOLUTION,
         camera_widths=LIBERO_ENV_RESOLUTION,
     )
-    env.seed(cfg.seed)
+    env.seed(rollout_seed)
     obs = env.reset()
     benchmark_init_state = np.asarray(initial_states[args.episode_idx], dtype=np.float32).copy()
     demo_init_state = np.asarray(demo["init_state"], dtype=np.float32).copy()
@@ -946,6 +966,8 @@ def main() -> None:
         "task_id": int(args.task_id),
         "episode_idx": int(args.episode_idx),
         "offset_cm": float(args.offset_cm),
+        "config_seed": int(cfg.seed),
+        "rollout_seed": int(rollout_seed),
         "task_language": task.language,
         "num_demo_steps": int(num_demo_steps),
         "max_policy_steps": int(args.max_policy_steps),

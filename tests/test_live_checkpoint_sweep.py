@@ -30,6 +30,7 @@ def test_run_case_forwards_disable_gripper_gates(monkeypatch, tmp_path):
         task_id=0,
         episode_idx=1,
         offset_cm=3.0,
+        rollout_seed=70,
         output_dir=tmp_path,
         replan_every=4,
         max_first_offset_mm=35.0,
@@ -53,6 +54,8 @@ def test_run_case_forwards_disable_gripper_gates(monkeypatch, tmp_path):
         trajectory_source="direct_action",
         direct_action_xyz_scale=(0.85, 1.55, 1.15),
         direct_action_xyz_bias_mm=(0.0, 0.0, 0.0),
+        closed_direct_action_xyz_scale=(1.1, 1.2, 1.0),
+        closed_direct_action_xyz_bias_mm=(0.1, -0.2, 0.0),
         state_history_update_rate="policy",
         state_gripper_source="commanded",
         disable_gripper_gates=True,
@@ -67,3 +70,6 @@ def test_run_case_forwards_disable_gripper_gates(monkeypatch, tmp_path):
     assert calls
     assert "--disable-gripper-gates" in calls[0]
     assert calls[0][calls[0].index("--model-gripper-decode-source") + 1] == "contact"
+    assert calls[0][calls[0].index("--rollout-seed") + 1] == "70"
+    assert calls[0][calls[0].index("--closed-direct-action-xyz-scale") + 1 : calls[0].index("--closed-direct-action-xyz-scale") + 4] == ["1.1", "1.2", "1.0"]
+    assert calls[0][calls[0].index("--closed-direct-action-xyz-bias-mm") + 1 : calls[0].index("--closed-direct-action-xyz-bias-mm") + 4] == ["0.1", "-0.2", "0.0"]

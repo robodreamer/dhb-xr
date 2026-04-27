@@ -310,3 +310,44 @@ persistent learned closed state. The next useful branch should preserve the
 currentready close-readiness head and focus release/transport supervision on
 the dense gripper-state/contact-phase heads, with rollout decisions still made
 only from learned model outputs rather than object-distance gates.
+
+## Seed-Controlled Evaluator Follow-Up
+
+A follow-up exposed an evaluation-control issue: the live rollout script used
+the training config's `seed` directly for the LIBERO environment, and previous
+continuation configs used different seeds. That made single-run comparisons
+between `currentready`, `currentready_release`, and `stateonly_release`
+partially seed-confounded. The evaluator now supports `--rollout-seed`, seeds
+Python/NumPy/Torch/CUDA plus the LIBERO environment, and records both
+`config_seed` and `rollout_seed` in every summary.
+
+Under the controlled `rollout_seed=70` contract, the currentready checkpoint
+with generic `close=0.55/open=0.40` closes at step `91`, never reopens, keeps
+`0` IK failures, and reaches a best close-affordance opportunity of `3.3 mm`
+at step `110`, but the actual close-vector error is `36.4 mm`. Raising the
+generic close threshold to `0.58` delays close to step `101` and improves the
+close snapshot to about `16.9 mm` XY from the demo close affordance, but it
+reopens prematurely at step `121`, gives `9` IK failures, and remains about
+`141 mm` bowl-plate XY from target. This is useful calibration evidence, not a
+full-task result.
+
+The state-only release continuation:
+
+`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentready_stateonly_release.yaml`
+
+changes only the four `gripper_state_head` tensors relative to currentready.
+With controlled `rollout_seed=70`, it closes at step `87`, never reopens,
+keeps `0` IK failures, and reaches a best close-affordance opportunity of
+`3.0 mm` at step `115`, but actual close-vector error is `42.0 mm` and final
+target XY is `129.4 mm`. A higher-threshold diagnostic
+(`close=0.60/open=0.50`, debounce `4`) suppresses closure entirely and causes
+late IK failures, so scalar hysteresis is not the breakthrough.
+
+Updated interpretation: the arm trajectory repeatedly contains near-perfect
+side-grasp opportunities under the deterministic evaluator, but the learned
+contact/release heads do not choose the right temporal phase. The strongest
+next model direction is a seed-controlled, reach-preserving training branch
+that preserves currentready contact-readiness while adding explicit held-object
+transport and release supervision. Full pick-place should remain unclaimed
+until it passes close-affordance and object-target release metrics under a
+fixed rollout-seed matrix, not a single uncontrolled video.

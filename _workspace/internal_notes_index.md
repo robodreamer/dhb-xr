@@ -280,6 +280,20 @@ Latest active result to preserve:
   `37.1 mm` close-vector error with `19.0 mm` close XY. It never reopens and
   leaves `118.0 mm` final target XY, so the remaining active blocker is
   post-close transport/release.
+- Latest evaluator correction:
+  `scripts/starvla_dhb_embodik_live_rollout.py` now supports
+  `--rollout-seed` and records `config_seed` plus `rollout_seed`. Use this for
+  all future claim-level rollouts. Previous currentready/currentready-release
+  single-run comparisons were partially seed-confounded because config seeds
+  also controlled the LIBERO environment. Under controlled `rollout_seed=70`,
+  currentready `close=0.55/open=0.40` closes at step `91`, no reopen, `0` IK
+  failures, actual close-vector error `36.4 mm`, and best possible
+  close-affordance error `3.3 mm` at step `110`. `close=0.58` delays close to
+  step `101` but reopens early at `121`. The state-only release continuation
+  changes only `gripper_state_head`; under the same seed it closes at `87`,
+  never reopens, and finishes `129 mm` from the plate. This confirms the
+  active blocker is learned phase selection/release under a controlled
+  benchmark, not trajectory reachability.
 
 Historical diagnostics were moved to:
 

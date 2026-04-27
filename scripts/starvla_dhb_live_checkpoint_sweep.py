@@ -36,6 +36,7 @@ def _run_case(
     task_id: int,
     episode_idx: int,
     offset_cm: float,
+    rollout_seed: int | None,
     output_dir: Path,
     replan_every: int,
     max_first_offset_mm: float,
@@ -59,6 +60,8 @@ def _run_case(
     trajectory_source: str,
     direct_action_xyz_scale: tuple[float, float, float],
     direct_action_xyz_bias_mm: tuple[float, float, float],
+    closed_direct_action_xyz_scale: tuple[float, float, float],
+    closed_direct_action_xyz_bias_mm: tuple[float, float, float],
     state_history_update_rate: str,
     state_gripper_source: str,
     disable_gripper_gates: bool,
@@ -135,6 +138,14 @@ def _run_case(
         str(direct_action_xyz_bias_mm[0]),
         str(direct_action_xyz_bias_mm[1]),
         str(direct_action_xyz_bias_mm[2]),
+        "--closed-direct-action-xyz-scale",
+        str(closed_direct_action_xyz_scale[0]),
+        str(closed_direct_action_xyz_scale[1]),
+        str(closed_direct_action_xyz_scale[2]),
+        "--closed-direct-action-xyz-bias-mm",
+        str(closed_direct_action_xyz_bias_mm[0]),
+        str(closed_direct_action_xyz_bias_mm[1]),
+        str(closed_direct_action_xyz_bias_mm[2]),
         "--state-history-update-rate",
         state_history_update_rate,
         "--state-gripper-source",
@@ -147,6 +158,8 @@ def _run_case(
         str(summary_path),
         "--no-video",
     ]
+    if rollout_seed is not None:
+        cmd.extend(["--rollout-seed", str(rollout_seed)])
     if disable_gripper_gates:
         cmd.append("--disable-gripper-gates")
     if reach_only:
@@ -232,6 +245,12 @@ def main() -> None:
     parser.add_argument("--task_suite_name", default="libero_spatial")
     parser.add_argument("--task_id", type=int, default=0)
     parser.add_argument("--case", action="append", default=None, help="EPISODE_IDX:OFFSET_CM, repeatable")
+    parser.add_argument(
+        "--rollout-seed",
+        type=int,
+        default=None,
+        help="Evaluation-only seed forwarded to the live rollout script.",
+    )
     parser.add_argument("--replan_every", type=int, default=4)
     parser.add_argument("--max-first-offset-mm", type=float, default=35.0)
     parser.add_argument("--max-step-mm", type=float, default=20.0)
@@ -300,6 +319,22 @@ def main() -> None:
         help="Task-agnostic per-step XYZ delta bias in millimeters for direct-action deltas.",
     )
     parser.add_argument(
+        "--closed-direct-action-xyz-scale",
+        type=float,
+        nargs=3,
+        default=(1.0, 1.0, 1.0),
+        metavar=("SX", "SY", "SZ"),
+        help="Task-agnostic XYZ delta scale applied while the gripper command is closed.",
+    )
+    parser.add_argument(
+        "--closed-direct-action-xyz-bias-mm",
+        type=float,
+        nargs=3,
+        default=(0.0, 0.0, 0.0),
+        metavar=("BX", "BY", "BZ"),
+        help="Task-agnostic per-step XYZ bias applied while the gripper command is closed.",
+    )
+    parser.add_argument(
         "--max-policy-steps",
         type=int,
         default=0,
@@ -363,6 +398,7 @@ def main() -> None:
                 task_id=args.task_id,
                 episode_idx=episode_idx,
                 offset_cm=offset_cm,
+                rollout_seed=args.rollout_seed,
                 output_dir=ckpt_dir,
                 replan_every=args.replan_every,
                 max_first_offset_mm=args.max_first_offset_mm,
@@ -386,6 +422,8 @@ def main() -> None:
                 trajectory_source=args.trajectory_source,
                 direct_action_xyz_scale=tuple(float(v) for v in args.direct_action_xyz_scale),
                 direct_action_xyz_bias_mm=tuple(float(v) for v in args.direct_action_xyz_bias_mm),
+                closed_direct_action_xyz_scale=tuple(float(v) for v in args.closed_direct_action_xyz_scale),
+                closed_direct_action_xyz_bias_mm=tuple(float(v) for v in args.closed_direct_action_xyz_bias_mm),
                 state_history_update_rate=args.state_history_update_rate,
                 state_gripper_source=args.state_gripper_source,
                 disable_gripper_gates=bool(args.disable_gripper_gates),
@@ -439,7 +477,10 @@ def main() -> None:
             "disable_gripper_gates": bool(args.disable_gripper_gates),
             "direct_action_xyz_scale": [float(v) for v in args.direct_action_xyz_scale],
             "direct_action_xyz_bias_mm": [float(v) for v in args.direct_action_xyz_bias_mm],
+            "closed_direct_action_xyz_scale": [float(v) for v in args.closed_direct_action_xyz_scale],
+            "closed_direct_action_xyz_bias_mm": [float(v) for v in args.closed_direct_action_xyz_bias_mm],
             "init_state_source": args.init_state_source,
+            "rollout_seed": None if args.rollout_seed is None else int(args.rollout_seed),
             "max_policy_steps": int(args.max_policy_steps),
             "settle_steps": int(args.settle_steps),
             "reach_only": bool(args.reach_only),

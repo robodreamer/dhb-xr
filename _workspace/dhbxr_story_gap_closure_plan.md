@@ -1079,3 +1079,33 @@ Story implication:
   release/transport branch moves the bowl toward the plate. The next best
   result would preserve the currentready close head and train release/transport
   without changing the deployment contract.
+
+2026-04-27 seed-controlled evaluation update:
+
+- The live rollout script now has an explicit `--rollout-seed` that seeds
+  Python, NumPy, Torch, CUDA, and LIBERO, and summaries now record both
+  `config_seed` and `rollout_seed`. This matters because several continuation
+  configs had different training seeds, which previously also changed the
+  evaluation environment seed.
+- Under controlled `rollout_seed=70`, the prior currentready result should be
+  treated as diagnostic rather than final benchmark evidence. Currentready with
+  `close=0.55/open=0.40` closes at step `91`, never reopens, and keeps `0` IK
+  failures, but actual close-vector error is `36.4 mm`. The same trajectory
+  reaches a much better `3.3 mm` best close-affordance opportunity at step
+  `110`, so the trajectory is not the limiting factor.
+- A generic `close=0.58` calibration delays currentready close to step `101`
+  and reaches `16.9 mm` close XY, but reopens at step `121` and still fails
+  placement. The state-only release continuation changes only the dense
+  `gripper_state_head`, but under the same seed it closes at step `87`, never
+  reopens, and finishes `129 mm` from the plate.
+
+Story implication:
+
+- The safe claim boundary tightens: do not promote single uncontrolled
+  gripper-rollout videos as final evidence.
+- The positive story remains robust reach/adaptation plus a learned
+  contact-ready design that creates near-perfect grasp opportunities; the
+  missing result is seed-controlled phase selection for close-hold-transport
+  and learned release.
+- Future paper tables should report fixed rollout-seed matrices, not one-off
+  traces, especially for gripper/release claims.

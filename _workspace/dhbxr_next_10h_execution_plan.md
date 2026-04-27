@@ -102,6 +102,43 @@ Immediate next actions:
 5. Treat full pick-place as unclaimed until a no-gate run passes both
    close-vector affordance and object-target release metrics.
 
+## 2026-04-27 Overnight Update: Evaluation Seed Is Now Explicit
+
+The live evaluator now accepts `--rollout-seed`, seeds Python, NumPy, Torch,
+CUDA, and LIBERO, and writes both `config_seed` and `rollout_seed` into the
+summary JSON. This fixes a comparison flaw: several continuation configs used
+different training seeds, and the rollout script previously reused those seeds
+for the environment. Single-rollout currentready/release comparisons were
+therefore not controlled.
+
+Controlled seed-70 reruns show the active blocker more clearly:
+
+- `currentready`, `close=0.55/open=0.40`: close step `91`, no reopen, `0` IK
+  failures, actual close-vector error `36.4 mm`, but best possible
+  close-affordance error in the same trace is `3.3 mm` at step `110`.
+- `currentready`, `close=0.58/open=0.40`: close step `101`, reopen step `121`,
+  actual close XY `16.9 mm`, but premature release and `141 mm` final
+  bowl-plate XY.
+- `stateonly_release`, `close=0.55/open=0.40`: only the dense
+  `gripper_state_head` changed from currentready; it closes at step `87`, never
+  reopens, reaches a `3.0 mm` best close-affordance opportunity later, and
+  finishes `129 mm` from the plate.
+- `stateonly_release`, `close=0.60/open=0.50`, debounce `4`: no close and late
+  IK failures, so scalar hysteresis is not the missing method.
+
+Immediate next actions:
+
+1. Use fixed rollout-seed matrices for all future benchmark claims. Keep old
+   uncontrolled single-run traces only as diagnostics/provenance.
+2. Preserve the currentready contact-readiness idea, but do not treat the
+   current checkpoint as a solved gripper policy.
+3. Train the next branch for explicit phase selection: current contact-ready
+   close, persistent held-object transport, and learned release near target.
+   The action/reach path should remain frozen or residual-preserved until it
+   passes the corrected reach gate again.
+4. Add no object-distance logic to deployment. Simulator geometry remains
+   acceptable only for offline labels and post-hoc scoring.
+
 ## 2026-04-25 Late Update: Reach Is Now Validated, Full Task Is Phase-Limited
 
 The current highest-confidence executable result is no longer the older
