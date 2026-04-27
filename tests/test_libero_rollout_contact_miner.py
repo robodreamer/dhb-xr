@@ -66,3 +66,51 @@ def test_mines_missed_positive_and_hard_negative_from_rollout_trace() -> None:
     assert result["counts"]["hard_negative"] == 1
     assert result["best_close_affordance"]["step"] == 0
     assert result["highest_confidence_hard_negative"]["step"] == 2
+
+
+def test_builds_policy_manifest_rows_from_mined_labels() -> None:
+    rollout = {
+        "checkpoint": "ckpt.pt",
+        "task_id": 0,
+        "episode_idx": 1,
+        "offset_cm": 3.0,
+        "chunks": [
+            {
+                "t_start": 4,
+                "n_use": 4,
+                "close_probs": [0.2, 0.7, 0.1, 0.8],
+            }
+        ],
+        "policy_trace": [
+            {
+                "chunk_index": 0,
+                "t_start": 4,
+                "n_use": 4,
+                "npz_path": "chunk_0000_t0004.npz",
+                "rel_live": {"ee_minus_bowl": [0.0, -0.05, 0.026]},
+            }
+        ],
+        "step_trace": [
+            {"step": 4, "ee_minus_bowl": [0.0, -0.05, 0.026]},
+            {"step": 5, "ee_minus_bowl": [0.08, 0.0, 0.06]},
+            {"step": 6, "ee_minus_bowl": [0.10, 0.0, 0.06]},
+            {"step": 7, "ee_minus_bowl": [0.09, 0.0, 0.06]},
+        ],
+    }
+    result = contact_miner.mine_contact_samples(
+        rollout,
+        rollout_json="rollout.json",
+        close_reference_m=[0.0, -0.050, 0.026],
+        ee_object_field="ee_minus_bowl",
+        positive_tolerance_mm=10.0,
+        positive_prob_margin=0.65,
+        hard_negative_prob=0.55,
+    )
+
+    rows = contact_miner.policy_manifest_rows(rollout, result)
+
+    assert len(rows) == 1
+    assert rows[0]["npz_path"] == "chunk_0000_t0004.npz"
+    assert rows[0]["target_close"] == [1.0, 0.0, 0.0, 0.0]
+    assert rows[0]["train_mask"] == [1.0, 1.0, 0.0, 1.0]
+    assert rows[0]["hard_negative_mask"] == [0.0, 1.0, 0.0, 1.0]

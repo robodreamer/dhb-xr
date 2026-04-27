@@ -187,6 +187,68 @@ def mine_contact_samples(
     }
 
 
+def policy_manifest_rows(
+    rollout: dict[str, Any],
+    mined_result: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Build chunk-level supervision rows for exported policy-trace NPZ files."""
+    policy_trace = rollout.get("policy_trace")
+    if not isinstance(policy_trace, list):
+        return []
+
+    sample_by_step = {
+        sample["step"]: sample
+        for sample in mined_result.get("samples", [])
+        if isinstance(sample, dict) and isinstance(sample.get("step"), int)
+    }
+    rows: list[dict[str, Any]] = []
+    for chunk in policy_trace:
+        if not isinstance(chunk, dict):
+            continue
+        t_start = chunk.get("t_start")
+        n_use = chunk.get("n_use")
+        npz_path = chunk.get("npz_path")
+        if not isinstance(t_start, int) or not isinstance(n_use, int) or not npz_path:
+            continue
+
+        target_close: list[float] = []
+        train_mask: list[float] = []
+        hard_negative_mask: list[float] = []
+        close_vector_error_mm: list[float | None] = []
+        labels: list[str | None] = []
+        for step in range(t_start, t_start + n_use):
+            sample = sample_by_step.get(step)
+            label = sample.get("label") if sample else None
+            labels.append(label)
+            target_close.append(1.0 if label in {"positive", "missed_positive"} else 0.0)
+            train_mask.append(1.0 if label in {"positive", "missed_positive", "hard_negative"} else 0.0)
+            hard_negative_mask.append(1.0 if label == "hard_negative" else 0.0)
+            close_vector_error_mm.append(
+                None if sample is None else sample.get("close_vector_error_mm")
+            )
+
+        rows.append(
+            {
+                "rollout_json": mined_result.get("rollout_json"),
+                "checkpoint": mined_result.get("checkpoint"),
+                "task_id": mined_result.get("task_id"),
+                "episode_idx": mined_result.get("episode_idx"),
+                "offset_cm": mined_result.get("offset_cm"),
+                "chunk_index": chunk.get("chunk_index"),
+                "t_start": t_start,
+                "n_use": n_use,
+                "npz_path": str(npz_path),
+                "target_close": target_close,
+                "train_mask": train_mask,
+                "hard_negative_mask": hard_negative_mask,
+                "close_vector_error_mm": close_vector_error_mm,
+                "labels": labels,
+                "rel_live": chunk.get("rel_live"),
+            }
+        )
+    return rows
+
+
 def _markdown_row(result: dict[str, Any]) -> str:
     counts = result.get("counts", {})
     best = result.get("best_close_affordance") or {}
@@ -215,6 +277,7 @@ def main() -> None:
     parser.add_argument("--demo-geometry-json", required=True)
     parser.add_argument("--rollout-json", nargs="+", required=True)
     parser.add_argument("--save-json")
+    parser.add_argument("--save-policy-manifest-jsonl")
     parser.add_argument("--print-markdown", action="store_true")
     parser.add_argument("--close-event", default="close_phys")
     parser.add_argument("--demo-close-field", default="ee_minus_object_m")
@@ -228,19 +291,20 @@ def main() -> None:
     close_reference = _reference_vector(demo_geometry, args.close_event, args.demo_close_field)
 
     results = []
+    manifest_rows: list[dict[str, Any]] = []
     for path_str in args.rollout_json:
         rollout = json.loads(Path(path_str).read_text(encoding="utf-8"))
-        results.append(
-            mine_contact_samples(
-                rollout,
-                rollout_json=path_str,
-                close_reference_m=close_reference,
-                ee_object_field=args.ee_object_field,
-                positive_tolerance_mm=float(args.positive_tolerance_mm),
-                positive_prob_margin=float(args.positive_prob_margin),
-                hard_negative_prob=float(args.hard_negative_prob),
-            )
+        result = mine_contact_samples(
+            rollout,
+            rollout_json=path_str,
+            close_reference_m=close_reference,
+            ee_object_field=args.ee_object_field,
+            positive_tolerance_mm=float(args.positive_tolerance_mm),
+            positive_prob_margin=float(args.positive_prob_margin),
+            hard_negative_prob=float(args.hard_negative_prob),
         )
+        results.append(result)
+        manifest_rows.extend(policy_manifest_rows(rollout, result))
 
     summary = {
         "demo_geometry_json": args.demo_geometry_json,
@@ -256,6 +320,12 @@ def main() -> None:
     if args.save_json:
         Path(args.save_json).parent.mkdir(parents=True, exist_ok=True)
         Path(args.save_json).write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    if args.save_policy_manifest_jsonl:
+        manifest_path = Path(args.save_policy_manifest_jsonl)
+        manifest_path.parent.mkdir(parents=True, exist_ok=True)
+        with manifest_path.open("w", encoding="utf-8") as f:
+            for row in manifest_rows:
+                f.write(json.dumps(row) + "\n")
 
     if args.print_markdown:
         print("| rollout | close_step | positives | missed positives | hard negatives | best affordance err mm | max hard-neg prob |")

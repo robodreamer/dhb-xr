@@ -403,7 +403,9 @@ Latest active result to preserve:
   One policy-trace smoke artifact was generated for the currentready/current-
   phase `steps_300` checkpoint, `episode=0`, `offset=0cm`, fixed
   `rollout_seed=70`; it produced `60` NPZ chunks / `8.6M` total and mines to
-  `191` hard negatives.
+  `191` hard negatives. The contact miner now emits a policy-manifest JSONL
+  with `target_close`, `train_mask`, and `hard_negative_mask`, which is the
+  next bridge into a closed-loop correction dataloader.
 
 Historical diagnostics were moved to:
 

@@ -1975,3 +1975,7 @@ Policy-trace smoke:
   outside the `30 mm` positive gate, which reinforces that the next dataset
   should include corrective/off-manifold contact states rather than simply
   replaying this one rollout.
+- The miner can now also write a policy-manifest JSONL that maps each replan
+  NPZ to horizon-aligned `target_close`, `train_mask`, and
+  `hard_negative_mask` arrays. The smoke manifest has `60` rows at
+  `_workspace/paper_eval/2026-04-27_policy_trace_case0_contact_manifest.jsonl`.
