@@ -169,6 +169,26 @@ Story implication: for the paper, call the full pick-place gap a
 post-contact transport/release gap. This is stronger and more precise than
 saying the policy simply fails to grasp.
 
+Contact-ready constrained residual update:
+
+- The unconstrained contact-precision residual branch is negative because it
+  fails the corrected 5-case reach gate (`2/5`, average dynamic bowl XY
+  `70.8 mm`). It should not be used for claims.
+- Adding cumulative base-action preservation fixes that regression. The
+  constrained branch
+  (`configs/libero_dhbxr_qwen_fresh_actionres_contactprecision_cumsum.yaml`)
+  passes the corrected reach gate at `5/5`, keeps `0` IK failures, and reaches
+  average dynamic bowl XY `39.5 mm`.
+- In the best no-gate full-task diagnostic, the constrained branch reaches
+  `18.9 mm` minimum dynamic bowl XY and `33.3 mm` 3D, closes at step `101` at
+  about `22.3 mm` XY / `33.6 mm` 3D from the bowl, and moves the bowl
+  `98.5 mm`. It still never reopens and ends about `140 mm` XY from the plate.
+
+Story implication: the current best full-task diagnostic is contact-ready but
+not placement-ready. This strengthens the claim boundary: DHB-XR can preserve
+robust reach while getting into a plausible contact regime, but the remaining
+unvalidated piece is learned post-contact transport and release.
+
 Transport residual update:
 
 - A transport-focused residual continuation
@@ -187,6 +207,26 @@ loss-weight sweep. The defensible next direction is a decoupled, reach-safe
 model path: preserve the original reach and weak close behavior, then apply
 post-contact transport adaptation only when the learned/current gripper state
 indicates the object is being grasped.
+
+Closed-state transport follow-up:
+
+- A physical-gripper-gated closed residual branch
+  (`configs/libero_dhbxr_qwen_fresh_actionres_contactready_transport.yaml`)
+  was trained from the constrained contact-ready checkpoint and preserved the
+  corrected reach gate: `5/5`, average dynamic bowl XY `40.1 mm`, average
+  dynamic bowl XYZ `78.2 mm`, and `0` IK failures.
+- In the no-gate full-task diagnostic with Y-scale `1.55` and gripper-state
+  threshold `0.90`, it closes at step `93`, reaches only `23.1 mm` minimum
+  dynamic bowl XY / `44.2 mm` 3D, moves the bowl `94.7 mm`, never reopens, and
+  still has `28` IK failures.
+- Relative to the constrained contact-ready diagnostic, this slightly improves
+  final/minimum plate proximity but worsens contact quality and does not solve
+  release.
+
+Story implication: closed residual training from demo chunks alone is not the
+breakthrough path. The next model-data intervention should change the
+post-contact state distribution and release supervision, not continue scalar
+transport residual sweeps.
 
 ## 2026-04-25 Claim Closure Strategy
 
@@ -494,6 +534,19 @@ The open claim gaps are:
   decision threshold.
 - The policy still lacks reliable post-contact transport/release after close.
 - The big scaling claim still needs seed-size and augmentation ablations.
+
+2026-04-26 contact-ready update:
+
+- The constrained cumsum contact branch is now the best contact diagnostic:
+  reach is preserved at `5/5`, contact reaches `18.9 mm` dynamic bowl XY, and
+  the bowl moves `98.5 mm`, but learned release/placement still fails.
+- The closed-state transport continuation is neutral/negative: reach remains
+  `5/5`, but contact worsens to `23.1 mm` XY / `44.2 mm` 3D and there is still
+  no reopen.
+- Do not spend more unattended time on more gripper thresholds or the same
+  closed-residual objective. The next useful evidence is a changed
+  post-contact training distribution, a learned release gate, or a stronger
+  matched-baseline/scaling experiment.
 
 Latest full-task diagnostic:
 

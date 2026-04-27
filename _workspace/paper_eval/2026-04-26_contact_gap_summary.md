@@ -34,6 +34,7 @@ rollout gates.
 | Release/gripper branch | Y-scale `1.55`, threshold `0.94` | `177` | `[30.4, -14.0, 21.7] mm` | `17.1 mm` | `30.2 mm` | `88.4 mm` | `36` | contact-ready but too late |
 | Constrained contact residual | Y-scale `1.55`, threshold `0.90` | `101` | `[20.2, -9.4, 25.1] mm` | `18.9 mm` | `33.3 mm` | `98.5 mm` | `29` | best contact-ready diagnostic, no reopen |
 | Constrained contact residual | Y-scale `1.55`, threshold `0.92` | `129` | `[35.4, 5.5, 14.2] mm` | `18.9 mm` | `32.8 mm` | `82.4 mm` | `39` | delayed close worsens IK |
+| Contact-ready transport residual | Y-scale `1.55`, threshold `0.90` | `93` | `[7.0, -22.0, 42.5] mm` | `23.1 mm` | `44.2 mm` | `94.7 mm` | `28` | slight plate improvement, worse contact, no reopen |
 
 ## Negative Branch
 
@@ -48,6 +49,16 @@ The constrained cumulative-base branch
 fixes that reach-preservation failure. It passes the corrected reach gate at
 `steps_400` with `5/5` successes, average dynamic bowl XY `39.5 mm`, average
 dynamic bowl XYZ `78.3 mm`, and `0` IK failures.
+
+The closed-state transport branch
+`_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_contactready_transport_fromcumsum400`
+also preserves the corrected reach gate at `steps_500`: `5/5` successes,
+average dynamic bowl XY `40.1 mm`, average dynamic bowl XYZ `78.2 mm`, and
+`0` IK failures. Its full-task diagnostic is neutral/negative: it slightly
+improves plate proximity and IK count relative to the constrained contact
+branch, but contact quality regresses to `23.1 mm` XY / `44.2 mm` 3D, it never
+reopens, and it still does not complete placement. Do not continue the same
+closed-residual demo-chunk training blindly.
 
 ## Interpretation
 
@@ -64,6 +75,11 @@ The most important negative signal is that the same run still does not reopen,
 keeps the bowl about `140 mm` XY from the plate at the end, and accumulates
 late IK failures. Contact precision is now close to the target; post-contact
 transport and learned release are the next blockers.
+
+The closed-transport follow-up confirms this boundary rather than closing it.
+Training only a physical-gripper-gated residual from the same demo chunks keeps
+open-gripper reach intact, but it does not provide the missing post-contact
+state coverage or release timing needed for success.
 
 ## Next Claim Gate
 

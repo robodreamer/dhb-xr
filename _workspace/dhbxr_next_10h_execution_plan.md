@@ -1054,3 +1054,36 @@ preservation failure of the unconstrained contact-precision branch and reaches
 the strict contact-ready regime. It still does not solve release or late
 placement IK. The next training target should be post-contact transport and
 learned reopen, not more close-threshold sweeps.
+
+## 2026-04-26 Closed-Transport Follow-Up: Neutral/Negative
+
+A closed-state transport branch was trained from the contact-ready cumsum
+checkpoint while freezing the open-gripper reach/contact path and learned
+gripper heads:
+
+- config:
+  `configs/libero_dhbxr_qwen_fresh_actionres_contactready_transport.yaml`
+- run:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_contactready_transport_fromcumsum400`
+- checkpoint: `steps_500_pytorch_model.pt`
+- trainable path: physical-gripper-gated closed residual only
+- corrected reach gate: `5/5`, average dynamic bowl XY `40.1 mm`, average
+  dynamic bowl XYZ `78.2 mm`, and `0` IK failures
+
+Full-task no-gate diagnostic with Y-scale `1.55` and gripper-state threshold
+`0.90`:
+
+- no success, no reopen
+- close step `93`
+- close geometry `23.1 mm` XY / `48.4 mm` 3D
+- minimum dynamic bowl distance `23.1 mm` XY / `44.2 mm` 3D
+- bowl motion `94.7 mm`
+- minimum plate XY `81.4 mm`
+- final bowl-plate XY `131.3 mm`
+- `28` IK failures
+
+Interpretation: this branch slightly improves plate proximity and IK count
+relative to the cumsum full-task diagnostic, but it worsens contact quality and
+does not learn release. Treat it as neutral/negative. The next transport
+attempt needs better post-contact state distribution or explicit release-phase
+supervision, not simply more closed-residual training from demo chunks.
