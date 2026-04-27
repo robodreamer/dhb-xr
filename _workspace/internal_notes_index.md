@@ -135,6 +135,14 @@ Latest active result to preserve:
   diagnostic `-0.3 mm/step` Y bias can pass close affordance but still fails
   object-target placement. Use this scorer as the full-task gate for future
   branches and avoid more scalar execution-bias sweeps.
+- Latest dataset/training path:
+  `/home/andypark/Projects/data/libero_lerobot_affordance` was regenerated
+  with demo-affordance close labels from simulator replay. It has `500`
+  episodes and `62,250` frames. Use StarVLA data mix
+  `libero_spatial_dhbxr_affordance` and configs
+  `libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp.yaml` then
+  `libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_grip.yaml` for
+  the next branch.
 
 Historical diagnostics were moved to:
 

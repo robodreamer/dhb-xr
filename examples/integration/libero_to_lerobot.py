@@ -123,6 +123,7 @@ LIBERO_CLOSE_GATE_Z_M = 0.05
 # supervision entirely.
 LIBERO_RELEASE_GATE_XY_M = 0.05
 LIBERO_RELEASE_GATE_Z_M = 0.06
+LIBERO_CLOSE_AFFORDANCE_TOLERANCE_M = 0.03
 DEFAULT_DHB_OAT_ACTION_HORIZON = 8
 DEFAULT_DHB_OAT_NUM_REGISTERS = 8
 DEFAULT_DHB_OAT_INIT_SEED = 0
@@ -236,6 +237,8 @@ class _LiberoGeometryLabeler:
         close_gate_z_m: float = LIBERO_CLOSE_GATE_Z_M,
         release_gate_xy_m: float = LIBERO_RELEASE_GATE_XY_M,
         release_gate_z_m: float = LIBERO_RELEASE_GATE_Z_M,
+        close_label_mode: str = "demo_affordance",
+        close_affordance_tolerance_m: float = LIBERO_CLOSE_AFFORDANCE_TOLERANCE_M,
     ) -> None:
         self.env = env
         self.bowl_key = bowl_key
@@ -244,6 +247,13 @@ class _LiberoGeometryLabeler:
         self.close_gate_z_m = float(close_gate_z_m)
         self.release_gate_xy_m = float(release_gate_xy_m)
         self.release_gate_z_m = float(release_gate_z_m)
+        if close_label_mode not in {"center", "demo_affordance"}:
+            raise ValueError(
+                "close_label_mode must be one of 'center' or 'demo_affordance', "
+                f"got {close_label_mode!r}"
+            )
+        self.close_label_mode = close_label_mode
+        self.close_affordance_tolerance_m = float(close_affordance_tolerance_m)
 
     def close(self) -> None:
         self.env.close()
@@ -261,6 +271,12 @@ class _LiberoGeometryLabeler:
         self, sim_states: np.ndarray, gripper_open: np.ndarray
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         bowl_rel, plate_rel = self.replay_relative_snapshots(sim_states)
+        close_affordance_target = None
+        if self.close_label_mode == "demo_affordance":
+            close_affordance_target = _infer_close_affordance_target(
+                bowl_rel=bowl_rel,
+                gripper_open=gripper_open,
+            )
         return _geometry_contact_labels(
             bowl_rel=bowl_rel,
             plate_rel=plate_rel,
@@ -269,6 +285,8 @@ class _LiberoGeometryLabeler:
             close_gate_z_m=self.close_gate_z_m,
             release_gate_xy_m=self.release_gate_xy_m,
             release_gate_z_m=self.release_gate_z_m,
+            close_affordance_target_m=close_affordance_target,
+            close_affordance_tolerance_m=self.close_affordance_tolerance_m,
         )
 
 
@@ -288,7 +306,13 @@ def _find_task_by_name(task_suite_name: str, task_name: str):
     raise KeyError(f"Task '{task_name}' not found in LIBERO suite '{task_suite_name}'")
 
 
-def _build_geometry_labeler(task_suite_name: str, task_name: str) -> _LiberoGeometryLabeler:
+def _build_geometry_labeler(
+    task_suite_name: str,
+    task_name: str,
+    *,
+    close_label_mode: str = "demo_affordance",
+    close_affordance_tolerance_m: float = LIBERO_CLOSE_AFFORDANCE_TOLERANCE_M,
+) -> _LiberoGeometryLabeler:
     task = _find_task_by_name(task_suite_name, task_name)
     task_bddl_file = Path(get_libero_path("bddl_files")) / task.problem_folder / task.bddl_file
     env = OffScreenRenderEnv(
@@ -317,6 +341,8 @@ def _build_geometry_labeler(task_suite_name: str, task_name: str) -> _LiberoGeom
         env,
         bowl_key=_pick_rel_key("bowl"),
         plate_key=_pick_rel_key("plate"),
+        close_label_mode=close_label_mode,
+        close_affordance_tolerance_m=close_affordance_tolerance_m,
     )
 
 
@@ -386,6 +412,37 @@ def _event_class_labels(
     return labels.astype(np.int64)
 
 
+def _infer_close_affordance_target(
+    *,
+    bowl_rel: np.ndarray,
+    gripper_open: np.ndarray,
+) -> Optional[np.ndarray]:
+    """Infer a demo-local grasp affordance vector from the physical close edge.
+
+    ``bowl_rel`` is intentionally kept in the same coordinate convention as the
+    LIBERO observation key used by the converter. The target is used only for
+    offline label generation, so the deployed policy still receives no object
+    pose or task-specific distance gate.
+    """
+    bowl_rel = np.asarray(bowl_rel, dtype=np.float32)
+    open_now = np.asarray(gripper_open, dtype=np.float32).reshape(-1)
+    if bowl_rel.ndim != 2 or bowl_rel.shape[1] < 3 or bowl_rel.shape[0] != len(open_now):
+        raise ValueError(
+            "close affordance target inputs must share shape (T, 3): "
+            f"bowl_rel={bowl_rel.shape}, gripper_open={open_now.shape}"
+        )
+    if len(open_now) == 0:
+        return None
+
+    next_open = np.concatenate([open_now[1:], open_now[-1:]], axis=0)
+    command_close_indices = np.flatnonzero((open_now > 0.5) & (next_open <= 0.5))
+    if command_close_indices.size == 0:
+        return None
+
+    physical_close_index = min(int(command_close_indices[0]) + 1, len(open_now) - 1)
+    return bowl_rel[physical_close_index, :3].astype(np.float32, copy=True)
+
+
 def _geometry_contact_labels(
     *,
     bowl_rel: np.ndarray,
@@ -395,6 +452,8 @@ def _geometry_contact_labels(
     close_gate_z_m: float = LIBERO_CLOSE_GATE_Z_M,
     release_gate_xy_m: float = LIBERO_RELEASE_GATE_XY_M,
     release_gate_z_m: float = LIBERO_RELEASE_GATE_Z_M,
+    close_affordance_target_m: Optional[np.ndarray] = None,
+    close_affordance_tolerance_m: float = LIBERO_CLOSE_AFFORDANCE_TOLERANCE_M,
     event_onset_steps: int = 1,
     close_phase_steps: int = 6,
     open_phase_steps: int = 6,
@@ -423,11 +482,23 @@ def _geometry_contact_labels(
     has_closed_before = np.cumsum(close_transitions.astype(np.int32)) > 0
     has_opened_after_close = np.cumsum(open_transitions.astype(np.int32)) > 0
 
-    close_ready = (
-        (np.abs(bowl_rel[:, 0]) <= close_gate_xy_m)
-        & (np.abs(bowl_rel[:, 1]) <= close_gate_xy_m)
-        & (bowl_rel[:, 2] <= close_gate_z_m)
-    )
+    if close_affordance_target_m is not None:
+        target = np.asarray(close_affordance_target_m, dtype=np.float32).reshape(-1)
+        if target.shape[0] < 3:
+            raise ValueError(
+                "close_affordance_target_m must contain at least 3 values, "
+                f"got shape {target.shape}"
+            )
+        close_ready = (
+            np.linalg.norm(bowl_rel[:, :3] - target[:3].reshape(1, 3), axis=1)
+            <= float(close_affordance_tolerance_m)
+        )
+    else:
+        close_ready = (
+            (np.abs(bowl_rel[:, 0]) <= close_gate_xy_m)
+            & (np.abs(bowl_rel[:, 1]) <= close_gate_xy_m)
+            & (bowl_rel[:, 2] <= close_gate_z_m)
+        )
     release_ready = (
         (np.abs(plate_rel[:, 0]) <= release_gate_xy_m)
         & (np.abs(plate_rel[:, 1]) <= release_gate_xy_m)
@@ -953,6 +1024,8 @@ def convert_libero_to_lerobot(
     dhb_oat_action_horizon: int = DEFAULT_DHB_OAT_ACTION_HORIZON,
     dhb_oat_num_registers: int = DEFAULT_DHB_OAT_NUM_REGISTERS,
     dhb_oat_init_seed: Optional[int] = DEFAULT_DHB_OAT_INIT_SEED,
+    geometry_close_label_mode: str = "demo_affordance",
+    geometry_close_affordance_tolerance_m: float = LIBERO_CLOSE_AFFORDANCE_TOLERANCE_M,
 ) -> Tuple[int, int, List[Dict], Dict[int, str]]:
     """Convert a single LIBERO HDF5 file to LeRobot format.
     
@@ -966,6 +1039,10 @@ def convert_libero_to_lerobot(
         dhb_oat_action_horizon: Step-aligned future horizon used for OAT targets
         dhb_oat_num_registers: Number of OAT tokens per exported chunk
         dhb_oat_init_seed: Optional deterministic seed for inline OAT init
+        geometry_close_label_mode: ``center`` for legacy object-center labels,
+            or ``demo_affordance`` for demo physical-close relative grasp labels
+        geometry_close_affordance_tolerance_m: Relative-vector tolerance for
+            ``demo_affordance`` close labels
         
     Returns:
         Tuple of (num_episodes_converted, total_frames)
@@ -1001,11 +1078,19 @@ def convert_libero_to_lerobot(
     task_suite_name = libero_h5_path.parent.name
     if HAS_LIBERO and task_suite_name.startswith("libero_"):
         try:
-            geometry_labeler = _build_geometry_labeler(task_suite_name, normalized_task_name)
+            geometry_labeler = _build_geometry_labeler(
+                task_suite_name,
+                normalized_task_name,
+                close_label_mode=geometry_close_label_mode,
+                close_affordance_tolerance_m=geometry_close_affordance_tolerance_m,
+            )
             logger.info(
-                "Using geometry-conditioned gripper labels for %s via suite '%s'",
+                "Using geometry-conditioned gripper labels for %s via suite '%s' "
+                "(close_label_mode=%s, affordance_tolerance=%.3fm)",
                 normalized_task_name,
                 task_suite_name,
+                geometry_close_label_mode,
+                geometry_close_affordance_tolerance_m,
             )
         except Exception as exc:
             logger.warning(
@@ -1233,6 +1318,23 @@ Examples:
         help="Deterministic seed for inline OAT tokenizer initialization",
     )
     parser.add_argument(
+        "--geometry-close-label-mode",
+        choices=("center", "demo_affordance"),
+        default="demo_affordance",
+        help=(
+            "How geometry-conditioned close labels are generated. "
+            "'center' keeps the legacy object-center gate; 'demo_affordance' "
+            "uses the demo physical-close relative grasp vector for offline "
+            "supervision without adding deployment-time object gates."
+        ),
+    )
+    parser.add_argument(
+        "--geometry-close-affordance-tolerance-m",
+        type=float,
+        default=LIBERO_CLOSE_AFFORDANCE_TOLERANCE_M,
+        help="Relative-vector tolerance for demo_affordance close labels.",
+    )
+    parser.add_argument(
         "--compute-stats",
         action="store_true",
         default=True,
@@ -1305,6 +1407,8 @@ Examples:
             dhb_oat_action_horizon=args.dhb_oat_action_horizon,
             dhb_oat_num_registers=args.dhb_oat_num_registers,
             dhb_oat_init_seed=args.dhb_oat_init_seed,
+            geometry_close_label_mode=args.geometry_close_label_mode,
+            geometry_close_affordance_tolerance_m=args.geometry_close_affordance_tolerance_m,
         )
         
         total_episodes += num_eps

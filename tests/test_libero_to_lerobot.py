@@ -10,6 +10,7 @@ from examples.integration.libero_to_lerobot import (
     _event_transition_labels,
     _gripper_state_from_events,
     _geometry_contact_labels,
+    _infer_close_affordance_target,
     create_episode_dataframe,
     load_libero_demo,
 )
@@ -249,6 +250,54 @@ def test_geometry_contact_labels_use_short_phase_windows_after_onset():
     np.testing.assert_array_equal(open_contact, np.zeros(10, dtype=np.float32))
     np.testing.assert_array_equal(gripper_event, [0, 1, 0, 0, 0, 0, 0, 0, 0, 0])
     np.testing.assert_array_equal(gripper_phase, [0, 1, 1, 1, 1, 1, 1, 0, 0, 0])
+
+
+def test_close_affordance_target_uses_physical_close_vector() -> None:
+    gripper_open = np.array([1.0, 1.0, 0.0, 0.0], dtype=np.float32)
+    bowl_rel = np.array(
+        [
+            [0.00, 0.00, 0.02],
+            [0.01, 0.03, -0.01],
+            [0.02, 0.05, -0.03],
+            [0.03, 0.05, -0.03],
+        ],
+        dtype=np.float32,
+    )
+
+    target = _infer_close_affordance_target(
+        bowl_rel=bowl_rel,
+        gripper_open=gripper_open,
+    )
+
+    np.testing.assert_allclose(target, [0.02, 0.05, -0.03], atol=1e-6)
+
+
+def test_geometry_contact_labels_can_target_side_grasp_affordance() -> None:
+    gripper_open = np.array([1.0, 1.0, 1.0, 0.0, 0.0], dtype=np.float32)
+    bowl_rel = np.array(
+        [
+            [0.00, 0.00, 0.02],   # legacy center contact, but not the side grasp
+            [0.01, 0.045, -0.025],
+            [0.02, 0.050, -0.030],
+            [0.02, 0.050, -0.030],
+            [0.00, 0.00, 0.02],
+        ],
+        dtype=np.float32,
+    )
+    plate_rel = np.full((5, 3), 0.20, dtype=np.float32)
+
+    close_contact, open_contact, gripper_event, gripper_phase = _geometry_contact_labels(
+        bowl_rel=bowl_rel,
+        plate_rel=plate_rel,
+        gripper_open=gripper_open,
+        close_affordance_target_m=np.array([0.02, 0.05, -0.03], dtype=np.float32),
+        close_affordance_tolerance_m=0.013,
+    )
+
+    np.testing.assert_array_equal(close_contact, [0, 1, 1, 0, 0])
+    np.testing.assert_array_equal(open_contact, np.zeros(5, dtype=np.float32))
+    np.testing.assert_array_equal(gripper_event, [0, 1, 0, 0, 0])
+    np.testing.assert_array_equal(gripper_phase, [0, 1, 1, 0, 0])
 
 
 def test_gripper_state_from_events_tracks_geometry_aligned_state():

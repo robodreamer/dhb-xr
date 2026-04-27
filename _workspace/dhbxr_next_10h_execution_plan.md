@@ -1337,3 +1337,39 @@ Updated execution rule:
 4. Deployment must remain object-free: object and target geometry are allowed
    for dataset generation, diagnostics, and benchmark scoring, not for
    rollout-time hardcoded gates.
+
+## 2026-04-26 Affordance Dataset Regeneration
+
+The offline training path has been updated so the next branch can train on the
+correct grasp proxy:
+
+- converter:
+  `examples/integration/libero_to_lerobot.py`
+- new converter mode:
+  `--geometry-close-label-mode demo_affordance`
+- regenerated dataset:
+  `/home/andypark/Projects/data/libero_lerobot_affordance`
+- dataset size:
+  `500` episodes, `62,250` frames, about `208 MB`
+- label coverage:
+  `500/500` episodes have close labels, `470/500` have release labels,
+  `2,929` close-phase steps, and `2,853` release-phase steps
+- StarVLA mixture:
+  `libero_spatial_dhbxr_affordance`
+- next configs:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp.yaml`
+  and
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_grip.yaml`
+
+The one-step train smoke passed on the affordance-grasp config. The smoke
+script only freezes Qwen, so its trainable-parameter count is not the final
+trainer freeze count; use the actual trainer log for the real trainable scope.
+
+Next unattended run:
+
+1. Train `affordancegrasp` from the commanded transport XY checkpoint.
+2. Re-run the corrected 5-case reach gate.
+3. Run the full-task trace and score it with
+   `scripts/libero_rollout_affordance_score.py`.
+4. Only if reach is preserved and close-vector error improves, train the
+   `affordancegrasp_grip` timing branch.

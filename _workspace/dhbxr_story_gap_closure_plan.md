@@ -213,6 +213,14 @@ supports the broader DHB-XR story because the action representation can be
 paired with compact geometric event targets, but those targets must be learned
 from simulator/demo geometry rather than replaced by deployment heuristics.
 
+Implementation update: the LIBERO-to-LeRobot converter now has a
+`demo_affordance` close-label mode, and the regenerated
+`libero_lerobot_affordance` dataset exposes that supervision through the same
+generic DHB gripper/contact columns. This is an important storytelling detail:
+the method is not using object-distance gates at rollout. It uses simulator
+geometry only to produce better offline training labels, then deploys from
+images, language, state history, DHB/action tokens, and learned heads.
+
 Transport residual update:
 
 - A transport-focused residual continuation
