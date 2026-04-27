@@ -76,6 +76,7 @@ def test_scores_close_affordance_and_release_from_snapshots() -> None:
     )
 
     assert score["events"]["close"]["vector_error_mm"] == pytest.approx(2.236, rel=1e-3)
+    assert score["physical_close_step"] is None
     assert score["events"]["reopen"]["xy_mm"] == pytest.approx(19.105, rel=1e-3)
     assert score["gates"]["close_affordance_pass"] is True
     assert score["gates"]["release_xy_pass"] is True
@@ -112,3 +113,61 @@ def test_falls_back_to_step_trace_when_snapshot_missing() -> None:
     assert score["gates"]["has_close"] is True
     assert score["gates"]["has_reopen"] is False
     assert score["gates"]["release_xy_pass"] is True
+
+
+def test_scores_physical_close_when_observed_gripper_lags_command() -> None:
+    demo_geometry = {
+        "events": [
+            {
+                "event": "close_phys",
+                "ee_minus_object_m": [0.0, -0.05, 0.026],
+                "object_minus_target_m": [0.13, 0.0, 0.0],
+            },
+            {
+                "event": "open_phys",
+                "ee_minus_object_m": [0.0, -0.04, 0.04],
+                "object_minus_target_m": [0.02, 0.0, 0.0],
+            },
+        ]
+    }
+    rollout = {
+        "close_step": 5,
+        "success": False,
+        "step_trace": [
+            {
+                "step": 5,
+                "observed_state_gripper": 0.034,
+                "ee_minus_bowl": [0.0, -0.01, 0.030],
+                "bowl_minus_plate": [0.13, 0.0, 0.0],
+            },
+            {
+                "step": 6,
+                "observed_state_gripper": 0.021,
+                "ee_minus_bowl": [0.0, -0.03, 0.028],
+                "bowl_minus_plate": [0.13, 0.0, 0.0],
+            },
+            {
+                "step": 7,
+                "observed_state_gripper": 0.006,
+                "ee_minus_bowl": [0.0, -0.051, 0.026],
+                "bowl_minus_plate": [0.13, 0.0, 0.0],
+            },
+        ],
+        "close_snapshot": {
+            "ee_minus_bowl": [0.0, -0.01, 0.030],
+            "bowl_minus_plate": [0.13, 0.0, 0.0],
+        },
+        "final_snapshot": {"bowl_minus_plate": [0.13, 0.0, 0.0]},
+    }
+
+    score = affordance_score.score_rollout(
+        rollout,
+        demo_geometry,
+        close_vector_tolerance_mm=5.0,
+    )
+
+    assert score["close_step"] == 5
+    assert score["physical_close_step"] == 7
+    assert score["events"]["close_command"]["vector_error_mm"] == pytest.approx(40.2, rel=1e-3)
+    assert score["events"]["close"]["vector_error_mm"] == pytest.approx(1.0)
+    assert score["gates"]["close_affordance_pass"] is True

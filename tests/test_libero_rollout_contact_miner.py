@@ -59,6 +59,9 @@ def test_mines_missed_positive_and_hard_negative_from_rollout_trace() -> None:
         ee_object_field="ee_minus_bowl",
         positive_tolerance_mm=10.0,
         positive_component_tolerance_mm=None,
+        best_positive_top_k_per_rollout=0,
+        best_positive_max_error_mm=float("inf"),
+        best_positive_window=0,
         positive_prob_margin=0.65,
         hard_negative_prob=0.55,
         near_object_hard_negative_xy_mm=None,
@@ -108,6 +111,9 @@ def test_builds_policy_manifest_rows_from_mined_labels() -> None:
         ee_object_field="ee_minus_bowl",
         positive_tolerance_mm=10.0,
         positive_component_tolerance_mm=None,
+        best_positive_top_k_per_rollout=0,
+        best_positive_max_error_mm=float("inf"),
+        best_positive_window=0,
         positive_prob_margin=0.65,
         hard_negative_prob=0.55,
         near_object_hard_negative_xy_mm=None,
@@ -156,6 +162,9 @@ def test_component_tolerance_filters_broad_vector_positive_to_hard_negative() ->
         ee_object_field="ee_minus_bowl",
         positive_tolerance_mm=45.0,
         positive_component_tolerance_mm=[10.0, 10.0, 10.0],
+        best_positive_top_k_per_rollout=0,
+        best_positive_max_error_mm=float("inf"),
+        best_positive_window=0,
         positive_prob_margin=0.65,
         hard_negative_prob=0.55,
         near_object_hard_negative_xy_mm=45.0,
@@ -166,3 +175,51 @@ def test_component_tolerance_filters_broad_vector_positive_to_hard_negative() ->
     assert result["samples"][0]["label"] == "hard_negative"
     assert result["samples"][0]["is_near_object_hard_negative"] is True
     assert result["samples"][1]["label"] == "missed_positive"
+
+
+def test_best_positive_relabeling_can_override_near_object_hard_negative() -> None:
+    rollout = {
+        "chunks": [
+            {
+                "t_start": 0,
+                "n_use": 2,
+                "close_probs": [0.2, 0.2],
+            }
+        ],
+        "step_trace": [
+            {
+                "step": 0,
+                "ee_minus_bowl": [0.020, -0.030, 0.040],
+                "desired_grip": -1.0,
+                "effective_grip": -1.0,
+            },
+            {
+                "step": 1,
+                "ee_minus_bowl": [0.080, 0.000, 0.040],
+                "desired_grip": -1.0,
+                "effective_grip": -1.0,
+            },
+        ],
+    }
+
+    result = contact_miner.mine_contact_samples(
+        rollout,
+        rollout_json="rollout.json",
+        close_reference_m=[0.0, -0.050, 0.026],
+        ee_object_field="ee_minus_bowl",
+        positive_tolerance_mm=10.0,
+        positive_component_tolerance_mm=[10.0, 10.0, 10.0],
+        best_positive_top_k_per_rollout=1,
+        best_positive_max_error_mm=40.0,
+        best_positive_window=0,
+        positive_prob_margin=0.65,
+        hard_negative_prob=0.55,
+        near_object_hard_negative_xy_mm=60.0,
+        near_object_hard_negative_z_min_mm=0.0,
+        near_object_hard_negative_z_max_mm=80.0,
+    )
+
+    assert result["samples"][0]["label"] == "missed_positive"
+    assert result["samples"][0]["is_forced_best_positive"] is True
+    assert result["samples"][0]["is_near_object_hard_negative"] is False
+    assert result["samples"][1]["label"] == "background"

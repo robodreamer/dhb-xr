@@ -1458,3 +1458,24 @@ Story implication:
   post-grasp transport/release validation. Do not claim the full task solved
   until both fixed cases close within the side-grasp affordance window and
   release near the plate under true no-gate deployment.
+
+2026-04-27 physical-close storytelling correction:
+
+- The side-grasp scorer now uses observed physical gripper closure when
+  available. This matters because the demo reference is physical close, while
+  model rollout records both command close and observed gripper qpos.
+- With this corrected metric, the bestpos v2 non-zero-offset run gives the
+  first clean learned-token side-grasp result: episode `1,+3 cm` commands
+  close at step `99`, physically closes at step `101`, and reaches `9.2 mm`
+  close-vector error to the demo side-grasp affordance without object-distance
+  gates.
+- This is not yet a solved full-task result. The same branch fails the
+  zero-offset side-grasp gate and does not reopen/place.
+
+Story implication:
+
+- The staged claim is stronger now. We can say the DHB-XR learned contact token
+  can produce a physically aligned side-grasp event under spatial offset, not
+  only a rough near-object close. The remaining paper gap is consistency and
+  post-contact manipulation, not whether the learned token can ever represent a
+  correct contact event.

@@ -2114,3 +2114,33 @@ Updated priority:
    spending more time on post-grasp transport. Threshold sweeps are exhausted
    until both fixed cases close within the affordance window under true
    no-gate deployment.
+
+Physical-close correction and best-positive follow-up:
+
+- The affordance scorer now separates command close from physical close using
+  `observed_state_gripper <= 0.015`. This fixes a real metric mismatch: the
+  demo reference is `close_phys`, but previous rollout scoring used the command
+  close snapshot.
+- Corrective best-positive relabeling was added to the contact miner. The v2
+  manifest has `43` positives and `567` negatives, up from `9` positives in
+  strict sidegrasp v1, while preserving strict side-grasp component caps and
+  near-object hard negatives.
+- The bestpos v2 200-step continuation gives a clean non-zero-offset contact
+  result under true no-gate deployment. For episode `1,+3 cm`, threshold `0.50`
+  commands close at step `99`; physical close occurs at step `101` with
+  `9.2 mm` side-grasp vector error. This is a valid learned-token side-grasp
+  pass.
+- The same run still fails full pick-place: case `0` closes high, no run
+  reopens, and final target XY remains around `139 mm` in the non-zero-offset
+  video. Debounce `4` made timing worse, so do not pursue debounce as the
+  solution.
+
+Updated immediate priority:
+
+1. Treat bestpos v2 as the first clean learned-token side-grasp success under
+   non-zero offset, but only for the contact event, not full manipulation.
+2. Continue data work toward consistency across cases: more balanced positive
+   rollout states around the physical side-grasp event, especially for the
+   `0 cm` case that still closes high.
+3. After contact consistency, train post-close hold/transport/release using the
+   physical-close event as the phase boundary instead of command close.

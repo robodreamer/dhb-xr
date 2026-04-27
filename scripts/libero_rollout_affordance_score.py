@@ -109,6 +109,51 @@ def _trace_records(rollout: dict[str, Any]) -> list[dict[str, Any]]:
     return [record for record in trace if isinstance(record, dict)]
 
 
+def _record_for_step(records: list[dict[str, Any]], step: int | None) -> dict[str, Any] | None:
+    if not isinstance(step, int):
+        return None
+    for record in records:
+        if record.get("step") == step:
+            return record
+    if 0 <= step < len(records):
+        return records[step]
+    return None
+
+
+def _physical_close_step(
+    records: list[dict[str, Any]],
+    *,
+    command_close_step: int | None,
+    gripper_qpos_threshold: float,
+) -> int | None:
+    """Return the first observed closed-qpos step after the close command.
+
+    Rollout traces distinguish command timing from physical gripper closure via
+    ``observed_state_gripper``. The demo close reference is a physical close
+    event, so affordance scoring should use this delayed crossing when it is
+    available.
+    """
+    if not isinstance(command_close_step, int):
+        return None
+    def sort_key(item: dict[str, Any]) -> int:
+        step = item.get("step")
+        return int(step) if isinstance(step, int) else 10**9
+
+    for record in sorted(records, key=sort_key):
+        step = record.get("step")
+        if not isinstance(step, int) or step < command_close_step:
+            continue
+        value = record.get("observed_state_gripper")
+        if value is None:
+            continue
+        try:
+            if float(value) <= gripper_qpos_threshold:
+                return step
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
 def _best_vector_match(
     records: list[dict[str, Any]],
     field: str,
@@ -198,17 +243,29 @@ def score_rollout(
     object_target_field: str = "bowl_minus_plate",
     close_vector_tolerance_mm: float = 30.0,
     release_xy_tolerance_mm: float = 40.0,
+    gripper_qpos_threshold: float = 0.015,
 ) -> dict[str, Any]:
     close_ref = reference_stats(demo_geometry, close_event, "ee_minus_object_m")
     release_ref = reference_stats(demo_geometry, release_event, "object_minus_target_m")
     close_step = rollout.get("close_step")
     reopen_step = rollout.get("reopen_step")
-    close_snapshot = _snapshot_for_step(rollout, "close_step", "close_snapshot")
-    reopen_snapshot = _snapshot_for_step(rollout, "reopen_step", "reopen_snapshot")
     final_snapshot = rollout.get("final_snapshot")
     records = _trace_records(rollout)
+    physical_close_step = _physical_close_step(
+        records,
+        command_close_step=close_step if isinstance(close_step, int) else None,
+        gripper_qpos_threshold=gripper_qpos_threshold,
+    )
+    close_snapshot = (
+        _record_for_step(records, physical_close_step)
+        if physical_close_step is not None
+        else _snapshot_for_step(rollout, "close_step", "close_snapshot")
+    )
+    close_command_snapshot = _snapshot_for_step(rollout, "close_step", "close_snapshot")
+    reopen_snapshot = _snapshot_for_step(rollout, "reopen_step", "reopen_snapshot")
 
     close_score = _score_event_vector(close_snapshot, ee_object_field, close_ref)
+    close_command_score = _score_event_vector(close_command_snapshot, ee_object_field, close_ref)
     reopen_score = _score_event_vector(reopen_snapshot, object_target_field, release_ref)
     final_release_score = _score_event_vector(final_snapshot, object_target_field, release_ref)
     best_close_match = _best_vector_match(records, ee_object_field, close_ref["mean_m"])
@@ -246,6 +303,7 @@ def score_rollout(
         "offset_cm": rollout.get("offset_cm"),
         "checkpoint": rollout.get("checkpoint"),
         "close_step": close_step,
+        "physical_close_step": physical_close_step,
         "reopen_step": reopen_step,
         "success": bool(rollout.get("success")),
         "ik_fail_total": int(rollout.get("ik_fail_total") or 0),
@@ -259,6 +317,7 @@ def score_rollout(
         },
         "events": {
             "close": close_score,
+            "close_command": close_command_score,
             "reopen": reopen_score,
             "final": final_release_score,
         },
@@ -272,6 +331,7 @@ def score_rollout(
 
 def _markdown_row(path: str, score: dict[str, Any]) -> str:
     close = score["events"]["close"] or {}
+    close_command = score["events"].get("close_command") or {}
     reopen = score["events"]["reopen"] or {}
     final = score["events"]["final"] or {}
     best_close = score["best"]["close_affordance_match"] or {}
@@ -285,7 +345,8 @@ def _markdown_row(path: str, score: dict[str, Any]) -> str:
         return str(value)
 
     return (
-        f"| {Path(path).name} | {score['close_step']} | "
+        f"| {Path(path).name} | {score['close_step']} | {score.get('physical_close_step')} | "
+        f"{fmt(close_command.get('vector_error_mm'))} | "
         f"{fmt(close.get('vector_error_mm'))} | {fmt(close.get('xy_mm'))} | "
         f"{fmt(best_close.get('vector_error_mm'))} @ {best_close.get('step', '-')} | "
         f"{score['reopen_step']} | {fmt(reopen.get('xy_mm'))} | "
@@ -308,6 +369,7 @@ def main() -> None:
     parser.add_argument("--object-target-field", default="bowl_minus_plate")
     parser.add_argument("--close-vector-tolerance-mm", type=float, default=30.0)
     parser.add_argument("--release-xy-tolerance-mm", type=float, default=40.0)
+    parser.add_argument("--gripper-qpos-threshold", type=float, default=0.015)
     parser.add_argument("--save-json", default="")
     parser.add_argument("--print-markdown", action="store_true")
     args = parser.parse_args()
@@ -325,6 +387,7 @@ def main() -> None:
             object_target_field=args.object_target_field,
             close_vector_tolerance_mm=args.close_vector_tolerance_mm,
             release_xy_tolerance_mm=args.release_xy_tolerance_mm,
+            gripper_qpos_threshold=args.gripper_qpos_threshold,
         )
         score["rollout_json"] = rollout_path
         scores.append(score)
@@ -340,12 +403,16 @@ def main() -> None:
 
     if args.print_markdown:
         print(
-            "| Rollout | Close step | Close vector err mm | Close XY mm | "
+            "| Rollout | Command close step | Physical close step | "
+            "Command close vector err mm | Physical close vector err mm | Close XY mm | "
             "Best close err mm | Reopen step | Reopen target XY mm | "
             "Final target XY mm | Best target XY mm | IK fails | "
             "Close pass | Release pass | Notes |"
         )
-        print("| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- | --- |")
+        print(
+            "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | "
+            "---: | ---: | ---: | ---: | --- | --- | --- |"
+        )
         for score in scores:
             print(_markdown_row(score["rollout_json"], score))
     else:

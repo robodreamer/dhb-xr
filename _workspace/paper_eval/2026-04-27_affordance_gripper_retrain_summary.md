@@ -881,3 +881,43 @@ next useful data intervention is not another scalar threshold sweep. It is to
 generate many balanced side-grasp-ready rollout positives, paired with
 near-bowl/high-or-center negatives, through simulator replay, DAgger-style
 correction, or the planned world-model augmentation path.
+
+## Physical-Close Scoring Correction And Best-Positive Relabeling
+
+The affordance scorer had a metric mismatch: it compared the rollout command
+close step against the demo `close_phys` reference. LIBERO gripper closure has
+actuator lag, and the rollout traces already record `observed_state_gripper`.
+The scorer now reports both command close and physical close, where physical
+close is the first observed gripper qpos crossing `0.015` after the close
+command.
+
+This correction is important. In the best non-zero-offset trace, the model
+commands close at step `99`, but the observed gripper physically closes at step
+`101`. The command-time side-grasp vector error is `35.5 mm`; the physical
+close vector error is `9.2 mm`, which passes the `30 mm` side-grasp gate:
+
+`_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_sidegrasp_bestposv2_fromrolloutpos400/bestposv2_thr050_ep1_offset3_video_summary.json`
+
+Video:
+
+`_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_sidegrasp_bestposv2_fromrolloutpos400/bestposv2_thr050_ep1_offset3.mp4`
+
+The data intervention that produced this trace added bounded corrective
+best-positive relabeling to the miner. The side-grasp v2 manifest keeps the
+strict component caps and near-object hard negatives, but also relabels the
+closest near-success rollout states as positives if their vector error is below
+`58 mm`. The resulting manifest has `610` supervised steps, `43` positives,
+and `567` negatives:
+
+`_workspace/paper_eval/2026-04-27_policy_trace_sidegrasp_bestpos_v2_contact_manifest.jsonl`
+
+The 200-step continuation restores useful no-gate contact timing on the
+non-zero-offset case, but it is not a full-task solution. Case `0` still closes
+high and fails the physical side-grasp gate, no evaluated run reopens, and
+final bowl-plate XY remains about `139 mm` in the non-zero-offset video.
+
+Updated interpretation: we now have clean evidence that the learned DHB contact
+token can trigger a physically correct side-grasp close under a `+3 cm`
+offset without object-distance gates. The remaining gap is narrower and more
+defensible: make this side-grasp timing consistent across cases, then solve
+post-close hold/transport/release.

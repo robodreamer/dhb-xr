@@ -489,3 +489,16 @@ explicitly references them. They are kept for provenance only.
   Treat this as evidence that the next
   breakthrough requires balanced side-grasp-positive rollout data, not another
   deployment heuristic or scalar threshold sweep.
+- Latest physical-close correction:
+  `scripts/libero_rollout_affordance_score.py` now scores physical close using
+  `observed_state_gripper <= 0.015` when available, while still reporting the
+  command close score. This fixes the mismatch between rollout command timing
+  and the demo `close_phys` reference.
+- Latest best learned-token contact result:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_sidegrasp_bestposv2_fromrolloutpos400`,
+  `steps_200`, threshold `0.50`, episode `1,+3 cm`, true no-gate deployment.
+  Command close is step `99`, physical close is step `101`, and physical
+  side-grasp vector error is `9.2 mm`. Video:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_sidegrasp_bestposv2_fromrolloutpos400/bestposv2_thr050_ep1_offset3.mp4`.
+  Full pick-place is still unsolved because zero-offset contact is high and
+  post-close transport/release fails.

@@ -107,6 +107,9 @@ def mine_contact_samples(
     ee_object_field: str,
     positive_tolerance_mm: float,
     positive_component_tolerance_mm: list[float] | None,
+    best_positive_top_k_per_rollout: int,
+    best_positive_max_error_mm: float,
+    best_positive_window: int,
     positive_prob_margin: float,
     hard_negative_prob: float,
     near_object_hard_negative_xy_mm: float | None,
@@ -121,7 +124,7 @@ def mine_contact_samples(
     if not isinstance(close_step, int):
         close_step = None
 
-    samples: list[dict[str, Any]] = []
+    candidates: list[dict[str, Any]] = []
     for row in trace:
         step = row.get("step")
         if not isinstance(step, int):
@@ -132,12 +135,47 @@ def mine_contact_samples(
         component_error_m = _sub(vector, close_reference_m)
         component_error_abs_mm = _abs_mm(component_error_m)
         vector_error_m = _norm(component_error_m)
+        candidates.append(
+            {
+                "row": row,
+                "step": step,
+                "vector": vector,
+                "component_error_abs_mm": component_error_abs_mm,
+                "vector_error_m": vector_error_m,
+            }
+        )
+
+    forced_positive_steps: set[int] = set()
+    if best_positive_top_k_per_rollout > 0:
+        candidate_steps = {int(candidate["step"]) for candidate in candidates}
+        sorted_candidates = sorted(candidates, key=lambda item: float(item["vector_error_m"]))
+        selected = [
+            candidate
+            for candidate in sorted_candidates
+            if float(candidate["vector_error_m"]) * 1000.0 <= float(best_positive_max_error_mm)
+        ][: int(best_positive_top_k_per_rollout)]
+        for candidate in selected:
+            step = int(candidate["step"])
+            for offset in range(-int(best_positive_window), int(best_positive_window) + 1):
+                forced_step = step + offset
+                if forced_step in candidate_steps:
+                    forced_positive_steps.add(forced_step)
+
+    samples: list[dict[str, Any]] = []
+    for candidate in candidates:
+        row = candidate["row"]
+        step = int(candidate["step"])
+        vector = candidate["vector"]
+        component_error_abs_mm = candidate["component_error_abs_mm"]
+        vector_error_m = float(candidate["vector_error_m"])
         is_affordance_positive = vector_error_m * 1000.0 <= positive_tolerance_mm
         if positive_component_tolerance_mm is not None:
             is_affordance_positive = is_affordance_positive and all(
                 component_error_abs_mm[i] <= positive_component_tolerance_mm[i]
                 for i in range(3)
             )
+        is_forced_best_positive = step in forced_positive_steps
+        is_affordance_positive = is_affordance_positive or is_forced_best_positive
         is_near_object_hard_negative = False
         if near_object_hard_negative_xy_mm is not None:
             z_mm = vector[2] * 1000.0
@@ -177,6 +215,7 @@ def mine_contact_samples(
                 "close_reference_m": close_reference_m,
                 "close_vector_error_mm": vector_error_m * 1000.0,
                 "close_component_error_abs_mm": component_error_abs_mm,
+                "is_forced_best_positive": is_forced_best_positive,
                 "is_near_object_hard_negative": is_near_object_hard_negative,
                 "close_prob": close_prob,
                 "open_prob": open_probs.get(step),
@@ -318,6 +357,22 @@ def main() -> None:
         metavar=("X_MM", "Y_MM", "Z_MM"),
         help="Optional component-wise absolute error cap for positive labels.",
     )
+    parser.add_argument(
+        "--best-positive-top-k-per-rollout",
+        type=int,
+        default=0,
+        help=(
+            "Optionally relabel the closest rollout states as corrective "
+            "positives, bounded by --best-positive-max-error-mm."
+        ),
+    )
+    parser.add_argument("--best-positive-max-error-mm", type=float, default=math.inf)
+    parser.add_argument(
+        "--best-positive-window",
+        type=int,
+        default=0,
+        help="Also relabel +/- this many neighboring steps around each selected best positive.",
+    )
     parser.add_argument("--positive-prob-margin", type=float, default=0.65)
     parser.add_argument("--hard-negative-prob", type=float, default=0.55)
     parser.add_argument(
@@ -348,6 +403,9 @@ def main() -> None:
                 if args.positive_component_tolerance_mm is not None
                 else None
             ),
+            best_positive_top_k_per_rollout=max(0, int(args.best_positive_top_k_per_rollout)),
+            best_positive_max_error_mm=float(args.best_positive_max_error_mm),
+            best_positive_window=max(0, int(args.best_positive_window)),
             positive_prob_margin=float(args.positive_prob_margin),
             hard_negative_prob=float(args.hard_negative_prob),
             near_object_hard_negative_xy_mm=(
@@ -372,6 +430,9 @@ def main() -> None:
             if args.positive_component_tolerance_mm is not None
             else None
         ),
+        "best_positive_top_k_per_rollout": max(0, int(args.best_positive_top_k_per_rollout)),
+        "best_positive_max_error_mm": float(args.best_positive_max_error_mm),
+        "best_positive_window": max(0, int(args.best_positive_window)),
         "positive_prob_margin": float(args.positive_prob_margin),
         "hard_negative_prob": float(args.hard_negative_prob),
         "near_object_hard_negative_xy_mm": (
