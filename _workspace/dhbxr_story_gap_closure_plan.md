@@ -936,3 +936,33 @@ Story implication:
   should remain available as a regularizer, likely at lower weight or applied
   only within same-phase hold segments, but more threshold sweeps are unlikely
   to close the remaining claim gap.
+
+2026-04-27 coupled post-contact update:
+
+- A coupled post-contact branch
+  (`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_coupled_postcontact.yaml`)
+  was trained from the affordance-gripper `steps_800` checkpoint. It keeps the
+  open/reach backbone frozen and jointly trains the closed-state residual with
+  generic contact/gripper heads.
+- The gated diagnostic improves close geometry but not full task success:
+  step `600`, `0` IK failures, close step `93`, and `36.0 mm` close-vector
+  error. It still never reopens under the previous `open=0.005` dense-state
+  hysteresis.
+- The evaluation harness had a real no-gate bug. `live_checkpoint_sweep.py`
+  did not expose or forward `--disable-gripper-gates`, so some artifacts named
+  `nogates` were actually using evaluator object gates. The harness now exposes
+  that flag and has a regression test.
+- With true gripper gates disabled and generic `close=0.55/open=0.40`
+  hysteresis, the same checkpoint emits both learned transitions but too early:
+  close step `81`, reopen step `93`, `57.6 mm` close-vector error, and
+  `129.2 mm` bowl-plate XY at reopen.
+
+Story implication:
+
+- The claim boundary is sharper. We can say learned release exists without
+  rollout-time object gates, but the model has not learned a persistent
+  close-hold-transport-release phase. The next gap is phase persistence tied to
+  transport progress, not gripper polarity, missing labels, or an evaluator
+  gate.
+- For paper evidence, any future "no-gate" table must explicitly verify
+  `"disable_gripper_gates": true` in the JSON artifacts.

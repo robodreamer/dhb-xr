@@ -1424,3 +1424,28 @@ Next unattended run:
    `scripts/libero_rollout_affordance_score.py`.
 4. Only if reach is preserved and close-vector error improves, train the
    `affordancegrasp_grip` timing branch.
+
+## 2026-04-27 Coupled Post-Contact Result
+
+The next branch has now been executed:
+
+- config:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_coupled_postcontact.yaml`
+- checkpoint:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_coupled_postcontact_fromgrip800/checkpoints/steps_600_pytorch_model.pt`
+- gated diagnostic:
+  close step `93`, close-vector error `36.0 mm`, `0` IK failures, no reopen
+- true no-gate diagnostic:
+  close step `81`, reopen step `93`, close-vector error `57.6 mm`, reopen
+  bowl-plate XY `129.2 mm`, `0` IK failures
+
+Important harness correction:
+
+- `scripts/starvla_dhb_live_checkpoint_sweep.py` now forwards
+  `--disable-gripper-gates`.
+- Older sweep artifacts whose filenames say `nogates` are only truly no-gate if
+  their JSON contains `"disable_gripper_gates": true`.
+- The remaining technical gap is learned phase persistence after close. The
+  model can produce release without object gates, but it releases before object
+  transport. Next work should train/regularize a hold-transport phase rather
+  than only changing scalar gripper thresholds.

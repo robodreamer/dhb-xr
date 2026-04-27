@@ -60,6 +60,7 @@ def _run_case(
     direct_action_xyz_bias_mm: tuple[float, float, float],
     state_history_update_rate: str,
     state_gripper_source: str,
+    disable_gripper_gates: bool,
     max_policy_steps: int,
     settle_steps: int,
     reach_only: bool,
@@ -143,6 +144,8 @@ def _run_case(
         str(summary_path),
         "--no-video",
     ]
+    if disable_gripper_gates:
+        cmd.append("--disable-gripper-gates")
     if reach_only:
         cmd.extend(
             [
@@ -260,6 +263,15 @@ def main() -> None:
         default="observed",
     )
     parser.add_argument(
+        "--disable-gripper-gates",
+        action="store_true",
+        help=(
+            "Forward rollout-side gripper gate disabling. Use this for learned "
+            "gripper evaluations so object-specific close/release gates do not "
+            "mask model behavior."
+        ),
+    )
+    parser.add_argument(
         "--direct-action-xyz-scale",
         type=float,
         nargs=3,
@@ -363,6 +375,7 @@ def main() -> None:
                 direct_action_xyz_bias_mm=tuple(float(v) for v in args.direct_action_xyz_bias_mm),
                 state_history_update_rate=args.state_history_update_rate,
                 state_gripper_source=args.state_gripper_source,
+                disable_gripper_gates=bool(args.disable_gripper_gates),
                 max_policy_steps=int(args.max_policy_steps),
                 settle_steps=args.settle_steps,
                 reach_only=args.reach_only,
@@ -409,6 +422,7 @@ def main() -> None:
             "trajectory_source": args.trajectory_source,
             "state_history_update_rate": args.state_history_update_rate,
             "state_gripper_source": args.state_gripper_source,
+            "disable_gripper_gates": bool(args.disable_gripper_gates),
             "direct_action_xyz_scale": [float(v) for v in args.direct_action_xyz_scale],
             "direct_action_xyz_bias_mm": [float(v) for v in args.direct_action_xyz_bias_mm],
             "init_state_source": args.init_state_source,

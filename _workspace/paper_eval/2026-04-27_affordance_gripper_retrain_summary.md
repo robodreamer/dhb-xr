@@ -99,6 +99,28 @@ both keep `0` IK failures and reach extremely close center contact
 `46.8-49.0 mm`, so the branch stabilizes gripper state but does not solve the
 side-affordance grasp or object-target release.
 
+A coupled post-contact continuation was then trained:
+
+`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_coupled_postcontact.yaml`
+
+This branch starts from the affordance-gripper `steps_800` checkpoint and trains
+the closed-state residual together with the generic contact/gripper heads while
+keeping the open/reach backbone frozen. It improves the learned close geometry
+but still does not solve full pick-place. With the evaluator gates still enabled
+and `close/open=0.55/0.005`, step `600` closes at step `93`, keeps `0` IK
+failures, and improves close-vector error to `36.0 mm`, but never reopens.
+
+The run also exposed a harness issue: `scripts/starvla_dhb_live_checkpoint_sweep.py`
+was not forwarding `--disable-gripper-gates`, so several files labeled
+`nogates` were still using object-specific evaluator gates. That is now fixed
+and covered by `tests/test_live_checkpoint_sweep.py`. With actual gripper gates
+disabled and generic dense-state hysteresis (`close=0.55`, `open=0.40`,
+debounce `2`), the same step `600` checkpoint closes at step `81` and reopens
+at step `93`, with `57.6 mm` close-vector error and `129.2 mm` reopen
+bowl-plate XY. This confirms the model can emit a release transition without
+object gates, but the phase is not persistent enough and releases before
+transport.
+
 ## Interpretation
 
 The current evidence is positive for the specific claim that learned gripper
@@ -113,6 +135,9 @@ positive for full pick-place. The active blocker is now more specific:
   checkpoints, but not a stable close-hold-transport-release sequence;
 - target-aware gripper-state smoothness suppresses flicker and IK collapse, but
   in the tested weighting it also suppresses release;
+- the coupled post-contact branch improves gated close geometry to near the
+  affordance gate, but true no-gate decoding still flickers from close to early
+  release;
 - the policy does not yet learn the demo side-grasp affordance tightly enough;
 - post-close transport and release remain unvalidated.
 

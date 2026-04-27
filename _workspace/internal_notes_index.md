@@ -196,6 +196,19 @@ Latest active result to preserve:
   as a solved release policy. The next branch should couple side-affordance
   close, hold/transport persistence, and object-target release instead of only
   increasing release sampling or scalar thresholds.
+- Latest coupled post-contact branch:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_coupled_postcontact.yaml`
+  trains the closed-state residual and generic contact/gripper heads jointly
+  from the affordance-gripper `steps_800` checkpoint. The gated diagnostic at
+  step `600` improves close-vector error to `36.0 mm` with `0` IK failures, but
+  still never reopens. The sweep harness was also fixed because it previously
+  failed to forward `--disable-gripper-gates`; files labeled `nogates` from the
+  sweep path may therefore have evaluator object gates enabled unless their JSON
+  has `"disable_gripper_gates": true`. With true gates disabled and generic
+  `0.55/0.40` gripper-state hysteresis, the branch closes at `81` and reopens at
+  `93`, before transport (`57.6 mm` close-vector error, `129.2 mm` release
+  target XY). This is the clearest remaining blocker: learned phase persistence
+  after close, not missing release labels or gripper polarity.
 
 Historical diagnostics were moved to:
 
