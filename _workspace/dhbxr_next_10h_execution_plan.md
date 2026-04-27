@@ -1462,6 +1462,10 @@ The phase-persistence branch has now been executed:
   close step `80`, reopen step `197`, close-vector error `60.2 mm`, reopen
   bowl-plate XY `118.1 mm`, final bowl-plate XY `116.8 mm`, and `0` IK
   failures
+- trace-scored no-gate diagnostic:
+  close step `79`, reopen step `233`, close-vector error `63.2 mm`, best
+  close-affordance error `26.1 mm` at step `123`, minimum bowl XY `4.5 mm`,
+  and `0` IK failures
 - threshold diagnostic:
   `close=0.85/open=0.40` closes at step `83` with `51.6 mm` close-vector
   error and no reopen
@@ -1471,7 +1475,10 @@ The phase-persistence branch has now been executed:
 Interpretation: phase persistence improved the learned gripper sequence, but
 close is still a phase prior rather than a contact-ready decision. The robot
 physically reaches the bowl around steps `136-148`; the model closes around
-steps `80-83`.
+steps `80-83`. The trace-scored best opportunity confirms that the same
+trajectory later becomes much closer to the demo side-grasp affordance, so the
+next useful implementation is contact-ready supervision/calibration rather than
+another threshold sweep.
 
 ## 2026-04-27 Pre-Contact-Open Negative Result
 

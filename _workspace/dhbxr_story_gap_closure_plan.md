@@ -984,6 +984,12 @@ Story implication:
   `80`. A stricter generic close threshold (`0.85`) only moves close to step
   `83` and still has `51.6 mm` close-vector error. Contact-phase decoding is
   worse, closing at step `2`.
+- A trace-scored true no-gate rerun gives the best current calibration
+  evidence: actual close step `79` has `63.2 mm` close-vector error, while the
+  same rollout later reaches a `26.1 mm` best close-affordance opportunity at
+  step `123` with `0` IK failures. This shows the motion path is close enough
+  to support a stronger grasp result if the gripper/contact-ready signal fires
+  from current state rather than learned chunk phase.
 - The pre-contact-open sampling branch
   (`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_precontactopen.yaml`)
   is a negative result. It improves close-vector error to `42.1 mm`, but

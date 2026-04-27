@@ -207,3 +207,14 @@ explicit contact-ready supervision or hard-negative calibration tied to the
 current visual/proprioceptive state, not another head type trained on the same
 short event windows. Offline simulator geometry can provide the labels, but
 deployment must remain object-free.
+
+A follow-up trace-scored run of the phase-persistence checkpoint makes the
+same conclusion more quantitative. With true gripper gates disabled, generic
+`close=0.55/open=0.40` hysteresis, and per-step trace recording, the rollout
+closed at step `79`, reopened at step `233`, kept `0` IK failures, and reached
+minimum bowl XY `4.5 mm`. The actual close-vector error was `63.2 mm`, but the
+same trajectory later reached a best close-affordance error of `26.1 mm` at
+step `123`. Therefore the arm trajectory already contains a substantially
+better grasp opportunity than the learned gripper uses. The immediate model
+gap is contact-readiness calibration from current perception/proprioception,
+not another execution threshold or object-distance deployment gate.

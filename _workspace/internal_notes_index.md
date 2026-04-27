@@ -218,6 +218,11 @@ Latest active result to preserve:
   contact (`60.2 mm` close-vector error) and release remains far from the plate
   (`118.1 mm` bowl-plate XY). Raising close threshold to `0.85` only moves
   close to step `83`; contact-phase decoding closes at step `2`.
+  A trace-scored rerun strengthens the diagnosis: actual close at step `79`
+  has `63.2 mm` close-vector error, but the same no-gate trajectory reaches a
+  `26.1 mm` best close-affordance opportunity at step `123` with `0` IK
+  failures. The motion is close enough; the learned gripper/contact-ready
+  calibration fires too early.
 - Latest negative calibration branch:
   `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_precontactopen.yaml`
   oversamples close labels at the horizon tail to teach open-before-contact
