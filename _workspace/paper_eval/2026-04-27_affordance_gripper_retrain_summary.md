@@ -585,3 +585,27 @@ mechanism and a validated release-label contract, but the current full-task
 result is still a partial. The next breakthrough should optimize close
 affordance precision and held-object transport before further release-head
 work.
+
+## Close-Contact Recalibration Negative Result
+
+A follow-up branch tested whether the currentready contact head should be
+trained directly from explicit `dhb.close_contact` geometry labels instead of
+the default dense gripper-state target:
+
+`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_objectrelease.yaml`
+
+The implementation also fixed the StarVLA wrapper so `contact_pos_weight` is
+actually passed into BCE contact loss. The trainer froze everything except
+`contact_head` (`3.149M` trainable parameters). Training loss collapsed quickly
+(`loss_contact` from `1.74` at step `50` to `0.0039` at step `300`), but the
+embodied result regressed badly: both `steps_150` and `steps_300` close at
+step `1`, far above and far from the bowl, then never recover (`180 mm`
+minimum bowl XY, `76` IK failures).
+
+Interpretation: the explicit close-affordance label is useful, but this
+particular sampling/weighting recipe is wrong. High close-phase oversampling
+with `gripper_event_target_pos=0` plus a large positive weight produced an
+always-close classifier. Do not reuse this recipe as-is. The next close
+precision attempt needs balanced hard negatives from "near bowl but too high /
+wrong side" and lower positive weighting, or a calibrated margin/ranking loss,
+not positive-only close-window fitting.

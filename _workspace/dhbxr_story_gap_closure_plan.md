@@ -1264,3 +1264,21 @@ Story implication:
   final result": reach/offset adaptation, no-gate learned close, and
   object-release label contract are validated; full pick-place success and
   bowl-to-plate release are pending.
+
+2026-04-27 close-contact recalibration update:
+
+- A direct close-contact recalibration branch trained only `contact_head` from
+  current-aligned `dhb.close_contact`, after fixing `contact_pos_weight` in the
+  StarVLA BCE contact loss. The training objective converged, but the rollout
+  collapsed to immediate close at step `1` for both checkpoints.
+- This is a useful negative result for the story: offline geometry labels are
+  powerful only if the sampling objective includes hard negatives. Positive-
+  only close-window fitting does not demonstrate invariance or perception
+  grounding; it just creates an always-close shortcut.
+
+Story implication:
+
+- The next convincing result should frame close as a calibrated affordance
+  decision, not merely a sparse event class. The model must learn that "near
+  the bowl but too high / wrong side / not settled" is still open. That is the
+  missing supervision shape for a clean DHB-XR manipulation story.

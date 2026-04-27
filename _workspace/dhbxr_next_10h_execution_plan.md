@@ -1838,3 +1838,26 @@ Next most impactful branch:
 4. Gate progress on actual close-vector error below `30 mm`, final
    object-target XY below `40 mm`, low IK failures, and no deployment
    object-distance gates.
+
+## 2026-04-27 Close-Contact Recalibration Negative Result
+
+The first direct close-affordance recalibration branch is negative:
+
+`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_objectrelease.yaml`
+
+It fixed `contact_pos_weight` support in StarVLA BCE contact loss and trained
+only `contact_head` from current-aligned `dhb.close_contact`. Mechanically the
+run succeeded: `3.149M` trainable parameters, `loss_contact` dropped to
+`0.0039`, and checkpoints were saved at steps `150/300`.
+
+Embodied behavior failed: both checkpoints close at step `1`, with the EE about
+`287 mm` XY / `271 mm` Z from the bowl at close, then never reach the bowl
+(`180 mm` minimum bowl XY) and accumulate `76` IK failures.
+
+Root-cause update: the label path is not enough by itself. The training recipe
+over-sampled close-positive current frames (`gripper_phase_chunk_prob=0.95`,
+`gripper_close_chunk_prob=0.90`, `gripper_event_target_pos=0`) and used a high
+positive BCE weight (`8.0`), so the sparse close head collapsed into
+always-close. The next attempt should use balanced hard negatives and a lower
+weight, or a pairwise/calibration objective that explicitly keeps pre-contact
+approach frames below threshold.

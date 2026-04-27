@@ -361,6 +361,16 @@ Latest active result to preserve:
   the plate, which is conceptually correct. The active blocker is now
   close-affordance precision plus held-object transport, not release-class
   plumbing.
+- Latest close-contact recalibration negative:
+  StarVLA BCE contact loss now honors `contact_pos_weight`, and
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_objectrelease.yaml`
+  trains only `contact_head` from current-aligned `dhb.close_contact`. The
+  training objective collapsed cleanly, but rollout collapsed to immediate
+  close at step `1` for both `steps_150` and `steps_300`. Root cause is the
+  recipe, not the deployment concept: close-positive sampling and high
+  positive weight made the classifier always-close. Future close-affordance
+  work needs balanced hard negatives and calibration, not positive-only
+  close-window fitting.
 
 Historical diagnostics were moved to:
 

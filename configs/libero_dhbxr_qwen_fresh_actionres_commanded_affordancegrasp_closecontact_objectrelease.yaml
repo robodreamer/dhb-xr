@@ -1,0 +1,156 @@
+run_id: dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_objectrelease_fromcurrentphase300
+run_root_dir: /home/andypark/Projects/repos/dhb-xr/_workspace/starvla_runs
+# Training seed only. Use --rollout-seed for claim-level evaluation.
+seed: 77
+trackers: [jsonl]
+wandb_entity: offline
+wandb_project: dhb_xr_corl2026
+is_debug: false
+
+framework:
+  name: QwenDHB
+  qwenvl:
+    base_vlm: /home/andypark/Projects/repos/dhb-xr/vendor/starVLA/playground/Pretrained_models/Qwen2.5-VL-3B-Instruct
+    attn_implementation: sdpa
+    load_in_8bit: true
+    device_map: auto
+  action_model:
+    action_model_type: DHB
+    action_hidden_dim: 2048
+    hidden_dim: 1024
+    action_dim: 7
+    state_dim: 8
+    state_history_window: 4
+    invariant_dim: 8
+    contact_dim: 1
+    contact_mode: gripper_state
+    contact_phase_dim: 3
+    gripper_state_dim: 1
+    num_oat_tokens: 8
+    future_action_window_size: 7
+    past_action_window_size: 0
+    action_horizon: 8
+    use_oat_quantizer: false
+    lambda_oat_autoencode: 0.0
+    # Recalibrate only the close-readiness head from explicit geometry
+    # close-affordance labels. Release/hold and trajectory behavior are kept
+    # from the current-phase object-release checkpoint.
+    lambda_invariant: 0.0
+    lambda_action: 0.0
+    action_loss_target_shift: 0
+    action_loss_ignore_gripper: true
+    action_loss_channel_weight: [4.0, 5.0, 2.5, 0.1, 0.1, 0.1, 0.0]
+    use_action_residual_adapter: true
+    action_residual_hidden_dim: 256
+    action_residual_scale: 0.035
+    lambda_action_residual_l2: 0.0
+    lambda_action_base_cumsum_l2: 0.0
+    action_base_cumsum_dims: 3
+    use_action_closed_residual_adapter: true
+    action_closed_residual_hidden_dim: 256
+    action_closed_residual_scale: 0.45
+    action_closed_residual_gate_source: state_gripper
+    action_closed_residual_gripper_threshold: 0.03
+    action_closed_residual_gate_temperature: 0.003
+    action_closed_residual_hard_gate: true
+    action_closed_residual_zero_gripper_dim: true
+    lambda_action_closed_residual_l2: 0.0
+    terminal_loss_weight: 2.0
+    prefix_loss_steps: 0
+    prefix_loss_weight: 1.0
+    invariant_loss_channel_scale: [0.0131, 0.6738, 0.9503, 1.5458, 0.0211, 0.3344, 0.5446, 1.5968]
+    lambda_invariant_delta: 0.0
+    head_query_residual_scale: 0.1
+    contact_target_field: dhb.close_contact
+    contact_target_alignment: current
+    lambda_contact: 8.0
+    contact_loss_type: bce
+    contact_pos_weight: 8.0
+    contact_phase_field: dhb.object_release_phase
+    contact_phase_target_alignment: current
+    lambda_contact_phase: 0.0
+    contact_phase_loss_type: cross_entropy
+    contact_phase_class_weight: [0.4, 0.8, 12.0]
+    gripper_state_field: dhb.object_release_gripper_state
+    gripper_state_target_alignment: future
+    lambda_gripper_state: 0.0
+    gripper_state_loss_type: bce
+    gripper_state_pos_weight: 0.70
+    lambda_gripper_state_smooth: 0.0
+    lambda_gripper_state_margin: 0.0
+    gripper_state_closed_margin: 0.65
+    gripper_state_open_margin: 0.35
+    contact_use_vlm_context: true
+    contact_use_state: true
+    contact_condition_on_phase: false
+    gripper_state_condition_on_phase: true
+
+datasets:
+  vla_data:
+    dataset_py: lerobot_datasets
+    data_root_dir: /home/andypark/Projects/data
+    data_mix: libero_spatial_dhbxr_affordance_transport
+    include_state: true
+    state_history_window: 4
+    state_gripper_source: commanded
+    recompute_dhb_invariants_from_actions: true
+    action_type: delta_qpos
+    action_mode: abs
+    action_window_size: 8
+    terminal_chunk_prob: 0.20
+    gripper_event_chunk_prob: 0.10
+    gripper_phase_chunk_prob: 0.95
+    gripper_close_chunk_prob: 0.90
+    gripper_event_target_pos: 0
+    gripper_phase_sampling_key: dhb.object_release_phase
+    corrective_reach_prob: 0.0
+    corrective_reach_phase_filter: closed_state
+    corrective_reach_pos_std_m: 0.012
+    corrective_reach_pos_clip_m: 0.030
+    corrective_reach_recovery_steps: 8
+    corrective_reach_xy_only: false
+    sequential_step_sampling: false
+    CoT_prompt: "Your task is {instruction}. To identify the key objects for your task. Locate their bounding boxes in [x1,y1,x2,y2] format."
+    CoT_answer: bbox
+    default_image_resolution: [3, 224, 224]
+    per_device_batch_size: 1
+    num_workers: 0
+    load_all_data_for_training: true
+    obs: ["image_0"]
+    video_backend: torchvision_av
+
+trainer:
+  epochs: 100
+  max_train_steps: 300
+  num_warmup_steps: 30
+  save_interval: 150
+  eval_interval: 150
+  learning_rate:
+    base: 2.0e-05
+    qwen_vl_interface: 2.0e-05
+    action_model: 2.0e-05
+  lr_scheduler_type: constant
+  scheduler_specific_kwargs:
+    min_lr: 1.0e-06
+  freeze_modules: qwen_vl_interface,action_model.backend.query_embed,action_model.backend.vlm_proj,action_model.backend.decoder,action_model.backend.invariant_head,action_model.backend.committed_prefix_proj,action_model.backend.state_proj,action_model.backend.action_head,action_model.backend.action_residual_adapter,action_model.backend.action_closed_residual_adapter,action_model.backend.contact_cross_attn,action_model.backend.contact_phase_proj,action_model.backend.contact_phase_head,action_model.backend.gripper_state_head
+  loss_scale:
+    vla: 1.0
+    vlm: 1.0
+  max_grad_norm: 1.0
+  warmup_ratio: 0.1
+  weight_decay: 0.0
+  logging_frequency: 50
+  gradient_clipping: 1.0
+  gradient_accumulation_steps: 1
+  optimizer:
+    name: AdamW
+    betas: [0.9, 0.95]
+    eps: 1.0e-08
+    weight_decay: 1.0e-08
+  save_format: pt
+  is_resume: false
+  resume_epoch: null
+  resume_step: null
+  pretrained_checkpoint: _workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_currentready_objectrelease_currentphase_fromobjectrelease300/checkpoints/steps_300_pytorch_model.pt
+  enable_gradient_checkpointing: true
+  enable_mixed_precision_training: true
