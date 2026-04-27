@@ -768,3 +768,38 @@ Story implication:
 - The next breakthrough path is contact-centering under the command-state
   streaming convention, followed by release/placement after close geometry is
   physically graspable.
+
+2026-04-26 contact-centered gripper update:
+
+- The contact-centered residual branch
+  (`configs/libero_dhbxr_qwen_fresh_actionres_commanded_contactcenter.yaml`,
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_contactcenter_fromxy500`,
+  `steps_500`) preserves the corrected reach gate at `5/5`, average dynamic
+  bowl XY `37.3 mm`, average dynamic bowl XYZ `78.7 mm`, and `0` IK failures.
+- Under the stronger diagnostic scale `0.85,1.55,1.15`, the old gripper head
+  exposes very strong contact geometry but closes too late: minimum dynamic
+  bowl XY reaches `7.2 mm`, while the close event waits until step `149`.
+- The contact-center gripper continuation
+  (`configs/libero_dhbxr_qwen_fresh_actionres_commanded_contactcenter_grip.yaml`,
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_contactcenter_grip_fromcenter500`,
+  `steps_800`) moves close timing into the plausible grasp window without
+  object-specific gates: close step `103`, close-time dynamic bowl XY
+  `18.0 mm`, close-time vertical offset `22.4 mm`, minimum dynamic bowl XY
+  `8.2 mm`, and `0` IK failures.
+- It still does not solve full pick-place. The bowl is contacted but
+  pushed/slid instead of reliably lifted and transported; final bowl-plate XY
+  remains about `116.8 mm`.
+
+Story implication:
+
+- The story is now around 85-90% complete for the current prototype. We can
+  support robust offset reach, correct streaming state/action conventions,
+  reach-preserving residual design, and learned contact-close timing under a
+  generic commanded-state VLA loop.
+- The remaining unclosed claim is full manipulation after contact. For a
+  strong CoRL submission, the next result should show object-level transport
+  and release, or a matched-control table that makes the staged DHB advantage
+  decisive even if full pick-place remains marked as ongoing.
+- The next technical move should be a post-contact transport/release module
+  from the contact-close checkpoint, with progress judged on bowl lift,
+  movement toward the plate, no IK regression, and learned reopen stability.

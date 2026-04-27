@@ -1178,3 +1178,56 @@ Next unattended target:
    returning to release/placement training.
 5. After contact close is physically plausible, revisit integrated gripper
    release and matched QwenDHB/QwenOFT comparisons for the paper table.
+
+## 2026-04-26 Overnight Update: Contact-Close Gate Passed
+
+The contact-centering branch completed and moved the active blocker forward:
+
+- config:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_contactcenter.yaml`
+- run:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_contactcenter_fromxy500`
+- checkpoint:
+  `steps_500_pytorch_model.pt`
+- corrected reach gate:
+  `5/5`, average dynamic bowl XY `37.3 mm`, average dynamic bowl XYZ
+  `78.7 mm`, and `0` IK failures
+
+With `--direct-action-xyz-scale 0.85 1.55 1.15`, the old gripper timing was
+too late, but the geometry became strong: minimum dynamic bowl XY reached
+`7.2 mm` and minimum dynamic bowl XYZ reached `21.0 mm`. This showed the
+pre-contact action field can reach contact-quality geometry.
+
+The follow-up contact-center gripper continuation then learned a better
+generic close timing without object-distance gates:
+
+- config:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_contactcenter_grip.yaml`
+- run:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_contactcenter_grip_fromcenter500`
+- checkpoint:
+  `steps_800_pytorch_model.pt`
+- best traced full-task diagnostic:
+  close at step `103`, close-time dynamic bowl XY `18.0 mm`, vertical offset
+  `22.4 mm`, minimum dynamic bowl XY `8.2 mm`, and `0` IK failures
+
+Interpretation: the contact-close gate is now passed for the active
+episode/offset diagnostic. The remaining failure is post-contact physical
+interaction: the bowl is contacted and pushed/slid, but not reliably lifted,
+transported, and released on the plate. Final bowl-plate XY in the best trace
+is still about `116.8 mm`.
+
+Next unattended target:
+
+1. Commit the contact-center configs and notes as a stable checkpoint.
+2. Train a post-contact transport/release residual from
+   `dhb_starvla_qwen_fresh_actionres_commanded_contactcenter_grip_fromcenter500/steps_800`.
+3. Freeze the validated pre-contact contact-centering action path and the
+   learned gripper timing heads; train only a commanded-gripper-gated closed
+   residual.
+4. Gate progress by object outcome, not only EE geometry: bowl lift, bowl
+   displacement toward the plate, lower final bowl-plate XY, no IK regression,
+   and a learned reopen near the plate.
+5. If this staged closed residual does not improve object transport, stop
+   residual sweeps and change the data distribution with rollout/contact
+   states, because demo-only post-contact chunks are then the limiting factor.

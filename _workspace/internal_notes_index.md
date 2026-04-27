@@ -108,6 +108,17 @@ Latest active result to preserve:
   about `29.2 mm` XY from the bowl after a best approach of about `19.2 mm`.
   Treat the remaining gap as contact-centered approach and learned close timing
   before returning to release/placement.
+- Latest contact-close status:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_contactcenter_fromxy500`
+  improves the contact-centered action field while preserving the corrected
+  5-case reach gate: `5/5`, average dynamic bowl XY `37.3 mm`, average dynamic
+  bowl XYZ `78.7 mm`, and `0` IK failures. The follow-up gripper timing branch
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_contactcenter_grip_fromcenter500`
+  reaches the current no-gate contact-close target: close at step `103`, close
+  dynamic bowl XY `18.0 mm`, minimum dynamic bowl XY `8.2 mm`, and `0` IK
+  failures. It still fails full pick-place because the bowl is pushed/slid
+  rather than lifted and transported. The active remaining gap is
+  post-contact transport/release from this contact-close checkpoint.
 
 Historical diagnostics were moved to:
 

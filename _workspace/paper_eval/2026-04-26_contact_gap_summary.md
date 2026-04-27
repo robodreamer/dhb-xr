@@ -130,6 +130,8 @@ New branch results:
 | Commanded transport | commanded | `0.45` | `109` | `24.4 mm` XY / `18.3 mm` Z | `19.2 mm` | `80.1 mm` | `40` | better IK, no placement |
 | Commanded transport XY | commanded | `0.45` | `121` | `29.2 mm` XY / `15.3 mm` Z | `19.2 mm` | `88.2 mm` | `0` | stable post-close, no success |
 | Commanded transport XY + closed calibration | commanded | `0.45` | `121` | `29.2 mm` XY / `15.3 mm` Z | `19.2 mm` | `81.7 mm` | `16` | diagnostic only, no success |
+| Commanded contact-center | commanded | old gripper, `0.45` | `149` | late close after best contact | `7.2 mm` | `82.3 mm` | `46` | excellent contact diagnostic, too-late close |
+| Contact-center + learned gripper heads | commanded | `0.47-0.55` | `103` | `18.0 mm` XY / `22.4 mm` Z | `8.2 mm` | `95.0 mm` | `0` | contact-close gate passed, no lift/placement |
 
 The commanded transport branch preserves reach:
 
@@ -149,12 +151,60 @@ contact precision, so the current blocker has narrowed to contact-centered
 approach and close timing. More post-close transport tuning is lower leverage
 until the close pose becomes physically graspable.
 
+## Contact-Centered Gripper Timing Update
+
+The contact-centered residual branch is the strongest contact diagnostic so
+far:
+
+- run:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_contactcenter_fromxy500`
+- checkpoint: `steps_500_pytorch_model.pt`
+- corrected 5-case reach gate:
+  `5/5`, average dynamic bowl XY `37.3 mm`, average dynamic bowl XYZ
+  `78.7 mm`, and `0` IK failures
+- diagnostic scale:
+  `--direct-action-xyz-scale 0.85 1.55 1.15`
+
+With the older gripper head, the same branch reaches physically plausible bowl
+contact before close: minimum dynamic bowl XY is `7.2 mm`, minimum dynamic
+bowl XYZ is `21.0 mm`, and the trace stays around `7-10 mm` XY / `19-23 mm`
+Z over steps `104-116`. However, the old close fires too late at step `149`,
+after the contact window and after IK degradation begins.
+
+The follow-up gripper-head continuation fixes that timing enough to pass the
+current contact-close gate:
+
+- run:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_contactcenter_grip_fromcenter500`
+- checkpoint: `steps_800_pytorch_model.pt`
+- state convention:
+  commanded gripper proxy
+- threshold/open/debounce:
+  `0.47-0.55 / 0.05 / 2`
+- close step:
+  `103`
+- close geometry:
+  `18.0 mm` dynamic bowl XY and `22.4 mm` vertical offset
+- minimum dynamic bowl geometry:
+  `8.2 mm` XY and `25.4 mm` 3D
+- IK failures:
+  `0`
+
+This is a meaningful gate change. The active blocker is no longer
+contact-centered reaching or a gross gripper timing bug. The policy now closes
+near plausible bowl contact without object-specific gripper gates, but it
+pushes/slides the bowl instead of lifting and transporting it to the plate.
+Final bowl-plate XY remains about `116.8 mm` in the best trace. The next
+branch should focus on post-contact grasp/transport/release from this
+contact-close checkpoint.
+
 ## Next Claim Gate
 
 Do not call a new branch promising unless it passes all of these checks:
 
 1. Corrected 5-case reach gate remains `5/5` with `0` IK failures.
 2. Full-task close occurs before step `120` with dynamic bowl XY `<=20 mm`.
-3. Object motion after close exceeds the current `95.7 mm` diagnostic without
-   increasing IK failures.
+   The current contact-center gripper branch now passes this gate.
+3. Object lift/transport after close moves the bowl toward the plate rather
+   than pushing/sliding it away from a graspable pose.
 4. A learned reopen event occurs near the plate without object-specific gates.
