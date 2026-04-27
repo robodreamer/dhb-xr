@@ -34,6 +34,15 @@ def test_slice_temporal_target_can_broadcast_current_label() -> None:
     torch.testing.assert_close(aligned, torch.tensor([[6, 6, 6, 6]]))
 
 
+def test_slice_temporal_target_future_preserves_late_contact_positive() -> None:
+    target = torch.tensor([[[0.0], [0.0], [0.0], [0.0], [0.0], [0.0], [1.0], [1.0]]])
+
+    aligned = _slice_temporal_target(target, window_size=8, alignment="future")
+
+    assert aligned.shape == (1, 8, 1)
+    torch.testing.assert_close(aligned[0, :, 0], torch.tensor([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0]))
+
+
 def test_slice_temporal_target_broadcasts_current_multichannel_label() -> None:
     target = torch.arange(2 * 6 * 3, dtype=torch.float32).reshape(2, 6, 3)
 

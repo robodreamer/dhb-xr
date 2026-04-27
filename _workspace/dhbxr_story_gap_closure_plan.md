@@ -1364,3 +1364,34 @@ Story implication:
   world-model/contact-state generator. This directly realizes the manuscript's
   claim that simulation/world-model augmentation plus DHB-XR invariants can
   turn minimum teleop data into spatially robust manipulation behavior.
+
+2026-04-27 future-aligned contact-token update:
+
+- A target-alignment bug explained the failed demo-positive contact retrain:
+  `contact_target_alignment: current` converted late future close labels into
+  all-open chunks. The active balanced contact config now uses
+  `contact_target_alignment: future`, with a regression test for late close
+  positives.
+- Demo close events are now exported into the same policy-trace format as
+  rollout chunks. This gives a unified representation for nominal positives,
+  rollout hard negatives, and future simulator/world-model contact positives.
+- The corrected contact-only run proves the training signal is real but
+  under-calibrated. Demo-positive chunks peak around `0.54`, rollout chunks
+  peak around `0.46-0.48`, and threshold `0.45` is needed to close without
+  object-distance gates.
+- A separate evaluation lesson is now locked in: the examples should use the
+  validated direct-action calibration `x=0.85, y=1.55, z=1.15`. With that
+  scale, reach is compelling (`6.9 mm` XY on the `3 cm` offset case), whereas
+  neutral scaling hides the trajectory progress.
+
+Story implication:
+
+- We can now claim a cleaner mechanistic story: DHB-XR contact tokens are
+  trainable and object-gate-free, but minimum-demo positives do not calibrate
+  them on closed-loop observations. The missing ingredient is precisely the
+  spatially diverse simulator/world-model augmentation proposed in the
+  manuscript.
+- The strongest near-term result is not "full task solved"; it is a rigorous
+  staged result showing calibrated reach under offsets, future-aligned learned
+  contact supervision, and a clearly diagnosed remaining gap: rollout-positive
+  contact-state generation plus post-grasp transport.

@@ -2013,3 +2013,40 @@ Policy-trace hard-negative training:
   task is to generate closed-loop positive contact traces or replay/simulate
   positive off-manifold contact states, then retrain the same dataloader path
   with a balanced positive/negative rollout-state set.
+
+Demo-positive/future-alignment follow-up:
+
+- The first demo-positive policy-trace config had a target-alignment bug:
+  `contact_target_alignment: current` broadcast the first chunk label and
+  erased late close positives such as `[0, 0, 0, 0, 0, 0, 1, 1]`.
+- The balanced config now uses `contact_target_alignment: future`, and a
+  regression test covers this exact late-positive case.
+- `scripts/libero_demo_contact_manifest_export.py` exports real LIBERO demo
+  close windows into policy-trace NPZ+manifest rows. The task-0 export has
+  `500` chunks from `50` demos, `1,650` positive supervised steps, and `2,350`
+  negative steps. Combined with hard-negative policy traces, the active
+  contact dataset has `562` rows and `4,242` supervised steps.
+- The corrected contact-only continuation completed for `300` steps:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_demopos_policytrace_balanced_futurealign_fromcurrentphase300`.
+- Focused probe: held-out demo-positive close probability rises to about
+  `0.54`, while a negative chunk stays around `0.18-0.32`. This validates the
+  training signal but also shows under-calibration.
+- Evaluation correction: use the already validated task-agnostic direct-action
+  scale `0.85, 1.55, 1.15`. Neutral `1,1,1` is a regression and should not be
+  used for the main examples.
+- With calibrated scale and threshold `0.50`, reach is strong but no close:
+  `22.9 mm` minimum bowl XY at `0 cm`, `6.9 mm` at `3 cm`.
+- With calibrated scale and threshold `0.45`, close fires in both cases:
+  the `3 cm` offset closes near the bowl (`~18.9 mm` XY, `21.9 mm` Z), but
+  the `0 cm` case closes too far away and neither case completes placement.
+
+Updated next actions:
+
+1. Treat the future-aligned contact head as the active learned-contact baseline.
+2. Stop evaluating examples without the calibrated direct-action scale; it
+   confounds trajectory quality with a known execution calibration.
+3. Generate or replay rollout-positive contact states around the precise
+   side-grasp configuration. The remaining learned-contact gap is calibration
+   on rollout observations, not plumbing.
+4. Revisit post-grasp transport/release after close timing is consistently
+   within about `15-20 mm` XY and `20-30 mm` Z under non-zero offsets.

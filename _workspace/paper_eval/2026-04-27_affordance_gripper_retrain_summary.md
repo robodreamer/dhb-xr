@@ -736,3 +736,55 @@ simulator/world-model perturbation around demo close-affordance states. This is
 now the most concrete version of the paper story: use simulation/replay to
 populate the missing spatially diverse positive and negative contact states,
 then train the learned DHB contact token without deployment object gates.
+
+## Demo-Positive Policy-Trace Follow-Up
+
+A root-cause bug was found in the first demo-positive policy-trace contact
+run: the balanced config used `contact_target_alignment: current`, which
+broadcast the first label in each chunk. Demo-contact chunks often look like
+`[0, 0, 0, 0, 0, 0, 1, 1]`, so the old alignment silently converted them into
+all-open targets. Switching the balanced contact config to
+`contact_target_alignment: future` makes the late close positives active.
+
+New training data and validation:
+
+- `scripts/libero_demo_contact_manifest_export.py` exports LIBERO demo close
+  events as the same NPZ+manifest format used by policy traces.
+- The full task-0 export has `500` chunks from `50` demos, with `1,650`
+  positive and `2,350` negative supervised contact steps.
+- Combined with the two closed-loop hard-negative manifests, the balanced
+  contact dataset has `562` rows, `4,242` supervised steps, `1,650` positives,
+  and `2,592` negatives.
+- Regression tests now cover late future contact positives, and the focused
+  probe confirms the positive sample loss is active (`loss_contact ~= 0.62`
+  instead of the previous near-zero loss).
+
+Corrected contact-head run:
+
+`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_demopos_policytrace_balanced.yaml`
+
+The corrected 300-step continuation trains only the contact path from the
+currentready/current-phase trajectory checkpoint. A held-out positive demo
+chunk now reaches max close probability about `0.54`, while a negative chunk
+stays around `0.18-0.32`. In closed-loop rollout, contact confidence is lower:
+with neutral action scaling, max close probability is only `0.43-0.46`, so the
+head still needs either better calibration or more rollout-positive data.
+
+Execution calibration matters. The strong reach behavior depends on the
+previously validated task-agnostic direct-action scale
+`x=0.85, y=1.55, z=1.15`; using neutral `1,1,1` regresses average closest bowl
+XY to about `63 mm`. With the calibrated scale and the corrected contact head:
+
+- At threshold `0.50`, no close fires, but reach is strong: `22.9 mm` XY on
+  `0 cm` and `6.9 mm` XY on `3 cm`.
+- At threshold `0.45`, close fires in both cases. The `3 cm` offset case closes
+  near the bowl (`~18.9 mm` XY, `21.9 mm` Z), while the `0 cm` case closes too
+  far away (`~66.9 mm` XY). Neither solves the full place task.
+
+Current interpretation: the alignment bug is fixed and the learned contact
+token can now train from late chunk positives, but the full-task blocker is no
+longer just gripper signal plumbing. The active gap is a combined
+closed-loop-calibration problem: preserve the calibrated reach profile, train
+contact confidence on true rollout-positive side-grasp states, and improve
+post-grasp transport/release. Deployment remains object-gate-free; the only
+thresholds used above are learned probability thresholds.

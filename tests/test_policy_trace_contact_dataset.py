@@ -104,3 +104,38 @@ def test_policy_trace_contact_dataset_filters_unmasked_rows(tmp_path):
     )
 
     assert len(dataset) == 1
+
+
+def test_policy_trace_contact_dataset_merges_base_statistics(tmp_path):
+    manifest_path = _write_policy_trace_fixture(tmp_path)
+    base_stats_path = tmp_path / "base_stats.json"
+    base_stats_path.write_text(
+        json.dumps(
+            {
+                "franka": {
+                    "action": {
+                        "min": [0.0],
+                        "max": [1.0],
+                        "mask": [True],
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    out_path = tmp_path / "dataset_statistics.json"
+    dataset = PolicyTraceContactDataset(
+        {
+            "policy_trace_contact_manifest_jsonl": str(manifest_path),
+            "action_window_size": 8,
+            "policy_trace_base_statistics_json": str(base_stats_path),
+        }
+    )
+
+    dataset.save_dataset_statistics(out_path)
+
+    payload = json.loads(out_path.read_text(encoding="utf-8"))
+    assert payload["franka"]["action"]["max"] == [1.0]
+    assert payload["policy_trace_contact"]["num_rows"] == 1
+    assert payload["policy_trace_contact"]["supervised_steps"] == 2
+    assert payload["policy_trace_contact"]["positive_steps"] == 1

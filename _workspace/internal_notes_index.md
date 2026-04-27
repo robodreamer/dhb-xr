@@ -430,3 +430,25 @@ Historical diagnostics were moved to:
 
 Do not treat archived notes as active guidance unless a current top-level note
 explicitly references them. They are kept for provenance only.
+
+2026-04-27 active contact-token status:
+
+- Root cause fixed: future close labels were being erased by
+  `contact_target_alignment: current`. The active balanced contact config now
+  uses `future` alignment.
+- New active files:
+  `scripts/libero_demo_contact_manifest_export.py` and
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_demopos_policytrace_balanced.yaml`.
+- Corrected run:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_demopos_policytrace_balanced_futurealign_fromcurrentphase300`.
+- Current best evaluation profile: `trajectory_source=direct_action`,
+  `direct_action_xyz_scale=(0.85, 1.55, 1.15)`,
+  `closed_direct_action_xyz_scale=(0.85, 1.55, 1.15)`,
+  `model_gripper_decode_source=contact_release_phase`, true no-gate,
+  `state_history_update_rate=policy`, `state_gripper_source=commanded`.
+- Current evidence: calibrated reach is strong (`6.9 mm` XY on the `3 cm`
+  offset case), learned close is active but under-calibrated (`0.45` threshold
+  needed), and full placement is still unsolved.
+- Next active gap: generate balanced rollout-positive contact states and then
+  revisit post-grasp transport/release. Do not evaluate main examples with
+  neutral direct-action scaling unless explicitly testing calibration.
