@@ -1,0 +1,46 @@
+from pathlib import Path
+import sys
+
+import pytest
+
+torch = pytest.importorskip("torch")
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+STARVLA_ROOT = REPO_ROOT / "vendor" / "starVLA"
+if str(STARVLA_ROOT) not in sys.path:
+    sys.path.insert(0, str(STARVLA_ROOT))
+
+from starVLA.model.framework.VLM4A.QwenDHB import _slice_temporal_target
+
+
+def test_slice_temporal_target_keeps_future_chunk_by_default() -> None:
+    target = torch.arange(10, dtype=torch.long).reshape(1, 10)
+
+    aligned = _slice_temporal_target(target, window_size=4)
+
+    torch.testing.assert_close(aligned, torch.tensor([[6, 7, 8, 9]]))
+
+
+def test_slice_temporal_target_can_broadcast_current_label() -> None:
+    target = torch.arange(10, dtype=torch.long).reshape(1, 10)
+
+    aligned = _slice_temporal_target(target, window_size=4, alignment="current")
+
+    torch.testing.assert_close(aligned, torch.tensor([[6, 6, 6, 6]]))
+
+
+def test_slice_temporal_target_broadcasts_current_multichannel_label() -> None:
+    target = torch.arange(2 * 6 * 3, dtype=torch.float32).reshape(2, 6, 3)
+
+    aligned = _slice_temporal_target(target, window_size=4, alignment="current")
+
+    assert aligned.shape == (2, 4, 3)
+    torch.testing.assert_close(aligned[:, 0], target[:, 2])
+    torch.testing.assert_close(aligned[:, -1], target[:, 2])
+
+
+def test_slice_temporal_target_rejects_unknown_alignment() -> None:
+    target = torch.zeros(1, 4)
+
+    with pytest.raises(ValueError, match="target_alignment"):
+        _slice_temporal_target(target, window_size=4, alignment="later")
