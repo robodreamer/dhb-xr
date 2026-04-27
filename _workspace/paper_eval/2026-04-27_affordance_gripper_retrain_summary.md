@@ -830,3 +830,54 @@ is useful for bootstrapping, but it is too broad for claim-level grasp
 precision; the next dataset should add side-grasp-ready positives and explicit
 near-bowl-but-too-high/too-central negatives, still using geometry only for
 offline supervision and not for deployment gating.
+
+## Side-Grasp Hard-Negative Calibration Follow-Up
+
+The rollout contact miner now supports component-wise positive tolerances and
+near-object hard negatives. This lets the offline labels distinguish
+"geometrically close to the demo side-grasp vector" from broad near-bowl states
+that are high, central, or otherwise likely to push the bowl instead of grasping
+it. These labels are still training/evaluation artifacts only; rollout remains
+learned-token/no-gate.
+
+The first strict side-grasp manifest used the demo close vector with a `45 mm`
+overall tolerance, component caps of `[30, 35, 25] mm`, and near-object hard
+negatives for non-positive states within `100 mm` XY and `0-90 mm` Z. It
+produced `240` chunks, `960` steps, `610` supervised steps, only `9` positives,
+and `601` hard negatives:
+
+`_workspace/paper_eval/2026-04-27_policy_trace_sidegrasp_v1_contact_manifest.jsonl`
+
+Strict continuation:
+
+`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_sidegraspv1.yaml`
+
+`_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_sidegraspv1_fromrolloutpos400`
+
+The strict `steps_300` checkpoint is a useful negative. With calibrated
+direct-action scale `0.85, 1.55, 1.15`, true gripper gates disabled, threshold
+`0.55`, and fixed `rollout_seed=70`, it never closes in either the `0 cm` or
+`3 cm` case. Live max close probability is only about `0.18-0.19`. This proves
+the stricter negatives are active but over-dominate the very small positive
+set.
+
+A lighter continuation from the same rollout-positive checkpoint reduced the
+margin weight and repeated demo positives:
+
+`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_sidegraspv1_light.yaml`
+
+It restored no-gate close activation but did not solve the task. At threshold
+`0.55`, case `0` closes at step `87` with EE-minus-bowl about
+`[-28.8, +0.6, +61.6] mm`, while the `3 cm` case closes at step `103` with
+about `[-12.2, -14.6, +21.9] mm`. Average minimum bowl XY is `15.2 mm` and
+average IK failures are `23.5`, but there is still no successful
+grasp/transport/release.
+
+Current interpretation: the learned contact token path is functioning, but
+label balance is the limiting factor. Broad rollout positives make the token
+fire; strict side-grasp hard negatives make it stop firing; lighter
+calibration recovers activation without sufficient side-grasp precision. The
+next useful data intervention is not another scalar threshold sweep. It is to
+generate many balanced side-grasp-ready rollout positives, paired with
+near-bowl/high-or-center negatives, through simulator replay, DAgger-style
+correction, or the planned world-model augmentation path.

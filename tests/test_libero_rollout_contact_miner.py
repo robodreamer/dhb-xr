@@ -58,8 +58,12 @@ def test_mines_missed_positive_and_hard_negative_from_rollout_trace() -> None:
         close_reference_m=[0.0, -0.050, 0.026],
         ee_object_field="ee_minus_bowl",
         positive_tolerance_mm=10.0,
+        positive_component_tolerance_mm=None,
         positive_prob_margin=0.65,
         hard_negative_prob=0.55,
+        near_object_hard_negative_xy_mm=None,
+        near_object_hard_negative_z_min_mm=float("-inf"),
+        near_object_hard_negative_z_max_mm=float("inf"),
     )
 
     assert result["counts"]["missed_positive"] == 1
@@ -103,8 +107,12 @@ def test_builds_policy_manifest_rows_from_mined_labels() -> None:
         close_reference_m=[0.0, -0.050, 0.026],
         ee_object_field="ee_minus_bowl",
         positive_tolerance_mm=10.0,
+        positive_component_tolerance_mm=None,
         positive_prob_margin=0.65,
         hard_negative_prob=0.55,
+        near_object_hard_negative_xy_mm=None,
+        near_object_hard_negative_z_min_mm=float("-inf"),
+        near_object_hard_negative_z_max_mm=float("inf"),
     )
 
     rows = contact_miner.policy_manifest_rows(rollout, result)
@@ -114,3 +122,47 @@ def test_builds_policy_manifest_rows_from_mined_labels() -> None:
     assert rows[0]["target_close"] == [1.0, 0.0, 0.0, 0.0]
     assert rows[0]["train_mask"] == [1.0, 1.0, 0.0, 1.0]
     assert rows[0]["hard_negative_mask"] == [0.0, 1.0, 0.0, 1.0]
+
+
+def test_component_tolerance_filters_broad_vector_positive_to_hard_negative() -> None:
+    rollout = {
+        "chunks": [
+            {
+                "t_start": 0,
+                "n_use": 2,
+                "close_probs": [0.2, 0.2],
+            }
+        ],
+        "step_trace": [
+            {
+                "step": 0,
+                "ee_minus_bowl": [0.020, -0.030, 0.040],
+                "desired_grip": -1.0,
+                "effective_grip": -1.0,
+            },
+            {
+                "step": 1,
+                "ee_minus_bowl": [0.000, -0.049, 0.027],
+                "desired_grip": -1.0,
+                "effective_grip": -1.0,
+            },
+        ],
+    }
+
+    result = contact_miner.mine_contact_samples(
+        rollout,
+        rollout_json="rollout.json",
+        close_reference_m=[0.0, -0.050, 0.026],
+        ee_object_field="ee_minus_bowl",
+        positive_tolerance_mm=45.0,
+        positive_component_tolerance_mm=[10.0, 10.0, 10.0],
+        positive_prob_margin=0.65,
+        hard_negative_prob=0.55,
+        near_object_hard_negative_xy_mm=45.0,
+        near_object_hard_negative_z_min_mm=0.0,
+        near_object_hard_negative_z_max_mm=80.0,
+    )
+
+    assert result["samples"][0]["label"] == "hard_negative"
+    assert result["samples"][0]["is_near_object_hard_negative"] is True
+    assert result["samples"][1]["label"] == "missed_positive"

@@ -471,3 +471,21 @@ explicitly references them. They are kept for provenance only.
   stricter side-grasp-ready offline positives plus near-bowl/high-or-center
   hard negatives, followed by post-grasp transport/release training. The
   deployment policy must remain learned-token/no-gate.
+
+2026-04-27 side-grasp calibration status:
+
+- `scripts/libero_rollout_contact_miner.py` now supports component-wise
+  positive tolerances and near-object hard negatives. The first strict
+  side-grasp manifest
+  `_workspace/paper_eval/2026-04-27_policy_trace_sidegrasp_v1_contact_manifest.jsonl`
+  has `9` positives and `601` hard negatives.
+- Strict continuation config:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_sidegraspv1.yaml`.
+  The strict checkpoint suppresses live close confidence and never closes at
+  threshold `0.55` under true no-gate deployment.
+- A lighter side-grasp calibration run restores no-gate close activation but
+  still fails grasp/transport/release. Repro config:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_sidegraspv1_light.yaml`.
+  Treat this as evidence that the next
+  breakthrough requires balanced side-grasp-positive rollout data, not another
+  deployment heuristic or scalar threshold sweep.

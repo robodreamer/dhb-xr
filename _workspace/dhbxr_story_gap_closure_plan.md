@@ -1430,3 +1430,31 @@ Story implication:
 - Do not overclaim success yet. The current result supports "learned contact
   token is trainable and can fire near the object without deployment geometry
   gates"; it does not yet support "full pick-place solved under offsets."
+
+2026-04-27 side-grasp calibration update:
+
+- The next stricter contact-label pass added component-wise side-grasp
+  positives and near-object hard negatives. This is the right label structure
+  for the story because it distinguishes the demo side-grasp affordance from
+  broad center/high near-bowl states without adding deployment geometry gates.
+- The first strict manifest is too imbalanced for a short continuation: `9`
+  positives versus `601` hard negatives. The resulting checkpoint suppresses
+  close confidence and never closes in the fixed no-gate eval.
+- A lighter side-grasp continuation restores close activation and keeps the
+  learned-token/no-gate contract, but it does not solve grasp or placement.
+  The best fixed non-zero-offset close remains near the bowl, while the
+  zero-offset case closes too high.
+
+Story implication:
+
+- This strengthens, rather than weakens, the central manuscript thesis. The
+  current bottleneck is no longer code plumbing, gripper polarity, or a missing
+  token path. It is the scarcity of balanced off-manifold side-grasp-positive
+  states. That is exactly where simulator replay, world-model augmentation, or
+  DAgger-style correction should provide the missing data.
+- The clean claim boundary is now: DHB-XR has validated offset reach and a
+  learned object-gate-free contact token that can fire near the object, but
+  full pick-place needs balanced side-grasp-ready positive augmentation plus
+  post-grasp transport/release validation. Do not claim the full task solved
+  until both fixed cases close within the side-grasp affordance window and
+  release near the plate under true no-gate deployment.

@@ -2082,3 +2082,35 @@ Revised unattended priority:
    evaluate the two fixed cases with thresholds `0.50`, `0.55`, and `0.60`.
 4. Only return to post-grasp transport/release after both fixed cases close
    within roughly `15 mm` XY and `25 mm` Z without deployment object gates.
+
+Side-grasp calibration update:
+
+- The contact miner now supports component-wise positive caps and near-object
+  hard-negative labels. The first strict side-grasp manifest produced only `9`
+  positives versus `601` hard negatives, so it is useful for calibration
+  pressure but too negative-heavy for a short continuation by itself.
+- The strict continuation
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_sidegraspv1_fromrolloutpos400`
+  suppressed live close probabilities to about `0.18-0.19` and never closed at
+  threshold `0.55`.
+- A lighter calibration run
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_sidegraspv1_light.yaml`
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_sidegraspv1_light_fromrolloutpos400`
+  restored close activation. It closes in both fixed cases without deployment
+  gates, but case `0` still closes high (`~61.6 mm` Z), case `1,+3 cm` closes
+  near but not solved (`~19 mm` XY, `~21.9 mm` Z), and neither transports or
+  releases successfully.
+
+Updated priority:
+
+1. Keep `rolloutposfirst_shuffle_tol45/steps_400` as the active learned-token
+   baseline and the sidegrasp light run as calibration evidence, not as a new
+   baseline.
+2. Generate a larger balanced side-grasp-ready positive set. The required data
+   is now specific: many rollout-observation chunks at the demo side-grasp
+   vector, paired with high/central near-bowl negatives. The current strict
+   manifest has the negative side but too few positives.
+3. Use simulator replay or correction rollouts to create those positives before
+   spending more time on post-grasp transport. Threshold sweeps are exhausted
+   until both fixed cases close within the affordance window under true
+   no-gate deployment.
