@@ -11,6 +11,7 @@ from examples.integration.libero_to_lerobot import (
     _gripper_state_from_events,
     _geometry_contact_labels,
     _infer_close_affordance_target,
+    _object_minus_target_from_eef_relative,
     create_episode_dataframe,
     load_libero_demo,
 )
@@ -80,6 +81,71 @@ def test_create_episode_dataframe_uses_axis_angle_state_and_delta_actions(tmp_pa
     np.testing.assert_array_equal(gripper_state, [0, 0])
     np.testing.assert_array_equal(gripper_event, [2, 2])
     np.testing.assert_array_equal(gripper_phase, [2, 2])
+
+
+def test_create_episode_dataframe_exports_offline_geometry_features(tmp_path: Path):
+    h5_path = tmp_path / "demo_geometry.hdf5"
+    with h5py.File(h5_path, "w") as f:
+        data = f.create_group("data")
+        demo = data.create_group("demo_0")
+
+        robot_states = np.zeros((3, 9), dtype=np.float32)
+        robot_states[:, 0] = np.array([0.02, 0.0, 0.0], dtype=np.float32)
+        robot_states[:, 2:5] = np.array(
+            [[0.1, 0.2, 0.3], [0.12, 0.21, 0.31], [0.14, 0.23, 0.32]],
+            dtype=np.float32,
+        )
+        robot_states[:, 5] = 1.0
+        demo.create_dataset("robot_states", data=robot_states)
+        demo.create_dataset("actions", data=np.zeros((3, 7), dtype=np.float32))
+        demo.create_dataset("states", data=np.zeros((3, 4), dtype=np.float32))
+
+        obs = demo.create_group("obs")
+        obs.create_dataset("agentview_rgb", data=np.zeros((3, 4, 4, 3), dtype=np.uint8))
+
+    class DummyGeometryLabeler:
+        def build_features(self, sim_states, gripper_open):
+            assert sim_states.shape == (3, 4)
+            object_rel = np.array(
+                [[0.10, 0.00, 0.02], [0.05, 0.01, 0.02], [0.02, 0.01, 0.02]],
+                dtype=np.float32,
+            )
+            target_rel = np.array(
+                [[0.20, 0.02, 0.03], [0.15, 0.02, 0.03], [0.08, 0.01, 0.02]],
+                dtype=np.float32,
+            )
+            return {
+                "close_contact": np.array([0, 1, 0], dtype=np.float32),
+                "open_contact": np.array([0, 0, 1], dtype=np.float32),
+                "gripper_event": np.array([0, 1, 2], dtype=np.int64),
+                "gripper_phase": np.array([0, 1, 2], dtype=np.int64),
+                "gripper_state": np.array([0, 1, 0], dtype=np.int64),
+                "object_to_eef_pos": object_rel,
+                "target_to_eef_pos": target_rel,
+                "object_minus_target_pos": _object_minus_target_from_eef_relative(
+                    object_rel=object_rel,
+                    target_rel=target_rel,
+                ),
+                "transport_phase": np.array([0, 1, 0], dtype=np.float32),
+            }
+
+    demo_data = load_libero_demo(h5_path, 0)
+    df = create_episode_dataframe(
+        demo_data,
+        episode_index=0,
+        geometry_labeler=DummyGeometryLabeler(),
+    )
+
+    assert "dhb.object_to_eef_pos" in df.columns
+    assert "dhb.target_to_eef_pos" in df.columns
+    assert "dhb.object_minus_target_pos" in df.columns
+    assert "dhb.transport_phase" in df.columns
+    np.testing.assert_allclose(
+        np.stack(df["dhb.object_minus_target_pos"].map(np.asarray)),
+        [[-0.10, -0.02, -0.01], [-0.10, -0.01, -0.01], [-0.06, 0.0, 0.0]],
+        atol=1e-6,
+    )
+    np.testing.assert_array_equal(np.asarray(df["dhb.gripper_state"], dtype=np.int64), [0, 1, 0])
 
 
 def test_create_episode_dataframe_exports_dhb_oat_token_targets(tmp_path: Path):

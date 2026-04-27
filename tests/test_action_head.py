@@ -41,6 +41,44 @@ class TestDHBActionHead:
         result = self.head(vlm_hidden, state=state)
         assert result["pred_invariants"].shape == (self.B, 20, 8)
 
+    def test_object_target_auxiliary_head_can_condition_closed_residual(self):
+        """Offline object-target supervision can train a learned geometry prior."""
+        head = DHBActionHead(
+            vlm_dim=32,
+            action_horizon=4,
+            invariant_dim=8,
+            hidden_dim=32,
+            num_heads=4,
+            num_layers=1,
+            action_dim=7,
+            lambda_act=0.0,
+            object_target_dim=3,
+            lambda_object_target=1.5,
+            object_target_readout="cross_attention",
+            action_closed_residual_condition_on_object_target=True,
+            use_action_closed_residual_adapter=True,
+            action_closed_residual_gate_source="none",
+        )
+        vlm_hidden = torch.randn(self.B, self.S, 32)
+        target_object = torch.randn(self.B, 4, 3) * 0.05
+        result = head(
+            vlm_hidden,
+            target_object_target=target_object,
+            target_actions=torch.zeros(self.B, 4, 7),
+        )
+
+        assert result["pred_object_target"].shape == (self.B, 4, 3)
+        assert result["pred_action_closed_residual"].shape == (self.B, 4, 7)
+        assert head.object_target_cross_attn is not None
+        assert head.object_target_context_proj is not None
+        assert torch.allclose(
+            head.object_target_context_proj.weight,
+            torch.zeros_like(head.object_target_context_proj.weight),
+        )
+        assert "loss_object_target" in result
+        assert result["loss_object_target"].requires_grad
+        assert result["loss"].requires_grad
+
     def test_state_conditioning_changes_predictions(self):
         """Regression test for SmolVLA closed-loop usage: state must affect predictions.
 

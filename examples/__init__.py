@@ -39,16 +39,25 @@ Usage:
 
 __version__ = "0.2.0"
 
-# Convenience imports for common examples
-from .basic_encoding import run_example as run_basic_encoding
-from .trajectory_adaptation import run_example as run_trajectory_adaptation
-from .dhb_qr_comparison import run_example as run_dhb_comparison
+_EXAMPLE_EXPORTS = {
+    "run_basic_encoding": (".basic_encoding", "run_example"),
+    "run_trajectory_adaptation": (".trajectory_adaptation", "run_example"),
+    "run_dhb_comparison": (".dhb_qr_comparison", "run_example"),
+}
+
+
+def __getattr__(name):
+    """Lazily import example entrypoints so subpackages can be imported alone."""
+    if name not in _EXAMPLE_EXPORTS:
+        raise AttributeError(name)
+    module_name, attr_name = _EXAMPLE_EXPORTS[name]
+    from importlib import import_module
+
+    module = import_module(module_name, __name__)
+    value = getattr(module, attr_name)
+    globals()[name] = value
+    return value
 
 def __dir__():
     """List all available examples."""
-    return [
-        'run_basic_encoding',
-        'run_trajectory_adaptation',
-        'run_dhb_comparison',
-        # Add more as needed
-    ]
+    return sorted([*globals(), *_EXAMPLE_EXPORTS])

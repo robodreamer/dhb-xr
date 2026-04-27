@@ -312,6 +312,19 @@ Latest active result to preserve:
   still `112.9 mm`. This rules out pure closed-residual action fitting as the
   next breakthrough. Use offline object-level transport/release supervision or
   post-contact relabeling next, while keeping rollout learned/no-gate.
+- Latest object-geometry transport status:
+  `/home/andypark/Projects/data/libero_lerobot_affordance_transport` now
+  includes object-to-EE, target-to-EE, object-minus-target, and transport-phase
+  labels. `QwenDHB` can train configurable object-target heads from one or more
+  fields and live rollouts now record `pred_object_target` diagnostics. The
+  simple object-minus-target branch and the frozen-feature object-pair branch
+  both collapsed to near-constant live geometry predictions and did not improve
+  placement. The separate cross-attention object-pair readout produces varying
+  predictions, but still fails: step `150` flickers (`87 -> 89`), and step
+  `300` closes at `103` with no release and `117.9 mm` final target XY. Treat
+  these as negative result/provenance. The next active branch should train a
+  learned release-ready signal and hold persistence from the same offline
+  geometry rather than adding more scalar object-vector context.
 
 Historical diagnostics were moved to:
 

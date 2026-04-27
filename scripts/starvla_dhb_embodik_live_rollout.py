@@ -789,6 +789,21 @@ def main() -> None:
 
         gripper_cmds = prepared["gripper_cmds"]
         gripper_debug = prepared["debug"]
+        pred_object_target = result.get("pred_object_target")
+        object_target_debug = {}
+        if pred_object_target is not None:
+            pred_object_target_chunk = np.asarray(pred_object_target[0], dtype=np.float32)[:n_use]
+            if pred_object_target_chunk.size:
+                object_target_debug = {
+                    "pred_object_target_first": pred_object_target_chunk[0].tolist(),
+                    "pred_object_target_mean": pred_object_target_chunk.mean(axis=0).tolist(),
+                    "pred_object_target_norm_mean": float(
+                        np.linalg.norm(pred_object_target_chunk, axis=-1).mean()
+                    ),
+                    "pred_object_target_norm_last": float(
+                        np.linalg.norm(pred_object_target_chunk[-1])
+                    ),
+                }
 
         gt_count = max(0, min(n_use, num_demo_steps - t))
         gt_chunk = demo["ee_pos"][t : t + gt_count] if gt_count > 0 else None
@@ -813,6 +828,7 @@ def main() -> None:
                 "first_stabilized_pos": prepared["first_stabilized_pos"],
                 "first_gt_pos": first_gt_pos,
                 "trajectory_source": args.trajectory_source,
+                **object_target_debug,
                 **gripper_debug,
             }
         )

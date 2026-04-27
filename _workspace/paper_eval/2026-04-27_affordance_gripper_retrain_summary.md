@@ -404,3 +404,57 @@ signal during training. That signal can be derived offline from simulator/demo
 geometry, but rollout should continue to use only learned predictions from
 images, language, state history, and DHB/action heads, with no object-distance
 deployment gate.
+
+## Object-Geometry Transport Follow-Up
+
+The LIBERO-to-LeRobot converter now also exports generic offline geometry
+features for transport supervision:
+
+- `dhb.object_to_eef_pos`
+- `dhb.target_to_eef_pos`
+- `dhb.object_minus_target_pos`
+- `dhb.transport_phase`
+
+These labels are simulator/demo-derived training targets only. The live policy
+still receives images, language, state history, and learned head outputs; it
+does not consume object-distance gates at deployment.
+
+The first object-transport branch used a learned
+`dhb.object_minus_target_pos` auxiliary head to condition the closed residual:
+
+`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentready_objecttransport.yaml`
+
+This branch is a useful negative result. Step `150` preserves smooth motion
+and the currentready close timing (`close_step=103`, `0` IK failures,
+`37.1 mm` close-vector error), but still ends over `110 mm` from the plate and
+does not reliably release across repeated traces. Step `300` regresses into an
+early close/open pulse (`87 -> 89`) and late IK failures. Rollout diagnostics
+show why: the learned object-target vector is almost constant across chunks,
+so it is not giving the closed residual meaningful placement information.
+
+A second branch supervised the richer object-pair target
+`[object_to_eef_pos, target_to_eef_pos]`. Reading this target from the frozen
+action-slot features also collapsed to near-constant predictions and worsened
+the live result: step `150` never reopens and finishes `128.6 mm` from target;
+step `300` reopens at step `189` but still releases/finalizes around
+`133 mm` from the plate.
+
+The follow-up implementation added an opt-in separate cross-attention geometry
+readout:
+
+`object_target_readout: cross_attention`
+
+The context projection into the closed residual is zero-initialized so the
+warm-start action behavior is preserved until the geometry path learns. This
+readout does produce non-constant object-pair predictions in live rollout, but
+the task result is still negative. Step `150` overfits into the close/open
+pulse (`87 -> 89`), and step `300` returns to stable close without release
+(`close_step=103`, `0` IK failures, `117.9 mm` final target XY).
+
+Updated interpretation: object-level geometry supervision is now plumbed and
+diagnosable, but adding it as an auxiliary action context does not by itself
+solve held-object transport/release. The next breakthrough should decouple the
+phase decision more explicitly: current-ready close, persistent hold/transport,
+and a learned release-ready signal trained from offline object-target geometry.
+Do not continue scalar object-target loss or residual-weight sweeps without a
+release-ready/persistence objective.

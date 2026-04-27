@@ -267,9 +267,12 @@ class _LiberoGeometryLabeler:
             plate_rel.append(np.asarray(obs[self.plate_key], dtype=np.float32))
         return np.stack(bowl_rel, axis=0), np.stack(plate_rel, axis=0)
 
-    def build_labels(
-        self, sim_states: np.ndarray, gripper_open: np.ndarray
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def build_features(self, sim_states: np.ndarray, gripper_open: np.ndarray) -> Dict[str, np.ndarray]:
+        """Return geometry-derived labels and auxiliary offline targets.
+
+        The exported geometry vectors are offline supervision only. They are
+        not used by rollout/evaluation policy code as object-distance gates.
+        """
         bowl_rel, plate_rel = self.replay_relative_snapshots(sim_states)
         close_affordance_target = None
         if self.close_label_mode == "demo_affordance":
@@ -277,7 +280,7 @@ class _LiberoGeometryLabeler:
                 bowl_rel=bowl_rel,
                 gripper_open=gripper_open,
             )
-        return _geometry_contact_labels(
+        close_contact, open_contact, gripper_event, gripper_phase = _geometry_contact_labels(
             bowl_rel=bowl_rel,
             plate_rel=plate_rel,
             gripper_open=gripper_open,
@@ -287,6 +290,40 @@ class _LiberoGeometryLabeler:
             release_gate_z_m=self.release_gate_z_m,
             close_affordance_target_m=close_affordance_target,
             close_affordance_tolerance_m=self.close_affordance_tolerance_m,
+        )
+        gripper_state = _gripper_state_from_events(
+            gripper_open=gripper_open,
+            close_contact=close_contact,
+            open_contact=open_contact,
+        )
+        transport_phase = (
+            (gripper_state > 0)
+            & (open_contact <= 0.5)
+        ).astype(np.float32)
+        return {
+            "close_contact": close_contact,
+            "open_contact": open_contact,
+            "gripper_event": gripper_event,
+            "gripper_phase": gripper_phase,
+            "gripper_state": gripper_state,
+            "object_to_eef_pos": bowl_rel.astype(np.float32, copy=False),
+            "target_to_eef_pos": plate_rel.astype(np.float32, copy=False),
+            "object_minus_target_pos": _object_minus_target_from_eef_relative(
+                object_rel=bowl_rel,
+                target_rel=plate_rel,
+            ),
+            "transport_phase": transport_phase,
+        }
+
+    def build_labels(
+        self, sim_states: np.ndarray, gripper_open: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        features = self.build_features(sim_states, gripper_open)
+        return (
+            features["close_contact"],
+            features["open_contact"],
+            features["gripper_event"],
+            features["gripper_phase"],
         )
 
 
@@ -441,6 +478,29 @@ def _infer_close_affordance_target(
 
     physical_close_index = min(int(command_close_indices[0]) + 1, len(open_now) - 1)
     return bowl_rel[physical_close_index, :3].astype(np.float32, copy=True)
+
+
+def _object_minus_target_from_eef_relative(
+    *,
+    object_rel: np.ndarray,
+    target_rel: np.ndarray,
+) -> np.ndarray:
+    """Compute object-minus-target from object/target vectors to the same EE.
+
+    LIBERO exposes observations such as ``<object>_to_robot0_eef_pos`` and
+    ``<target>_to_robot0_eef_pos``. Because both vectors use the same end
+    effector as their reference, subtracting them cancels the EE term and
+    yields an offline object-target vector. This is exported as supervision and
+    diagnostics only; rollout code should not consume simulator object poses.
+    """
+    object_rel = np.asarray(object_rel, dtype=np.float32)
+    target_rel = np.asarray(target_rel, dtype=np.float32)
+    if object_rel.shape != target_rel.shape or object_rel.ndim != 2 or object_rel.shape[1] < 3:
+        raise ValueError(
+            "object/target relative observations must share shape (T, >=3): "
+            f"object={object_rel.shape}, target={target_rel.shape}"
+        )
+    return (object_rel[:, :3] - target_rel[:, :3]).astype(np.float32, copy=False)
 
 
 def _geometry_contact_labels(
@@ -891,11 +951,17 @@ def create_episode_dataframe(
     # [delta_x, delta_y, delta_z, delta_rx, delta_ry, delta_rz, next_open_gripper]
     action_vector = demo_data["delta_actions"].astype(np.float32)
     gripper_open = (demo_data["gripper_state"][:, 0] > LIBERO_GRIPPER_OPEN_QPOS_THRESHOLD).astype(np.float32)
+    geometry_features: Dict[str, np.ndarray] = {}
     if geometry_labeler is not None and demo_data.get("sim_states") is not None:
-        close_contact, open_contact, gripper_event, gripper_phase = geometry_labeler.build_labels(
+        geometry_features = geometry_labeler.build_features(
             demo_data["sim_states"],
             gripper_open,
         )
+        close_contact = geometry_features["close_contact"]
+        open_contact = geometry_features["open_contact"]
+        gripper_event = geometry_features["gripper_event"]
+        gripper_phase = geometry_features["gripper_phase"]
+        gripper_state = geometry_features["gripper_state"]
     else:
         close_contact = _event_transition_labels(gripper_open, transition="close")
         open_contact = _event_transition_labels(gripper_open, transition="open")
@@ -903,11 +969,11 @@ def create_episode_dataframe(
         gripper_phase = np.zeros_like(gripper_event, dtype=np.int64)
         gripper_phase[close_contact > 0.5] = 1
         gripper_phase[open_contact > 0.5] = 2
-    gripper_state = _gripper_state_from_events(
-        gripper_open=gripper_open,
-        close_contact=close_contact,
-        open_contact=open_contact,
-    )
+        gripper_state = _gripper_state_from_events(
+            gripper_open=gripper_open,
+            close_contact=close_contact,
+            open_contact=open_contact,
+        )
     
     # Build one parquet row per environment step. The StarVLA LeRobot loader
     # expects trajectory data to be indexed by timestep inside each episode
@@ -968,6 +1034,21 @@ def create_episode_dataframe(
     data_dict["dhb.gripper_state"] = gripper_state.astype(np.int64).tolist()
     data_dict["dhb.gripper_event"] = gripper_event.astype(np.int64).tolist()
     data_dict["dhb.gripper_phase"] = gripper_phase.astype(np.int64).tolist()
+    for source_key, export_key in (
+        ("object_to_eef_pos", "dhb.object_to_eef_pos"),
+        ("target_to_eef_pos", "dhb.target_to_eef_pos"),
+        ("object_minus_target_pos", "dhb.object_minus_target_pos"),
+        ("transport_phase", "dhb.transport_phase"),
+    ):
+        value = geometry_features.get(source_key)
+        if value is not None:
+            arr = np.asarray(value, dtype=np.float32)
+            if arr.shape[0] != length:
+                raise ValueError(
+                    f"Geometry feature '{source_key}' length mismatch for episode {episode_index}: "
+                    f"{arr.shape[0]} != {length}"
+                )
+            data_dict[export_key] = arr.astype(np.float32).tolist()
     
     df = pd.DataFrame(data_dict)
     return df

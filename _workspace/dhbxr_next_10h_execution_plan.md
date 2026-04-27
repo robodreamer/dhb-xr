@@ -179,6 +179,36 @@ Follow-up executed:
   deploy only learned model outputs. Do not keep sweeping scalar residual
   weights or thresholds.
 
+Follow-up executed:
+
+- Regenerated/exported object-level transport labels in
+  `/home/andypark/Projects/data/libero_lerobot_affordance_transport`:
+  `dhb.object_to_eef_pos`, `dhb.target_to_eef_pos`,
+  `dhb.object_minus_target_pos`, and `dhb.transport_phase`.
+- Added configurable object-target supervision in `QwenDHB`, including
+  multi-field target concatenation, live rollout diagnostics for
+  `pred_object_target`, and an opt-in separate cross-attention readout via
+  `object_target_readout: cross_attention`.
+- The simple `object_minus_target` branch is negative. It preserves the useful
+  close at step `150` but the predicted object-target vector is nearly constant
+  in live rollout; step `300` regresses into early close/open and IK failures.
+- The richer object-pair target read from frozen action features is also
+  negative: step `150` never reopens and step `300` releases far from target.
+- The cross-attention object-pair readout produces non-constant live geometry
+  predictions, confirming the new readout path works mechanically, but it still
+  fails the task: step `150` flickers (`87 -> 89`), while step `300` returns to
+  stable close with no release and `117.9 mm` final target XY.
+
+Next action:
+
+Stop treating object geometry as only an action-context auxiliary. The next
+branch should train an explicit learned release-ready signal from offline
+object-target geometry, while preserving the currentready close head and the
+future-aligned dense gripper hold signal. The live decoder should remain
+object-free: close from current contact readiness, hold from persistent gripper
+state, and open only from the learned release-ready output rather than from a
+raw future gripper pulse.
+
 ## 2026-04-25 Late Update: Reach Is Now Validated, Full Task Is Phase-Limited
 
 The current highest-confidence executable result is no longer the older

@@ -140,6 +140,11 @@ if HAS_TORCH:
             action_closed_residual_hard_gate: bool = False,
             action_closed_residual_zero_gripper_dim: bool = True,
             lambda_action_closed_residual_l2: float = 0.0,
+            object_target_dim: int = 0,
+            lambda_object_target: float = 0.0,
+            object_target_loss_type: str = "smooth_l1",
+            object_target_readout: str = "action_features",
+            action_closed_residual_condition_on_object_target: bool = False,
         ):
             super().__init__()
 
@@ -208,6 +213,13 @@ if HAS_TORCH:
             self.action_closed_residual_hard_gate = bool(action_closed_residual_hard_gate)
             self.action_closed_residual_zero_gripper_dim = bool(action_closed_residual_zero_gripper_dim)
             self.lambda_action_closed_residual_l2 = float(lambda_action_closed_residual_l2)
+            self.object_target_dim = int(object_target_dim or 0)
+            self.lambda_object_target = float(lambda_object_target)
+            self.object_target_loss_type = str(object_target_loss_type)
+            self.object_target_readout = str(object_target_readout or "action_features")
+            self.action_closed_residual_condition_on_object_target = bool(
+                action_closed_residual_condition_on_object_target
+            )
             if action_loss_channel_weight is None:
                 action_loss_weights = torch.ones(1, dtype=torch.float32)
                 self.action_loss_uses_channel_weight = False
@@ -268,6 +280,16 @@ if HAS_TORCH:
                 raise ValueError(
                     "action_closed_residual_gate_source must be 'none' or 'state_gripper', "
                     f"got {self.action_closed_residual_gate_source!r}"
+                )
+            if self.object_target_loss_type not in {"smooth_l1", "mse", "l1"}:
+                raise ValueError(
+                    "object_target_loss_type must be one of 'smooth_l1', 'mse', or 'l1', "
+                    f"got {self.object_target_loss_type!r}"
+                )
+            if self.object_target_readout not in {"action_features", "cross_attention"}:
+                raise ValueError(
+                    "object_target_readout must be one of 'action_features' or "
+                    f"'cross_attention', got {self.object_target_readout!r}"
                 )
             if self.oat_autoencode_target not in {"pred", "target", "both"}:
                 raise ValueError(
@@ -426,6 +448,29 @@ if HAS_TORCH:
             self.action_head = None
             self.action_residual_adapter = None
             self.action_closed_residual_adapter = None
+            self.object_target_head = None
+            self.object_target_context_proj = None
+            self.object_target_query_embed = None
+            self.object_target_cross_attn = None
+            if self.object_target_dim > 0:
+                if self.object_target_readout == "cross_attention":
+                    self.object_target_query_embed = nn.Embedding(action_horizon, hidden_dim)
+                    self.object_target_cross_attn = nn.MultiheadAttention(
+                        embed_dim=hidden_dim,
+                        num_heads=num_heads,
+                        dropout=dropout,
+                        batch_first=True,
+                    )
+                self.object_target_head = nn.Sequential(
+                    nn.LayerNorm(hidden_dim),
+                    nn.Linear(hidden_dim, hidden_dim // 2),
+                    nn.GELU(),
+                    nn.Linear(hidden_dim // 2, self.object_target_dim),
+                )
+                if self.action_closed_residual_condition_on_object_target:
+                    self.object_target_context_proj = nn.Linear(self.object_target_dim, hidden_dim)
+                    nn.init.zeros_(self.object_target_context_proj.weight)
+                    nn.init.zeros_(self.object_target_context_proj.bias)
             if action_dim is not None:
                 self.action_head = nn.Linear(hidden_dim, action_dim)
                 if self.use_action_residual_adapter:
@@ -1002,6 +1047,7 @@ if HAS_TORCH:
             target_contact: Optional[torch.Tensor] = None,
             target_contact_phase: Optional[torch.Tensor] = None,
             target_gripper_state: Optional[torch.Tensor] = None,
+            target_object_target: Optional[torch.Tensor] = None,
             committed_prefix_invariants: Optional[torch.Tensor] = None,
             committed_prefix_mask: Optional[torch.Tensor] = None,
             loss_mask: Optional[torch.Tensor] = None,
@@ -1144,6 +1190,26 @@ if HAS_TORCH:
             if result_prefix_mask is not None:
                 result["committed_prefix_mask"] = result_prefix_mask
 
+            pred_object_target = None
+            object_conditioned_features = head_features
+            if self.object_target_head is not None:
+                object_target_features = head_features
+                if self.object_target_cross_attn is not None and self.object_target_query_embed is not None:
+                    object_queries = self.object_target_query_embed(query_pos).unsqueeze(0).expand(B, -1, -1)
+                    object_target_features, _ = self.object_target_cross_attn(
+                        object_queries,
+                        memory,
+                        memory,
+                        need_weights=False,
+                    )
+                pred_object_target = self.object_target_head(object_target_features)
+                result["pred_object_target"] = pred_object_target
+                if self.object_target_context_proj is not None:
+                    object_conditioned_features = (
+                        head_features
+                        + self.object_target_context_proj(pred_object_target)
+                    )
+
             # Optional: predict raw actions via action_head
             pred_actions = None
             pred_action_residual = None
@@ -1171,7 +1237,7 @@ if HAS_TORCH:
                         dtype=head_features.dtype,
                     )
                     pred_action_closed_residual_raw = (
-                        self.action_closed_residual_adapter(head_features)
+                        self.action_closed_residual_adapter(object_conditioned_features)
                         * self.action_closed_residual_scale
                     )
                     if (
@@ -1456,6 +1522,52 @@ if HAS_TORCH:
                     self.lambda_action_closed_residual_l2 * loss_action_closed_residual_l2
                     if total is None
                     else total + self.lambda_action_closed_residual_l2 * loss_action_closed_residual_l2
+                )
+
+            if (
+                pred_object_target is not None
+                and target_object_target is not None
+                and self.lambda_object_target > 0.0
+            ):
+                target_object = target_object_target.to(
+                    device=pred_object_target.device,
+                    dtype=pred_object_target.dtype,
+                )
+                if target_object.ndim == 2:
+                    target_object = target_object.unsqueeze(-1)
+                if target_object.shape[:2] != pred_object_target.shape[:2]:
+                    raise ValueError(
+                        "target_object_target must have shape (B, T, D), got "
+                        f"{tuple(target_object.shape)} for prediction "
+                        f"{tuple(pred_object_target.shape)}"
+                    )
+                target_object = target_object[..., : pred_object_target.shape[-1]]
+                if target_object.shape[-1] != pred_object_target.shape[-1]:
+                    raise ValueError(
+                        "target_object_target last dimension must be at least "
+                        f"{pred_object_target.shape[-1]}, got {target_object.shape[-1]}"
+                    )
+                if self.object_target_loss_type == "mse":
+                    per_dim_object = (pred_object_target - target_object).pow(2)
+                elif self.object_target_loss_type == "l1":
+                    per_dim_object = (pred_object_target - target_object).abs()
+                else:
+                    per_dim_object = F.smooth_l1_loss(
+                        pred_object_target,
+                        target_object,
+                        reduction="none",
+                        beta=0.02,
+                    )
+                per_step_object = per_dim_object.mean(dim=-1)
+                loss_object_target = self._masked_temporal_mean(
+                    per_step_object,
+                    temporal_loss_mask,
+                )
+                result["loss_object_target"] = loss_object_target
+                total = (
+                    self.lambda_object_target * loss_object_target
+                    if total is None
+                    else total + self.lambda_object_target * loss_object_target
                 )
 
             if (

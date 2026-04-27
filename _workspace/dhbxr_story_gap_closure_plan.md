@@ -1145,3 +1145,33 @@ Story implication:
   post-contact supervision signal. This can use simulator/demo geometry during
   data generation and scoring, but the deployment path should remain learned
   and object-free.
+
+2026-04-27 object-geometry transport update:
+
+- The converter and StarVLA wrapper now support generic offline object-geometry
+  transport labels: `dhb.object_to_eef_pos`, `dhb.target_to_eef_pos`,
+  `dhb.object_minus_target_pos`, and `dhb.transport_phase`. Live rollout also
+  records `pred_object_target` diagnostics when the head exists.
+- A simple object-minus-target auxiliary head conditioned into the closed
+  residual is negative. It preserves the useful close at step `150`, but the
+  predicted vector is nearly constant in live rollout; by step `300` it
+  regresses into early close/open and IK failures.
+- A richer object-pair target
+  `[object_to_eef_pos, target_to_eef_pos]` read from frozen action features is
+  also negative. It improves neither release nor placement.
+- A separate cross-attention object-pair readout is mechanically better: live
+  predictions vary across chunks, and the context projection is zero-initialized
+  to preserve the warm start. The embodied result is still negative. Step
+  `150` flickers (`87 -> 89`), while step `300` closes at `103`, has `0` IK
+  failures, but never releases and ends `117.9 mm` from target.
+
+Story implication:
+
+- Object geometry supervision is a necessary infrastructure piece for the
+  manuscript story, but auxiliary object-vector conditioning alone is not the
+  breakthrough. The remaining gap is learned phase selection: hold through
+  transport and open only when a learned release-ready signal says the object is
+  at the target.
+- The next result should explicitly train release readiness and hold
+  persistence from the offline object-target geometry, while keeping the live
+  policy object-free and learned.

@@ -10,7 +10,10 @@ STARVLA_ROOT = REPO_ROOT / "vendor" / "starVLA"
 if str(STARVLA_ROOT) not in sys.path:
     sys.path.insert(0, str(STARVLA_ROOT))
 
-from starVLA.model.framework.VLM4A.QwenDHB import _slice_temporal_target
+from starVLA.model.framework.VLM4A.QwenDHB import (
+    _extract_gt_object_target,
+    _slice_temporal_target,
+)
 
 
 def test_slice_temporal_target_keeps_future_chunk_by_default() -> None:
@@ -64,3 +67,28 @@ def test_slice_temporal_target_rejects_unknown_alignment() -> None:
 
     with pytest.raises(ValueError, match="target_alignment"):
         _slice_temporal_target(target, window_size=4, alignment="later")
+
+
+def test_extract_gt_object_target_can_concatenate_configured_fields() -> None:
+    examples = [
+        {
+            "dhb.object_to_eef_pos": [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+            "dhb.target_to_eef_pos": [[-1.0, -2.0, -3.0], [-4.0, -5.0, -6.0]],
+        },
+        {
+            "dhb.object_to_eef_pos": [[7.0, 8.0, 9.0], [10.0, 11.0, 12.0]],
+            "dhb.target_to_eef_pos": [[-7.0, -8.0, -9.0], [-10.0, -11.0, -12.0]],
+        },
+    ]
+
+    target = _extract_gt_object_target(
+        examples,
+        fields=["dhb.object_to_eef_pos", "dhb.target_to_eef_pos"],
+    )
+
+    assert target is not None
+    assert target.shape == (2, 2, 6)
+    torch.testing.assert_close(
+        target[0, 0],
+        torch.tensor([1.0, 2.0, 3.0, -1.0, -2.0, -3.0]),
+    )
