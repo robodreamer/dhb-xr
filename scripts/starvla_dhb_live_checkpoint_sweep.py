@@ -72,9 +72,13 @@ def _run_case(
     reach_threshold_z_m: float,
     reach_stop_on_success: bool,
     record_step_trace: bool,
+    save_policy_trace: bool,
 ) -> dict:
     summary_path = output_dir / (
         f"{checkpoint.stem}_ep{episode_idx}_offset{offset_cm:.1f}cm_summary.json"
+    )
+    policy_trace_dir = output_dir / (
+        f"{checkpoint.stem}_ep{episode_idx}_offset{offset_cm:.1f}cm_policy_trace"
     )
     cmd = [
         sys.executable,
@@ -165,6 +169,8 @@ def _run_case(
         cmd.append("--disable-gripper-gates")
     if record_step_trace:
         cmd.append("--record-step-trace")
+    if save_policy_trace:
+        cmd.extend(["--save-policy-trace-dir", str(policy_trace_dir)])
     if reach_only:
         cmd.extend(
             [
@@ -369,6 +375,15 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--save-policy-trace",
+        action="store_true",
+        help=(
+            "Forward rollout-side per-replan policy input export. Use to build "
+            "closed-loop hard-negative datasets; disabled by default because it "
+            "writes image/state NPZ files."
+        ),
+    )
+    parser.add_argument(
         "--sweep-name",
         default=None,
         help=(
@@ -463,6 +478,7 @@ def main() -> None:
                 reach_threshold_z_m=args.reach_threshold_z_m,
                 reach_stop_on_success=args.reach_stop_on_success,
                 record_step_trace=bool(args.record_step_trace),
+                save_policy_trace=bool(args.save_policy_trace),
             )
             rows.append(row)
         results.append(

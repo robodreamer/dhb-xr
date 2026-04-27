@@ -397,6 +397,9 @@ Latest active result to preserve:
   but the retrain suppresses close entirely at the default threshold. Treat
   demo-only contact-head recalibration as exhausted. Next: collect/replay
   rollout-state observations and train against those hard negatives directly.
+  The rollout harness now has policy-trace export (`--save-policy-trace-dir`
+  and sweep `--save-policy-trace`) so the next dataset can use actual
+  closed-loop observation/state tensors rather than geometry-only summaries.
 
 Historical diagnostics were moved to:
 

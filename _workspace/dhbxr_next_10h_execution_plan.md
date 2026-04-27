@@ -1915,6 +1915,10 @@ Implemented:
 - `scripts/starvla_dhb_live_checkpoint_sweep.py --record-step-trace` now
   forwards trace recording into each child rollout so future sweeps can be
   mined directly.
+- `scripts/starvla_dhb_embodik_live_rollout.py --save-policy-trace-dir` and
+  the sweep-level `--save-policy-trace` flag export per-replan image/state
+  tensors plus decoded close/open probabilities. This is the missing substrate
+  for constructing a closed-loop hard-negative training set.
 - `DHBActionHead` and the StarVLA wrapper now support generic
   `lambda_contact_margin`, `contact_positive_margin`, and
   `contact_negative_margin`.

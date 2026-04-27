@@ -408,6 +408,16 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--save-policy-trace-dir",
+        default=None,
+        help=(
+            "Optional directory for per-replan policy inputs and predictions. "
+            "Each chunk is saved as a compressed NPZ containing the preprocessed "
+            "images, state window, and decoded gripper probabilities for "
+            "closed-loop hard-negative mining."
+        ),
+    )
+    parser.add_argument(
         "--state-history-update-rate",
         choices=("policy", "substep"),
         default="policy",
@@ -615,6 +625,10 @@ def main() -> None:
     min_plate_xyz_m = float("inf")
     ee_trace = [np.asarray(robot.controller.ee_pos, dtype=np.float32).copy()]
     step_trace = []
+    policy_trace = []
+    policy_trace_dir = Path(args.save_policy_trace_dir) if args.save_policy_trace_dir else None
+    if policy_trace_dir is not None:
+        policy_trace_dir.mkdir(parents=True, exist_ok=True)
 
     def reach_ready(ee_pos_xyz: np.ndarray) -> bool:
         rel = _relative_snapshot(ee_pos_xyz, scene_refs, env=env)
@@ -672,6 +686,55 @@ def main() -> None:
                 np.asarray(observed_state_vector, dtype=np.float32)[-1]
             )
         step_trace.append(entry)
+
+    def record_policy_trace_chunk(
+        *,
+        chunk_index: int,
+        t_start: int,
+        n_use: int,
+        agentview_image: np.ndarray,
+        wrist_image: np.ndarray,
+        state_window: np.ndarray,
+        ee_pos_live: np.ndarray,
+        rel_live: dict,
+        chunk_positions: np.ndarray,
+        gripper_debug: dict,
+        object_target_debug: dict,
+    ) -> None:
+        if policy_trace_dir is None:
+            return
+        npz_name = f"chunk_{chunk_index:04d}_t{t_start:04d}.npz"
+        npz_path = policy_trace_dir / npz_name
+        close_probs = np.asarray(gripper_debug.get("close_probs") or [], dtype=np.float32)
+        open_probs = np.asarray(gripper_debug.get("open_probs") or [], dtype=np.float32)
+        state_close_probs = np.asarray(
+            gripper_debug.get("state_close_probs") or [],
+            dtype=np.float32,
+        )
+        np.savez_compressed(
+            npz_path,
+            agentview_image=np.asarray(agentview_image, dtype=np.uint8),
+            wrist_image=np.asarray(wrist_image, dtype=np.uint8),
+            state_window=np.asarray(state_window, dtype=np.float32),
+            ee_pos_live=np.asarray(ee_pos_live, dtype=np.float32),
+            chunk_positions=np.asarray(chunk_positions[:n_use], dtype=np.float32),
+            close_probs=close_probs,
+            open_probs=open_probs,
+            state_close_probs=state_close_probs,
+        )
+        policy_trace.append(
+            {
+                "chunk_index": int(chunk_index),
+                "t_start": int(t_start),
+                "n_use": int(n_use),
+                "npz_path": str(npz_path),
+                "gripper_source_used": gripper_debug.get("gripper_source_used"),
+                "gripper_close_threshold": gripper_debug.get("gripper_close_threshold"),
+                "gripper_open_threshold": gripper_debug.get("gripper_open_threshold"),
+                "rel_live": rel_live,
+                **object_target_debug,
+            }
+        )
 
     update_min_dists(np.asarray(robot.controller.ee_pos, dtype=np.float32))
 
@@ -852,6 +915,19 @@ def main() -> None:
                 **object_target_debug,
                 **gripper_debug,
             }
+        )
+        record_policy_trace_chunk(
+            chunk_index=len(debug_chunks) - 1,
+            t_start=t,
+            n_use=n_use,
+            agentview_image=agentview,
+            wrist_image=wrist,
+            state_window=state_window,
+            ee_pos_live=ee_pos_live,
+            rel_live=rel_live,
+            chunk_positions=chunk_pos_stable,
+            gripper_debug=debug_chunks[-1],
+            object_target_debug=object_target_debug,
         )
         ik_fail_total += int(ik_failures)
         if ik_failures > 0 and first_ik_fail_chunk is None:
@@ -1054,6 +1130,8 @@ def main() -> None:
         "reach_threshold_z_m": float(args.reach_threshold_z_m),
         "reach_stop_on_success": bool(args.reach_stop_on_success),
         "record_step_trace": bool(args.record_step_trace),
+        "policy_trace_dir": None if policy_trace_dir is None else str(policy_trace_dir),
+        "policy_trace": policy_trace if policy_trace_dir is not None else None,
         "success": bool(final_success),
         "success_at": None if success_at is None else int(success_at),
         "reward": float(reward),
@@ -1091,6 +1169,10 @@ def main() -> None:
     printed_summary["chunks"] = f"<{len(debug_chunks)} chunks saved to {save_json}>"
     if args.record_step_trace:
         printed_summary["step_trace"] = f"<{len(step_trace)} entries saved to {save_json}>"
+    if policy_trace_dir is not None:
+        printed_summary["policy_trace"] = (
+            f"<{len(policy_trace)} chunks saved under {policy_trace_dir}>"
+        )
     print(json.dumps(printed_summary, indent=2))
 
 
