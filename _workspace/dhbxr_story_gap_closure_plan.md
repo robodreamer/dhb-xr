@@ -1575,3 +1575,22 @@ Story implication:
   merely adding an object-target auxiliary loss. The breakthrough experiment is
   to create spatially diverse closed-state corrections that actually reach the
   target, then train DHB-XR on those compact invariant/action tokens.
+
+2026-04-27 transport correction miner:
+
+- The new transport miner turns rollout traces into generic post-close
+  correction requests: object-minus-target vector, desired object-space delta,
+  and target-window status.
+- On the active closed-transport baseline, target XY improves by only about
+  `10 mm` after physical close and never enters the `45 mm` target window.
+
+Story implication:
+
+- This is the cleanest quantitative statement of the remaining gap. DHB-XR has
+  the compact token path for contact and post-contact action, but the current
+  dataset does not contain enough off-manifold closed-state transport examples.
+  The manuscript's strongest next story is now concrete: use simulator or
+  world-model augmentation to create spatially diverse post-contact correction
+  trajectories from these mined requests, then show DHB-XR learns them better
+  than ordinary action heads because the invariant/action token compresses the
+  spatial transformation.

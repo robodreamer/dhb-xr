@@ -536,3 +536,11 @@ explicitly references them. They are kept for provenance only.
   as evidence that nominal demo-side object-target supervision is insufficient;
   the next breakthrough needs generated or replayed post-close target-reaching
   positives.
+- Transport correction miner:
+  `scripts/libero_rollout_transport_miner.py`. On active closed-transport
+  `steps_300`, post-close target progress is only about `10 mm` in both fixed
+  cases, with no target-reached steps under a `45 mm` window. Correction
+  requests are exported locally at
+  `_workspace/paper_eval/2026-04-27_closedtransport_transport_correction_requests.jsonl`.
+  Use these requests as the interface for simulator/world-model post-contact
+  augmentation.

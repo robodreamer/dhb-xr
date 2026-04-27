@@ -1073,3 +1073,35 @@ transport-to-target states, then train on those off-manifold positives.
 
 The diagnostic model weights were removed after evaluation; configs, traces,
 aggregate summaries, and physical scores were retained.
+
+## Transport Correction Mining Interface
+
+`scripts/libero_rollout_transport_miner.py` now converts closed-loop rollout
+traces into post-close transport diagnostics and correction requests. This is
+training/data-generation infrastructure only; deployment still uses learned
+tokens and no object-distance gates.
+
+The miner reports physical close, target XY at close, best post-close target
+XY, target progress, target-reached counts, and a small set of closed
+post-contact correction requests. Each request contains the generic
+`object_minus_target_m` vector and the desired object-space delta to bring the
+object to the target. This is the concrete interface for the next simulator or
+world-model augmentation pass.
+
+Applied to the active closed-transport `steps_300` policy traces:
+
+`_workspace/paper_eval/2026-04-27_closedtransport_transport_mining.json`
+
+`_workspace/paper_eval/2026-04-27_closedtransport_transport_correction_requests.jsonl`
+
+- `0 cm`: physical close step `89`, target XY at close `114.1 mm`, best target
+  XY `103.5 mm`, progress only `10.6 mm`, no target-reached steps.
+- `3 cm`: physical close step `89`, target XY at close `129.8 mm`, best target
+  XY `119.5 mm`, progress only `10.3 mm`, no target-reached steps.
+
+Updated interpretation: the active policy is not merely releasing at the wrong
+time; it barely transports the closed object toward the target after contact.
+The next high-impact experiment should generate closed-state corrections that
+move the object by roughly the exported `object_minus_target_m` vector, then
+retrain closed residual and release heads on those corrected post-contact
+states.

@@ -2255,3 +2255,23 @@ Updated immediate priority:
    world-model/trajectory augmentation that produces near-plate closed states.
 3. Only after those positives exist should release mining be rerun with honest
    near-target release positives.
+
+Transport correction miner update:
+
+- Added `scripts/libero_rollout_transport_miner.py` and tests.
+- Applied it to the active closed-transport `steps_300` policy traces.
+- Result: after physical close, the current policy improves target XY by only
+  about `10 mm` in both fixed cases and never reaches the `45 mm` target
+  window.
+- Exported correction requests:
+  `_workspace/paper_eval/2026-04-27_closedtransport_transport_correction_requests.jsonl`.
+
+Updated immediate priority:
+
+1. Use the correction requests as the concrete interface for the next data
+   generation pass. They specify generic object-minus-target vectors and the
+   desired object-space delta, not object-specific deployment gates.
+2. Generate closed-state correction rollouts or synthetic post-contact examples
+   that reduce target XY from roughly `110-130 mm` to below `45 mm`.
+3. Retrain closed residual plus release heads only after those corrected
+   post-contact positives exist.
