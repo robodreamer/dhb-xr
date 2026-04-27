@@ -351,3 +351,29 @@ that preserves currentready contact-readiness while adding explicit held-object
 transport and release supervision. Full pick-place should remain unclaimed
 until it passes close-affordance and object-target release metrics under a
 fixed rollout-seed matrix, not a single uncontrolled video.
+
+## Currentready Transport-Release Continuation
+
+The next branch followed that direction:
+
+`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentready_transport_release.yaml`
+
+It warm-starts from currentready, freezes Qwen, the base action path, the
+currentready contact-readiness head, and the phase head, then trains only the
+closed-state residual adapter plus dense `gripper_state_head`. The trainer
+confirmed the intended scope with `4.464M` trainable parameters.
+
+This branch is a useful partial but not a breakthrough. At `steps_200` under
+controlled `rollout_seed=70`, true no-gate hybrid decoding preserves the
+currentready close behavior and learns late release: close step `103`, reopen
+step `221`, `0` IK failures, minimum bowl XY `10.2 mm`, close-vector error
+`37.1 mm`, and final target XY `114.4 mm`. This is better than no release, but
+object-target transport remains essentially unsolved.
+
+By `steps_400`, the same branch regresses into the known flicker mode:
+close step `85`, reopen step `89`, `12` IK failures, `46.6 mm` close-vector
+error, and `136.6 mm` final target XY. Therefore the branch identifies the
+right coupling direction but overtraining quickly destabilizes the gripper
+phase. The next attempt should either early-stop around `steps_200` and focus
+on a stronger closed-transport target, or add an explicit hold-through-transport
+loss/gate in training so release cannot become a short local pulse.

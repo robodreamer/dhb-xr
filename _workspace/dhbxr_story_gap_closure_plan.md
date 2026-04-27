@@ -1109,3 +1109,28 @@ Story implication:
   and learned release.
 - Future paper tables should report fixed rollout-seed matrices, not one-off
   traces, especially for gripper/release claims.
+
+2026-04-27 transport-release continuation update:
+
+- A currentready transport-release branch now freezes currentready
+  close-readiness and trains only the closed-state action residual plus dense
+  gripper-state release path. This is the right architecture split for the
+  story because it tests whether post-close behavior can improve without
+  moving the learned contact-ready trigger.
+- Step `200` restores a learned late release while preserving close: close
+  step `103`, reopen step `221`, `0` IK failures, `37.1 mm` close-vector error,
+  and `114.4 mm` final target XY under controlled `rollout_seed=70`. This is a
+  partial validation of the close-hold-release decomposition, but not full
+  manipulation.
+- Step `400` overtrains into close/open flicker (`85 -> 89`) and adds IK
+  failures. The missing piece is not another longer run; it is a stronger
+  held-object transport objective and phase-persistence constraint.
+
+Story implication:
+
+- The paper story can now say the representation/architecture naturally
+  decomposes reach, current contact readiness, and post-contact residuals, but
+  the full pick-place result remains open because learned object transport is
+  still weak.
+- Do not overclaim release. The best release result is still about `114 mm`
+  from the plate, so it is evidence of learned phase transition, not placement.

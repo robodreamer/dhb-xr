@@ -139,6 +139,27 @@ Immediate next actions:
 4. Add no object-distance logic to deployment. Simulator geometry remains
    acceptable only for offline labels and post-hoc scoring.
 
+Follow-up executed:
+
+- Added
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentready_transport_release.yaml`.
+  It freezes currentready close-readiness and trains only the closed-state
+  residual adapter plus dense gripper-state release path.
+- The run trains with `4.464M` trainable parameters. Step `200` is the useful
+  checkpoint: close step `103`, reopen step `221`, `0` IK failures, close-vector
+  error `37.1 mm`, final target XY `114.4 mm`. It restores learned release
+  without breaking close, but does not solve object transport.
+- Step `400` overtrains into flicker (`85 -> 89` close/open) and `12` IK
+  failures. Do not continue this exact weighting longer.
+
+Next action:
+
+Train a held-object transport target more directly. Keep currentready close
+frozen, but add a loss that keeps the gripper closed through transport and
+weights closed-phase XY action/trajectory toward the object-target segment.
+Use `steps_200` from the transport-release branch as the diagnostic reference,
+not as a solved policy.
+
 ## 2026-04-25 Late Update: Reach Is Now Validated, Full Task Is Phase-Limited
 
 The current highest-confidence executable result is no longer the older

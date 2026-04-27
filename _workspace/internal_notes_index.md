@@ -294,6 +294,15 @@ Latest active result to preserve:
   never reopens, and finishes `129 mm` from the plate. This confirms the
   active blocker is learned phase selection/release under a controlled
   benchmark, not trajectory reachability.
+- Latest currentready transport-release branch:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentready_transport_release.yaml`
+  freezes the currentready close-readiness head and trains only
+  `action_closed_residual_adapter` plus `gripper_state_head` (`4.464M`
+  trainable). Step `200` is the useful partial: close step `103`, reopen step
+  `221`, `0` IK failures, `37.1 mm` close-vector error, and `114.4 mm` final
+  target XY under `rollout_seed=70`. Step `400` overtrains into close/open
+  flicker (`85 -> 89`) and `12` IK failures. The next branch should strengthen
+  held-object transport and phase persistence, not extend this weighting.
 
 Historical diagnostics were moved to:
 
