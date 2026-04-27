@@ -114,6 +114,9 @@ if HAS_TORCH:
             gripper_state_class_weight: float | Sequence[float] = 1.0,
             gripper_state_pos_weight: float | Sequence[float] = 1.0,
             lambda_gripper_state_smooth: float = 0.0,
+            lambda_gripper_state_margin: float = 0.0,
+            gripper_state_closed_margin: float = 0.65,
+            gripper_state_open_margin: float = 0.35,
             contact_mode: str = "event",
             contact_use_vlm_context: bool = True,
             contact_use_state: bool = True,
@@ -179,6 +182,9 @@ if HAS_TORCH:
             self.gripper_state_class_weight = gripper_state_class_weight
             self.gripper_state_pos_weight = gripper_state_pos_weight
             self.lambda_gripper_state_smooth = float(lambda_gripper_state_smooth)
+            self.lambda_gripper_state_margin = float(lambda_gripper_state_margin)
+            self.gripper_state_closed_margin = float(gripper_state_closed_margin)
+            self.gripper_state_open_margin = float(gripper_state_open_margin)
             self.contact_mode = contact_mode
             self.contact_use_vlm_context = contact_use_vlm_context
             self.contact_use_state = contact_use_state
@@ -1764,7 +1770,11 @@ if HAS_TORCH:
                     if total is None
                     else total + self.lambda_gripper_state * loss_gripper_state
                 )
-                if self.lambda_gripper_state_smooth > 0.0 and pred_gripper_state_logits.shape[1] > 1:
+                needs_gripper_prob_loss = (
+                    self.lambda_gripper_state_smooth > 0.0
+                    or self.lambda_gripper_state_margin > 0.0
+                )
+                if needs_gripper_prob_loss:
                     if self.gripper_state_loss_type == "cross_entropy":
                         closed_probs = pred_gripper_state_logits.softmax(dim=-1)[..., 1]
                         target_closed = target_gripper_state_ce.to(
@@ -1778,18 +1788,35 @@ if HAS_TORCH:
                             dtype=pred_gripper_state_logits.dtype,
                         )
 
-                    same_state = (target_closed[:, 1:] - target_closed[:, :-1]).abs() < 0.5
-                    smooth_mask = same_state.to(dtype=pred_gripper_state_logits.dtype)
-                    if temporal_loss_mask is not None:
-                        smooth_mask = smooth_mask * temporal_loss_mask[:, 1:] * temporal_loss_mask[:, :-1]
-                    per_step_smooth = (closed_probs[:, 1:] - closed_probs[:, :-1]).pow(2)
-                    loss_gripper_state_smooth = self._masked_temporal_mean(per_step_smooth, smooth_mask)
-                    result["loss_gripper_state_smooth"] = loss_gripper_state_smooth
-                    total = (
-                        self.lambda_gripper_state_smooth * loss_gripper_state_smooth
-                        if total is None
-                        else total + self.lambda_gripper_state_smooth * loss_gripper_state_smooth
-                    )
+                    if self.lambda_gripper_state_smooth > 0.0 and pred_gripper_state_logits.shape[1] > 1:
+                        same_state = (target_closed[:, 1:] - target_closed[:, :-1]).abs() < 0.5
+                        smooth_mask = same_state.to(dtype=pred_gripper_state_logits.dtype)
+                        if temporal_loss_mask is not None:
+                            smooth_mask = smooth_mask * temporal_loss_mask[:, 1:] * temporal_loss_mask[:, :-1]
+                        per_step_smooth = (closed_probs[:, 1:] - closed_probs[:, :-1]).pow(2)
+                        loss_gripper_state_smooth = self._masked_temporal_mean(per_step_smooth, smooth_mask)
+                        result["loss_gripper_state_smooth"] = loss_gripper_state_smooth
+                        total = (
+                            self.lambda_gripper_state_smooth * loss_gripper_state_smooth
+                            if total is None
+                            else total + self.lambda_gripper_state_smooth * loss_gripper_state_smooth
+                        )
+
+                    if self.lambda_gripper_state_margin > 0.0:
+                        closed_target = target_closed >= 0.5
+                        closed_penalty = F.relu(self.gripper_state_closed_margin - closed_probs).pow(2)
+                        open_penalty = F.relu(closed_probs - self.gripper_state_open_margin).pow(2)
+                        per_step_margin = torch.where(closed_target, closed_penalty, open_penalty)
+                        loss_gripper_state_margin = self._masked_temporal_mean(
+                            per_step_margin,
+                            temporal_loss_mask,
+                        )
+                        result["loss_gripper_state_margin"] = loss_gripper_state_margin
+                        total = (
+                            self.lambda_gripper_state_margin * loss_gripper_state_margin
+                            if total is None
+                            else total + self.lambda_gripper_state_margin * loss_gripper_state_margin
+                        )
 
             if total is not None:
                 result["loss"] = total
