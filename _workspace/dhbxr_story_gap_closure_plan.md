@@ -803,3 +803,33 @@ Story implication:
 - The next technical move should be a post-contact transport/release module
   from the contact-close checkpoint, with progress judged on bowl lift,
   movement toward the plate, no IK regression, and learned reopen stability.
+
+2026-04-26 post-contact affordance update:
+
+- The post-contact branch from the contact-close checkpoint
+  (`configs/libero_dhbxr_qwen_fresh_actionres_commanded_postcontact_fromcontactgrip.yaml`,
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_postcontact_fromcontactgrip800`)
+  preserves the corrected reach gate at `5/5`, average dynamic bowl XY about
+  `37.4 mm`, and `0` IK failures.
+- It adds a real learned reopen event. The best trace closes at step `111` and
+  reopens at step `201`, which is a useful progression beyond the prior
+  no-reopen branch.
+- It still fails object-level manipulation. The bowl-plate XY distance only
+  improves to about `105 mm`, and the best trace has `76` late IK failures.
+- The root cause is now clearer: our previous center-contact gate was the
+  wrong physical grasp proxy. A reusable demo event-geometry probe shows that
+  task `0` demos physically close at about `[-1.5, -49.9, +26.3] mm`
+  EE-minus-bowl, with `52.1 mm` lateral offset. The current learned close is
+  near bowl center, about `[4.5, -5.3, 19.6] mm`.
+
+Story implication:
+
+- This is a stronger and more honest narrative. DHB-XR did not simply fail
+  because of generic instability; it exposed the difference between object
+  center reaching and task affordance grasping.
+- The next claim gap is affordance-relative action generalization: learn the
+  side-grasp invariant/relative event geometry from minimal demos, then adapt
+  it across offsets without deployment-time object gates.
+- For the paper story, this supports the broader thesis better than another
+  threshold sweep. DHB-XR should encode the reusable geometric relation needed
+  for grasping, not just minimize distance to the object's center.

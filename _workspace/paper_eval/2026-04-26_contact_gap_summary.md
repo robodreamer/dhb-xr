@@ -198,13 +198,65 @@ Final bowl-plate XY remains about `116.8 mm` in the best trace. The next
 branch should focus on post-contact grasp/transport/release from this
 contact-close checkpoint.
 
+## Post-Contact and Grasp-Affordance Update
+
+The post-contact closed-residual branch confirms that the contact-close
+checkpoint can be improved without damaging reach:
+
+- config:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_postcontact_fromcontactgrip.yaml`
+- run:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_postcontact_fromcontactgrip800`
+- checkpoints:
+  `steps_250_pytorch_model.pt`, `steps_500_pytorch_model.pt`
+- corrected 5-case reach gate:
+  both checkpoints get `5/5`, average dynamic bowl XY about `37.4 mm`, and
+  `0` IK failures
+
+The best no-gate full-task diagnostic at `steps_500`, threshold `0.55`,
+achieves a stronger learned sequence than the previous branch: close at step
+`111`, reopen at step `201`, close-time EE-bowl offset `6.9 mm` XY /
+`19.6 mm` Z, and minimum EE-bowl `20.7 mm` 3D. However, the object-level
+metric still fails: bowl-plate XY only improves from roughly `123 mm` at close
+to `105 mm` at best, with `76` late IK failures. The gripper is contacting and
+pushing/sliding the bowl, not forming a reliable lift/transport grasp.
+
+The new demo event-geometry probe found the likely conceptual error in the
+previous contact gate. Across all 50 demos for task `0`, the successful bowl
+grasp is not a center grasp:
+
+- probe script:
+  `scripts/libero_demo_event_geometry_probe.py`
+- probe artifact:
+  `_workspace/paper_eval/2026-04-26_demo_event_geometry_task0_bowl_plate.json`
+- demo close command mean EE-minus-bowl:
+  `[11.4, -49.9, 44.2] mm`, XY mean `54.6 mm`
+- demo physical close mean EE-minus-bowl:
+  `[-1.5, -49.9, 26.3] mm`, XY mean `52.1 mm`
+
+This explains the current failure. The policy closes near bowl center
+(`[4.5, -5.3, 19.6] mm` in the best post-contact trace), while the demo
+grasps from the side, about `50 mm` in negative local/world Y relative to the
+bowl. Optimizing for `<=20 mm` bowl-center close made the contact metric look
+better while making the physical grasp worse.
+
+Diagnostic Y-bias runs support the interpretation but are not the final policy
+path. A task-agnostic `-0.3 mm/step` Y bias moved the close vector toward the
+demo side-grasp direction and removed IK failures, but still did not transport
+the bowl. A stronger `-0.5 mm/step` bias matched the side offset better but
+closed high/early and still failed. The durable fix is to learn or supervise a
+grasp-affordance relative pose, not to deploy a constant bias or an
+object-distance gate.
+
 ## Next Claim Gate
 
 Do not call a new branch promising unless it passes all of these checks:
 
 1. Corrected 5-case reach gate remains `5/5` with `0` IK failures.
-2. Full-task close occurs before step `120` with dynamic bowl XY `<=20 mm`.
-   The current contact-center gripper branch now passes this gate.
+2. Full-task close occurs near the demo grasp affordance, not the bowl center.
+   For task `0`, the physical close target is roughly `[-1.5, -49.9,
+   +26.3] mm` EE-minus-bowl with about `52 mm` lateral offset.
 3. Object lift/transport after close moves the bowl toward the plate rather
    than pushing/sliding it away from a graspable pose.
-4. A learned reopen event occurs near the plate without object-specific gates.
+4. A learned reopen event occurs near the plate without object-specific gates;
+   for task `0`, demo open occurs when bowl-plate XY is about `19-22 mm`.

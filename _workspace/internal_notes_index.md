@@ -119,6 +119,14 @@ Latest active result to preserve:
   failures. It still fails full pick-place because the bowl is pushed/slid
   rather than lifted and transported. The active remaining gap is
   post-contact transport/release from this contact-close checkpoint.
+- Latest root cause:
+  the task `0` bowl grasp is a side-grasp affordance, not a center-contact
+  event. `scripts/libero_demo_event_geometry_probe.py` reports physical close
+  over 50 demos at mean EE-minus-bowl `[-1.5, -49.9, +26.3] mm` with
+  `52.1 mm` lateral offset. The current post-contact branch closes near bowl
+  center (`[4.5, -5.3, 19.6] mm` in the best trace), which explains why it
+  pushes/slides the bowl instead of lifting it. Replace center-close gates with
+  affordance-relative grasp/release diagnostics and offline supervision.
 
 Historical diagnostics were moved to:
 

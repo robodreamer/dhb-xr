@@ -1231,3 +1231,67 @@ Next unattended target:
 5. If this staged closed residual does not improve object transport, stop
    residual sweeps and change the data distribution with rollout/contact
    states, because demo-only post-contact chunks are then the limiting factor.
+
+## 2026-04-26 Late Root Cause: Center Contact Is the Wrong Grasp Proxy
+
+The post-contact branch was trained and evaluated from the contact-close
+checkpoint:
+
+- config:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_postcontact_fromcontactgrip.yaml`
+- run:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_postcontact_fromcontactgrip800`
+- trainable scope:
+  `0.267M` parameters, only `action_closed_residual_adapter`
+- corrected reach gate:
+  `5/5`, average bowl XY about `37.4 mm`, `0` IK failures for both
+  `steps_250` and `steps_500`
+
+The best full-task trace at `steps_500` improves learned sequencing but not
+object success:
+
+- close step:
+  `111`
+- reopen step:
+  `201`
+- close EE-bowl offset:
+  `[4.5, -5.3, 19.6] mm`
+- minimum EE-bowl 3D:
+  `20.7 mm`
+- best bowl-plate XY:
+  about `105 mm`
+- IK failures:
+  `76`
+
+The important new finding is that the previous center-contact gate was wrong
+for this bowl task. The demo event-geometry probe shows that successful demos
+close from a side grasp:
+
+- script:
+  `scripts/libero_demo_event_geometry_probe.py`
+- artifact:
+  `_workspace/paper_eval/2026-04-26_demo_event_geometry_task0_bowl_plate.json`
+- physical close mean over 50 demos:
+  `[-1.5, -49.9, +26.3] mm` EE-minus-bowl, `52.1 mm` XY
+- open command/physical open occurs when bowl-plate XY is about `19-22 mm`
+
+Interpretation: the current model did what we asked it to do in the wrong
+metric. It centered the EE over the bowl, which improves EE-bowl distance but
+causes pushing/sliding rather than side grasp/lift. The remaining breakthrough
+path is now better defined: learn an affordance-relative grasp pose and
+release pose, not object-center contact.
+
+Next unattended target:
+
+1. Stop using `<=20 mm` bowl-center close as a success gate for bowl grasp.
+2. Add an affordance-relative grasp metric to diagnostics: close vector error
+   to the demo event mean and bowl-plate XY at reopen.
+3. Regenerate or augment training labels with object-relative event geometry
+   from simulator states, keeping object geometry as offline supervision or
+   diagnostics rather than deployment-time gates.
+4. Train the next residual/contact branch to preserve the demo side-grasp
+   offset around close, then transport until bowl-plate XY reaches the demo
+   release band.
+5. Keep the current post-contact branch as a positive partial result:
+   reach preserved, learned close and learned reopen present, but physical
+   grasp affordance still wrong.

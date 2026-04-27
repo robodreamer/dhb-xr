@@ -1,0 +1,4379 @@
+{
+  "task_suite_name": "libero_spatial",
+  "task_id": 0,
+  "task_name": "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate",
+  "hdf5_path": "/home/andypark/Projects/data/libero/libero_spatial/pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate_demo.hdf5",
+  "object_token": "bowl",
+  "target_token": "plate",
+  "gripper_qpos_threshold": 0.015,
+  "events": [
+    {
+      "demo": "demo_0",
+      "event": "close_cmd",
+      "step": 36,
+      "episode_len": 98,
+      "gripper_qpos": 0.03930527634163253,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.010622728628744894,
+        -0.030092481137100335,
+        0.046008460777226756
+      ],
+      "object_minus_target_m": [
+        -0.13526733122700021,
+        0.009455144473392685,
+        -0.004095519690824001
+      ],
+      "ee_object_xy_m": 0.03191237666653325,
+      "object_target_xy_m": 0.13559738439323862
+    },
+    {
+      "demo": "demo_0",
+      "event": "open_cmd",
+      "step": 85,
+      "episode_len": 98,
+      "gripper_qpos": 0.0064014930616790155,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.028775864492784547,
+        -0.038952030293528145,
+        0.03035352230852717
+      ],
+      "object_minus_target_m": [
+        0.003150971724001028,
+        -0.0018561672061675194,
+        0.003964983973128167
+      ],
+      "ee_object_xy_m": 0.04842841150910313,
+      "object_target_xy_m": 0.003657045187402768
+    },
+    {
+      "demo": "demo_0",
+      "event": "close_phys",
+      "step": 43,
+      "episode_len": 98,
+      "gripper_qpos": 0.011652087161005168,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.004163494347871929,
+        -0.03700315559403683,
+        0.029727637330968282
+      ],
+      "object_minus_target_m": [
+        -0.13543664980901962,
+        0.015063821219611057,
+        -0.003437747724227447
+      ],
+      "ee_object_xy_m": 0.03723665142170091,
+      "object_target_xy_m": 0.1362718049386131
+    },
+    {
+      "demo": "demo_0",
+      "event": "open_phys",
+      "step": 89,
+      "episode_len": 98,
+      "gripper_qpos": 0.015506447539266383,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.02818093430409519,
+        -0.03911360358362451,
+        0.04623889047733665
+      ],
+      "object_minus_target_m": [
+        -0.001189563058701687,
+        -0.000939407238833373,
+        0.003736215310681912
+      ],
+      "ee_object_xy_m": 0.0482082881209098,
+      "object_target_xy_m": 0.0015157658892455178
+    },
+    {
+      "demo": "demo_1",
+      "event": "close_cmd",
+      "step": 35,
+      "episode_len": 84,
+      "gripper_qpos": 0.039242733950494,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.017401483607711897,
+        -0.043254613083980875,
+        0.025997001350913873
+      ],
+      "object_minus_target_m": [
+        -0.12978531222888132,
+        -0.0017799634367929307,
+        -0.004095519690824112
+      ],
+      "ee_object_xy_m": 0.04662374057059725,
+      "object_target_xy_m": 0.1297975174654143
+    },
+    {
+      "demo": "demo_1",
+      "event": "open_cmd",
+      "step": 73,
+      "episode_len": 84,
+      "gripper_qpos": 0.008090389902812781,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.013895042728932591,
+        -0.0489664655756277,
+        0.029233905391007342
+      ],
+      "object_minus_target_m": [
+        0.0038106082017734383,
+        -0.007169335173605629,
+        0.004516745480353523
+      ],
+      "ee_object_xy_m": 0.05089977370684466,
+      "object_target_xy_m": 0.008119119515004188
+    },
+    {
+      "demo": "demo_1",
+      "event": "close_phys",
+      "step": 42,
+      "episode_len": 84,
+      "gripper_qpos": 0.010788387748227213,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.02405733089444865,
+        -0.04556716687437709,
+        0.028147115335033
+      ],
+      "object_minus_target_m": [
+        -0.13310688377726207,
+        -0.0038280424098437738,
+        -0.0027245410128384773
+      ],
+      "ee_object_xy_m": 0.05152787465753194,
+      "object_target_xy_m": 0.1331619180456076
+    },
+    {
+      "demo": "demo_1",
+      "event": "open_phys",
+      "step": 77,
+      "episode_len": 84,
+      "gripper_qpos": 0.01611727727913283,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.017752220962508267,
+        -0.0500874893279471,
+        0.03753546287413445
+      ],
+      "object_minus_target_m": [
+        0.0058875482345728675,
+        -0.006362447029817114,
+        0.0038976433142906552
+      ],
+      "ee_object_xy_m": 0.053140360708965204,
+      "object_target_xy_m": 0.008668561381316435
+    },
+    {
+      "demo": "demo_2",
+      "event": "close_cmd",
+      "step": 39,
+      "episode_len": 90,
+      "gripper_qpos": 0.03924100625303117,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.012257142164985177,
+        -0.05445126953423257,
+        0.01989230222332017
+      ],
+      "object_minus_target_m": [
+        -0.1286307189321526,
+        -0.006158376715423991,
+        -0.003851120837703337
+      ],
+      "ee_object_xy_m": 0.05581378224007312,
+      "object_target_xy_m": 0.1287780550279104
+    },
+    {
+      "demo": "demo_2",
+      "event": "open_cmd",
+      "step": 83,
+      "episode_len": 90,
+      "gripper_qpos": 0.007767247673269998,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.014219373273640597,
+        -0.04330828569194173,
+        0.020894657309634135
+      ],
+      "object_minus_target_m": [
+        -0.005922430221611305,
+        0.009576204407633626,
+        0.004514898904458442
+      ],
+      "ee_object_xy_m": 0.04558287162816719,
+      "object_target_xy_m": 0.01125961236395981
+    },
+    {
+      "demo": "demo_2",
+      "event": "close_phys",
+      "step": 46,
+      "episode_len": 90,
+      "gripper_qpos": 0.010656464573131241,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.012580997950990484,
+        -0.05267244700541385,
+        0.022203322024855532
+      ],
+      "object_minus_target_m": [
+        -0.12895566150516544,
+        -0.00540776887853095,
+        -0.0014506425474209994
+      ],
+      "ee_object_xy_m": 0.054154115106619154,
+      "object_target_xy_m": 0.12906899937040814
+    },
+    {
+      "demo": "demo_2",
+      "event": "open_phys",
+      "step": 87,
+      "episode_len": 90,
+      "gripper_qpos": 0.015738660721267044,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.01372661350452755,
+        -0.04317695546590966,
+        0.037653494972119006
+      ],
+      "object_minus_target_m": [
+        -0.005207621727956406,
+        0.008796451625182,
+        0.003963636227503731
+      ],
+      "ee_object_xy_m": 0.045306394709884214,
+      "object_target_xy_m": 0.010222371801869207
+    },
+    {
+      "demo": "demo_3",
+      "event": "close_cmd",
+      "step": 40,
+      "episode_len": 97,
+      "gripper_qpos": 0.039290738425645795,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.009960769799365492,
+        -0.05666244369928125,
+        0.03412031278664163
+      ],
+      "object_minus_target_m": [
+        -0.12002825665224351,
+        -0.009645036292673465,
+        -0.004095519690824001
+      ],
+      "ee_object_xy_m": 0.05753129114638545,
+      "object_target_xy_m": 0.12041515319951981
+    },
+    {
+      "demo": "demo_3",
+      "event": "open_cmd",
+      "step": 84,
+      "episode_len": 97,
+      "gripper_qpos": 0.00973152958452496,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.017491776677535154,
+        -0.0536207319552032,
+        0.02417503787878661
+      ],
+      "object_minus_target_m": [
+        -0.0071673023361535845,
+        0.006784747436809124,
+        0.012036556139380372
+      ],
+      "ee_object_xy_m": 0.05640164134800079,
+      "object_target_xy_m": 0.009869296862447731
+    },
+    {
+      "demo": "demo_3",
+      "event": "close_phys",
+      "step": 47,
+      "episode_len": 97,
+      "gripper_qpos": 0.01068870211120915,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.01872053832208726,
+        -0.048291731524009146,
+        0.034222268710725756
+      ],
+      "object_minus_target_m": [
+        -0.12330415686310345,
+        -0.016436874057910417,
+        -0.004131647196582433
+      ],
+      "ee_object_xy_m": 0.05179333826522207,
+      "object_target_xy_m": 0.12439487902850514
+    },
+    {
+      "demo": "demo_3",
+      "event": "open_phys",
+      "step": 88,
+      "episode_len": 97,
+      "gripper_qpos": 0.016065494872147087,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.013212170413930184,
+        -0.052568061048387266,
+        0.06111873197880768
+      ],
+      "object_minus_target_m": [
+        -0.008143132625056039,
+        0.0029924456164550084,
+        0.004508958184224587
+      ],
+      "ee_object_xy_m": 0.05420297491313279,
+      "object_target_xy_m": 0.008675559907965183
+    },
+    {
+      "demo": "demo_4",
+      "event": "close_cmd",
+      "step": 50,
+      "episode_len": 105,
+      "gripper_qpos": 0.03943482958708077,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.011379259150942254,
+        -0.04976424428118201,
+        0.024550723102415684
+      ],
+      "object_minus_target_m": [
+        -0.12290881860315256,
+        0.001722229556243876,
+        -0.004095519690824112
+      ],
+      "ee_object_xy_m": 0.05104867821698677,
+      "object_target_xy_m": 0.12292088416972545
+    },
+    {
+      "demo": "demo_4",
+      "event": "open_cmd",
+      "step": 92,
+      "episode_len": 105,
+      "gripper_qpos": 0.005097655098528757,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.02084211226601706,
+        -0.046443472701927446,
+        0.020843759468551548
+      ],
+      "object_minus_target_m": [
+        0.00014150066158707952,
+        -0.0014600836158516761,
+        0.004851827101352124
+      ],
+      "ee_object_xy_m": 0.050905695165903965,
+      "object_target_xy_m": 0.0014669241979421044
+    },
+    {
+      "demo": "demo_4",
+      "event": "close_phys",
+      "step": 57,
+      "episode_len": 105,
+      "gripper_qpos": 0.010817575901592004,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.017704899040919132,
+        -0.04790746307413116,
+        0.027232541490111783
+      ],
+      "object_minus_target_m": [
+        -0.12257591532796694,
+        -0.0009152431419725271,
+        -0.004048879493706692
+      ],
+      "ee_object_xy_m": 0.05107434256305586,
+      "object_target_xy_m": 0.1225793322240656
+    },
+    {
+      "demo": "demo_4",
+      "event": "open_phys",
+      "step": 96,
+      "episode_len": 105,
+      "gripper_qpos": 0.015426171454876405,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.015424807609139064,
+        -0.04383201756972452,
+        0.05005871047978905
+      ],
+      "object_minus_target_m": [
+        -0.004193690280249643,
+        -0.0026807181628115406,
+        0.003695070682828816
+      ],
+      "ee_object_xy_m": 0.046466874803580166,
+      "object_target_xy_m": 0.004977277170812171
+    },
+    {
+      "demo": "demo_5",
+      "event": "close_cmd",
+      "step": 38,
+      "episode_len": 134,
+      "gripper_qpos": 0.039332830095063845,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.01120093714778242,
+        -0.0549802763281875,
+        0.040615433657410716
+      ],
+      "object_minus_target_m": [
+        -0.13059433290982247,
+        -0.003224275967214474,
+        -0.004095519690824001
+      ],
+      "ee_object_xy_m": 0.05610964068778579,
+      "object_target_xy_m": 0.1306341293218365
+    },
+    {
+      "demo": "demo_5",
+      "event": "open_cmd",
+      "step": 89,
+      "episode_len": 134,
+      "gripper_qpos": 0.005924456539368128,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.028115927528259074,
+        -0.040066540254946714,
+        0.022229170631230755
+      ],
+      "object_minus_target_m": [
+        0.030310956297376124,
+        -0.003389364815717083,
+        0.01996602274604864
+      ],
+      "ee_object_xy_m": 0.04894724740754665,
+      "object_target_xy_m": 0.030499866647503007
+    },
+    {
+      "demo": "demo_5",
+      "event": "close_phys",
+      "step": 45,
+      "episode_len": 134,
+      "gripper_qpos": 0.010816133666499611,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.0008164811367987607,
+        -0.04989836001654771,
+        0.028685386699774162
+      ],
+      "object_minus_target_m": [
+        -0.1306157722580321,
+        -0.0029433188874027627,
+        -0.004153049290387512
+      ],
+      "ee_object_xy_m": 0.04990503956303166,
+      "object_target_xy_m": 0.13064893068309072
+    },
+    {
+      "demo": "demo_5",
+      "event": "open_phys",
+      "step": 93,
+      "episode_len": 134,
+      "gripper_qpos": 0.015410329751458736,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.04055186592815992,
+        -0.03942823240725252,
+        0.034578196853453425
+      ],
+      "object_minus_target_m": [
+        0.0281373261889602,
+        -0.012531912069214002,
+        0.008351669087105718
+      ],
+      "ee_object_xy_m": 0.056560050751531116,
+      "object_target_xy_m": 0.030801914634880363
+    },
+    {
+      "demo": "demo_6",
+      "event": "close_cmd",
+      "step": 32,
+      "episode_len": 92,
+      "gripper_qpos": 0.03927433992149824,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.0216599319442113,
+        -0.04568571006780511,
+        0.03961824262906943
+      ],
+      "object_minus_target_m": [
+        -0.11720066826290021,
+        0.00549476677801472,
+        -0.004095519690824112
+      ],
+      "ee_object_xy_m": 0.050560228996983536,
+      "object_target_xy_m": 0.11732940425662766
+    },
+    {
+      "demo": "demo_6",
+      "event": "open_cmd",
+      "step": 78,
+      "episode_len": 92,
+      "gripper_qpos": 0.006346879617697384,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.0002143135725818507,
+        -0.048311290568225834,
+        0.020748600155019004
+      ],
+      "object_minus_target_m": [
+        0.0031385581917770106,
+        -0.004618474375351622,
+        0.00497097945749958
+      ],
+      "ee_object_xy_m": 0.04831176592378858,
+      "object_target_xy_m": 0.005583981830105658
+    },
+    {
+      "demo": "demo_6",
+      "event": "close_phys",
+      "step": 39,
+      "episode_len": 92,
+      "gripper_qpos": 0.010719444908212373,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.0015070555675205655,
+        -0.04572514792371882,
+        0.023896069392619235
+      ],
+      "object_minus_target_m": [
+        -0.11720066826290021,
+        0.00549476677801472,
+        -0.004095519690824112
+      ],
+      "ee_object_xy_m": 0.04574997671179257,
+      "object_target_xy_m": 0.11732940425662766
+    },
+    {
+      "demo": "demo_6",
+      "event": "open_phys",
+      "step": 82,
+      "episode_len": 92,
+      "gripper_qpos": 0.01554679277965514,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.0011318132542200363,
+        -0.046585987143984514,
+        0.032944588169047107
+      ],
+      "object_minus_target_m": [
+        0.00038777241854761474,
+        -0.005767920676245625,
+        0.003611712749337359
+      ],
+      "ee_object_xy_m": 0.046599733898617046,
+      "object_target_xy_m": 0.005780940786416001
+    },
+    {
+      "demo": "demo_7",
+      "event": "close_cmd",
+      "step": 33,
+      "episode_len": 92,
+      "gripper_qpos": 0.039277549349884,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.020857832797939985,
+        -0.056521849896730036,
+        0.05709688530399393
+      ],
+      "object_minus_target_m": [
+        -0.13333131669124396,
+        0.016535862212509078,
+        -0.004095519690824112
+      ],
+      "ee_object_xy_m": 0.060247561816021256,
+      "object_target_xy_m": 0.1343527995604553
+    },
+    {
+      "demo": "demo_7",
+      "event": "open_cmd",
+      "step": 78,
+      "episode_len": 92,
+      "gripper_qpos": 0.006346584665063258,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.026123854391080614,
+        -0.03971846302540627,
+        0.023648394111313253
+      ],
+      "object_minus_target_m": [
+        -0.008605729736659185,
+        0.0012492384873983853,
+        0.004854108988126771
+      ],
+      "ee_object_xy_m": 0.04753958427823014,
+      "object_target_xy_m": 0.008695928995732289
+    },
+    {
+      "demo": "demo_7",
+      "event": "close_phys",
+      "step": 40,
+      "episode_len": 92,
+      "gripper_qpos": 0.01077275453595333,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.005458330608191349,
+        -0.05694089730430121,
+        0.018114647011251428
+      ],
+      "object_minus_target_m": [
+        -0.13441272167279528,
+        0.01606747988541324,
+        -0.0012834298130626198
+      ],
+      "ee_object_xy_m": 0.05720191569211031,
+      "object_target_xy_m": 0.13536965560034675
+    },
+    {
+      "demo": "demo_7",
+      "event": "open_phys",
+      "step": 82,
+      "episode_len": 92,
+      "gripper_qpos": 0.015491017065326412,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.02701580626566142,
+        -0.03874679233443437,
+        0.04620542400711691
+      ],
+      "object_minus_target_m": [
+        -0.008911616897652005,
+        -0.0011362108266465276,
+        0.0037412855545326806
+      ],
+      "ee_object_xy_m": 0.04723523795210026,
+      "object_target_xy_m": 0.008983757052208477
+    },
+    {
+      "demo": "demo_8",
+      "event": "close_cmd",
+      "step": 31,
+      "episode_len": 79,
+      "gripper_qpos": 0.03934339879487973,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.02403249625004186,
+        -0.05903370369506075,
+        0.053507636071865705
+      ],
+      "object_minus_target_m": [
+        -0.11796561445602882,
+        -0.009696409009392615,
+        -0.004095519690824001
+      ],
+      "ee_object_xy_m": 0.0637380502366091,
+      "object_target_xy_m": 0.11836345103817253
+    },
+    {
+      "demo": "demo_8",
+      "event": "open_cmd",
+      "step": 72,
+      "episode_len": 79,
+      "gripper_qpos": 0.00850453494450954,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.014597870350347208,
+        -0.04865478976896778,
+        0.026878185344122785
+      ],
+      "object_minus_target_m": [
+        -0.0036471929152172705,
+        0.0044640317554955344,
+        0.006997529851321405
+      ],
+      "ee_object_xy_m": 0.05079750374012485,
+      "object_target_xy_m": 0.005764511746443371
+    },
+    {
+      "demo": "demo_8",
+      "event": "close_phys",
+      "step": 38,
+      "episode_len": 79,
+      "gripper_qpos": 0.010852202944821152,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.006326175225343199,
+        -0.060094718475827036,
+        0.025496870224791524
+      ],
+      "object_minus_target_m": [
+        -0.11715798446750829,
+        -0.00959453826529394,
+        -0.003778012603312564
+      ],
+      "ee_object_xy_m": 0.06042677950768726,
+      "object_target_xy_m": 0.11755019561452504
+    },
+    {
+      "demo": "demo_8",
+      "event": "open_phys",
+      "step": 76,
+      "episode_len": 79,
+      "gripper_qpos": 0.015938848981210296,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.018593269923274744,
+        -0.0478344210296249,
+        0.03903294226397802
+      ],
+      "object_minus_target_m": [
+        -0.005395542771692158,
+        0.004498978214509758,
+        0.003885445991342662
+      ],
+      "ee_object_xy_m": 0.051320965712651725,
+      "object_target_xy_m": 0.007025146744075379
+    },
+    {
+      "demo": "demo_9",
+      "event": "close_cmd",
+      "step": 36,
+      "episode_len": 89,
+      "gripper_qpos": 0.03929040067954335,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.030578520764322874,
+        -0.04148691923445627,
+        0.06264403545080433
+      ],
+      "object_minus_target_m": [
+        -0.13368880965327357,
+        -0.005284518579791814,
+        -0.004095519690824112
+      ],
+      "ee_object_xy_m": 0.05153843613945249,
+      "object_target_xy_m": 0.13379321344197312
+    },
+    {
+      "demo": "demo_9",
+      "event": "open_cmd",
+      "step": 78,
+      "episode_len": 89,
+      "gripper_qpos": 0.0058993476096162465,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.015282129274561324,
+        -0.04770648393632537,
+        0.04708211949990604
+      ],
+      "object_minus_target_m": [
+        0.0035070561637865066,
+        0.0020559562373876072,
+        0.004911290409014724
+      ],
+      "ee_object_xy_m": 0.05009443167390239,
+      "object_target_xy_m": 0.0040652673941582165
+    },
+    {
+      "demo": "demo_9",
+      "event": "close_phys",
+      "step": 43,
+      "episode_len": 89,
+      "gripper_qpos": 0.010834209728363626,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.016465401305099915,
+        -0.04211618584605825,
+        0.04851918538408251
+      ],
+      "object_minus_target_m": [
+        -0.13368880965327357,
+        -0.005284518579791814,
+        -0.004095519690824112
+      ],
+      "ee_object_xy_m": 0.04522037760078639,
+      "object_target_xy_m": 0.13379321344197312
+    },
+    {
+      "demo": "demo_9",
+      "event": "open_phys",
+      "step": 82,
+      "episode_len": 89,
+      "gripper_qpos": 0.0164475283161791,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.017285972696111235,
+        -0.048807076039875164,
+        0.0523949015179489
+      ],
+      "object_minus_target_m": [
+        0.0026520517911322733,
+        0.004256480043841548,
+        0.004248634142256513
+      ],
+      "ee_object_xy_m": 0.051777751241366785,
+      "object_target_xy_m": 0.005015077373926473
+    },
+    {
+      "demo": "demo_10",
+      "event": "close_cmd",
+      "step": 43,
+      "episode_len": 93,
+      "gripper_qpos": 0.03936095711627032,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.001227796270393551,
+        -0.047136138162774815,
+        0.04843957455732739
+      ],
+      "object_minus_target_m": [
+        -0.11224206381754079,
+        0.008726433069483064,
+        -0.004095519690824112
+      ],
+      "ee_object_xy_m": 0.04715212619364888,
+      "object_target_xy_m": 0.11258077777372595
+    },
+    {
+      "demo": "demo_10",
+      "event": "open_cmd",
+      "step": 84,
+      "episode_len": 93,
+      "gripper_qpos": 0.010034529873675941,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.008918999191467873,
+        -0.050063723341200544,
+        0.022426042268373858
+      ],
+      "object_minus_target_m": [
+        -0.006432481930827558,
+        0.001670187775229287,
+        0.007995124955666677
+      ],
+      "ee_object_xy_m": 0.050851990534901116,
+      "object_target_xy_m": 0.006645776929370138
+    },
+    {
+      "demo": "demo_10",
+      "event": "close_phys",
+      "step": 50,
+      "episode_len": 93,
+      "gripper_qpos": 0.010814374575493706,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.005847578930101099,
+        -0.04560993600340371,
+        0.03020350640243674
+      ],
+      "object_minus_target_m": [
+        -0.11224206381754079,
+        0.008726433069483064,
+        -0.004095519690824112
+      ],
+      "ee_object_xy_m": 0.04598326262433261,
+      "object_target_xy_m": 0.11258077777372595
+    },
+    {
+      "demo": "demo_10",
+      "event": "open_phys",
+      "step": 88,
+      "episode_len": 93,
+      "gripper_qpos": 0.016122978236153197,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.014237182423029245,
+        -0.05317433005156877,
+        0.04363742132610915
+      ],
+      "object_minus_target_m": [
+        -0.0064119480420992275,
+        0.0009980007781267286,
+        0.0039891091782351396
+      ],
+      "ee_object_xy_m": 0.055047313647259684,
+      "object_target_xy_m": 0.006489151196244519
+    },
+    {
+      "demo": "demo_11",
+      "event": "close_cmd",
+      "step": 39,
+      "episode_len": 128,
+      "gripper_qpos": 0.03933055146726224,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.051806420141481624,
+        -0.05026153273268366,
+        0.07045119765860408
+      ],
+      "object_minus_target_m": [
+        -0.13808020696330597,
+        -0.00775973224839277,
+        -0.004095519690824001
+      ],
+      "ee_object_xy_m": 0.07218120836141734,
+      "object_target_xy_m": 0.13829807301476096
+    },
+    {
+      "demo": "demo_11",
+      "event": "open_cmd",
+      "step": 59,
+      "episode_len": 128,
+      "gripper_qpos": 0.0011616213714192014,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.0458019526921104,
+        -0.05647872364964018,
+        0.14842855163400714
+      ],
+      "object_minus_target_m": [
+        -0.13914469176336103,
+        -0.008510041387726874,
+        -0.0040955197716047165
+      ],
+      "ee_object_xy_m": 0.0727163330724449,
+      "object_target_xy_m": 0.13940468446340523
+    },
+    {
+      "demo": "demo_11",
+      "event": "close_phys",
+      "step": 46,
+      "episode_len": 128,
+      "gripper_qpos": 0.010720595890093235,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.045089754699729895,
+        -0.0583314497746574,
+        0.06144058208099934
+      ],
+      "object_minus_target_m": [
+        -0.13910697974142244,
+        -0.008521593173473646,
+        -0.0012378691594527869
+      ],
+      "ee_object_xy_m": 0.07372682016535904,
+      "object_target_xy_m": 0.13936774864722004
+    },
+    {
+      "demo": "demo_11",
+      "event": "open_phys",
+      "step": 64,
+      "episode_len": 128,
+      "gripper_qpos": 0.019513627748732103,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.012909047175706206,
+        -0.0486634193735378,
+        0.10222978915765446
+      ],
+      "object_minus_target_m": [
+        -0.13914469176284522,
+        -0.008510041390163647,
+        -0.004095519690945237
+      ],
+      "ee_object_xy_m": 0.05034651809320504,
+      "object_target_xy_m": 0.13940468446303914
+    },
+    {
+      "demo": "demo_12",
+      "event": "close_cmd",
+      "step": 39,
+      "episode_len": 86,
+      "gripper_qpos": 0.03930890646115561,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.011933036043921909,
+        -0.04210502462790877,
+        0.04126283660928176
+      ],
+      "object_minus_target_m": [
+        -0.12571926101707478,
+        -6.541430420675676e-05,
+        -0.004095519690824112
+      ],
+      "ee_object_xy_m": 0.043763345943178794,
+      "object_target_xy_m": 0.1257192780352742
+    },
+    {
+      "demo": "demo_12",
+      "event": "open_cmd",
+      "step": 77,
+      "episode_len": 86,
+      "gripper_qpos": 0.008661115935058082,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.016458020488084604,
+        -0.0422788570833752,
+        0.022693801441799333
+      ],
+      "object_minus_target_m": [
+        -0.004492313064749738,
+        0.0011908839283982786,
+        0.004962954315997803
+      ],
+      "ee_object_xy_m": 0.04536924282664058,
+      "object_target_xy_m": 0.004647481167539951
+    },
+    {
+      "demo": "demo_12",
+      "event": "close_phys",
+      "step": 46,
+      "episode_len": 86,
+      "gripper_qpos": 0.010752001956939249,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.0017872891143897313,
+        -0.047999892241056746,
+        0.021840336800342586
+      ],
+      "object_minus_target_m": [
+        -0.1251403239031685,
+        -0.0006514904085398177,
+        -0.003402301228506266
+      ],
+      "ee_object_xy_m": 0.048033155814827276,
+      "object_target_xy_m": 0.1251420197469353
+    },
+    {
+      "demo": "demo_12",
+      "event": "open_phys",
+      "step": 81,
+      "episode_len": 86,
+      "gripper_qpos": 0.01587201002453298,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.017561295684522776,
+        -0.044494237508040935,
+        0.03163432566953417
+      ],
+      "object_minus_target_m": [
+        -0.004412029625595823,
+        0.0011276722742634138,
+        0.004078802614932764
+      ],
+      "ee_object_xy_m": 0.047834467463756664,
+      "object_target_xy_m": 0.004553861018441125
+    },
+    {
+      "demo": "demo_13",
+      "event": "close_cmd",
+      "step": 37,
+      "episode_len": 88,
+      "gripper_qpos": 0.03936612342014852,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.026528028162980007,
+        -0.04713513379117917,
+        0.03379728513036184
+      ],
+      "object_minus_target_m": [
+        -0.13778487422527746,
+        -0.004140364865019758,
+        -0.004211129872150998
+      ],
+      "ee_object_xy_m": 0.05408749500326505,
+      "object_target_xy_m": 0.1378470681098841
+    },
+    {
+      "demo": "demo_13",
+      "event": "open_cmd",
+      "step": 77,
+      "episode_len": 88,
+      "gripper_qpos": 0.0077572143864839665,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.0018961074685644175,
+        -0.04696885967394038,
+        0.016584522570041615
+      ],
+      "object_minus_target_m": [
+        0.004610372961087503,
+        -0.0026662586196258,
+        0.004871726676161647
+      ],
+      "ee_object_xy_m": 0.04700711651019076,
+      "object_target_xy_m": 0.005325830814723241
+    },
+    {
+      "demo": "demo_13",
+      "event": "close_phys",
+      "step": 44,
+      "episode_len": 88,
+      "gripper_qpos": 0.012153954798755742,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.013119178310025355,
+        -0.05362930191990381,
+        0.012065450454165627
+      ],
+      "object_minus_target_m": [
+        -0.13954817145205398,
+        -0.0065315981222812125,
+        -0.0003621741315891214
+      ],
+      "ee_object_xy_m": 0.055210640857958154,
+      "object_target_xy_m": 0.13970094462688087
+    },
+    {
+      "demo": "demo_13",
+      "event": "open_phys",
+      "step": 82,
+      "episode_len": 88,
+      "gripper_qpos": 0.018542325449693545,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.00296843560052526,
+        -0.045892904171146276,
+        0.021588156234242817
+      ],
+      "object_minus_target_m": [
+        0.004485985776326959,
+        -0.002411753813367251,
+        0.0035505272314972913
+      ],
+      "ee_object_xy_m": 0.045988805846384845,
+      "object_target_xy_m": 0.005093193972518548
+    },
+    {
+      "demo": "demo_14",
+      "event": "close_cmd",
+      "step": 43,
+      "episode_len": 112,
+      "gripper_qpos": 0.039337803328440446,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.047343316643208795,
+        -0.06119863848651719,
+        0.011783583499650474
+      ],
+      "object_minus_target_m": [
+        -0.14725288283151491,
+        -0.013499084763307578,
+        -0.0012266586476965546
+      ],
+      "ee_object_xy_m": 0.07737352895779379,
+      "object_target_xy_m": 0.1478703377680555
+    },
+    {
+      "demo": "demo_14",
+      "event": "open_cmd",
+      "step": 47,
+      "episode_len": 112,
+      "gripper_qpos": 0.02700795653675509,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.06478416155509155,
+        -0.06785401838612119,
+        0.013009472000812261
+      ],
+      "object_minus_target_m": [
+        -0.1781802495354521,
+        -0.01574246654354433,
+        -0.00026416252225913706
+      ],
+      "ee_object_xy_m": 0.09381447329458432,
+      "object_target_xy_m": 0.17887433180138115
+    },
+    {
+      "demo": "demo_14",
+      "event": "close_phys",
+      "step": 75,
+      "episode_len": 112,
+      "gripper_qpos": 0.010867356373095126,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.021070868034735873,
+        -0.04558058228786466,
+        0.03406885625871359
+      ],
+      "object_minus_target_m": [
+        -0.17410090523807667,
+        -0.01765897205517683,
+        -0.0026131658198148555
+      ],
+      "ee_object_xy_m": 0.05021524630466384,
+      "object_target_xy_m": 0.17499418418554163
+    },
+    {
+      "demo": "demo_15",
+      "event": "close_cmd",
+      "step": 36,
+      "episode_len": 84,
+      "gripper_qpos": 0.03925648235036532,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.023790244607105285,
+        -0.03809684789185569,
+        0.030796105194833112
+      ],
+      "object_minus_target_m": [
+        -0.1252431540644512,
+        -0.004932000467085279,
+        -0.004095519690824001
+      ],
+      "ee_object_xy_m": 0.044914870118492954,
+      "object_target_xy_m": 0.1253402260593908
+    },
+    {
+      "demo": "demo_15",
+      "event": "open_cmd",
+      "step": 75,
+      "episode_len": 84,
+      "gripper_qpos": 0.009195617431268904,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.01308871072822717,
+        -0.0426539744947273,
+        0.02338080620604821
+      ],
+      "object_minus_target_m": [
+        0.002591392530113243,
+        0.014558943089948068,
+        0.005645184510160051
+      ],
+      "ee_object_xy_m": 0.04461699103171409,
+      "object_target_xy_m": 0.014787769917789271
+    },
+    {
+      "demo": "demo_15",
+      "event": "close_phys",
+      "step": 43,
+      "episode_len": 84,
+      "gripper_qpos": 0.011339153661303995,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.02065477753948987,
+        -0.03449152485976051,
+        0.026617338572755833
+      ],
+      "object_minus_target_m": [
+        -0.12565387115267584,
+        -0.004371607720708964,
+        -0.003600318087603971
+      ],
+      "ee_object_xy_m": 0.04020304866993662,
+      "object_target_xy_m": 0.12572989417683061
+    },
+    {
+      "demo": "demo_15",
+      "event": "open_phys",
+      "step": 79,
+      "episode_len": 84,
+      "gripper_qpos": 0.016033794623241657,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.01752136902663961,
+        -0.04662587359084755,
+        0.027557475502712037
+      ],
+      "object_minus_target_m": [
+        0.0024905012484376238,
+        0.014265900703759632,
+        0.004601283515511256
+      ],
+      "ee_object_xy_m": 0.049809341098607005,
+      "object_target_xy_m": 0.01448166148471918
+    },
+    {
+      "demo": "demo_16",
+      "event": "close_cmd",
+      "step": 36,
+      "episode_len": 89,
+      "gripper_qpos": 0.039321147821380686,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.006150260316405955,
+        -0.058586617353711845,
+        0.0510914908675808
+      ],
+      "object_minus_target_m": [
+        -0.12677471295150497,
+        0.013985169269150333,
+        -0.004095519690824001
+      ],
+      "ee_object_xy_m": 0.05890855145825441,
+      "object_target_xy_m": 0.1275437681873296
+    },
+    {
+      "demo": "demo_16",
+      "event": "open_cmd",
+      "step": 81,
+      "episode_len": 89,
+      "gripper_qpos": 0.007922958921791231,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.022310399555525072,
+        -0.04434073926221446,
+        0.018919868562187303
+      ],
+      "object_minus_target_m": [
+        -0.0024816889190094477,
+        0.0004009785884393491,
+        0.007692614089088057
+      ],
+      "ee_object_xy_m": 0.04963723488115409,
+      "object_target_xy_m": 0.0025138742448899652
+    },
+    {
+      "demo": "demo_16",
+      "event": "close_phys",
+      "step": 43,
+      "episode_len": 89,
+      "gripper_qpos": 0.010783280339148358,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.014241632620377621,
+        -0.058709313663074025,
+        0.020469293261196397
+      ],
+      "object_minus_target_m": [
+        -0.1264791968453955,
+        0.013612705947761983,
+        -0.003857551869482112
+      ],
+      "ee_object_xy_m": 0.060411982341941194,
+      "object_target_xy_m": 0.12720964192181555
+    },
+    {
+      "demo": "demo_16",
+      "event": "open_phys",
+      "step": 85,
+      "episode_len": 89,
+      "gripper_qpos": 0.015832827993413127,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.02413440132364668,
+        -0.04456996402431743,
+        0.03264429289894111
+      ],
+      "object_minus_target_m": [
+        -0.0023652902430494754,
+        -0.0006803870473492402,
+        0.0039877114523041435
+      ],
+      "ee_object_xy_m": 0.050684820413806224,
+      "object_target_xy_m": 0.0024612038656043234
+    },
+    {
+      "demo": "demo_17",
+      "event": "close_cmd",
+      "step": 38,
+      "episode_len": 97,
+      "gripper_qpos": 0.03934977414427581,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.014718407581392368,
+        -0.05498836613303748,
+        0.08553883104848925
+      ],
+      "object_minus_target_m": [
+        -0.14575640988618807,
+        -0.012181933179550436,
+        -0.004095519690824001
+      ],
+      "ee_object_xy_m": 0.056924089204070466,
+      "object_target_xy_m": 0.14626459078977896
+    },
+    {
+      "demo": "demo_17",
+      "event": "open_cmd",
+      "step": 85,
+      "episode_len": 97,
+      "gripper_qpos": 0.009600462206717031,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.027684693585948515,
+        -0.0464554226932658,
+        0.01543955681373077
+      ],
+      "object_minus_target_m": [
+        -0.01919806881854514,
+        0.001050103008434916,
+        -0.00012981731246952677
+      ],
+      "ee_object_xy_m": 0.05407909537481054,
+      "object_target_xy_m": 0.01922676682882276
+    },
+    {
+      "demo": "demo_17",
+      "event": "close_phys",
+      "step": 45,
+      "episode_len": 97,
+      "gripper_qpos": 0.01078814246245551,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.021769333497283452,
+        -0.055313378989314405,
+        0.030515965956389723
+      ],
+      "object_minus_target_m": [
+        -0.14476578734546386,
+        -0.013889888402144196,
+        -0.0031155726072813472
+      ],
+      "ee_object_xy_m": 0.05944302966817452,
+      "object_target_xy_m": 0.14543060952074732
+    },
+    {
+      "demo": "demo_18",
+      "event": "close_cmd",
+      "step": 29,
+      "episode_len": 75,
+      "gripper_qpos": 0.039400207246104525,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.013538333427444448,
+        -0.04650194411470662,
+        0.05376960273155906
+      ],
+      "object_minus_target_m": [
+        -0.11259261322263722,
+        -0.011108649938074228,
+        -0.00409551969082389
+      ],
+      "ee_object_xy_m": 0.048432605530158684,
+      "object_target_xy_m": 0.11313928873626994
+    },
+    {
+      "demo": "demo_18",
+      "event": "open_cmd",
+      "step": 66,
+      "episode_len": 75,
+      "gripper_qpos": 0.00434552029666389,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.015970136660975402,
+        -0.044724074469346176,
+        0.018856282993063855
+      ],
+      "object_minus_target_m": [
+        -0.00918000582921065,
+        0.006579028767958517,
+        0.0039045515034992206
+      ],
+      "ee_object_xy_m": 0.04748987367965778,
+      "object_target_xy_m": 0.011294074842764557
+    },
+    {
+      "demo": "demo_18",
+      "event": "close_phys",
+      "step": 36,
+      "episode_len": 75,
+      "gripper_qpos": 0.014879154653812095,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.008068877857043799,
+        -0.03470118860185359,
+        0.020697789571387126
+      ],
+      "object_minus_target_m": [
+        -0.11257628931632956,
+        -0.010514453552450509,
+        -0.003322516881078985
+      ],
+      "ee_object_xy_m": 0.03562694598549397,
+      "object_target_xy_m": 0.11306624009730126
+    },
+    {
+      "demo": "demo_18",
+      "event": "open_phys",
+      "step": 71,
+      "episode_len": 75,
+      "gripper_qpos": 0.019618004065131357,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.013269393200825756,
+        -0.04607864722771393,
+        0.03931876218504626
+      ],
+      "object_minus_target_m": [
+        -0.008804110443715069,
+        0.006651964396152177,
+        0.003918837286514432
+      ],
+      "ee_object_xy_m": 0.04795120985182991,
+      "object_target_xy_m": 0.011034536285354675
+    },
+    {
+      "demo": "demo_19",
+      "event": "close_cmd",
+      "step": 47,
+      "episode_len": 99,
+      "gripper_qpos": 0.0393035466529569,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.00713720158672148,
+        -0.04080675568282657,
+        0.03551726209060868
+      ],
+      "object_minus_target_m": [
+        -0.14201385616612777,
+        0.02969783293164363,
+        -0.004095519690824001
+      ],
+      "ee_object_xy_m": 0.04142621097623338,
+      "object_target_xy_m": 0.1450858250278415
+    },
+    {
+      "demo": "demo_19",
+      "event": "open_cmd",
+      "step": 86,
+      "episode_len": 99,
+      "gripper_qpos": 0.005807305655435687,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.015837725462593003,
+        -0.04611016593991177,
+        0.02440130155174902
+      ],
+      "object_minus_target_m": [
+        -0.005541716927458806,
+        0.011537614531974744,
+        0.004742116620018222
+      ],
+      "ee_object_xy_m": 0.04875429161453037,
+      "object_target_xy_m": 0.012799499036779457
+    },
+    {
+      "demo": "demo_19",
+      "event": "close_phys",
+      "step": 54,
+      "episode_len": 99,
+      "gripper_qpos": 0.012955202406847718,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.008204039135154995,
+        -0.03615888627323985,
+        0.02637778549706571
+      ],
+      "object_minus_target_m": [
+        -0.1423905164776185,
+        0.02951158069617807,
+        -0.002798348743831003
+      ],
+      "ee_object_xy_m": 0.03707790871465444,
+      "object_target_xy_m": 0.14541661726896957
+    },
+    {
+      "demo": "demo_19",
+      "event": "open_phys",
+      "step": 90,
+      "episode_len": 99,
+      "gripper_qpos": 0.01548111126060687,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.01680085461028455,
+        -0.04984487305526811,
+        0.03271139657283495
+      ],
+      "object_minus_target_m": [
+        -0.00988410869820748,
+        0.009700100079331503,
+        0.004547019728935009
+      ],
+      "ee_object_xy_m": 0.05260019092676102,
+      "object_target_xy_m": 0.0138487380763385
+    },
+    {
+      "demo": "demo_20",
+      "event": "close_cmd",
+      "step": 38,
+      "episode_len": 87,
+      "gripper_qpos": 0.03898486096478565,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.012877833910630722,
+        -0.040964748013124164,
+        0.020047158566729895
+      ],
+      "object_minus_target_m": [
+        -0.11267141156704129,
+        0.022305407698037544,
+        -0.003996302238848171
+      ],
+      "ee_object_xy_m": 0.04294122944221032,
+      "object_target_xy_m": 0.11485807850162424
+    },
+    {
+      "demo": "demo_20",
+      "event": "open_cmd",
+      "step": 78,
+      "episode_len": 87,
+      "gripper_qpos": 0.008013726111916829,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.03357116607258433,
+        -0.03285478158374516,
+        0.01619923822801428
+      ],
+      "object_minus_target_m": [
+        -0.01701083582060753,
+        0.005213379192330364,
+        0.0026158064089305544
+      ],
+      "ee_object_xy_m": 0.0469729695078844,
+      "object_target_xy_m": 0.017791791869249354
+    },
+    {
+      "demo": "demo_20",
+      "event": "close_phys",
+      "step": 45,
+      "episode_len": 87,
+      "gripper_qpos": 0.01197832734714083,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.014120970191241332,
+        -0.05047578000826222,
+        0.016847172835009805
+      ],
+      "object_minus_target_m": [
+        -0.11275278042061188,
+        0.02245892418409623,
+        -1.5130275716535024e-05
+      ],
+      "ee_object_xy_m": 0.05241379748295682,
+      "object_target_xy_m": 0.11496779013308771
+    },
+    {
+      "demo": "demo_20",
+      "event": "open_phys",
+      "step": 82,
+      "episode_len": 87,
+      "gripper_qpos": 0.016043674750686545,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.028634317835886235,
+        -0.03418981532405657,
+        0.025737273125408744
+      ],
+      "object_minus_target_m": [
+        -0.016033098895942358,
+        0.004475637808553923,
+        0.008291611299227841
+      ],
+      "ee_object_xy_m": 0.04459672218694605,
+      "object_target_xy_m": 0.016646068424718954
+    },
+    {
+      "demo": "demo_21",
+      "event": "close_cmd",
+      "step": 38,
+      "episode_len": 121,
+      "gripper_qpos": 0.03931327756333006,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.023742531695385746,
+        -0.04645880466668198,
+        0.058872092266816
+      ],
+      "object_minus_target_m": [
+        -0.11398142647614928,
+        0.00468186756148628,
+        -0.004095519690824001
+      ],
+      "ee_object_xy_m": 0.052174019802611604,
+      "object_target_xy_m": 0.11407754145931233
+    },
+    {
+      "demo": "demo_21",
+      "event": "open_cmd",
+      "step": 106,
+      "episode_len": 121,
+      "gripper_qpos": 0.002959648076383823,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.0036118199163132497,
+        -0.04067251310577988,
+        0.030420502603971444
+      ],
+      "object_minus_target_m": [
+        0.0009957343929319767,
+        -0.009133766210896621,
+        0.022229014824418858
+      ],
+      "ee_object_xy_m": 0.04083256746088486,
+      "object_target_xy_m": 0.009187881811200253
+    },
+    {
+      "demo": "demo_21",
+      "event": "close_phys",
+      "step": 45,
+      "episode_len": 121,
+      "gripper_qpos": 0.010725570890885501,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.0013345194033106134,
+        -0.05633204464390143,
+        0.02671660016402566
+      ],
+      "object_minus_target_m": [
+        -0.11397805740617538,
+        0.00392734643729728,
+        -0.003995357464173344
+      ],
+      "ee_object_xy_m": 0.05634784996608403,
+      "object_target_xy_m": 0.11404569970026911
+    },
+    {
+      "demo": "demo_21",
+      "event": "open_phys",
+      "step": 110,
+      "episode_len": 121,
+      "gripper_qpos": 0.01516894572248994,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.009093951261896147,
+        -0.03909460499898698,
+        0.050366191322680165
+      ],
+      "object_minus_target_m": [
+        -0.004724207407917083,
+        -0.011248388905119144,
+        0.005836224001148027
+      ],
+      "ee_object_xy_m": 0.04013836181984213,
+      "object_target_xy_m": 0.01220017985907692
+    },
+    {
+      "demo": "demo_22",
+      "event": "close_cmd",
+      "step": 42,
+      "episode_len": 96,
+      "gripper_qpos": 0.03936682404950344,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.008212548169516255,
+        -0.04753904892640151,
+        0.03540193011162296
+      ],
+      "object_minus_target_m": [
+        -0.1134409208865455,
+        -0.000319532698154934,
+        -0.004095519690824112
+      ],
+      "ee_object_xy_m": 0.04824320802209801,
+      "object_target_xy_m": 0.11344137090467775
+    },
+    {
+      "demo": "demo_22",
+      "event": "open_cmd",
+      "step": 82,
+      "episode_len": 96,
+      "gripper_qpos": 0.014054613601719447,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.015983499198797393,
+        -0.0478698089617238,
+        0.028596326477907885
+      ],
+      "object_minus_target_m": [
+        -0.009420079912229005,
+        0.004104764010946671,
+        0.008468724400854777
+      ],
+      "ee_object_xy_m": 0.050467720937941,
+      "object_target_xy_m": 0.01027555317918911
+    },
+    {
+      "demo": "demo_22",
+      "event": "close_phys",
+      "step": 49,
+      "episode_len": 96,
+      "gripper_qpos": 0.01086218395713288,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.0035726150855064365,
+        -0.042352069491823324,
+        0.044670191772329004
+      ],
+      "object_minus_target_m": [
+        -0.1134409208865455,
+        -0.000319532698154934,
+        -0.004095519690824112
+      ],
+      "ee_object_xy_m": 0.04250248661889584,
+      "object_target_xy_m": 0.11344137090467775
+    },
+    {
+      "demo": "demo_22",
+      "event": "open_phys",
+      "step": 86,
+      "episode_len": 96,
+      "gripper_qpos": 0.016776107385252922,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.010300911967999704,
+        -0.046710732355123324,
+        0.049387075949922865
+      ],
+      "object_minus_target_m": [
+        -0.01087131271119511,
+        0.0011542695148852034,
+        0.004108371743073547
+      ],
+      "ee_object_xy_m": 0.04783305660863044,
+      "object_target_xy_m": 0.010932418679212104
+    },
+    {
+      "demo": "demo_23",
+      "event": "close_cmd",
+      "step": 34,
+      "episode_len": 85,
+      "gripper_qpos": 0.0392898325939527,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.008111184667662572,
+        -0.040320721829347234,
+        0.04243458978496639
+      ],
+      "object_minus_target_m": [
+        -0.1307471836732872,
+        0.008500623649561223,
+        -0.004095519690824112
+      ],
+      "ee_object_xy_m": 0.0411284807104824,
+      "object_target_xy_m": 0.13102322939436264
+    },
+    {
+      "demo": "demo_23",
+      "event": "open_cmd",
+      "step": 78,
+      "episode_len": 85,
+      "gripper_qpos": 0.012109284852930148,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.035447500348013486,
+        -0.03399446282670049,
+        0.019957205417494905
+      ],
+      "object_minus_target_m": [
+        0.0003448345627449917,
+        -0.006313406980968772,
+        0.0065847960066065525
+      ],
+      "ee_object_xy_m": 0.049113631344040704,
+      "object_target_xy_m": 0.006322817297930469
+    },
+    {
+      "demo": "demo_23",
+      "event": "close_phys",
+      "step": 41,
+      "episode_len": 85,
+      "gripper_qpos": 0.011206792077176505,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.004959475993504783,
+        -0.03824806479809861,
+        0.02866317085829928
+      ],
+      "object_minus_target_m": [
+        -0.13111430544964228,
+        0.011183523126782696,
+        -0.00413339898212417
+      ],
+      "ee_object_xy_m": 0.038568262378926285,
+      "object_target_xy_m": 0.13159039586181576
+    },
+    {
+      "demo": "demo_23",
+      "event": "open_phys",
+      "step": 82,
+      "episode_len": 85,
+      "gripper_qpos": 0.016957632409583638,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.03519657134572266,
+        -0.0361422449195562,
+        0.03190126640322588
+      ],
+      "object_minus_target_m": [
+        0.0007776666726229259,
+        -0.006412419755379567,
+        0.004875295883839725
+      ],
+      "ee_object_xy_m": 0.050448592669367215,
+      "object_target_xy_m": 0.006459403422367313
+    },
+    {
+      "demo": "demo_24",
+      "event": "close_cmd",
+      "step": 34,
+      "episode_len": 100,
+      "gripper_qpos": 0.03918363645865307,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.004886249096137496,
+        -0.07149324244134572,
+        0.024666864030667868
+      ],
+      "object_minus_target_m": [
+        -0.15217035296780412,
+        0.04071813839422711,
+        -0.004095519690824001
+      ],
+      "ee_object_xy_m": 0.07166002473490043,
+      "object_target_xy_m": 0.15752391284067802
+    },
+    {
+      "demo": "demo_24",
+      "event": "open_cmd",
+      "step": 82,
+      "episode_len": 100,
+      "gripper_qpos": 0.0004850446291297266,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.03820929265169988,
+        -0.04719503577788295,
+        0.03097834862954918
+      ],
+      "object_minus_target_m": [
+        0.014822597749557145,
+        -0.004085070862628271,
+        0.00940639575763147
+      ],
+      "ee_object_xy_m": 0.06072331880767798,
+      "object_target_xy_m": 0.015375214079741167
+    },
+    {
+      "demo": "demo_24",
+      "event": "close_phys",
+      "step": 41,
+      "episode_len": 100,
+      "gripper_qpos": 0.010608133007858893,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.006734754399156301,
+        -0.06806186939409856,
+        0.021036501389675055
+      ],
+      "object_minus_target_m": [
+        -0.15449678322499405,
+        0.04163098366033763,
+        0.0001398737705826658
+      ],
+      "ee_object_xy_m": 0.0683942613253209,
+      "object_target_xy_m": 0.16000748366060288
+    },
+    {
+      "demo": "demo_24",
+      "event": "open_phys",
+      "step": 87,
+      "episode_len": 100,
+      "gripper_qpos": 0.019142361775456133,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.03282013814242965,
+        -0.049848932513369526,
+        0.04136255595319538
+      ],
+      "object_minus_target_m": [
+        0.011509840193995327,
+        -0.0036888002777887285,
+        0.033624614544029874
+      ],
+      "ee_object_xy_m": 0.059683142849640845,
+      "object_target_xy_m": 0.012086507716488025
+    },
+    {
+      "demo": "demo_25",
+      "event": "close_cmd",
+      "step": 36,
+      "episode_len": 91,
+      "gripper_qpos": 0.039346852918328394,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.0005476692942733979,
+        -0.06307295833313203,
+        0.04045751849493506
+      ],
+      "object_minus_target_m": [
+        -0.16657913794977713,
+        -0.010807487790394754,
+        -0.004095519690824001
+      ],
+      "ee_object_xy_m": 0.0630753360240665,
+      "object_target_xy_m": 0.16692935928838407
+    },
+    {
+      "demo": "demo_25",
+      "event": "close_phys",
+      "step": 43,
+      "episode_len": 91,
+      "gripper_qpos": 0.010792092439473992,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.0028200548115468044,
+        -0.05662444357605853,
+        0.019722676280804596
+      ],
+      "object_minus_target_m": [
+        -0.16655726229439305,
+        -0.010341736794933443,
+        -0.00443104702605257
+      ],
+      "ee_object_xy_m": 0.05669462337328263,
+      "object_target_xy_m": 0.16687801875303687
+    },
+    {
+      "demo": "demo_26",
+      "event": "close_cmd",
+      "step": 41,
+      "episode_len": 105,
+      "gripper_qpos": 0.03935389810738704,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.02740690211183958,
+        -0.05458783042867729,
+        0.04462804350160354
+      ],
+      "object_minus_target_m": [
+        -0.14750976938213287,
+        0.006489905721963174,
+        -0.004095519690824001
+      ],
+      "ee_object_xy_m": 0.06108166266792337,
+      "object_target_xy_m": 0.14765246675707788
+    },
+    {
+      "demo": "demo_26",
+      "event": "open_cmd",
+      "step": 90,
+      "episode_len": 105,
+      "gripper_qpos": 0.006495645200795514,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.02951431547347704,
+        -0.053519113754285336,
+        0.026900327052469586
+      ],
+      "object_minus_target_m": [
+        -0.00025190774553401907,
+        0.001634315389141966,
+        0.011511078316107537
+      ],
+      "ee_object_xy_m": 0.06111783990711763,
+      "object_target_xy_m": 0.0016536155246750339
+    },
+    {
+      "demo": "demo_26",
+      "event": "close_phys",
+      "step": 48,
+      "episode_len": 105,
+      "gripper_qpos": 0.01076561462321901,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.009781614625941577,
+        -0.05541095834640586,
+        0.033817777017972395
+      ],
+      "object_minus_target_m": [
+        -0.14750976938213287,
+        0.006489905721963174,
+        -0.004095519690824001
+      ],
+      "ee_object_xy_m": 0.056267702010634475,
+      "object_target_xy_m": 0.14765246675707788
+    },
+    {
+      "demo": "demo_26",
+      "event": "open_phys",
+      "step": 94,
+      "episode_len": 105,
+      "gripper_qpos": 0.01556408219187827,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.025874001254037576,
+        -0.049617887969037155,
+        0.06106980973956766
+      ],
+      "object_minus_target_m": [
+        -0.0030213201491253033,
+        -0.003345641527500609,
+        0.004208078954878847
+      ],
+      "ee_object_xy_m": 0.05595890230697757,
+      "object_target_xy_m": 0.004507958814590829
+    },
+    {
+      "demo": "demo_27",
+      "event": "close_cmd",
+      "step": 43,
+      "episode_len": 113,
+      "gripper_qpos": 0.039356347316334334,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.007864401465225733,
+        -0.04219578129496818,
+        0.04849096137217135
+      ],
+      "object_minus_target_m": [
+        -0.1140601054893623,
+        -0.020141971111431234,
+        -0.004095519690824112
+      ],
+      "ee_object_xy_m": 0.04292240405078717,
+      "object_target_xy_m": 0.11582489656588597
+    },
+    {
+      "demo": "demo_27",
+      "event": "open_cmd",
+      "step": 97,
+      "episode_len": 113,
+      "gripper_qpos": 0.003564680463118985,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.018014081589760568,
+        -0.039612273400701586,
+        0.024862139638471947
+      ],
+      "object_minus_target_m": [
+        0.0011490127593467292,
+        -0.011312310102809198,
+        0.004653524559147693
+      ],
+      "ee_object_xy_m": 0.04351596648926094,
+      "object_target_xy_m": 0.01137051406855735
+    },
+    {
+      "demo": "demo_27",
+      "event": "close_phys",
+      "step": 50,
+      "episode_len": 113,
+      "gripper_qpos": 0.01085202606885168,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.005847752560576749,
+        -0.048661777637261955,
+        0.022299247833056368
+      ],
+      "object_minus_target_m": [
+        -0.1140601054893623,
+        -0.020141971111431234,
+        -0.004095519690824112
+      ],
+      "ee_object_xy_m": 0.049011884403969405,
+      "object_target_xy_m": 0.11582489656588597
+    },
+    {
+      "demo": "demo_27",
+      "event": "open_phys",
+      "step": 101,
+      "episode_len": 113,
+      "gripper_qpos": 0.015272777812085369,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.013867759823357848,
+        -0.03778664048211411,
+        0.01999394879816563
+      ],
+      "object_minus_target_m": [
+        0.002613309001008521,
+        -0.00622658695021755,
+        0.003250724220360768
+      ],
+      "ee_object_xy_m": 0.04025102435271533,
+      "object_target_xy_m": 0.006752760101126919
+    },
+    {
+      "demo": "demo_28",
+      "event": "close_cmd",
+      "step": 31,
+      "episode_len": 92,
+      "gripper_qpos": 0.03928480854080755,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.0062227537949193015,
+        -0.04584140314688995,
+        0.03125374296838268
+      ],
+      "object_minus_target_m": [
+        -0.12482189739529918,
+        -0.0105657329044965,
+        -0.004095519690824001
+      ],
+      "ee_object_xy_m": 0.04626182991698312,
+      "object_target_xy_m": 0.12526827523827314
+    },
+    {
+      "demo": "demo_28",
+      "event": "open_cmd",
+      "step": 77,
+      "episode_len": 92,
+      "gripper_qpos": 0.007623352144971092,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.003855656422178541,
+        -0.042897427599044385,
+        0.021799610347501774
+      ],
+      "object_minus_target_m": [
+        -0.003978090272201237,
+        0.0009021956646356466,
+        0.005601934036131628
+      ],
+      "ee_object_xy_m": 0.043070353853447055,
+      "object_target_xy_m": 0.004079112554351678
+    },
+    {
+      "demo": "demo_28",
+      "event": "close_phys",
+      "step": 38,
+      "episode_len": 92,
+      "gripper_qpos": 0.010779146780827618,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.004634885968254926,
+        -0.046204719754956936,
+        0.01808787493356756
+      ],
+      "object_minus_target_m": [
+        -0.1248851401086174,
+        -0.010106243233366008,
+        -0.0023789053588322284
+      ],
+      "ee_object_xy_m": 0.046436605125405477,
+      "object_target_xy_m": 0.12529339317075325
+    },
+    {
+      "demo": "demo_28",
+      "event": "open_phys",
+      "step": 81,
+      "episode_len": 92,
+      "gripper_qpos": 0.015729735233143714,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.00686158920183183,
+        -0.041571960659182006,
+        0.05241728253615319
+      ],
+      "object_minus_target_m": [
+        -0.003295746532927163,
+        0.0011035746604313723,
+        0.004222472914707898
+      ],
+      "ee_object_xy_m": 0.042134419652147474,
+      "object_target_xy_m": 0.0034756038670204683
+    },
+    {
+      "demo": "demo_29",
+      "event": "close_cmd",
+      "step": 33,
+      "episode_len": 124,
+      "gripper_qpos": 0.03928752658755446,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.03153822871141137,
+        -0.06822842820516223,
+        0.0687630098660379
+      ],
+      "object_minus_target_m": [
+        -0.17096804053279852,
+        0.022530986857378532,
+        -0.004095519690824001
+      ],
+      "ee_object_xy_m": 0.07516500705514681,
+      "object_target_xy_m": 0.1724462706247717
+    },
+    {
+      "demo": "demo_29",
+      "event": "open_cmd",
+      "step": 106,
+      "episode_len": 124,
+      "gripper_qpos": 0.0005664816297761457,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.05350321337289534,
+        -0.04042483194061741,
+        0.03183406719823234
+      ],
+      "object_minus_target_m": [
+        0.013232990345604406,
+        -0.006950955554940935,
+        0.02444090716152314
+      ],
+      "ee_object_xy_m": 0.06705789199380434,
+      "object_target_xy_m": 0.01494750201918781
+    },
+    {
+      "demo": "demo_29",
+      "event": "close_phys",
+      "step": 40,
+      "episode_len": 124,
+      "gripper_qpos": 0.010757202451041439,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.001354346922576119,
+        -0.07576500934608349,
+        0.014999391374662774
+      ],
+      "object_minus_target_m": [
+        -0.16242374341794422,
+        0.023602365280509602,
+        0.005707126627477188
+      ],
+      "ee_object_xy_m": 0.07577711327834288,
+      "object_target_xy_m": 0.16412965628652484
+    },
+    {
+      "demo": "demo_29",
+      "event": "open_phys",
+      "step": 111,
+      "episode_len": 124,
+      "gripper_qpos": 0.019393292485719214,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.0510572031912455,
+        -0.03765285047196895,
+        0.04268265734280208
+      ],
+      "object_minus_target_m": [
+        0.015475074962045782,
+        -0.0018819009054557578,
+        0.029731630082171723
+      ],
+      "ee_object_xy_m": 0.06343953929826873,
+      "object_target_xy_m": 0.015589082593241061
+    },
+    {
+      "demo": "demo_30",
+      "event": "close_cmd",
+      "step": 32,
+      "episode_len": 127,
+      "gripper_qpos": 0.039248312448179036,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.05234022295976299,
+        -0.05652182811169984,
+        0.08263805877791153
+      ],
+      "object_minus_target_m": [
+        -0.1374420888415605,
+        0.026957566111001363,
+        -0.004095519690824112
+      ],
+      "ee_object_xy_m": 0.07703386263563734,
+      "object_target_xy_m": 0.14006083733778127
+    },
+    {
+      "demo": "demo_30",
+      "event": "open_cmd",
+      "step": 55,
+      "episode_len": 127,
+      "gripper_qpos": 0.001078424641442034,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.06901101821996485,
+        -0.07192733980213659,
+        0.1479552068736254
+      ],
+      "object_minus_target_m": [
+        -0.13862093670992476,
+        0.026395661342250243,
+        -0.004095519920118251
+      ],
+      "ee_object_xy_m": 0.09967980159876093,
+      "object_target_xy_m": 0.14111164031373077
+    },
+    {
+      "demo": "demo_30",
+      "event": "close_phys",
+      "step": 39,
+      "episode_len": 127,
+      "gripper_qpos": 0.010673395406846517,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.033209294961756876,
+        -0.061866845269322845,
+        0.05117723354832582
+      ],
+      "object_minus_target_m": [
+        -0.13838957929905635,
+        0.0262340362599216,
+        0.0010813023222253637
+      ],
+      "ee_object_xy_m": 0.07021654944124857,
+      "object_target_xy_m": 0.1408541810421568
+    },
+    {
+      "demo": "demo_30",
+      "event": "open_phys",
+      "step": 60,
+      "episode_len": 127,
+      "gripper_qpos": 0.01958603200195511,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.039499883395182296,
+        -0.04673016501626151,
+        0.10678324519282156
+      ],
+      "object_minus_target_m": [
+        -0.1386209367099173,
+        0.026395661337185017,
+        -0.0040955196911699465
+      ],
+      "ee_object_xy_m": 0.06118781831933567,
+      "object_target_xy_m": 0.14111164031277595
+    },
+    {
+      "demo": "demo_31",
+      "event": "close_cmd",
+      "step": 37,
+      "episode_len": 151,
+      "gripper_qpos": 0.03931715805358339,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.024345558544553884,
+        -0.06603417209511481,
+        0.04430415596378823
+      ],
+      "object_minus_target_m": [
+        -0.13318867456139505,
+        0.011018607943931641,
+        -0.00149073141285605
+      ],
+      "ee_object_xy_m": 0.07037910275879865,
+      "object_target_xy_m": 0.13364367831081003
+    },
+    {
+      "demo": "demo_31",
+      "event": "open_cmd",
+      "step": 66,
+      "episode_len": 151,
+      "gripper_qpos": 0.0023252100341829844,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.0135892423964728,
+        -0.03136940180318476,
+        0.050226227278988844
+      ],
+      "object_minus_target_m": [
+        -0.0028782599779610674,
+        -0.0016329443442391067,
+        0.06506004310647306
+      ],
+      "ee_object_xy_m": 0.034186355149382994,
+      "object_target_xy_m": 0.003309212554689549
+    },
+    {
+      "demo": "demo_31",
+      "event": "close_phys",
+      "step": 44,
+      "episode_len": 151,
+      "gripper_qpos": 0.010736609295431715,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.015959430827035423,
+        -0.0520113749927307,
+        0.04489619757458885
+      ],
+      "object_minus_target_m": [
+        -0.1319478105851695,
+        0.004778424971977696,
+        -0.004355305508407681
+      ],
+      "ee_object_xy_m": 0.054404839499417525,
+      "object_target_xy_m": 0.1320343063882739
+    },
+    {
+      "demo": "demo_31",
+      "event": "open_phys",
+      "step": 70,
+      "episode_len": 151,
+      "gripper_qpos": 0.015000922798192373,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.008770099005994167,
+        -0.01216723298520589,
+        0.06472865742976852
+      ],
+      "object_minus_target_m": [
+        -0.008491315505337285,
+        -0.014695909068285051,
+        0.007046268899119856
+      ],
+      "ee_object_xy_m": 0.01499853976529789,
+      "object_target_xy_m": 0.016972689308252957
+    },
+    {
+      "demo": "demo_32",
+      "event": "close_cmd",
+      "step": 40,
+      "episode_len": 93,
+      "gripper_qpos": 0.03930589362880871,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.03361027744443604,
+        -0.04783426720987233,
+        0.060216596630609076
+      ],
+      "object_minus_target_m": [
+        -0.1248429144164708,
+        0.00873262968308211,
+        -0.004095519690824001
+      ],
+      "ee_object_xy_m": 0.05846167863992132,
+      "object_target_xy_m": 0.12514796083508553
+    },
+    {
+      "demo": "demo_32",
+      "event": "open_cmd",
+      "step": 84,
+      "episode_len": 93,
+      "gripper_qpos": 0.009028002918120103,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.005390980953849767,
+        -0.05683348793492918,
+        0.031109084198095105
+      ],
+      "object_minus_target_m": [
+        -0.01709988037558989,
+        0.007421361654918052,
+        0.011671052340468724
+      ],
+      "ee_object_xy_m": 0.0570885980428186,
+      "object_target_xy_m": 0.018640882963866606
+    },
+    {
+      "demo": "demo_32",
+      "event": "close_phys",
+      "step": 47,
+      "episode_len": 93,
+      "gripper_qpos": 0.010683388643424418,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.028255886246948726,
+        -0.05566571901753389,
+        0.03824024720565289
+      ],
+      "object_minus_target_m": [
+        -0.12073067370422905,
+        0.008009590453808585,
+        0.0008103735905372611
+      ],
+      "ee_object_xy_m": 0.062426495827809694,
+      "object_target_xy_m": 0.12099607064824364
+    },
+    {
+      "demo": "demo_32",
+      "event": "open_phys",
+      "step": 88,
+      "episode_len": 93,
+      "gripper_qpos": 0.01587935049540908,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.003435533627088677,
+        -0.05384569659474392,
+        0.05678270631725635
+      ],
+      "object_minus_target_m": [
+        -0.018943760783896285,
+        0.007476504764026698,
+        0.005487211852559515
+      ],
+      "ee_object_xy_m": 0.05395518448746213,
+      "object_target_xy_m": 0.020365760386590055
+    },
+    {
+      "demo": "demo_33",
+      "event": "close_cmd",
+      "step": 37,
+      "episode_len": 111,
+      "gripper_qpos": 0.039275930493167265,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.028206091374997064,
+        -0.0628806183455703,
+        0.07510566730290213
+      ],
+      "object_minus_target_m": [
+        -0.1344142259642133,
+        -0.006272510534950815,
+        -0.004095519690824001
+      ],
+      "ee_object_xy_m": 0.0689170207871463,
+      "object_target_xy_m": 0.13456050137380457
+    },
+    {
+      "demo": "demo_33",
+      "event": "open_cmd",
+      "step": 95,
+      "episode_len": 111,
+      "gripper_qpos": 0.00047555774697312836,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.028061702039791393,
+        -0.054568232360623775,
+        0.03557587186469291
+      ],
+      "object_minus_target_m": [
+        0.014429468140529311,
+        -0.015224870357085474,
+        0.00907984061765943
+      ],
+      "ee_object_xy_m": 0.06136082711578341,
+      "object_target_xy_m": 0.020976325421975375
+    },
+    {
+      "demo": "demo_33",
+      "event": "close_phys",
+      "step": 44,
+      "episode_len": 111,
+      "gripper_qpos": 0.010690187746884294,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.0003271164519774161,
+        -0.06902677130688428,
+        0.025864412164972483
+      ],
+      "object_minus_target_m": [
+        -0.13811325428744148,
+        -0.009303055480250372,
+        0.0020219183552872
+      ],
+      "ee_object_xy_m": 0.06902754640160737,
+      "object_target_xy_m": 0.13842621807712616
+    },
+    {
+      "demo": "demo_33",
+      "event": "open_phys",
+      "step": 100,
+      "episode_len": 111,
+      "gripper_qpos": 0.019264223143374382,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.03296764289872362,
+        -0.052694627896678864,
+        0.04012334982386023
+      ],
+      "object_minus_target_m": [
+        0.014268477933822049,
+        -0.01488848426285358,
+        0.007857668668977635
+      ],
+      "ee_object_xy_m": 0.06215777736910489,
+      "object_target_xy_m": 0.020621746438970814
+    },
+    {
+      "demo": "demo_34",
+      "event": "close_cmd",
+      "step": 56,
+      "episode_len": 167,
+      "gripper_qpos": 0.03944488566666922,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.01125666439043415,
+        -0.0526000917966071,
+        0.05380196359002676
+      ],
+      "object_minus_target_m": [
+        -0.14267286900646553,
+        -0.011497012076271407,
+        -0.004095546625074942
+      ],
+      "ee_object_xy_m": 0.0537910973136853,
+      "object_target_xy_m": 0.14313535145874343
+    },
+    {
+      "demo": "demo_34",
+      "event": "open_cmd",
+      "step": 91,
+      "episode_len": 167,
+      "gripper_qpos": 0.0007489515555238969,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.06536424624915928,
+        -0.04387032832755039,
+        0.17461217542248597
+      ],
+      "object_minus_target_m": [
+        -0.07537345421467638,
+        0.003694471707193392,
+        0.00895233738851997
+      ],
+      "ee_object_xy_m": 0.07872160056355436,
+      "object_target_xy_m": 0.07546394318777126
+    },
+    {
+      "demo": "demo_34",
+      "event": "close_phys",
+      "step": 64,
+      "episode_len": 167,
+      "gripper_qpos": 0.011651487488390148,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.0024667732237985823,
+        -0.06171914853397423,
+        0.01162783132441092
+      ],
+      "object_minus_target_m": [
+        -0.1415172387803379,
+        -0.014612894242931246,
+        0.0018406772281980288
+      ],
+      "ee_object_xy_m": 0.06176842450553861,
+      "object_target_xy_m": 0.14226969301353773
+    },
+    {
+      "demo": "demo_34",
+      "event": "open_phys",
+      "step": 96,
+      "episode_len": 167,
+      "gripper_qpos": 0.019348997732621612,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.03429607785350788,
+        -0.05170791473545411,
+        0.1548467289560983
+      ],
+      "object_minus_target_m": [
+        -0.07537589088272226,
+        0.003696905819324553,
+        0.008942770567825886
+      ],
+      "ee_object_xy_m": 0.06204779933585772,
+      "object_target_xy_m": 0.07546649613570917
+    },
+    {
+      "demo": "demo_35",
+      "event": "close_cmd",
+      "step": 42,
+      "episode_len": 89,
+      "gripper_qpos": 0.03933061919124848,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.004313716988457138,
+        -0.03876616376597733,
+        0.028822358214722787
+      ],
+      "object_minus_target_m": [
+        -0.1142914649882305,
+        -0.0115977887579084,
+        -0.004095519690824112
+      ],
+      "ee_object_xy_m": 0.0390054304858577,
+      "object_target_xy_m": 0.11487840385916313
+    },
+    {
+      "demo": "demo_35",
+      "event": "close_phys",
+      "step": 49,
+      "episode_len": 89,
+      "gripper_qpos": 0.012281748766627977,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.014793677035263762,
+        -0.039794240742662246,
+        0.020032116866842697
+      ],
+      "object_minus_target_m": [
+        -0.11414301051377099,
+        -0.011568118019731954,
+        -0.0021486767127559814
+      ],
+      "ee_object_xy_m": 0.04245508775763689,
+      "object_target_xy_m": 0.11472771332012716
+    },
+    {
+      "demo": "demo_35",
+      "event": "open_phys",
+      "step": 81,
+      "episode_len": 89,
+      "gripper_qpos": 0.01793891840102799,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.007089501854842098,
+        -0.014892130257489367,
+        0.05773972894030488
+      ],
+      "object_minus_target_m": [
+        0.01014253538609576,
+        -0.021565684730702667,
+        0.014425026105413075
+      ],
+      "ee_object_xy_m": 0.01649353146405705,
+      "object_target_xy_m": 0.023831697001310395
+    },
+    {
+      "demo": "demo_36",
+      "event": "close_cmd",
+      "step": 36,
+      "episode_len": 102,
+      "gripper_qpos": 0.03934105793195019,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.005717475038958197,
+        -0.03631579178514155,
+        0.05070928417880505
+      ],
+      "object_minus_target_m": [
+        -0.16499603622930184,
+        0.0020488347532356954,
+        -0.004095519690824001
+      ],
+      "ee_object_xy_m": 0.03676310995825659,
+      "object_target_xy_m": 0.16500875641985535
+    },
+    {
+      "demo": "demo_36",
+      "event": "open_cmd",
+      "step": 88,
+      "episode_len": 102,
+      "gripper_qpos": 0.006482679084317696,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.020442782879842553,
+        -0.041038359657689816,
+        0.02109216004926595
+      ],
+      "object_minus_target_m": [
+        0.006868356198427877,
+        -0.008867506654929302,
+        0.011485411949177626
+      ],
+      "ee_object_xy_m": 0.04584816610581373,
+      "object_target_xy_m": 0.01121637156765494
+    },
+    {
+      "demo": "demo_36",
+      "event": "close_phys",
+      "step": 43,
+      "episode_len": 102,
+      "gripper_qpos": 0.01232008478487021,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.003944126134257875,
+        -0.04090865020124615,
+        0.01930518718598684
+      ],
+      "object_minus_target_m": [
+        -0.1648250172939617,
+        0.001978505180042389,
+        -0.0023021308197089807
+      ],
+      "ee_object_xy_m": 0.04109834293801701,
+      "object_target_xy_m": 0.16483689152826872
+    },
+    {
+      "demo": "demo_36",
+      "event": "open_phys",
+      "step": 92,
+      "episode_len": 102,
+      "gripper_qpos": 0.015626016165293737,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.015404445972044559,
+        -0.03623744729081477,
+        0.042296953179733365
+      ],
+      "object_minus_target_m": [
+        0.0003113508951197719,
+        -0.0005035182585707287,
+        0.004205031889389588
+      ],
+      "ee_object_xy_m": 0.03937574814349841,
+      "object_target_xy_m": 0.0005920050815710811
+    },
+    {
+      "demo": "demo_37",
+      "event": "close_cmd",
+      "step": 41,
+      "episode_len": 168,
+      "gripper_qpos": 0.039355000826329624,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.008439399769558563,
+        -0.05977188062589908,
+        0.032381575960325315
+      ],
+      "object_minus_target_m": [
+        -0.156697901580705,
+        -0.008354700284335187,
+        -0.004095519690824001
+      ],
+      "ee_object_xy_m": 0.06036473458922151,
+      "object_target_xy_m": 0.15692046831639708
+    },
+    {
+      "demo": "demo_37",
+      "event": "open_cmd",
+      "step": 79,
+      "episode_len": 168,
+      "gripper_qpos": 0.0008532096956128006,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.11841145247884988,
+        -0.041802518503177455,
+        0.12735610018159538
+      ],
+      "object_minus_target_m": [
+        -0.09405732683501573,
+        -0.018597537372692596,
+        0.0008232999623906112
+      ],
+      "ee_object_xy_m": 0.12557357457426868,
+      "object_target_xy_m": 0.09587830373800774
+    },
+    {
+      "demo": "demo_37",
+      "event": "close_phys",
+      "step": 48,
+      "episode_len": 168,
+      "gripper_qpos": 0.01079528015804426,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.005870462288112402,
+        -0.06228311245323237,
+        0.01497724812379686
+      ],
+      "object_minus_target_m": [
+        -0.15544545921864195,
+        -0.010028988941507555,
+        0.00068862307835027
+      ],
+      "ee_object_xy_m": 0.062559159396032,
+      "object_target_xy_m": 0.155768647072777
+    },
+    {
+      "demo": "demo_37",
+      "event": "open_phys",
+      "step": 84,
+      "episode_len": 168,
+      "gripper_qpos": 0.0195961818289611,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.10811273725624307,
+        -0.0482206203445604,
+        0.13797553309000699
+      ],
+      "object_minus_target_m": [
+        -0.09406088198198903,
+        -0.018598061783099917,
+        0.0008224992821831423
+      ],
+      "ee_object_xy_m": 0.11837901918605205,
+      "object_target_xy_m": 0.09588189308371874
+    },
+    {
+      "demo": "demo_38",
+      "event": "close_cmd",
+      "step": 33,
+      "episode_len": 89,
+      "gripper_qpos": 0.03922132713559757,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.02878241227463596,
+        -0.05027971098721051,
+        0.05926303319267201
+      ],
+      "object_minus_target_m": [
+        -0.12933818878995046,
+        -0.017776102096427826,
+        -0.004095519690824112
+      ],
+      "ee_object_xy_m": 0.05793510674284231,
+      "object_target_xy_m": 0.13055403818039293
+    },
+    {
+      "demo": "demo_38",
+      "event": "open_cmd",
+      "step": 79,
+      "episode_len": 89,
+      "gripper_qpos": 0.004894118915910013,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.008793606499178284,
+        -0.04568209267654513,
+        0.03230899043704505
+      ],
+      "object_minus_target_m": [
+        -0.007094712872112052,
+        0.00873644015474706,
+        0.003210312322308617
+      ],
+      "ee_object_xy_m": 0.04652075995263673,
+      "object_target_xy_m": 0.011254347485091675
+    },
+    {
+      "demo": "demo_38",
+      "event": "close_phys",
+      "step": 40,
+      "episode_len": 89,
+      "gripper_qpos": 0.010652075034325043,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.0060519288934153675,
+        -0.05221506754922314,
+        0.022797825525841198
+      ],
+      "object_minus_target_m": [
+        -0.12933818878995046,
+        -0.017776102096427826,
+        -0.004095519690824112
+      ],
+      "ee_object_xy_m": 0.05256461854233217,
+      "object_target_xy_m": 0.13055403818039293
+    },
+    {
+      "demo": "demo_38",
+      "event": "open_phys",
+      "step": 83,
+      "episode_len": 89,
+      "gripper_qpos": 0.015481780991868338,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.017286868878730696,
+        -0.04790087339497048,
+        0.02872823317166151
+      ],
+      "object_minus_target_m": [
+        -0.005575856011542951,
+        0.005745141025277678,
+        0.0038996656116832007
+      ],
+      "ee_object_xy_m": 0.05092474356961868,
+      "object_target_xy_m": 0.00800604869219444
+    },
+    {
+      "demo": "demo_39",
+      "event": "close_cmd",
+      "step": 38,
+      "episode_len": 108,
+      "gripper_qpos": 0.039331477462363894,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.010180016252915633,
+        -0.04915375539856895,
+        0.05188244814399445
+      ],
+      "object_minus_target_m": [
+        -0.13066903202504793,
+        0.005870803056276047,
+        -0.004095519690824112
+      ],
+      "ee_object_xy_m": 0.050196856482173986,
+      "object_target_xy_m": 0.13080084961072913
+    },
+    {
+      "demo": "demo_39",
+      "event": "open_cmd",
+      "step": 97,
+      "episode_len": 108,
+      "gripper_qpos": 0.004096693913123094,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.004344642612487029,
+        -0.04309261280534618,
+        0.025697053414504012
+      ],
+      "object_minus_target_m": [
+        0.0017477203067328556,
+        0.0026616993896762253,
+        0.005228394890134713
+      ],
+      "ee_object_xy_m": 0.04331107477102968,
+      "object_target_xy_m": 0.003184206323649455
+    },
+    {
+      "demo": "demo_39",
+      "event": "close_phys",
+      "step": 45,
+      "episode_len": 108,
+      "gripper_qpos": 0.010709436319617618,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.006743362893373565,
+        -0.05050908987542274,
+        0.028819542405098764
+      ],
+      "object_minus_target_m": [
+        -0.13066903202504793,
+        0.005870803056276047,
+        -0.004095519690824112
+      ],
+      "ee_object_xy_m": 0.05095724779808324,
+      "object_target_xy_m": 0.13080084961072913
+    },
+    {
+      "demo": "demo_39",
+      "event": "open_phys",
+      "step": 101,
+      "episode_len": 108,
+      "gripper_qpos": 0.01531971040208562,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.007917049755798239,
+        -0.04360526477441942,
+        0.04644187448898984
+      ],
+      "object_minus_target_m": [
+        0.00270961740425911,
+        0.0025608395190781508,
+        0.0038108087633139665
+      ],
+      "ee_object_xy_m": 0.04431815421340343,
+      "object_target_xy_m": 0.003728260387893567
+    },
+    {
+      "demo": "demo_40",
+      "event": "close_cmd",
+      "step": 40,
+      "episode_len": 95,
+      "gripper_qpos": 0.03935572995321211,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.020633096470900933,
+        -0.04335878294410833,
+        0.04616732687628655
+      ],
+      "object_minus_target_m": [
+        -0.12457819151583535,
+        0.0008389949347261394,
+        -0.004095519690824001
+      ],
+      "ee_object_xy_m": 0.04801779595495616,
+      "object_target_xy_m": 0.12458101666729425
+    },
+    {
+      "demo": "demo_40",
+      "event": "open_cmd",
+      "step": 85,
+      "episode_len": 95,
+      "gripper_qpos": 0.0037621339213705397,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.018755329255994907,
+        -0.04418962533543655,
+        0.020025705239626435
+      ],
+      "object_minus_target_m": [
+        0.0021654963730126514,
+        -0.0023102190216056917,
+        0.004832385470507572
+      ],
+      "ee_object_xy_m": 0.048005055596124814,
+      "object_target_xy_m": 0.00316646276929316
+    },
+    {
+      "demo": "demo_40",
+      "event": "close_phys",
+      "step": 47,
+      "episode_len": 95,
+      "gripper_qpos": 0.010782023683032755,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.004057933209421778,
+        -0.041011308144415365,
+        0.023016018921459436
+      ],
+      "object_minus_target_m": [
+        -0.1248236413181051,
+        0.0010925699295255553,
+        -0.0038109720095579336
+      ],
+      "ee_object_xy_m": 0.04121157868425229,
+      "object_target_xy_m": 0.12482842280891743
+    },
+    {
+      "demo": "demo_40",
+      "event": "open_phys",
+      "step": 90,
+      "episode_len": 95,
+      "gripper_qpos": 0.019682345263268234,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.019907839339056113,
+        -0.045499955798068675,
+        0.04614612633379611
+      ],
+      "object_minus_target_m": [
+        0.001841427869192211,
+        -0.0024128811819581764,
+        0.0037004086998752017
+      ],
+      "ee_object_xy_m": 0.04966455521572576,
+      "object_target_xy_m": 0.0030352680599389655
+    },
+    {
+      "demo": "demo_41",
+      "event": "close_cmd",
+      "step": 43,
+      "episode_len": 95,
+      "gripper_qpos": 0.039374319158501134,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.024022110620045875,
+        -0.06116744469027491,
+        0.04310643108830847
+      ],
+      "object_minus_target_m": [
+        -0.11676364777476791,
+        0.0023476162198988737,
+        -0.0037098755714812803
+      ],
+      "ee_object_xy_m": 0.06571543265154359,
+      "object_target_xy_m": 0.11678724563746674
+    },
+    {
+      "demo": "demo_41",
+      "event": "open_cmd",
+      "step": 85,
+      "episode_len": 95,
+      "gripper_qpos": 0.005509139710824957,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.024577310347718116,
+        -0.043630011108383354,
+        0.019835966737170696
+      ],
+      "object_minus_target_m": [
+        0.006975132156678623,
+        0.0016270085615652796,
+        0.005281388339715032
+      ],
+      "ee_object_xy_m": 0.05007616252515469,
+      "object_target_xy_m": 0.0071623756856603734
+    },
+    {
+      "demo": "demo_41",
+      "event": "close_phys",
+      "step": 50,
+      "episode_len": 95,
+      "gripper_qpos": 0.010785080262792643,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.0016098086645288945,
+        -0.05521996300148427,
+        0.020359349474415978
+      ],
+      "object_minus_target_m": [
+        -0.11708150697769727,
+        0.00214469477642687,
+        -0.0016326685017421516
+      ],
+      "ee_object_xy_m": 0.05524342311824715,
+      "object_target_xy_m": 0.11710114855052707
+    },
+    {
+      "demo": "demo_41",
+      "event": "open_phys",
+      "step": 90,
+      "episode_len": 95,
+      "gripper_qpos": 0.01963072044746134,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.031563775525289106,
+        -0.04716402697295055,
+        0.030524396536391496
+      ],
+      "object_minus_target_m": [
+        0.006487822009519362,
+        0.0010490100349356546,
+        0.0039611971934241375
+      ],
+      "ee_object_xy_m": 0.056751364439245396,
+      "object_target_xy_m": 0.006572081594183045
+    },
+    {
+      "demo": "demo_42",
+      "event": "close_cmd",
+      "step": 37,
+      "episode_len": 109,
+      "gripper_qpos": 0.03938656623168152,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.01643085872321539,
+        -0.06463100672369512,
+        0.05423033610831063
+      ],
+      "object_minus_target_m": [
+        -0.11534964929463379,
+        -0.005608042015705472,
+        -0.004095519690824112
+      ],
+      "ee_object_xy_m": 0.06668688138232727,
+      "object_target_xy_m": 0.11548589406349559
+    },
+    {
+      "demo": "demo_42",
+      "event": "open_cmd",
+      "step": 96,
+      "episode_len": 109,
+      "gripper_qpos": 0.004744629756091065,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.0005055853969783974,
+        -0.04445026427809004,
+        0.01874745312426651
+      ],
+      "object_minus_target_m": [
+        0.02623984877902963,
+        0.004119958615374758,
+        0.01506493591525826
+      ],
+      "ee_object_xy_m": 0.044453139495267205,
+      "object_target_xy_m": 0.02656132005263939
+    },
+    {
+      "demo": "demo_42",
+      "event": "close_phys",
+      "step": 44,
+      "episode_len": 109,
+      "gripper_qpos": 0.010765441679168817,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.005091100003058721,
+        -0.05287747151160799,
+        0.021879618226222863
+      ],
+      "object_minus_target_m": [
+        -0.11532878270777727,
+        -0.005276721337871326,
+        -0.0037216853674962858
+      ],
+      "ee_object_xy_m": 0.05312199443452833,
+      "object_target_xy_m": 0.11544943442449275
+    },
+    {
+      "demo": "demo_42",
+      "event": "open_phys",
+      "step": 100,
+      "episode_len": 109,
+      "gripper_qpos": 0.015371538349672,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.009049537315732159,
+        -0.046267160922203565,
+        0.0272907978681185
+      ],
+      "object_minus_target_m": [
+        0.018082351506123195,
+        0.00779341723651561,
+        0.005647664497289484
+      ],
+      "ee_object_xy_m": 0.04714386816363194,
+      "object_target_xy_m": 0.01969032219679034
+    },
+    {
+      "demo": "demo_43",
+      "event": "close_cmd",
+      "step": 43,
+      "episode_len": 96,
+      "gripper_qpos": 0.03941105589162913,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.0014119216780578009,
+        -0.04274585049198723,
+        0.020767644190299084
+      ],
+      "object_minus_target_m": [
+        -0.11570057817115634,
+        -0.00884736326137095,
+        -0.004095519690824112
+      ],
+      "ee_object_xy_m": 0.042769162455071466,
+      "object_target_xy_m": 0.11603835411543252
+    },
+    {
+      "demo": "demo_43",
+      "event": "open_cmd",
+      "step": 80,
+      "episode_len": 96,
+      "gripper_qpos": 0.00437626548482597,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.010569153976815251,
+        -0.042149173593682476,
+        0.0188930733174415
+      ],
+      "object_minus_target_m": [
+        -0.005680092932221215,
+        -0.0023574909978568703,
+        0.006637152790025969
+      ],
+      "ee_object_xy_m": 0.04345411200814038,
+      "object_target_xy_m": 0.006149895895350228
+    },
+    {
+      "demo": "demo_43",
+      "event": "close_phys",
+      "step": 50,
+      "episode_len": 96,
+      "gripper_qpos": 0.01080540815519026,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.0052657896841328405,
+        -0.042676369815666276,
+        0.021368688547224735
+      ],
+      "object_minus_target_m": [
+        -0.11537315068220763,
+        -0.007513411579217311,
+        -0.0036571918421766103
+      ],
+      "ee_object_xy_m": 0.04300001257721946,
+      "object_target_xy_m": 0.1156175386863866
+    },
+    {
+      "demo": "demo_43",
+      "event": "open_phys",
+      "step": 85,
+      "episode_len": 96,
+      "gripper_qpos": 0.017799271624038288,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.012562577864156224,
+        -0.045674480431421166,
+        0.021854834463938322
+      ],
+      "object_minus_target_m": [
+        -0.007656783281946897,
+        -0.0003857251404749962,
+        0.0034403598215008158
+      ],
+      "ee_object_xy_m": 0.047370629352725124,
+      "object_target_xy_m": 0.007666492947280128
+    },
+    {
+      "demo": "demo_44",
+      "event": "close_cmd",
+      "step": 35,
+      "episode_len": 88,
+      "gripper_qpos": 0.03935162744691468,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.016702459553402944,
+        -0.031214218503621716,
+        0.024059457322965883
+      ],
+      "object_minus_target_m": [
+        -0.13972581074168292,
+        -0.008928057332251965,
+        -0.004095519690824001
+      ],
+      "ee_object_xy_m": 0.0354019715824543,
+      "object_target_xy_m": 0.1400107581407535
+    },
+    {
+      "demo": "demo_44",
+      "event": "open_cmd",
+      "step": 73,
+      "episode_len": 88,
+      "gripper_qpos": 0.007226448977251543,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.03687740342220312,
+        -0.03284895662333054,
+        0.007175527428984418
+      ],
+      "object_minus_target_m": [
+        0.02127616589085561,
+        -0.0036854942245533873,
+        0.061641895893676524
+      ],
+      "ee_object_xy_m": 0.049386200850089386,
+      "object_target_xy_m": 0.021593010505587776
+    },
+    {
+      "demo": "demo_44",
+      "event": "close_phys",
+      "step": 42,
+      "episode_len": 88,
+      "gripper_qpos": 0.01422379083754158,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.02321887243822328,
+        -0.036486329316193944,
+        0.014243189063072426
+      ],
+      "object_minus_target_m": [
+        -0.13905907575049126,
+        -0.009428302362094881,
+        -0.0003929277162076916
+      ],
+      "ee_object_xy_m": 0.04324775444196193,
+      "object_target_xy_m": 0.13937833201043823
+    },
+    {
+      "demo": "demo_44",
+      "event": "open_phys",
+      "step": 77,
+      "episode_len": 88,
+      "gripper_qpos": 0.015826625152096954,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.043192821528033214,
+        -0.028600511639876258,
+        0.026654056747247412
+      ],
+      "object_minus_target_m": [
+        0.008641930333887451,
+        -0.01675454484586178,
+        0.006485277476016127
+      ],
+      "ee_object_xy_m": 0.051803562595783184,
+      "object_target_xy_m": 0.0188519954616947
+    },
+    {
+      "demo": "demo_45",
+      "event": "close_cmd",
+      "step": 35,
+      "episode_len": 90,
+      "gripper_qpos": 0.03934930370131564,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.001058826882441466,
+        -0.06289631285942573,
+        0.05405974989715534
+      ],
+      "object_minus_target_m": [
+        -0.17725651549412968,
+        0.011123194319241886,
+        -0.004095519690824001
+      ],
+      "ee_object_xy_m": 0.06290522462941964,
+      "object_target_xy_m": 0.17760517373371829
+    },
+    {
+      "demo": "demo_45",
+      "event": "open_cmd",
+      "step": 81,
+      "episode_len": 90,
+      "gripper_qpos": 0.005561048595112779,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.027095613815000474,
+        -0.04005183641345933,
+        0.01985775461419126
+      ],
+      "object_minus_target_m": [
+        0.009518255510477275,
+        -0.009572492820149936,
+        0.0048857216123648906
+      ],
+      "ee_object_xy_m": 0.04835619803191884,
+      "object_target_xy_m": 0.013499252081302619
+    },
+    {
+      "demo": "demo_45",
+      "event": "close_phys",
+      "step": 42,
+      "episode_len": 90,
+      "gripper_qpos": 0.010877984340074916,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.01624582579366174,
+        -0.05595090759334448,
+        0.019107755921975444
+      ],
+      "object_minus_target_m": [
+        -0.17714524104423007,
+        0.011130401681729435,
+        -0.004044480137647133
+      ],
+      "ee_object_xy_m": 0.0582617448780671,
+      "object_target_xy_m": 0.17749456968092014
+    },
+    {
+      "demo": "demo_45",
+      "event": "open_phys",
+      "step": 85,
+      "episode_len": 90,
+      "gripper_qpos": 0.015175783102390811,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.03186363443132431,
+        -0.04167894208051717,
+        0.019106574012655808
+      ],
+      "object_minus_target_m": [
+        0.008517222807811559,
+        -0.011404224685435477,
+        0.0041835972602795035
+      ],
+      "ee_object_xy_m": 0.05246356270902865,
+      "object_target_xy_m": 0.014233742481645554
+    },
+    {
+      "demo": "demo_46",
+      "event": "close_cmd",
+      "step": 31,
+      "episode_len": 85,
+      "gripper_qpos": 0.039230999990962426,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.05883539228750835,
+        -0.0439684140010598,
+        0.08729526447159186
+      ],
+      "object_minus_target_m": [
+        -0.12069305660765457,
+        0.002876601484870206,
+        -0.004095519690824112
+      ],
+      "ee_object_xy_m": 0.0734494711716401,
+      "object_target_xy_m": 0.12072733223840104
+    },
+    {
+      "demo": "demo_46",
+      "event": "open_cmd",
+      "step": 72,
+      "episode_len": 85,
+      "gripper_qpos": 0.0027432845780256663,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.0021354957652236217,
+        -0.04364805060284016,
+        0.035313259025387955
+      ],
+      "object_minus_target_m": [
+        -0.0035786177834058325,
+        -0.007850988761282013,
+        0.019734201341446655
+      ],
+      "ee_object_xy_m": 0.04370025930805655,
+      "object_target_xy_m": 0.008628124348285957
+    },
+    {
+      "demo": "demo_46",
+      "event": "close_phys",
+      "step": 38,
+      "episode_len": 85,
+      "gripper_qpos": 0.010723716631817173,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.027249074603533614,
+        -0.04817240635988265,
+        0.02698477368734309
+      ],
+      "object_minus_target_m": [
+        -0.11958990160423107,
+        0.004504622945205067,
+        0.00036676514467104404
+      ],
+      "ee_object_xy_m": 0.055345214799931916,
+      "object_target_xy_m": 0.11967470991645703
+    },
+    {
+      "demo": "demo_46",
+      "event": "open_phys",
+      "step": 76,
+      "episode_len": 85,
+      "gripper_qpos": 0.015279803684861702,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        0.0003941290737404235,
+        -0.04026870719949957,
+        0.04542147752083092
+      ],
+      "object_minus_target_m": [
+        -0.003715604074336229,
+        -0.009867338578586432,
+        0.0053312264130430664
+      ],
+      "ee_object_xy_m": 0.04027063591807058,
+      "object_target_xy_m": 0.01054372250496399
+    },
+    {
+      "demo": "demo_47",
+      "event": "close_cmd",
+      "step": 39,
+      "episode_len": 92,
+      "gripper_qpos": 0.03936677220524722,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.03738657175453042,
+        -0.0503813068264726,
+        0.015259637917460656
+      ],
+      "object_minus_target_m": [
+        -0.15732410636310243,
+        -0.007699090945932602,
+        -0.001901925961386386
+      ],
+      "ee_object_xy_m": 0.06273780220170154,
+      "object_target_xy_m": 0.15751238187629094
+    },
+    {
+      "demo": "demo_47",
+      "event": "open_cmd",
+      "step": 80,
+      "episode_len": 92,
+      "gripper_qpos": 0.004436684311538561,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.021213607406499566,
+        -0.03306107511308631,
+        0.02594417528368753
+      ],
+      "object_minus_target_m": [
+        0.011547844928969167,
+        0.005530777667006881,
+        0.010102257163003503
+      ],
+      "ee_object_xy_m": 0.03928169836998177,
+      "object_target_xy_m": 0.012803992506455983
+    },
+    {
+      "demo": "demo_47",
+      "event": "close_phys",
+      "step": 46,
+      "episode_len": 92,
+      "gripper_qpos": 0.01086957738011826,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.022568552352135188,
+        -0.04466209774381885,
+        0.0231819583389955
+      ],
+      "object_minus_target_m": [
+        -0.15682180942026486,
+        -0.005433297292226608,
+        -0.0037270534034368197
+      ],
+      "ee_object_xy_m": 0.05004040897264426,
+      "object_target_xy_m": 0.156915903047816
+    },
+    {
+      "demo": "demo_47",
+      "event": "open_phys",
+      "step": 84,
+      "episode_len": 92,
+      "gripper_qpos": 0.01538395846567377,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.029051010901424187,
+        -0.03991474529568553,
+        0.020391979273555516
+      ],
+      "object_minus_target_m": [
+        0.007466577717077386,
+        0.00972273918840355,
+        0.005584980054156086
+      ],
+      "ee_object_xy_m": 0.049367480454385326,
+      "object_target_xy_m": 0.012258933074736753
+    },
+    {
+      "demo": "demo_48",
+      "event": "close_cmd",
+      "step": 35,
+      "episode_len": 96,
+      "gripper_qpos": 0.039245888899734356,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.005484373122186095,
+        -0.04504590224719063,
+        0.02348733109914547
+      ],
+      "object_minus_target_m": [
+        -0.11867187626157955,
+        -0.0008564391803444205,
+        -0.004095519690824112
+      ],
+      "ee_object_xy_m": 0.045378537413702645,
+      "object_target_xy_m": 0.11867496662528823
+    },
+    {
+      "demo": "demo_48",
+      "event": "open_cmd",
+      "step": 82,
+      "episode_len": 96,
+      "gripper_qpos": 0.005535498290403873,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.02143924439523555,
+        -0.04403019894787555,
+        0.023869874687858617
+      ],
+      "object_minus_target_m": [
+        -9.311727165922656e-05,
+        -0.0011131195353576429,
+        0.007924260659512683
+      ],
+      "ee_object_xy_m": 0.04897243734620669,
+      "object_target_xy_m": 0.0011170075766421966
+    },
+    {
+      "demo": "demo_48",
+      "event": "close_phys",
+      "step": 42,
+      "episode_len": 96,
+      "gripper_qpos": 0.010739581996088746,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.007066893547676159,
+        -0.046188998265989684,
+        0.02585734882983748
+      ],
+      "object_minus_target_m": [
+        -0.11896938759368517,
+        -0.00020494846235588615,
+        -0.0041279555911286625
+      ],
+      "ee_object_xy_m": 0.046726486549170214,
+      "object_target_xy_m": 0.11896956412582468
+    },
+    {
+      "demo": "demo_48",
+      "event": "open_phys",
+      "step": 86,
+      "episode_len": 96,
+      "gripper_qpos": 0.015419996792905177,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.021105225309142717,
+        -0.04357039888785569,
+        0.043158246086949736
+      ],
+      "object_minus_target_m": [
+        -0.0016665088763263697,
+        -0.005418318461369753,
+        0.0036212005632773048
+      ],
+      "ee_object_xy_m": 0.04841291351072082,
+      "object_target_xy_m": 0.005668811761180192
+    },
+    {
+      "demo": "demo_49",
+      "event": "close_cmd",
+      "step": 37,
+      "episode_len": 92,
+      "gripper_qpos": 0.039252143589398186,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.025218677866068788,
+        -0.028744005276756718,
+        0.020940823507828332
+      ],
+      "object_minus_target_m": [
+        -0.1198594720165132,
+        -0.023383579053539633,
+        -0.004095519690824112
+      ],
+      "ee_object_xy_m": 0.03823871797880737,
+      "object_target_xy_m": 0.12211914183055189
+    },
+    {
+      "demo": "demo_49",
+      "event": "open_cmd",
+      "step": 78,
+      "episode_len": 92,
+      "gripper_qpos": 0.010126738149667441,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.033856260516140324,
+        -0.026467706203502223,
+        0.021187909759812773
+      ],
+      "object_minus_target_m": [
+        0.014148639757588503,
+        -0.014195562412714802,
+        0.0055017577565482645
+      ],
+      "ee_object_xy_m": 0.04297424633209607,
+      "object_target_xy_m": 0.020042405025427847
+    },
+    {
+      "demo": "demo_49",
+      "event": "close_phys",
+      "step": 46,
+      "episode_len": 92,
+      "gripper_qpos": 0.014201104390494178,
+      "command": 1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.021459384963418635,
+        -0.03210524305943266,
+        0.02522320992390814
+      ],
+      "object_minus_target_m": [
+        -0.11587991614718307,
+        -0.021643626781328695,
+        -0.003496188814022805
+      ],
+      "ee_object_xy_m": 0.03861672998731828,
+      "object_target_xy_m": 0.11788384769139336
+    },
+    {
+      "demo": "demo_49",
+      "event": "open_phys",
+      "step": 82,
+      "episode_len": 92,
+      "gripper_qpos": 0.01633858148161317,
+      "command": -1.0,
+      "object_ref": "body:akita_black_bowl_1_main",
+      "target_ref": "body:plate_1_main",
+      "ee_minus_object_m": [
+        -0.03529964633252895,
+        -0.02282431742683208,
+        0.04746076027162749
+      ],
+      "object_minus_target_m": [
+        0.013246302932588438,
+        -0.014428335678902171,
+        0.005959201359761579
+      ],
+      "ee_object_xy_m": 0.042035871552787096,
+      "object_target_xy_m": 0.019586766242669626
+    }
+  ],
+  "summary": {
+    "close_cmd": {
+      "count": 50,
+      "ee_minus_object_mean_mm": [
+        11.356,
+        -49.875,
+        44.2
+      ],
+      "ee_minus_object_std_mm": [
+        19.984,
+        9.899,
+        18.105
+      ],
+      "ee_object_xy_mean_mm": 54.58180037412633,
+      "ee_object_xy_std_mm": 11.605738209935716,
+      "ee_object_xy_min_mm": 31.912376666533252,
+      "ee_object_xy_max_mm": 77.37352895779378,
+      "object_minus_target_xy_mean_mm": 132.69939475167376,
+      "object_minus_target_xy_std_mm": 16.40272727155721
+    },
+    "close_phys": {
+      "count": 50,
+      "ee_minus_object_mean_mm": [
+        -1.484,
+        -49.925,
+        26.327
+      ],
+      "ee_minus_object_std_mm": [
+        14.947,
+        9.401,
+        9.912
+      ],
+      "ee_object_xy_mean_mm": 52.09861397503526,
+      "ee_object_xy_std_mm": 9.601776357103335,
+      "ee_object_xy_min_mm": 35.626945985493975,
+      "ee_object_xy_max_mm": 75.77711327834288,
+      "object_minus_target_xy_mean_mm": 133.1444052557654,
+      "object_minus_target_xy_std_mm": 17.106688556898046
+    },
+    "open_cmd": {
+      "count": 48,
+      "ee_minus_object_mean_mm": [
+        -8.876,
+        -44.738,
+        34.97
+      ],
+      "ee_minus_object_std_mm": [
+        31.182,
+        8.146,
+        35.686
+      ],
+      "ee_object_xy_mean_mm": 53.459752025862194,
+      "ee_object_xy_std_mm": 16.155828442272007,
+      "ee_object_xy_min_mm": 34.18635514938299,
+      "ee_object_xy_max_mm": 125.57357457426868,
+      "object_minus_target_xy_mean_mm": 22.443015149902703,
+      "object_minus_target_xy_std_mm": 37.841697388053056
+    },
+    "open_phys": {
+      "count": 47,
+      "ee_minus_object_mean_mm": [
+        -12.645,
+        -42.8,
+        46.988
+      ],
+      "ee_minus_object_std_mm": [
+        25.006,
+        8.741,
+        27.268
+      ],
+      "ee_object_xy_mean_mm": 50.099740886482486,
+      "ee_object_xy_std_mm": 13.544463892933704,
+      "ee_object_xy_min_mm": 14.99853976529789,
+      "ee_object_xy_max_mm": 118.37901918605205,
+      "object_minus_target_xy_mean_mm": 19.199356590146557,
+      "object_minus_target_xy_std_mm": 30.426065231136754
+    }
+  }
+}
