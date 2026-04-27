@@ -2144,3 +2144,25 @@ Updated immediate priority:
    `0 cm` case that still closes high.
 3. After contact consistency, train post-close hold/transport/release using the
    physical-close event as the phase boundary instead of command close.
+
+Closed-transport continuation result:
+
+- Run:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_bestposv2_closedtransport_actiononly_frombestpos200`
+- Best checkpoint: `steps_300`.
+- Eval: fixed cases `0:0` and `1:3`, threshold `0.50`, calibrated direct action
+  scale `0.85, 1.55, 1.15`, true no-gate deployment.
+- Outcome: close remains active in both cases, IK failures drop to `0`, average
+  min bowl XY is `19.4 mm`, and the `3 cm` case has a physical side-grasp
+  vector error of `10.6 mm`.
+- Failure: no reopen/release; final target XY is still about `137 mm` in the
+  `3 cm` case.
+
+Updated immediate priority:
+
+1. Preserve `steps_300` as the smoother current contact/approach checkpoint.
+2. Do not spend more time on closed-action-only warm starts unless the dataset
+   includes explicit release/placement positives after observed physical close.
+3. Next unattended work should mine or export post-close release/placement
+   supervision keyed from physical close, then train a release-aware continuation
+   while keeping deployment object gates disabled.

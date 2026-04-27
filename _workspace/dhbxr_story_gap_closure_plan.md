@@ -1479,3 +1479,24 @@ Story implication:
   only a rough near-object close. The remaining paper gap is consistency and
   post-contact manipulation, not whether the learned token can ever represent a
   correct contact event.
+
+2026-04-27 closed-transport residual update:
+
+- A closed-state action-only continuation from bestpos v2 improves rollout
+  smoothness and feasibility: the best `steps_300` checkpoint closes in both
+  fixed cases with zero IK failures and average minimum bowl XY of `19.4 mm`.
+- The key non-zero-offset contact claim remains intact. Episode `1,+3 cm`
+  physically closes with `10.6 mm` side-grasp vector error and no deployment
+  object-distance gate.
+- The continuation still does not learn release or placement. There is no
+  reopen event, and final target XY remains about `137 mm` from the plate in the
+  `3 cm` case.
+
+Story implication:
+
+- The current evidence supports a staged CoRL story: DHB-XR gives a compact
+  invariant token that can generalize reach and contact under offset, and the
+  remaining failure is specifically data coverage for post-contact release and
+  placement. This matches the larger augmentation thesis: spatially diverse
+  simulator/world-model rollouts should fill the missing off-manifold
+  post-contact supervision more directly than another execution heuristic.

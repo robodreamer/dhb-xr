@@ -921,3 +921,32 @@ token can trigger a physically correct side-grasp close under a `+3 cm`
 offset without object-distance gates. The remaining gap is narrower and more
 defensible: make this side-grasp timing consistent across cases, then solve
 post-close hold/transport/release.
+
+## Closed-Transport Residual Follow-Up
+
+A post-close action-only continuation was trained from the bestpos v2 contact
+checkpoint:
+
+`_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_bestposv2_closedtransport_actiononly_frombestpos200`
+
+The continuation freezes the contact path and trains only the closed-state
+residual/action path. The best evaluated checkpoint is `steps_300`; redundant
+`steps_150` and `final_model/pytorch_model.pt` artifacts were removed after
+evaluation to preserve disk.
+
+Fixed no-gate eval used threshold `0.50`, calibrated direct-action scale
+`0.85, 1.55, 1.15`, `state_history_update_rate=policy`, and
+`state_gripper_source=commanded`. Results:
+
+- `steps_300` closes in both fixed cases with zero IK failures.
+- Average minimum bowl XY improves to `19.4 mm`.
+- The `3 cm` offset case reaches `13.3 mm` minimum bowl XY and has a physical
+  close vector error of `10.6 mm`, so the learned side-grasp contact result
+  survives the post-close continuation.
+- No evaluated case reopens or releases near the plate. Final target XY remains
+  about `137 mm` in the `3 cm` case, so this is not a full pick-place success.
+
+Updated interpretation: the contact/reach story is now stronger and smoother,
+but the closed-state residual by itself is insufficient for release. The next
+useful intervention should add release/placement-positive supervision anchored
+to observed physical close, not more scalar contact threshold tuning.

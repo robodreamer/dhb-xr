@@ -502,3 +502,10 @@ explicitly references them. They are kept for provenance only.
   `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_sidegrasp_bestposv2_fromrolloutpos400/bestposv2_thr050_ep1_offset3.mp4`.
   Full pick-place is still unsolved because zero-offset contact is high and
   post-close transport/release fails.
+- Active closed-transport follow-up:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_bestposv2_closedtransport_actiononly_frombestpos200`,
+  `steps_300`, threshold `0.50`, fixed cases `0:0` and `1:3`, true no-gate
+  deployment. This checkpoint keeps the non-zero-offset physical side-grasp
+  pass (`10.6 mm` vector error), closes in both fixed cases, and has zero IK
+  failures, but still never reopens/releases. Treat it as the smoother current
+  contact/approach checkpoint, not as a solved full-task result.
