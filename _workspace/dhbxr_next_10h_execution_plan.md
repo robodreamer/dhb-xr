@@ -2166,3 +2166,69 @@ Updated immediate priority:
 3. Next unattended work should mine or export post-close release/placement
    supervision keyed from physical close, then train a release-aware continuation
    while keeping deployment object gates disabled.
+
+Release-aware diagnostic result:
+
+- Run:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_bestposv2_releaseaware_fromclosedtransport300`
+- The run trained release/contact-phase heads from offline
+  `dhb.object_release_phase` and `dhb.object_release_gripper_state` labels while
+  freezing the learned contact head.
+- `steps_300` reopens in both fixed cases, proving the learned release path is
+  active. It still fails: reopen is about `127-134 mm` from the plate and IK
+  failures increase to `35-45`.
+- The release-aware model weights were removed after evaluation because this is
+  not a useful baseline; configs, traces, and scores remain.
+
+Updated immediate priority:
+
+1. Keep the closed-transport `steps_300` checkpoint as the active smooth
+   contact/approach baseline.
+2. Mine release positives from rollout traces only when the object/EE is near
+   the target after physical close, and mine hard negatives from closed states
+   that are still far from target.
+3. Train the next release continuation on rollout-state release labels, not
+   only nominal demo release labels.
+
+Release mining update:
+
+- Added `scripts/libero_rollout_release_miner.py` and tests.
+- Fresh closed-transport policy traces were exported for fixed cases `0:0` and
+  `1:3`.
+- Strict release mining found `0` honest release positives. It found `270`
+  closed-far hard negatives, with best target XY still `103.5 mm` and
+  `119.5 mm`.
+
+Updated immediate priority:
+
+1. Do not force far rollout states into release positives. That would recreate
+   the premature-release failure.
+2. Use the strict manifest as hard-negative release calibration, mixed with
+   demo release positives.
+3. Evaluate with `model_gripper_decode_source=contact_gripper_state` so the
+   fixed contact head handles close and the gripper-state head handles
+   conservative open/release.
+
+Release hard-negative calibration result:
+
+- Run:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_releasehardneg_gripperstate_fromclosedtransport300`
+- Training only the gripper-state release head with strict rollout
+  closed-far hard negatives is learnable: `steps_200` delays reopening versus
+  `steps_100` and reduces average IK failures from `37` to `21`.
+- The best non-zero-offset contact result is preserved at `steps_200`:
+  episode `1,+3 cm` physically closes at step `101` with `10.6 mm` side-grasp
+  vector error under true no-gate deployment.
+- Release is still not solved. `steps_200` reopens at `116.4 mm` and
+  `133.6 mm` target XY for the fixed `0 cm` and `3 cm` cases.
+
+Updated immediate priority:
+
+1. Keep the closed-transport `steps_300` checkpoint as the active smooth
+   contact/approach baseline.
+2. Treat release-hard-negative calibration as diagnostic evidence that the
+   learned release path can be regularized, not as a final model branch.
+3. Stop spending cycles on release-only warm starts until we have post-close
+   transport states that reach within the target affordance window. The next
+   data task is transport-to-target positive generation after observed physical
+   close, followed by honest release-positive mining.

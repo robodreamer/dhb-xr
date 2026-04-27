@@ -950,3 +950,95 @@ Updated interpretation: the contact/reach story is now stronger and smoother,
 but the closed-state residual by itself is insufficient for release. The next
 useful intervention should add release/placement-positive supervision anchored
 to observed physical close, not more scalar contact threshold tuning.
+
+## Release-Aware Continuation Diagnostic
+
+A release-aware continuation was trained from the smoother closed-transport
+`steps_300` checkpoint:
+
+`_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_bestposv2_releaseaware_fromclosedtransport300`
+
+This run unfreezes the contact-phase/release heads and closed residual while
+keeping the learned contact head fixed. It uses offline
+`dhb.object_release_phase` and `dhb.object_release_gripper_state` supervision;
+deployment still uses only learned token outputs with object-distance gates
+disabled.
+
+The result is diagnostic but not a new baseline. `steps_300` learns to reopen
+in both fixed cases, so the release token path is trainable. However, reopen is
+not transport-conditioned enough:
+
+- `0 cm`: close step `91`, reopen step `142`, but reopen is about `127 mm` XY
+  from the plate and IK failures rise to `45`.
+- `3 cm`: close step `95`, physical close step `97`, physical side-grasp vector
+  error `13.9 mm`, reopen step `175`, but reopen target XY is `133.8 mm` and
+  IK failures rise to `35`.
+
+Updated interpretation: training a release head from nominal object-release
+labels alone makes the model willing to reopen, but not at the correct
+transport state. The next release intervention should mine rollout states that
+are actually post-close and near-target as positives, paired with
+closed-but-not-near-target hard negatives. This mirrors the contact-token fix:
+the missing piece is balanced off-manifold rollout-state supervision, not a
+deployment heuristic.
+
+## Rollout Release Mining Infrastructure
+
+`scripts/libero_rollout_release_miner.py` now exports dense gripper-state
+release labels from policy traces. The manifest format intentionally reuses the
+policy-trace contact loader: `target_close=1` means keep holding, and
+`target_close=0` means release/open. A config can emit this target under
+`dhb.object_release_gripper_state` via `policy_trace_close_target_field`.
+
+Strict mining on fresh closed-transport policy traces found no honest
+near-target release positives:
+
+`_workspace/paper_eval/2026-04-27_policy_trace_release_strict_manifest.jsonl`
+
+- `0 cm`: `211` closed-far hard negatives, best target XY `103.5 mm`.
+- `3 cm`: `59` closed-far hard negatives, best target XY `119.5 mm`.
+
+This is an important guardrail. We should not relabel these far states as
+release positives for claim-level training. The immediate use of this manifest
+is to pair rollout closed-far hard negatives with demo release positives, so
+the learned release head stops reopening far from the plate while retaining the
+ability to open when the visual/robot state matches true release.
+
+## Release Hard-Negative Calibration Diagnostic
+
+A conservative gripper-state continuation was trained from the active
+closed-transport `steps_300` checkpoint using the strict rollout release
+hard-negative manifest mixed with the base LeRobot data:
+
+`_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_releasehardneg_gripperstate_fromclosedtransport300`
+
+The run trained the gripper-state release head with
+`policy_trace_close_target_field=dhb.object_release_gripper_state`; deployment
+still used learned model gripper decoding and disabled all object-distance
+gates.
+
+Fixed no-gate eval used calibrated direct-action scale `0.85, 1.55, 1.15`,
+threshold `0.50`, and `model_gripper_decode_source=contact_gripper_state`.
+Physical scoring:
+
+`_workspace/paper_eval/2026-04-27_releasehardneg_gripperstate_physical_scores.json`
+
+- `steps_100` reopens too early in the `3 cm` case: close step `91`, reopen
+  step `93`, no physical close pass.
+- `steps_200` delays reopen in both cases and lowers average IK failures from
+  `37` to `21`, showing the hard-negative signal is learnable.
+- `steps_200`, episode `1,+3 cm`, keeps the useful physical side-grasp close:
+  command close step `99`, physical close step `101`, physical close vector
+  error `10.6 mm`.
+- Release remains invalid. `steps_200` reopens at target XY `116.4 mm` for
+  `0 cm` and `133.6 mm` for `3 cm`; release pass is false in all cases.
+
+Updated interpretation: hard-negative release calibration can delay premature
+opening without object gates, but it does not create the missing
+transport-to-target behavior. The active baseline remains the closed-transport
+`steps_300` checkpoint for smooth reach/contact. The next breakthrough should
+generate post-close transport/near-target positives, then use this release
+miner to add honest release positives and closed-far hard negatives.
+
+The diagnostic model weights were removed after evaluation to preserve disk;
+configs, traces, aggregate summaries, and physical scores were retained.

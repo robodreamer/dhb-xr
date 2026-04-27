@@ -1500,3 +1500,61 @@ Story implication:
   placement. This matches the larger augmentation thesis: spatially diverse
   simulator/world-model rollouts should fill the missing off-manifold
   post-contact supervision more directly than another execution heuristic.
+
+2026-04-27 release-aware diagnostic:
+
+- Training release heads from nominal offline object-release labels is
+  sufficient to produce learned reopen events under true no-gate deployment.
+  `steps_300` reopens in both fixed cases.
+- The reopen is not successful: it happens about `127-134 mm` from the plate,
+  and IK failures increase. The non-zero-offset trace still preserves a valid
+  physical side-grasp close (`13.9 mm` vector error), so contact is not the
+  reason release fails.
+
+Story implication:
+
+- This is useful negative evidence. It shows the architecture can express
+  release through the DHB-XR token path, but nominal demo release labels do not
+  close the rollout distribution gap after contact. The next strong story step
+  is rollout/world-model augmentation for post-contact release: positives must
+  come from states that are actually closed and near target, while hard
+  negatives must be closed-but-far states.
+
+2026-04-27 rollout release mining update:
+
+- The new release miner provides the missing training interface for
+  rollout-state release labels. It deliberately separates release positives
+  from closed-far hard negatives and can feed the existing policy-trace loader
+  as `dhb.object_release_gripper_state`.
+- Fresh policy traces from the active closed-transport checkpoint contain no
+  honest near-target release positives. The best target XY remains over
+  `100 mm`, so the current policy has a transport-to-target gap before a
+  release-data gap.
+
+Story implication:
+
+- This gives a clean failure boundary for the paper narrative. The architecture
+  supports learned release, and the tooling can mine release supervision, but
+  the dataset must first create off-manifold post-contact states that actually
+  reach the target. This directly supports the proposed simulator/world-model
+  augmentation storyline.
+
+2026-04-27 release hard-negative calibration:
+
+- A conservative continuation mixed strict rollout closed-far hard negatives
+  into the gripper-state release head while keeping deployment learned-token
+  and object-gate-free.
+- The intervention has the expected direction but not the final behavior:
+  `steps_200` delays reopening and preserves the `3 cm` physical side-grasp
+  pass (`10.6 mm` vector error), but it still reopens over `100 mm` from the
+  plate and fails release in every fixed case.
+
+Story implication:
+
+- This result tightens the claim boundary. We can now say the learned DHB-XR
+  gripper/release path is controllable by rollout-state supervision, but the
+  decisive missing evidence is transport-to-target coverage after physical
+  close. The strongest paper story is therefore not "more tuning solved
+  release"; it is "DHB-XR exposes the right compact action-token interface, and
+  simulator/world-model augmentation must fill the off-manifold post-contact
+  states needed for robust full manipulation."

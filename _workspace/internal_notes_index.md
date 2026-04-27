@@ -509,3 +509,23 @@ explicitly references them. They are kept for provenance only.
   pass (`10.6 mm` vector error), closes in both fixed cases, and has zero IK
   failures, but still never reopens/releases. Treat it as the smoother current
   contact/approach checkpoint, not as a solved full-task result.
+- Release-aware diagnostic:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_bestposv2_releaseaware_fromclosedtransport300`.
+  The run proves learned reopen can activate without deployment object gates,
+  but the reopen is still far from target (`127-134 mm` XY) and raises IK
+  failures. Model weights were removed after evaluation; keep this as evidence
+  that release needs rollout-state positives and closed-far hard negatives.
+- New release mining tool:
+  `scripts/libero_rollout_release_miner.py`. Strict mining of fresh
+  closed-transport policy traces produced `0` release positives and `270`
+  closed-far hard negatives. Use it next as conservative hard-negative
+  calibration mixed with demo release positives; do not treat the current
+  rollout states as release positives because best target XY is still above
+  `100 mm`.
+- Release hard-negative calibration run:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_releasehardneg_gripperstate_fromclosedtransport300`.
+  `steps_200` delays reopen and preserves the `3 cm` physical side-grasp pass
+  (`10.6 mm` vector error), but still reopens over `100 mm` from the plate.
+  Treat this as diagnostic. The active baseline remains closed-transport
+  `steps_300`; the next data gap is post-close transport-to-target positives
+  before release positives can be mined honestly.
