@@ -1108,3 +1108,37 @@ The next high-impact experiment should generate closed-state corrections that
 move the object by roughly the exported `object_minus_target_m` vector, then
 retrain closed residual and release heads on those corrected post-contact
 states.
+
+## Trainable Transport Correction Follow-Up
+
+The transport miner was extended to export policy-trace training rows directly:
+normalized corrective action targets, generic object-minus-target vectors, and
+dense closed gripper-state targets. The StarVLA policy-trace loader now consumes
+these optional fields, so the same manifest can train closed residual,
+object-target, and gripper-state heads without adding deployment-time object
+gates.
+
+Two warm-start continuations were tested from the active closed-transport
+`steps_300` checkpoint:
+
+`_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_transportcorrection_fromclosedtransport300`
+
+`_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_transportcorrection_v2_fromclosedtransport300`
+
+The first run used aggressive 8-step corrective labels and failed as an
+execution candidate: it introduced close/reopen flicker and severe IK
+regressions in the `3 cm` case. The second run used conservative 16-step labels
+plus dense closed gripper-state supervision. `steps_200` fixed the v1 flicker
+and avoided IK collapse, but still did not move the object close enough to the
+target and weakened the `0 cm` physical-close result. `steps_400` overfit
+further and reopened again.
+
+Updated interpretation: the trainable transport-manifest path is now validated
+mechanically, but synthetic residual labels from failed traces are not enough
+to create successful post-contact transport. The next run should not be another
+scalar sweep of these labels. It should generate successful post-contact
+target-reaching positives from mined physically closed states, then retrain
+closed residual and release heads on those positives.
+
+The non-best transport-correction weights were removed after evaluation;
+configs, summaries, traces, and scores remain for reproducibility.

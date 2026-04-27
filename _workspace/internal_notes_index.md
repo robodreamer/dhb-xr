@@ -545,3 +545,13 @@ explicitly references them. They are kept for provenance only.
   `_workspace/paper_eval/2026-04-27_closedtransport_transport_correction_requests.jsonl`.
   Use these requests as the interface for simulator/world-model post-contact
   augmentation.
+- Trainable transport correction status:
+  `scripts/libero_rollout_transport_miner.py` now also exports policy-trace
+  manifests with normalized corrective actions, object-minus-target targets,
+  and closed gripper-state targets; StarVLA `PolicyTraceContactDataset`
+  consumes all three fields. Aggressive v1 labels caused flicker/IK regression.
+  Conservative v2 labels with dense gripper-state supervision fixed that
+  mechanical issue at `steps_200`, but still failed object transport and
+  weakened `0 cm` close. Treat both as negative diagnostics; the non-best
+  weights were deleted after evaluation. Next step is successful post-contact
+  target-reaching positive generation, not another scalar warm-start sweep.

@@ -3,6 +3,8 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
+import numpy as np
+
 
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "libero_rollout_transport_miner.py"
 SPEC = importlib.util.spec_from_file_location("libero_rollout_transport_miner", SCRIPT_PATH)
@@ -82,6 +84,66 @@ def test_exports_correction_requests_when_target_never_reached() -> None:
         -0.02,
         -0.0,
     ]
+
+
+def test_builds_policy_manifest_rows_with_normalized_corrective_actions() -> None:
+    rollout = {
+        "checkpoint": "ckpt.pt",
+        "task_id": 0,
+        "episode_idx": 1,
+        "offset_cm": 3.0,
+        "close_step": 1,
+        "policy_trace": [
+            {
+                "chunk_index": 0,
+                "t_start": 0,
+                "n_use": 4,
+                "npz_path": "chunk_0000_t0000.npz",
+                "rel_live": {"bowl_minus_plate": [0.12, 0.0, 0.0]},
+            }
+        ],
+        "step_trace": [
+            {"step": 0, "bowl_minus_plate": [0.12, 0.0, 0.0], "observed_state_gripper": 0.04},
+            {"step": 1, "bowl_minus_plate": [0.12, 0.0, 0.0], "observed_state_gripper": 0.01},
+            {"step": 2, "bowl_minus_plate": [0.08, 0.0, 0.0], "observed_state_gripper": 0.01},
+            {"step": 3, "bowl_minus_plate": [0.06, 0.0, 0.0], "observed_state_gripper": 0.01},
+        ],
+    }
+    result = transport_miner.mine_transport_samples(
+        rollout,
+        rollout_json="rollout.json",
+        object_target_field="bowl_minus_plate",
+        target_xy_tolerance_mm=45.0,
+        target_z_min_mm=-20.0,
+        target_z_max_mm=40.0,
+        gripper_qpos_threshold=0.015,
+        correction_top_k=2,
+    )
+    action_stats = {
+        "min": [-0.02, -0.02, -0.02, -1.0, -1.0, -1.0, 0.0],
+        "max": [0.02, 0.02, 0.02, 1.0, 1.0, 1.0, 1.0],
+        "mask": [True, True, True, True, True, True, False],
+    }
+
+    rows = transport_miner.policy_manifest_rows(
+        rollout,
+        result,
+        action_stats=action_stats,
+        correction_steps=4,
+        max_action_step_mm=18.0,
+        include_z=False,
+    )
+
+    assert len(rows) == 1
+    assert rows[0]["npz_path"] == "chunk_0000_t0000.npz"
+    assert rows[0]["target_action_normalized"] is True
+    assert rows[0]["train_mask"] == [0.0, 1.0, 1.0, 1.0]
+    assert rows[0]["target_close"] == [1.0, 1.0, 1.0, 1.0]
+    assert rows[0]["target_gripper_state"] == [[1.0], [1.0], [1.0], [1.0]]
+    assert rows[0]["target_action"][1][0] == -0.8999999761581421
+    assert rows[0]["target_action"][2][0] == -0.8999999761581421
+    assert rows[0]["target_action"][3][0] == -0.75
+    np.testing.assert_allclose(rows[0]["target_object_target"][2], [0.08, 0.0, 0.0])
 
 
 def test_ignores_preclose_target_ready_states() -> None:

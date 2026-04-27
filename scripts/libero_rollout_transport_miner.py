@@ -20,6 +20,8 @@ import math
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+
 
 def _vector3(value: Any) -> list[float] | None:
     if not isinstance(value, list | tuple) or len(value) < 3:
@@ -72,6 +74,29 @@ def _target_ready(
     xy_mm = _xy_norm(vector) * 1000.0
     z_mm = vector[2] * 1000.0
     return xy_mm <= target_xy_tolerance_mm and target_z_min_mm <= z_mm <= target_z_max_mm
+
+
+def _extract_action_stats(payload: dict[str, Any]) -> dict[str, Any]:
+    if "action" in payload:
+        return payload["action"]
+    if "franka" in payload and isinstance(payload["franka"], dict):
+        return payload["franka"]["action"]
+    first_key = next(iter(payload.keys()))
+    return payload[first_key]["action"]
+
+
+def _normalize_raw_action(raw_action: list[float], action_stats: dict[str, Any]) -> list[float]:
+    raw = np.asarray(raw_action, dtype=np.float32)
+    low = np.asarray(action_stats["min"], dtype=np.float32)
+    high = np.asarray(action_stats["max"], dtype=np.float32)
+    mask = np.asarray(
+        action_stats.get("mask", np.ones_like(low, dtype=bool)),
+        dtype=bool,
+    )
+    denom = np.where(np.abs(high - low) < 1e-8, 1.0, high - low)
+    normalized = 2.0 * (raw - low) / denom - 1.0
+    normalized = np.where(mask, normalized, raw)
+    return np.clip(normalized, -1.0, 1.0).astype(np.float32).tolist()
 
 
 def mine_transport_samples(
@@ -218,6 +243,107 @@ def mine_transport_samples(
     }
 
 
+def policy_manifest_rows(
+    rollout: dict[str, Any],
+    mined_result: dict[str, Any],
+    *,
+    action_stats: dict[str, Any],
+    correction_steps: int,
+    max_action_step_mm: float,
+    include_z: bool,
+) -> list[dict[str, Any]]:
+    """Build policy-trace rows with normalized corrective action targets."""
+    policy_trace = rollout.get("policy_trace")
+    if not isinstance(policy_trace, list):
+        return []
+
+    sample_by_step = {
+        sample["step"]: sample
+        for sample in mined_result.get("samples", [])
+        if isinstance(sample, dict) and isinstance(sample.get("step"), int)
+    }
+    max_step_m = float(max_action_step_mm) / 1000.0
+    horizon = max(1, int(correction_steps))
+    rows: list[dict[str, Any]] = []
+    for chunk in policy_trace:
+        if not isinstance(chunk, dict):
+            continue
+        t_start = chunk.get("t_start")
+        n_use = chunk.get("n_use")
+        npz_path = chunk.get("npz_path")
+        if not isinstance(t_start, int) or not isinstance(n_use, int) or not npz_path:
+            continue
+
+        target_action: list[list[float]] = []
+        target_object: list[list[float]] = []
+        target_gripper_state: list[list[float]] = []
+        target_close: list[float] = []
+        train_mask: list[float] = []
+        labels: list[str | None] = []
+        object_target_xy_mm: list[float | None] = []
+        for step in range(t_start, t_start + n_use):
+            sample = sample_by_step.get(step)
+            label = sample.get("label") if sample else None
+            labels.append(label)
+            if sample and label == "closed_transport_candidate":
+                vector = np.asarray(sample["object_minus_target_m"], dtype=np.float32)
+                desired_delta = -vector
+                if not include_z:
+                    desired_delta[2] = 0.0
+                raw_xyz = np.clip(desired_delta / float(horizon), -max_step_m, max_step_m)
+                raw_action = [
+                    float(raw_xyz[0]),
+                    float(raw_xyz[1]),
+                    float(raw_xyz[2]),
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0,
+                ]
+                target_action.append(_normalize_raw_action(raw_action, action_stats))
+                target_object.append(vector.astype(np.float32).tolist())
+                target_gripper_state.append([1.0])
+                target_close.append(1.0)
+                train_mask.append(1.0)
+                object_target_xy_mm.append(float(sample["object_target_xy_mm"]))
+            else:
+                target_action.append([0.0] * 7)
+                target_object.append([0.0, 0.0, 0.0])
+                target_gripper_state.append([1.0])
+                target_close.append(1.0)
+                train_mask.append(0.0)
+                object_target_xy_mm.append(None)
+
+        if not any(value > 0.5 for value in train_mask):
+            continue
+        rows.append(
+            {
+                "rollout_json": mined_result.get("rollout_json"),
+                "checkpoint": mined_result.get("checkpoint"),
+                "task_id": mined_result.get("task_id"),
+                "episode_idx": mined_result.get("episode_idx"),
+                "offset_cm": mined_result.get("offset_cm"),
+                "chunk_index": chunk.get("chunk_index"),
+                "t_start": t_start,
+                "n_use": n_use,
+                "npz_path": str(npz_path),
+                "target_action": target_action,
+                "target_action_normalized": True,
+                "target_object_target": target_object,
+                "target_gripper_state": target_gripper_state,
+                "target_close": target_close,
+                "train_mask": train_mask,
+                "labels": labels,
+                "object_target_xy_mm": object_target_xy_mm,
+                "correction_steps": int(horizon),
+                "max_action_step_mm": float(max_action_step_mm),
+                "correction_include_z": bool(include_z),
+                "rel_live": chunk.get("rel_live"),
+            }
+        )
+    return rows
+
+
 def _markdown_row(result: dict[str, Any]) -> str:
     def fmt(value: Any) -> str:
         if value is None:
@@ -244,6 +370,7 @@ def main() -> None:
     parser.add_argument("--rollout-json", nargs="+", required=True)
     parser.add_argument("--save-json")
     parser.add_argument("--save-correction-jsonl")
+    parser.add_argument("--save-policy-manifest-jsonl")
     parser.add_argument("--print-markdown", action="store_true")
     parser.add_argument("--object-target-field", default="bowl_minus_plate")
     parser.add_argument("--target-xy-tolerance-mm", type=float, default=45.0)
@@ -251,10 +378,22 @@ def main() -> None:
     parser.add_argument("--target-z-max-mm", type=float, default=55.0)
     parser.add_argument("--gripper-qpos-threshold", type=float, default=0.015)
     parser.add_argument("--correction-top-k", type=int, default=3)
+    parser.add_argument("--action-stats-json")
+    parser.add_argument("--correction-steps", type=int, default=8)
+    parser.add_argument("--max-action-step-mm", type=float, default=18.0)
+    parser.add_argument("--transport-correction-include-z", action="store_true")
     args = parser.parse_args()
+
+    action_stats = None
+    if args.save_policy_manifest_jsonl:
+        if not args.action_stats_json:
+            raise ValueError("--save-policy-manifest-jsonl requires --action-stats-json")
+        action_stats_payload = json.loads(Path(args.action_stats_json).read_text(encoding="utf-8"))
+        action_stats = _extract_action_stats(action_stats_payload)
 
     results = []
     correction_requests: list[dict[str, Any]] = []
+    policy_rows: list[dict[str, Any]] = []
     for path_str in args.rollout_json:
         rollout = json.loads(Path(path_str).read_text(encoding="utf-8"))
         result = mine_transport_samples(
@@ -269,6 +408,17 @@ def main() -> None:
         )
         results.append(result)
         correction_requests.extend(result["correction_requests"])
+        if action_stats is not None:
+            policy_rows.extend(
+                policy_manifest_rows(
+                    rollout,
+                    result,
+                    action_stats=action_stats,
+                    correction_steps=max(1, int(args.correction_steps)),
+                    max_action_step_mm=float(args.max_action_step_mm),
+                    include_z=bool(args.transport_correction_include_z),
+                )
+            )
 
     summary = {
         "object_target_field": args.object_target_field,
@@ -277,6 +427,10 @@ def main() -> None:
         "target_z_max_mm": float(args.target_z_max_mm),
         "gripper_qpos_threshold": float(args.gripper_qpos_threshold),
         "correction_top_k": max(0, int(args.correction_top_k)),
+        "policy_manifest_rows": int(len(policy_rows)),
+        "policy_correction_steps": max(1, int(args.correction_steps)),
+        "policy_max_action_step_mm": float(args.max_action_step_mm),
+        "policy_correction_include_z": bool(args.transport_correction_include_z),
         "results": results,
     }
     if args.save_json:
@@ -288,6 +442,12 @@ def main() -> None:
         out.parent.mkdir(parents=True, exist_ok=True)
         with out.open("w", encoding="utf-8") as f:
             for row in correction_requests:
+                f.write(json.dumps(row) + "\n")
+    if args.save_policy_manifest_jsonl:
+        out = Path(args.save_policy_manifest_jsonl)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        with out.open("w", encoding="utf-8") as f:
+            for row in policy_rows:
                 f.write(json.dumps(row) + "\n")
 
     if args.print_markdown:

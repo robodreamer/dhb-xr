@@ -1594,3 +1594,29 @@ Story implication:
   trajectories from these mined requests, then show DHB-XR learns them better
   than ordinary action heads because the invariant/action token compresses the
   spatial transformation.
+
+2026-04-27 trainable transport correction result:
+
+- The transport miner now exports trainable policy-trace rows with normalized
+  corrective actions, object-minus-target context, and closed gripper-state
+  targets. The StarVLA policy-trace loader can consume all three fields.
+- Aggressive corrective labels were not usable: v1 learned some action loss but
+  introduced gripper flicker/reopen and IK regressions.
+- Conservative labels plus dense gripper-state supervision were mechanically
+  better: v2 `steps_200` removed the v1 flicker and avoided IK collapse, but it
+  still did not transport the object into the target window and weakened the
+  `0 cm` close. v2 `steps_400` overfit further and reopened again.
+- Both transport-correction branches remain negative diagnostics. Their
+  checkpoint weights were removed to keep disk available.
+
+Story implication:
+
+- This result sharpens the story rather than invalidating it. The DHB-XR token
+  pipeline now has the right training interface for post-contact corrections,
+  but failed rollout traces do not contain enough successful transport signal
+  to learn from. The next compelling result must add successful post-contact
+  target-reaching states through simulator reset/replay, trajectory generation,
+  or world-model augmentation. That directly supports the paper's big-picture
+  claim: DHB-XR is useful because it provides a compact spatially adaptable
+  token for augmented trajectories, not because execution-side heuristics can
+  rescue missing post-contact data.

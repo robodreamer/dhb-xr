@@ -2275,3 +2275,34 @@ Updated immediate priority:
    that reduce target XY from roughly `110-130 mm` to below `45 mm`.
 3. Retrain closed residual plus release heads only after those corrected
    post-contact positives exist.
+
+Trainable transport correction follow-up:
+
+- Added policy-manifest export to `scripts/libero_rollout_transport_miner.py`.
+  The manifest can now train from mined post-close rollout chunks with
+  normalized corrective `action`, `dhb.object_minus_target_pos`, and
+  `dhb.gripper_state` targets.
+- StarVLA `PolicyTraceContactDataset` now consumes those optional action,
+  object-target, and gripper-state targets, and records supervised-step counts
+  in dataset statistics.
+- Two warm-start transport-correction continuations were evaluated from the
+  active closed-transport `steps_300` checkpoint:
+  - v1 used aggressive 8-step corrective action labels. It caused close/open
+    flicker and IK regressions, especially on the `3 cm` case.
+  - v2 used conservative 16-step labels plus dense closed gripper-state
+    supervision. `steps_200` removed the v1 flicker and IK collapse, but still
+    produced only weak target progress and degraded the `0 cm` close.
+- Neither continuation becomes the active baseline. Their model weights were
+  deleted after evaluation; configs, traces, and metric summaries remain.
+
+Updated immediate priority:
+
+1. Do not keep training scalar variants of synthetic residual labels from the
+   same failed post-close traces. v2 shows the interface is mechanically valid,
+   but the labels are too weak to create reliable object transport.
+2. Preserve the closed-transport `steps_300` checkpoint as the current best
+   smooth reach/contact baseline.
+3. Create post-contact target-reaching positives next: simulator reset/replay,
+   world-model augmentation, or scripted correction rollouts from mined
+   physically closed states. The positive data must actually reduce target XY
+   below the release affordance window before release retraining can be honest.
