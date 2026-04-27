@@ -1904,3 +1904,55 @@ Updated plan:
    closed-loop relabeling over more scalar positive weights. The claim-level
    gate remains actual close-vector error below `30 mm`, no immediate flicker,
    low IK failures, and no deployment object-distance gates.
+
+## 2026-04-27 Contact Mining and Margin Result
+
+Implemented:
+
+- `scripts/libero_rollout_contact_miner.py` mines per-step rollout traces into
+  `positive`, `missed_positive`, `hard_negative`, and `background` labels using
+  the demo close-affordance reference.
+- `scripts/starvla_dhb_live_checkpoint_sweep.py --record-step-trace` now
+  forwards trace recording into each child rollout so future sweeps can be
+  mined directly.
+- `DHBActionHead` and the StarVLA wrapper now support generic
+  `lambda_contact_margin`, `contact_positive_margin`, and
+  `contact_negative_margin`.
+- `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_margin_objectrelease.yaml`
+  tested contact-margin calibration from the current-phase checkpoint.
+
+Validation:
+
+- `pytest tests/test_action_head.py tests/test_libero_rollout_contact_miner.py -q`
+  passed (`43 passed`).
+- The margin config train-step smoke passed and logged
+  `loss_contact_margin`.
+- The 300-step margin retrain completed with only `3.149M` trainable
+  parameters.
+
+Result:
+
+- The mined currentready/current-phase traces show the active close failure is
+  mostly false-positive closed-loop states, not missing confidence at true
+  positives.
+- The margin run over-corrects: both `steps_150` and `steps_300` never close at
+  the default learned threshold on `0 cm` and `3 cm` cases. Average minimum
+  bowl XY is `63.1 mm`, average IK failures are `75`, and close confidence is
+  suppressed (`max ~= 0.187` at step 150, `~= 0.043` at step 300).
+
+Updated plan:
+
+1. Stop all demo-only contact-head recalibration attempts for now. We have
+   bracketed the behavior: positive-heavy BCE always-closes; balanced BCE and
+   margin training never-close.
+2. Preserve the currentready/current-phase checkpoint as the best active
+   partial and use it to collect rollout-state observations around both hard
+   false positives and true close-affordance states.
+3. Implement a closed-loop correction dataset: replay recorded states, save the
+   policy observation/state tensors, and label them with offline
+   demo-affordance geometry. This is the minimum intervention aligned with the
+   paper story of simulation/world-model spatial augmentation.
+4. Only after that dataset exists should we train a contrastive/ranking close
+   readiness head or DAgger-style classifier. The next evidence gate is reduced
+   hard-negative close probability while keeping true close-affordance
+   probability above threshold.

@@ -71,6 +71,7 @@ def _run_case(
     reach_threshold_xy_m: float,
     reach_threshold_z_m: float,
     reach_stop_on_success: bool,
+    record_step_trace: bool,
 ) -> dict:
     summary_path = output_dir / (
         f"{checkpoint.stem}_ep{episode_idx}_offset{offset_cm:.1f}cm_summary.json"
@@ -162,6 +163,8 @@ def _run_case(
         cmd.extend(["--rollout-seed", str(rollout_seed)])
     if disable_gripper_gates:
         cmd.append("--disable-gripper-gates")
+    if record_step_trace:
+        cmd.append("--record-step-trace")
     if reach_only:
         cmd.extend(
             [
@@ -358,6 +361,14 @@ def main() -> None:
     parser.add_argument("--reach-threshold-z-m", type=float, default=0.08)
     parser.add_argument("--reach-stop-on-success", action="store_true")
     parser.add_argument(
+        "--record-step-trace",
+        action="store_true",
+        help=(
+            "Forward rollout-side per-step trace recording. Use for contact "
+            "calibration mining; disabled by default to keep sweep summaries small."
+        ),
+    )
+    parser.add_argument(
         "--sweep-name",
         default=None,
         help=(
@@ -451,6 +462,7 @@ def main() -> None:
                 reach_threshold_xy_m=args.reach_threshold_xy_m,
                 reach_threshold_z_m=args.reach_threshold_z_m,
                 reach_stop_on_success=args.reach_stop_on_success,
+                record_step_trace=bool(args.record_step_trace),
             )
             rows.append(row)
         results.append(

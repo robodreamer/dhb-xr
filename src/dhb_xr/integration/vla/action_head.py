@@ -103,6 +103,9 @@ if HAS_TORCH:
             contact_pos_weight: float | Sequence[float] = 1.0,
             contact_loss_type: str = "bce",
             contact_class_weight: float | Sequence[float] = 1.0,
+            lambda_contact_margin: float = 0.0,
+            contact_positive_margin: float = 0.65,
+            contact_negative_margin: float = 0.35,
             contact_phase_dim: int = 0,
             lambda_contact_phase: float = 0.0,
             contact_phase_loss_type: str = "bce",
@@ -176,6 +179,9 @@ if HAS_TORCH:
             self.contact_pos_weight = contact_pos_weight
             self.contact_loss_type = contact_loss_type
             self.contact_class_weight = contact_class_weight
+            self.lambda_contact_margin = float(lambda_contact_margin)
+            self.contact_positive_margin = float(contact_positive_margin)
+            self.contact_negative_margin = float(contact_negative_margin)
             self.contact_phase_dim = contact_phase_dim
             self.lambda_contact_phase = lambda_contact_phase
             self.contact_phase_loss_type = contact_phase_loss_type
@@ -1696,6 +1702,45 @@ if HAS_TORCH:
                 loss_contact = self._masked_temporal_mean(per_step_contact, temporal_loss_mask)
                 result["loss_contact"] = loss_contact
                 total = self.lambda_contact * loss_contact if total is None else total + self.lambda_contact * loss_contact
+
+                if self.lambda_contact_margin > 0.0:
+                    if self.contact_loss_type == "cross_entropy":
+                        close_class = 1 if pred_contact_logits.shape[-1] > 1 else 0
+                        close_probs = pred_contact_logits.softmax(dim=-1)[..., close_class]
+                        target_closed = target_contact_ce == close_class
+                    else:
+                        if self.contact_mode == "gripper_state":
+                            target_closed_logits = self._closed_binary_target(
+                                target_contact,
+                                pred_contact_logits,
+                            ).to(device=pred_contact_logits.device, dtype=pred_contact_logits.dtype)
+                            close_logits = pred_contact_logits
+                        else:
+                            target_closed_logits = target_contact.to(
+                                device=pred_contact_logits.device,
+                                dtype=pred_contact_logits.dtype,
+                            )
+                            if target_closed_logits.ndim == pred_contact_logits.ndim:
+                                target_closed_logits = target_closed_logits[..., :1]
+                            else:
+                                target_closed_logits = target_closed_logits.unsqueeze(-1)
+                            close_logits = pred_contact_logits[..., :1]
+                        close_probs = torch.sigmoid(close_logits).squeeze(-1)
+                        target_closed = target_closed_logits.squeeze(-1) >= 0.5
+
+                    closed_penalty = F.relu(self.contact_positive_margin - close_probs).pow(2)
+                    open_penalty = F.relu(close_probs - self.contact_negative_margin).pow(2)
+                    per_step_contact_margin = torch.where(target_closed, closed_penalty, open_penalty)
+                    loss_contact_margin = self._masked_temporal_mean(
+                        per_step_contact_margin,
+                        temporal_loss_mask,
+                    )
+                    result["loss_contact_margin"] = loss_contact_margin
+                    total = (
+                        self.lambda_contact_margin * loss_contact_margin
+                        if total is None
+                        else total + self.lambda_contact_margin * loss_contact_margin
+                    )
 
             if target_contact_phase is not None and pred_contact_phase_logits is not None:
                 if self.contact_phase_loss_type == "cross_entropy":

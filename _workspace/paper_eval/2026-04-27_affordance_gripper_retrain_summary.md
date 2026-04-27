@@ -644,3 +644,48 @@ wrong side / not settled" must be contrasted directly against true
 side-grasp-ready states. This points toward closed-loop data aggregation,
 offline perturbation/replay around the observed rollout states, or a pairwise
 margin/ranking close-readiness objective rather than another BCE sampler sweep.
+
+## Closed-Loop Contact Mining and Margin Follow-Up
+
+To make the failure mode explicit, `scripts/libero_rollout_contact_miner.py`
+now mines recorded rollout traces against the demo-derived close-affordance
+reference. It labels each policy step as `positive`, `missed_positive`,
+`hard_negative`, or `background` using only offline trace geometry and the
+model's recorded close probabilities.
+
+Mining the current recorded traces gives:
+
+- currentready/current-phase trace: `45` positives, `0` missed positives,
+  `170` hard negatives, best close-affordance error `4.1 mm` at step `103`,
+  and maximum hard-negative close probability about `0.6` at step `151`.
+- currentphase gripper-state trace: `17` positives, `0` missed positives,
+  `142` hard negatives, best close-affordance error `25.9 mm` at step `122`,
+  and maximum hard-negative close probability about `0.9` at step `107`.
+- balanced close-contact trace: `0` positives, `0` hard negatives, best
+  close-affordance error `54.2 mm`; this branch is primarily a reach/trajectory
+  miss on that offset, not merely a hidden gripper threshold miss.
+
+This confirms the best active partial is not lacking close confidence in
+general; it is over-confident at the wrong closed-loop states. A contact-margin
+loss was added to `DHBActionHead` and StarVLA's wrapper, then tested with:
+
+`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_margin_objectrelease.yaml`
+
+The margin run trained only `contact_head` (`3.149M` trainable parameters) from
+the current-phase checkpoint and passed the one-step smoke with
+`loss_contact_margin` present. However, the fixed-seed, true-no-gate h240 sweep
+is also negative:
+
+- `steps_150`: no close at either `0 cm` or `3 cm`; average minimum bowl XY
+  `63.1 mm`, average IK failures `75`.
+- `steps_300`: no close at either `0 cm` or `3 cm`; average minimum bowl XY
+  `63.1 mm`, average IK failures `75`.
+- rollout close confidence is strongly suppressed (`max close prob ~= 0.187`
+  at `steps_150`, `~= 0.043` at `steps_300`).
+
+Updated conclusion: demo-only contact-head recalibration is exhausted. The
+failure is a closed-loop distribution problem: the model must see hard negative
+rollout states, not only nominal demo negatives, if we want learned gripper
+timing without deployment object gates. The next training intervention should
+capture or reconstruct observation/state samples from rollout states and train
+a contrastive or DAgger-style close-readiness objective against those states.

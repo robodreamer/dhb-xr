@@ -1310,3 +1310,30 @@ Story implication:
   the larger storyline: simulation/world-model augmentation is valuable because
   it can create exactly these spatially diverse corrective contact states that
   the minimum-demo dataset lacks.
+
+2026-04-27 contact-mining and margin update:
+
+- A rollout contact miner now converts recorded traces into explicit
+  close-affordance positives and hard negatives. On the best current partial,
+  the trace contains both true close-affordance states and many hard negatives
+  where close probability remains high. This is the cleanest empirical support
+  so far for the closed-loop distribution-gap diagnosis.
+- A generic contact-margin loss was added and smoke-tested, then trained from
+  the same checkpoint. The result is negative: the head suppresses close
+  confidence and never closes at the default learned threshold. This brackets
+  demo-only contact-head training from both sides: positive-heavy BCE
+  always-closes, balanced/margin demo training never-closes.
+
+Story implication:
+
+- This actually strengthens the big-picture story rather than weakening it:
+  minimum-demo imitation is missing the exact spatially diverse off-manifold
+  contact states needed for robust closed-loop manipulation. The next result
+  should be positioned as simulation/world-model data augmentation producing
+  those hard negative and corrective states, with DHB-XR serving as the compact
+  geometry-aware action/phase representation that can absorb the augmentation.
+- For CoRL framing, avoid claiming solved full pick-place from the current
+  checkpoint. Claim the validated pieces separately, then make the next
+  breakthrough experiment a direct test of the central thesis: closed-loop
+  rollout-state augmentation should improve calibrated contact decisions
+  without adding object-distance gates at deployment.

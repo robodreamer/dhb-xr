@@ -386,6 +386,17 @@ Latest active result to preserve:
   bracketed and should stop. The next high-leverage path is rollout-state hard
   negatives or a pairwise/margin close-readiness objective that explicitly
   contrasts true side-grasp-ready states against near-bowl-but-wrong states.
+- Latest contact mining/margin follow-up:
+  `scripts/libero_rollout_contact_miner.py` now mines recorded traces for
+  close-affordance positives and hard negatives. The currentready/current-phase
+  trace has many hard negatives (`170`) and true positives (`45`), so the best
+  partial is over-confident at wrong closed-loop states rather than simply
+  under-confident near the bowl. A generic `lambda_contact_margin` path was
+  added and tested via
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_margin_objectrelease.yaml`,
+  but the retrain suppresses close entirely at the default threshold. Treat
+  demo-only contact-head recalibration as exhausted. Next: collect/replay
+  rollout-state observations and train against those hard negatives directly.
 
 Historical diagnostics were moved to:
 
