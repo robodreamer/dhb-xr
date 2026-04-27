@@ -1558,3 +1558,20 @@ Story implication:
   release"; it is "DHB-XR exposes the right compact action-token interface, and
   simulator/world-model augmentation must fill the off-manifold post-contact
   states needed for robust full manipulation."
+
+2026-04-27 object-transport conditioning diagnostic:
+
+- Training the existing object-target-conditioned closed residual from the
+  active closed-transport checkpoint did not close the full-task gap.
+- The run preserves the learned `3 cm` physical side-grasp pass (`9.4 mm`
+  vector error), but release still happens over `130 mm` from the plate and IK
+  failures increase.
+
+Story implication:
+
+- This is direct evidence that nominal demo-side transport labels are not enough
+  once closed-loop execution has drifted into a different post-contact state.
+  The story should emphasize augmentation of post-contact rollout states, not
+  merely adding an object-target auxiliary loss. The breakthrough experiment is
+  to create spatially diverse closed-state corrections that actually reach the
+  target, then train DHB-XR on those compact invariant/action tokens.

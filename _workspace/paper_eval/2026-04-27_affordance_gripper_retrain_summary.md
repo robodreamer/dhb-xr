@@ -1042,3 +1042,34 @@ miner to add honest release positives and closed-far hard negatives.
 
 The diagnostic model weights were removed after evaluation to preserve disk;
 configs, traces, aggregate summaries, and physical scores were retained.
+
+## Object-Transport Conditioning Diagnostic
+
+A demo-side object-target conditioning continuation was trained from the active
+closed-transport `steps_300` checkpoint:
+
+`_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_objecttransport_fromclosedtransport300`
+
+This run used the existing `libero_spatial_dhbxr_affordance_transport` data mix
+and trained the object-target head plus closed residual. Deployment still used
+learned gripper decoding and disabled object-distance gates.
+
+Physical scoring:
+
+`_workspace/paper_eval/2026-04-27_objecttransport_fromclosedtransport_physical_scores.json`
+
+- `steps_300`, episode `1,+3 cm`, preserves the physical side-grasp pass:
+  physical close step `101`, vector error `9.4 mm`.
+- It does not solve transport/release. The same `3 cm` case reopens at target
+  XY `136.5 mm`, final target XY is `145.0 mm`, and IK failures rise to `34`.
+- The `0 cm` case still fails the close affordance, with physical close vector
+  error `79.5 mm`.
+
+Updated interpretation: demo-side object-target conditioning is not sufficient
+from the current rollout distribution. It can preserve the learned contact
+event but does not pull the held object into the plate affordance. This further
+supports the data-centric next step: generate or replay post-close
+transport-to-target states, then train on those off-manifold positives.
+
+The diagnostic model weights were removed after evaluation; configs, traces,
+aggregate summaries, and physical scores were retained.

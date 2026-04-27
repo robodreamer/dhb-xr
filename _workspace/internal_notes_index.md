@@ -529,3 +529,10 @@ explicitly references them. They are kept for provenance only.
   Treat this as diagnostic. The active baseline remains closed-transport
   `steps_300`; the next data gap is post-close transport-to-target positives
   before release positives can be mined honestly.
+- Object-transport conditioning diagnostic:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_objecttransport_fromclosedtransport300`.
+  `steps_300` preserves the `3 cm` physical close pass (`9.4 mm` vector error)
+  but still reopens at `136.5 mm` target XY with `34` IK failures. Treat this
+  as evidence that nominal demo-side object-target supervision is insufficient;
+  the next breakthrough needs generated or replayed post-close target-reaching
+  positives.

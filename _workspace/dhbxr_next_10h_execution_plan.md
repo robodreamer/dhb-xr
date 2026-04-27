@@ -2232,3 +2232,26 @@ Updated immediate priority:
    transport states that reach within the target affordance window. The next
    data task is transport-to-target positive generation after observed physical
    close, followed by honest release-positive mining.
+
+Object-transport conditioning diagnostic:
+
+- Run:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_objecttransport_fromclosedtransport300`
+- This continuation trained the object-target head and closed residual from the
+  demo-side `libero_spatial_dhbxr_affordance_transport` data mix.
+- It preserves the useful `3 cm` contact event (`steps_300` physical close
+  vector error `9.4 mm`) but does not solve target transport. The same case
+  reopens at `136.5 mm` target XY and ends at `145.0 mm`; IK failures rise to
+  `34`.
+- Model weights were removed after evaluation; traces and scores remain.
+
+Updated immediate priority:
+
+1. Do not continue warm-starting on nominal demo-side object-transport labels
+   alone. The closed-loop post-contact distribution is still too far from the
+   target.
+2. Build a transport-to-target positive source from actual post-close rollout
+   states: simulator correction, replay/reset to physically closed states, or a
+   world-model/trajectory augmentation that produces near-plate closed states.
+3. Only after those positives exist should release mining be rerun with honest
+   near-target release positives.
