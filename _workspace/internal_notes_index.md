@@ -400,6 +400,10 @@ Latest active result to preserve:
   The rollout harness now has policy-trace export (`--save-policy-trace-dir`
   and sweep `--save-policy-trace`) so the next dataset can use actual
   closed-loop observation/state tensors rather than geometry-only summaries.
+  One policy-trace smoke artifact was generated for the currentready/current-
+  phase `steps_300` checkpoint, `episode=0`, `offset=0cm`, fixed
+  `rollout_seed=70`; it produced `60` NPZ chunks / `8.6M` total and mines to
+  `191` hard negatives.
 
 Historical diagnostics were moved to:
 

@@ -1960,3 +1960,18 @@ Updated plan:
    readiness head or DAgger-style classifier. The next evidence gate is reduced
    hard-negative close probability while keeping true close-affordance
    probability above threshold.
+
+Policy-trace smoke:
+
+- Generated a trainable policy trace for the best currentready/current-phase
+  checkpoint, fixed `rollout_seed=70`, case `episode=0, offset=0cm`.
+- Artifact directory:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_currentready_objectrelease_currentphase_fromobjectrelease300/live_checkpoint_sweep/policy_trace_currentready_currentphase_step300_seed70_case0/step_300/steps_300_pytorch_model_ep0_offset0.0cm_policy_trace`
+- It contains `60` compressed replan NPZ files (`8.6M` total), each with
+  agentview image, wrist image, state window, predicted chunk positions, and
+  close/open probabilities.
+- Contact mining on that trace reports `191` hard negatives and best
+  close-affordance error `35.5 mm` at step `107`. This is close to but still
+  outside the `30 mm` positive gate, which reinforces that the next dataset
+  should include corrective/off-manifold contact states rather than simply
+  replaying this one rollout.

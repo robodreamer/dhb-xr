@@ -195,6 +195,11 @@ def _run_case(
     step_trace = summary.get("step_trace")
     if isinstance(step_trace, list):
         summary["step_trace"] = f"<{len(step_trace)} entries saved to {summary_path}>"
+    policy_trace = summary.get("policy_trace")
+    if isinstance(policy_trace, list):
+        policy_trace_dir = summary.get("policy_trace_dir")
+        suffix = f" under {policy_trace_dir}" if policy_trace_dir else f" to {summary_path}"
+        summary["policy_trace"] = f"<{len(policy_trace)} chunks saved{suffix}>"
     return summary
 
 
