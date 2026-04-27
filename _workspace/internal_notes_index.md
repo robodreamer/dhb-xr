@@ -371,6 +371,21 @@ Latest active result to preserve:
   positive weight made the classifier always-close. Future close-affordance
   work needs balanced hard negatives and calibration, not positive-only
   close-window fitting.
+- Latest balanced close-contact follow-up:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_balanced_objectrelease.yaml`
+  avoids the immediate-close collapse but under-calibrates the learned close
+  probability. At `close=0.55`, `steps_150` and `steps_300` never close despite
+  reaching about `6.8 mm` minimum bowl XY; both accumulate `88` IK failures.
+  A diagnostic `close=0.15` on `steps_150` closes at step `87` with `0` IK
+  failures, but only scores `40.0 mm` close-vector error, `42.7 mm` close XY,
+  no reopen, and `126.8 mm` final target XY. The contact-cross-attention
+  variant,
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_xattn_objectrelease.yaml`,
+  trains `7.347M` parameters but suppresses close confidence further and never
+  closes at the default threshold. Conclusion: BCE close-contact retraining is
+  bracketed and should stop. The next high-leverage path is rollout-state hard
+  negatives or a pairwise/margin close-readiness objective that explicitly
+  contrasts true side-grasp-ready states against near-bowl-but-wrong states.
 
 Historical diagnostics were moved to:
 

@@ -1861,3 +1861,46 @@ positive BCE weight (`8.0`), so the sparse close head collapsed into
 always-close. The next attempt should use balanced hard negatives and a lower
 weight, or a pairwise/calibration objective that explicitly keeps pre-contact
 approach frames below threshold.
+
+## 2026-04-27 Balanced Close-Contact Follow-Up
+
+The balanced follow-up was executed:
+
+- config:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_balanced_objectrelease.yaml`
+- change:
+  lower positive oversampling, `gripper_phase_sampling_key: dhb.close_contact`,
+  `gripper_event_target_pos: null`, and `contact_pos_weight: 2.0`
+- result at `close=0.55/open=0.55`, fixed `rollout_seed=70`, true no-gate:
+  both `steps_150` and `steps_300` reach the bowl (`6.8 mm` min XY) but never
+  close, then accumulate `88` IK failures
+- diagnostic at `close=0.15`, `steps_150`:
+  closes at step `87`, `0` IK failures, `40.0 mm` close-vector error,
+  `42.7 mm` close XY, no reopen, and `126.8 mm` final target XY
+
+A second follow-up unfreezing `contact_cross_attn` was also executed:
+
+- config:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_xattn_objectrelease.yaml`
+- trainable scope:
+  `7.347M` parameters (`contact_head` plus `contact_cross_attn`)
+- result:
+  also never closes at the default threshold; close confidence is even lower
+  than the head-only balanced branch
+
+Updated plan:
+
+1. Stop BCE-only close-contact sampler sweeps. The failure mode has now been
+   bracketed: high-positive BCE becomes always-close, while balanced BCE
+   becomes never-close or under-confident.
+2. Keep the currentready/current-phase checkpoint as the best active partial,
+   because it still gives a real learned close signal and the release head is
+   conceptually correct.
+3. Next high-impact implementation should create rollout-state hard negatives:
+   collect or replay the observed approach states where the arm is near the
+   bowl but too high/wrong-side, label them open, and contrast them with true
+   side-grasp-ready states.
+4. Prefer a pairwise/margin close-readiness objective or DAgger-style
+   closed-loop relabeling over more scalar positive weights. The claim-level
+   gate remains actual close-vector error below `30 mm`, no immediate flicker,
+   low IK failures, and no deployment object-distance gates.

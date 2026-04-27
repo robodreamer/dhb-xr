@@ -1282,3 +1282,31 @@ Story implication:
   decision, not merely a sparse event class. The model must learn that "near
   the bowl but too high / wrong side / not settled" is still open. That is the
   missing supervision shape for a clean DHB-XR manipulation story.
+
+2026-04-27 balanced close-contact update:
+
+- A balanced close-contact branch and a contact-cross-attention variant were
+  tested after the immediate-close collapse. These are also negative, but they
+  clarify the root cause. With balanced sampling and low positive weight, the
+  model reaches the bowl but does not close at the default threshold. Lowering
+  the generic threshold to `0.15` recovers a close at step `87`, but only
+  matches the previous partial close score (`40.0 mm` close-vector error) and
+  still has no release or target placement. Unfreezing `contact_cross_attn`
+  suppresses close confidence further.
+- This means the current limitation is not a missing `dhb.close_contact` label,
+  a gripper polarity issue, or a final-layer capacity issue. The labels and
+  heads exist, but iid demo BCE does not cover the closed-loop rollout states
+  where the policy is near the bowl but still not at the side-grasp affordance.
+
+Story implication:
+
+- The paper story is stronger if we present this honestly as the remaining
+  closed-loop distribution gap. DHB-XR already gives a stable spatial reaching
+  backbone and a compact learned phase interface. The missing final result is
+  the data/learning recipe that turns simulator-derived affordance labels into
+  a calibrated closed-loop contact decision under offset-induced timing drift.
+- The next credible breakthrough should use rollout-state relabeling or
+  contrastive hard negatives, not another BCE sampler sweep. This aligns with
+  the larger storyline: simulation/world-model augmentation is valuable because
+  it can create exactly these spatially diverse corrective contact states that
+  the minimum-demo dataset lacks.

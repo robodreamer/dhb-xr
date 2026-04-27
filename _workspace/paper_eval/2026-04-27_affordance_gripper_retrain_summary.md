@@ -609,3 +609,38 @@ always-close classifier. Do not reuse this recipe as-is. The next close
 precision attempt needs balanced hard negatives from "near bowl but too high /
 wrong side" and lower positive weighting, or a calibrated margin/ranking loss,
 not positive-only close-window fitting.
+
+## Balanced Close-Contact Follow-Ups
+
+Two safer close-contact recalibration branches were then tested from the same
+current-phase object-release checkpoint:
+
+- `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_balanced_objectrelease.yaml`
+- `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_closecontact_xattn_objectrelease.yaml`
+
+The balanced head-only branch lowers close-positive oversampling
+(`gripper_phase_chunk_prob=0.35`), samples from `dhb.close_contact` directly,
+does not force positives into slot `0`, and uses `contact_pos_weight=2.0`.
+This avoids the previous always-close collapse, but it under-calibrates the
+contact probability. At the default `0.55` threshold, both `steps_150` and
+`steps_300` never close despite reaching about `6.8 mm` minimum bowl XY and
+then accumulating `88` IK failures. A diagnostic generic threshold of `0.15`
+for `steps_150` closes at step `87` with `0` IK failures, but the affordance
+score is still only the previous partial level: `40.0 mm` close-vector error,
+`42.7 mm` close XY, no reopen, and `126.8 mm` final target XY.
+
+The cross-attention branch unfreezes `contact_cross_attn` in addition to
+`contact_head` (`7.347M` trainable parameters). It also avoids immediate close,
+but collapses close confidence even further: at the default threshold neither
+checkpoint closes, and the maximum rollout close probability is only about
+`0.0064` for `steps_150` and `0.0017` for `steps_300`.
+
+Updated interpretation: BCE close-contact relabeling alone is not the
+breakthrough. The positive-only recipe saturates to always-close; balanced BCE
+and contact-readout adaptation swing to never-close or low-confidence
+under-calibration. The remaining close-affordance gap likely requires labels
+or losses built from rollout-state hard negatives: "near bowl but too high /
+wrong side / not settled" must be contrasted directly against true
+side-grasp-ready states. This points toward closed-loop data aggregation,
+offline perturbation/replay around the observed rollout states, or a pairwise
+margin/ranking close-readiness objective rather than another BCE sampler sweep.
