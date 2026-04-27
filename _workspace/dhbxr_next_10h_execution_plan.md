@@ -1295,3 +1295,45 @@ Next unattended target:
 5. Keep the current post-contact branch as a positive partial result:
    reach preserved, learned close and learned reopen present, but physical
    grasp affordance still wrong.
+
+## 2026-04-26 Overnight Metric Closure: Affordance Scorer Added
+
+The affordance-relative diagnostic is now implemented:
+
+- script:
+  `scripts/libero_rollout_affordance_score.py`
+- tests:
+  `tests/test_libero_rollout_affordance_score.py`
+- score artifact:
+  `_workspace/paper_eval/2026-04-26_affordance_scores_postcontact.json`
+
+The scorer compares rollout close geometry to the demo physical-close
+EE-object vector and compares release/final state to demo object-target
+placement. This is the correct gate for the next branch because it measures
+the actual grasp affordance and object outcome rather than center proximity.
+
+Latest scores:
+
+- Contact-center + learned gripper closes at `18.0 mm` center XY but has
+  `37.1 mm` close-vector error to the demo side grasp; it never reopens and
+  ends at `116.8 mm` bowl-plate XY.
+- Post-contact best closes at `6.9 mm` center XY but has `45.6 mm`
+  close-vector error; it reopens at `118.6 mm` bowl-plate XY and ends at
+  `105.8 mm`.
+- The `-0.3 mm/step` diagnostic Y bias passes the close-affordance gate
+  (`18.7 mm` vector error), but still reopens/finalizes at about
+  `128/120 mm` bowl-plate XY.
+- The side-plus-down bias closes late, increases IK failures, and does not
+  improve placement.
+
+Updated execution rule:
+
+1. Do not spend more unattended compute on scalar execution biases.
+2. Use the scorer table as the required full-task diagnostic for every new
+   branch.
+3. The next trainable branch should add offline affordance-relative
+   supervision from simulator/demo geometry: demo close EE-object vector,
+   post-close object attachment/lift, and release object-target band.
+4. Deployment must remain object-free: object and target geometry are allowed
+   for dataset generation, diagnostics, and benchmark scoring, not for
+   rollout-time hardcoded gates.

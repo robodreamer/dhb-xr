@@ -127,6 +127,14 @@ Latest active result to preserve:
   center (`[4.5, -5.3, 19.6] mm` in the best trace), which explains why it
   pushes/slides the bowl instead of lifting it. Replace center-close gates with
   affordance-relative grasp/release diagnostics and offline supervision.
+- Latest diagnostic tool:
+  `scripts/libero_rollout_affordance_score.py` scores rollout traces against
+  the demo close/release event geometry. The current score artifact
+  `_workspace/paper_eval/2026-04-26_affordance_scores_postcontact.json` shows
+  that center-contact branches fail the side-grasp close-vector gate, while a
+  diagnostic `-0.3 mm/step` Y bias can pass close affordance but still fails
+  object-target placement. Use this scorer as the full-task gate for future
+  branches and avoid more scalar execution-bias sweeps.
 
 Historical diagnostics were moved to:
 

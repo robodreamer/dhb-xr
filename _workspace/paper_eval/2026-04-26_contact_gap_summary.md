@@ -248,6 +248,27 @@ closed high/early and still failed. The durable fix is to learn or supervise a
 grasp-affordance relative pose, not to deploy a constant bias or an
 object-distance gate.
 
+The rollout affordance scorer now makes this failure mode explicit:
+
+- scorer:
+  `scripts/libero_rollout_affordance_score.py`
+- score artifact:
+  `_workspace/paper_eval/2026-04-26_affordance_scores_postcontact.json`
+
+| Rollout | Close step | Close vector err | Close XY | Best close err | Reopen step | Reopen/final bowl-plate XY | IK fails | Gate result |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| Contact-center + learned gripper | `103` | `37.1 mm` | `18.0 mm` | `7.8 mm @ 299` | none | `116.8 mm final` | `0` | center contact, wrong affordance |
+| Post-contact best | `111` | `45.6 mm` | `6.9 mm` | `36.2 mm @ 92` | `201` | `118.6/105.8 mm` | `76` | center contact, poor transport |
+| Post-contact + `-0.3 mm/step` Y bias | `99` | `18.7 mm` | `32.9 mm` | `5.4 mm @ 102` | `297` | `127.9/119.7 mm` | `0` | close-affordance pass, no release |
+| Post-contact + `-0.5 mm/step` Y bias | `91` | `32.6 mm` | `68.2 mm` | `2.3 mm @ 122` | `141` | `126.9/125.3 mm` | `85` | late best affordance, no release |
+| Post-contact + `-0.5 Y, -0.25 Z mm/step` bias | `207` | `54.5 mm` | `65.2 mm` | `13.9 mm @ 108` | `277` | `129.8/136.5 mm` | `136` | closes late, worse IK |
+
+The important readout is not that Y bias should be used. The readout is that
+the correct close objective is side-grasp affordance alignment, and the correct
+release objective is object-target placement. The current learned controller
+can sometimes pass the close-affordance geometry, but it does not keep the
+object attached or move it into the release band.
+
 ## Next Claim Gate
 
 Do not call a new branch promising unless it passes all of these checks:

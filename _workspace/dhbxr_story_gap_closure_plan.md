@@ -189,6 +189,30 @@ not placement-ready. This strengthens the claim boundary: DHB-XR can preserve
 robust reach while getting into a plausible contact regime, but the remaining
 unvalidated piece is learned post-contact transport and release.
 
+2026-04-26 affordance-metric update:
+
+- The demo event-geometry probe shows that the bowl task's successful grasp is
+  a side affordance, not a bowl-center grasp. The physical close mean is about
+  `[-1.5, -49.9, +26.3] mm` EE-minus-bowl, while demo release happens with
+  bowl-plate XY around `19 mm`.
+- A new rollout affordance scorer compares full-task traces against those demo
+  event geometries. This replaces the misleading center-contact gate with two
+  paper-safe metrics: close-vector error to the demo grasp affordance and
+  object-target XY at reopen/final.
+- The latest table confirms the active gap. Center-contact checkpoints can
+  reach `6-18 mm` EE-bowl XY but are `37-46 mm` away from the demo side-grasp
+  vector. A diagnostic `-0.3 mm/step` Y bias passes the close-affordance gate,
+  but all runs remain over `100 mm` bowl-plate XY at release/final. Therefore,
+  constant execution bias is not the solution; training must learn
+  affordance-relative grasp and object-level transport/release.
+
+Story implication: the narrative is cleaner now. The robust reach result is
+already validated, and the full-task failure has a specific missing variable:
+object-affordance-relative contact and release supervision. This directly
+supports the broader DHB-XR story because the action representation can be
+paired with compact geometric event targets, but those targets must be learned
+from simulator/demo geometry rather than replaced by deployment heuristics.
+
 Transport residual update:
 
 - A transport-focused residual continuation
