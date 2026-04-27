@@ -157,6 +157,57 @@ def test_runner_debounces_dense_gripper_state_predictions():
     assert prepared["debug"]["gripper_open_threshold"] == 0.4
 
 
+def test_runner_hybrid_contact_ready_closes_and_dense_state_reopens():
+    runner = TrajectoryChunkRunner(
+        ChunkRolloutConfig(
+            gripper_source="model",
+            model_gripper_decode_source="contact_gripper_state",
+            gripper_close_threshold=0.6,
+            gripper_open_threshold=0.4,
+            gripper_transition_debounce_steps=2,
+        )
+    )
+    prepared = runner.prepare_chunk(
+        {
+            "positions": np.array(
+                [[[0.00, 0.00, 0.00], [0.01, 0.00, 0.00], [0.02, 0.00, 0.00], [0.03, 0.00, 0.00], [0.04, 0.00, 0.00]]],
+                dtype=np.float32,
+            ),
+            "quaternions": np.array([[[1.0, 0.0, 0.0, 0.0]] * 5], dtype=np.float32),
+            "contact_mode": "gripper_state",
+            "pred_contact_probs": np.array(
+                [[
+                    [0.90, 0.10],
+                    [0.35, 0.65],
+                    [0.34, 0.66],
+                    [0.95, 0.05],
+                    [0.95, 0.05],
+                ]],
+                dtype=np.float32,
+            ),
+            "pred_gripper_state_probs": np.array(
+                [[
+                    [0.95, 0.05],
+                    [0.90, 0.10],
+                    [0.10, 0.90],
+                    [0.70, 0.30],
+                    [0.72, 0.28],
+                ]],
+                dtype=np.float32,
+            ),
+        },
+        anchor_pos=np.zeros(3, dtype=np.float32),
+        current_start=0,
+        n_use=5,
+        initial_gripper_cmd=-1.0,
+    )
+
+    assert prepared["debug"]["gripper_source_used"] == "contact_gripper_state_probs"
+    assert prepared["gripper_cmds"].tolist() == [-1.0, -1.0, 1.0, 1.0, -1.0]
+    assert prepared["debug"]["gripper_close_threshold"] == 0.6
+    assert prepared["debug"]["gripper_open_threshold"] == 0.4
+
+
 def test_runner_applies_temporal_debounce_to_gripper_state_predictions():
     runner = TrajectoryChunkRunner(
         ChunkRolloutConfig(

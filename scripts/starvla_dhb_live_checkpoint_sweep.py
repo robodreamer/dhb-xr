@@ -246,7 +246,7 @@ def main() -> None:
     parser.add_argument("--gripper-source", choices=("demo", "model"), default="demo")
     parser.add_argument(
         "--model-gripper-decode-source",
-        choices=("auto", "gripper_state", "contact_phase", "contact", "normalized_action"),
+        choices=("auto", "gripper_state", "contact_phase", "contact", "contact_gripper_state", "normalized_action"),
         default="auto",
         help=(
             "Which learned gripper signal to decode when --gripper-source=model. "

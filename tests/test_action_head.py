@@ -358,6 +358,32 @@ class TestDHBActionHead:
         assert torch.isfinite(result["loss_gripper_state"])
         assert result["loss_gripper_state"].item() > 0.0
 
+    def test_bce_contact_gripper_state_accepts_categorical_closed_labels(self):
+        head = DHBActionHead(
+            vlm_dim=128,
+            action_horizon=8,
+            invariant_dim=8,
+            hidden_dim=64,
+            num_heads=4,
+            num_layers=2,
+            contact_dim=1,
+            lambda_contact=1.0,
+            contact_mode="gripper_state",
+            contact_loss_type="bce",
+            contact_pos_weight=3.0,
+        )
+        vlm_hidden = torch.randn(self.B, self.S, 128)
+        target_contact = torch.zeros(self.B, 8, dtype=torch.long)
+        target_contact[:, 4:] = 1
+
+        result = head(vlm_hidden, target_contact=target_contact)
+
+        assert result["pred_contact_logits"].shape == (self.B, 8, 1)
+        assert result["pred_contact_probs"].shape == (self.B, 8, 1)
+        assert "loss_contact" in result
+        assert torch.isfinite(result["loss_contact"])
+        assert result["loss_contact"].item() > 0.0
+
     def test_gripper_state_smooth_loss_penalizes_same_phase_flicker(self):
         head = DHBActionHead(
             vlm_dim=128,

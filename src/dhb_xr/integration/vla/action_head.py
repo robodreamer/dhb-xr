@@ -1538,6 +1538,14 @@ if HAS_TORCH:
                     )
                     per_step_contact = per_step_contact.reshape(pred_contact_logits.shape[0], pred_contact_logits.shape[1])
                 else:
+                    if self.contact_mode == "gripper_state":
+                        target_contact = self._closed_binary_target(
+                            target_contact,
+                            pred_contact_logits,
+                        ).to(
+                            device=pred_contact_logits.device,
+                            dtype=pred_contact_logits.dtype,
+                        )
                     pos_weight_values = None
                     if not isinstance(self.contact_pos_weight, (str, bytes)):
                         try:
