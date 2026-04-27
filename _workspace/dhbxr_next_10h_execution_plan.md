@@ -1006,3 +1006,31 @@ Updated overnight priorities:
 4. Spend the next compute on claim closure: matched QwenDHB/QwenOFT tables,
    strict contact-ready diagnostics, and paper-ready reach videos rather than
    unconstrained residual fine-tunes.
+
+## 2026-04-26 Implementation Follow-Up: Constrained Residual Objective
+
+The contact-precision failure showed that per-step residual L2 was not enough:
+small residuals can accumulate into a large endpoint drift over the chunk. A
+new optional loss was added for residual branches:
+
+- `lambda_action_base_cumsum_l2`
+- `action_base_cumsum_dims`
+
+When enabled, the action head compares the cumulative sum of the predicted
+residual-corrected action against the frozen base action path over the selected
+leading action dimensions. This directly penalizes accumulated XYZ drift while
+still allowing bounded local residual corrections.
+
+Validation:
+
+- `tests/test_action_head.py -q`: `37 passed`
+- constrained config smoke:
+  `_workspace/dhb_contactprecision_cumsum_train_step_smoke.json`
+
+Active constrained config:
+
+`configs/libero_dhbxr_qwen_fresh_actionres_contactprecision_cumsum.yaml`
+
+This should be the next branch to train/evaluate if we revisit contact
+precision. It must still pass the corrected `5/5` reach gate before any
+full-task rollout.

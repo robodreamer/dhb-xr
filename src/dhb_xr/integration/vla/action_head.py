@@ -125,6 +125,8 @@ if HAS_TORCH:
             action_residual_hidden_dim: Optional[int] = None,
             action_residual_scale: float = 1.0,
             lambda_action_residual_l2: float = 0.0,
+            lambda_action_base_cumsum_l2: float = 0.0,
+            action_base_cumsum_dims: int = 3,
             use_action_closed_residual_adapter: bool = False,
             action_closed_residual_hidden_dim: Optional[int] = None,
             action_closed_residual_scale: float = 1.0,
@@ -185,6 +187,8 @@ if HAS_TORCH:
             self.use_action_residual_adapter = bool(use_action_residual_adapter)
             self.action_residual_scale = float(action_residual_scale)
             self.lambda_action_residual_l2 = float(lambda_action_residual_l2)
+            self.lambda_action_base_cumsum_l2 = float(lambda_action_base_cumsum_l2)
+            self.action_base_cumsum_dims = max(0, int(action_base_cumsum_dims))
             self.use_action_closed_residual_adapter = bool(use_action_closed_residual_adapter)
             self.action_closed_residual_scale = float(action_closed_residual_scale)
             self.action_closed_residual_gate_source = str(action_closed_residual_gate_source)
@@ -1400,6 +1404,34 @@ if HAS_TORCH:
                     if total is None
                     else total + self.lambda_action_residual_l2 * loss_action_residual_l2
                 )
+
+            if (
+                pred_actions is not None
+                and "pred_actions_base" in result
+                and self.lambda_action_base_cumsum_l2 > 0.0
+                and target_actions is not None
+            ):
+                base_actions = result["pred_actions_base"].detach()
+                num_dims = min(
+                    self.action_base_cumsum_dims,
+                    pred_actions.shape[-1],
+                    base_actions.shape[-1],
+                )
+                if num_dims > 0:
+                    cumulative_delta = (
+                        pred_actions[..., :num_dims] - base_actions[..., :num_dims]
+                    ).cumsum(dim=1)
+                    per_step_base_cumsum_l2 = cumulative_delta.pow(2).mean(dim=-1)
+                    loss_action_base_cumsum_l2 = self._masked_temporal_mean(
+                        per_step_base_cumsum_l2,
+                        temporal_loss_mask,
+                    )
+                    result["loss_action_base_cumsum_l2"] = loss_action_base_cumsum_l2
+                    total = (
+                        self.lambda_action_base_cumsum_l2 * loss_action_base_cumsum_l2
+                        if total is None
+                        else total + self.lambda_action_base_cumsum_l2 * loss_action_base_cumsum_l2
+                    )
 
             if (
                 pred_action_closed_residual_raw is not None

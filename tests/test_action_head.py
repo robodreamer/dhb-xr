@@ -510,6 +510,39 @@ class TestDHBActionHead:
         )
         assert "loss" in result
 
+    def test_action_base_cumsum_loss_penalizes_accumulated_residual_drift(self):
+        head = DHBActionHead(
+            vlm_dim=128,
+            action_horizon=4,
+            invariant_dim=8,
+            hidden_dim=64,
+            num_heads=4,
+            num_layers=2,
+            dropout=0.0,
+            action_dim=7,
+            lambda_act=0.0,
+            use_action_residual_adapter=True,
+            action_residual_hidden_dim=16,
+            action_residual_scale=1.0,
+            lambda_action_base_cumsum_l2=3.0,
+            action_base_cumsum_dims=3,
+        )
+        with torch.no_grad():
+            head.action_residual_adapter[-1].bias.zero_()
+            head.action_residual_adapter[-1].bias[0] = 1.0
+
+        vlm_hidden = torch.randn(self.B, self.S, 128)
+        target_actions = torch.zeros(self.B, 4, 7)
+        result = head(vlm_hidden, target_actions=target_actions)
+
+        assert "loss_action_base_cumsum_l2" in result
+        assert torch.isclose(
+            result["loss_action_base_cumsum_l2"],
+            torch.tensor(2.5),
+            atol=1e-6,
+        )
+        assert torch.isclose(result["loss"], torch.tensor(7.5), atol=1e-6)
+
     def test_closed_residual_adapter_is_gated_by_current_gripper_state(self):
         head = DHBActionHead(
             vlm_dim=128,
