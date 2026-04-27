@@ -487,3 +487,51 @@ preserves the currentready close-readiness head and routes
 labels. The refreshed affordance-transport dataset has `500` episodes and
 `62,250` frames. A one-step StarVLA smoke passes, so the next evidence point is
 the seed-controlled embodied rollout at `steps_150/300`.
+
+## Object-Target Release Rollout Result
+
+The first object-target release run completed:
+
+`_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_currentready_objectrelease_fromtransport200`
+
+The initial checkpoint sweep accidentally used `--max-policy-steps 0`, which
+caps full-task rollout to the nominal demo length (`84` policy steps for the
+episode-1 case). That was an invalid full-task comparison because the
+controlled baselines often close after the nominal demo horizon under the
+`+3 cm` offset. The rollout scripts now emit an explicit warning and record
+`demo_length_cap_warning` when this happens. Claim-level full-task sweeps
+should set a long horizon such as `--max-policy-steps 240`.
+
+With the corrected fixed-seed, true-no-gate horizon (`rollout_seed=70`,
+episode `1`, offset `+3 cm`, `max_policy_steps=240`), the object-release
+branch gives a useful partial but not a full pick-place pass:
+
+- `steps_150`: close step `86`, reopen step `201`, minimum bowl XY `30.7 mm`,
+  close-vector error `41.8 mm`, reopen target XY `134.1 mm`, final target XY
+  `122.6 mm`, and `12` IK failures.
+- `steps_300`: close step `82`, reopen step `153`, minimum bowl XY `1.8 mm`,
+  close-vector error `51.7 mm`, reopen target XY `121.1 mm`, final target XY
+  `116.1 mm`, and `11` IK failures.
+
+The result confirms that the learned no-gate policy can now emit a
+close-hold-reopen sequence from offline object-release supervision, but
+release still happens far from the plate and late IK failures remain.
+
+Small generic hysteresis diagnostics are informative but not a breakthrough.
+At `steps_300`, `close=0.58/open=0.40` reopens later at step `201` and the
+same trace contains a very good best close-affordance opportunity (`5.2 mm` at
+step `104`), but actual close still misses the affordance and final target XY
+is `111.6 mm`. At `close=0.60/open=0.60/debounce=1`, actual close improves to
+`37.9 mm` close-vector error and `12.8 mm` close XY, with reopen at step
+`139`, but final target XY remains `110.6 mm` and IK failures rise to `64`.
+Direct `contact_phase` decoding is worse: close step `75`, reopen step `87`,
+`73.7 mm` close-vector error, `129.2 mm` reopen target XY, and `75` IK
+failures.
+
+Updated interpretation: object-target release labels are the right conceptual
+direction because they create a learned release transition without deployment
+object gates. The remaining gap is not whether release labels exist; it is
+held-object transport and release calibration. The next model should preserve
+the currentready close-readiness path, keep the hybrid decoder, and strengthen
+post-close transport/release supervision rather than switching to
+`contact_phase` decoding or relying on scalar threshold sweeps.

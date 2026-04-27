@@ -5,6 +5,7 @@ from collections import deque
 import functools
 import json
 import random
+import warnings
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -457,6 +458,18 @@ def main() -> None:
     num_demo_steps = len(demo["ee_pos"])
     rollout_steps = int(args.max_policy_steps) if int(args.max_policy_steps) > 0 else num_demo_steps
     rollout_steps = max(1, rollout_steps)
+    demo_length_cap_warning = (
+        not bool(args.reach_only)
+        and int(args.max_policy_steps) <= 0
+    )
+    if demo_length_cap_warning:
+        warnings.warn(
+            "Full-task rollout is capped to the demo length because "
+            "--max-policy-steps is 0. Non-zero-offset closed-loop runs often "
+            "need a longer horizon; set --max-policy-steps explicitly for "
+            "claim-level full-task evaluation.",
+            stacklevel=2,
+        )
     last_effective_grip = float(demo["gripper_cmd"][0]) if len(demo["gripper_cmd"]) else -1.0
 
     task_bddl_file = Path(get_libero_path("bddl_files")) / task.problem_folder / task.bddl_file
@@ -988,6 +1001,7 @@ def main() -> None:
         "num_demo_steps": int(num_demo_steps),
         "max_policy_steps": int(args.max_policy_steps),
         "rollout_steps": int(rollout_steps),
+        "demo_length_cap_warning": bool(demo_length_cap_warning),
         "replan_every": int(args.replan_every),
         "max_first_offset_mm": float(args.max_first_offset_mm),
         "max_step_mm": float(args.max_step_mm),

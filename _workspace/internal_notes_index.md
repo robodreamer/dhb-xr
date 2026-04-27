@@ -332,8 +332,20 @@ Latest active result to preserve:
   new active config is
   `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentready_objectrelease.yaml`.
   The refreshed dataset has `500` episodes / `62,250` frames, and the targeted
-  regression suite plus one-step StarVLA smoke pass. Evaluate this branch under
-  fixed `rollout_seed=70` with true gripper gates disabled.
+  regression suite plus one-step StarVLA smoke pass. The first evaluation
+  exposed a full-task horizon bug: `--max-policy-steps 0` capped the
+  episode-1 offset rollout at `84` steps before known delayed close events.
+  The rollout scripts now warn/record `demo_length_cap_warning`; use
+  `--max-policy-steps 240` for full-task offset claims.
+  Under the corrected fixed `rollout_seed=70`, true-no-gate protocol, step
+  `300` closes at `82`, reopens at `153`, and reaches `1.8 mm` minimum bowl
+  XY, but still has `51.7 mm` close-vector error, `121.1 mm` reopen target XY,
+  `116.1 mm` final target XY, and `11` IK failures. A generic
+  `close=0.60/open=0.60/debounce=1` diagnostic improves actual close to
+  `37.9 mm` close-vector error and `12.8 mm` close XY, but final target XY
+  remains `110.6 mm` and IK failures rise to `64`. Direct `contact_phase`
+  decoding is worse. Treat this as a validated no-gate learned close/reopen
+  partial, not a solved full-task result.
 
 Historical diagnostics were moved to:
 

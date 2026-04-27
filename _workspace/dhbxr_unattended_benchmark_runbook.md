@@ -54,6 +54,49 @@ Gate:
 - Do not reuse the older demo-init/raw-image artifact as the paper-safe live
   reach protocol. It remains provenance only.
 
+### Current Full-Task Learned-Gripper Diagnostic Contract
+
+For full pick-place diagnostics under non-zero offsets, do not use the rollout
+default horizon. The default `--max-policy-steps 0` preserves the nominal demo
+length, which can stop the rollout before delayed offset-adapted close/release
+events. The rollout scripts now warn and record `demo_length_cap_warning` when
+this happens. For current task-0 learned-gripper diagnostics, use an explicit
+long horizon:
+
+```bash
+PYTHONPATH=vendor/starVLA:src:${PYTHONPATH:-} WANDB_MODE=disabled MUJOCO_GL=egl ./.pixi-home/bin/pixi run python scripts/starvla_dhb_live_checkpoint_sweep.py \
+  --config_yaml configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentready_objectrelease.yaml \
+  --run-dir _workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_currentready_objectrelease_fromtransport200 \
+  --checkpoint-step 300 \
+  --task_suite_name libero_spatial --task_id 0 --case 1:3 \
+  --rollout-seed 70 \
+  --replan_every 4 --max-first-offset-mm 35 --max-step-mm 20 \
+  --smooth-window 3 --blend-overlap-alpha 0.6 --blend-mode ramp \
+  --commit-prefix-steps 0 --gripper-source model \
+  --model-gripper-decode-source contact_gripper_state \
+  --init-state-source benchmark --image-orientation raw \
+  --trajectory-source direct_action --direct-action-xyz-scale 0.85 1.55 1.15 \
+  --direct-action-xyz-bias-mm 0 0 0 \
+  --closed-direct-action-xyz-scale 0.85 1.55 1.15 \
+  --closed-direct-action-xyz-bias-mm 0 0 0 \
+  --state-history-update-rate policy --state-gripper-source commanded \
+  --disable-gripper-gates \
+  --gripper-close-threshold 0.55 --gripper-open-threshold 0.40 \
+  --gripper-transition-debounce-steps 2 \
+  --max-policy-steps 240 --settle-steps 60
+```
+
+Gate:
+
+- Pass for full-task claim: reward success, true `disable_gripper_gates`, close
+  affordance pass, release/placement pass, and no severe IK collapse.
+- Partial only: learned close/reopen without object gates but final
+  bowl-plate XY remains above the scorer gate. Current object-release
+  `steps_300` is in this category: close `82`, reopen `153`, minimum bowl XY
+  `1.8 mm`, but final target XY `116.1 mm` and `11` IK failures.
+- Negative: direct `contact_phase` decode on this branch. It closes/reopens
+  too early and is not the active deployment path.
+
 ### Frozen Continuous Evaluator Contract
 
 Primary paper path:

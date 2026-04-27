@@ -372,6 +372,16 @@ def main() -> None:
     if not checkpoints:
         raise RuntimeError(f"No checkpoints found under {run_dir}")
 
+    demo_length_cap_warning = bool(not args.reach_only and int(args.max_policy_steps) <= 0)
+    if demo_length_cap_warning:
+        print(
+            "[warning] Full-task sweep is using --max-policy-steps=0, so each "
+            "rollout will stop at the nominal demo length. Use an explicit "
+            "long horizon, e.g. --max-policy-steps 240, for delayed non-zero-"
+            "offset full-task evaluation.",
+            file=sys.stderr,
+        )
+
     sweep_name = args.sweep_name
     if sweep_name is None and args.output_json:
         sweep_name = Path(args.output_json).stem
@@ -482,6 +492,7 @@ def main() -> None:
             "init_state_source": args.init_state_source,
             "rollout_seed": None if args.rollout_seed is None else int(args.rollout_seed),
             "max_policy_steps": int(args.max_policy_steps),
+            "demo_length_cap_warning": bool(demo_length_cap_warning),
             "settle_steps": int(args.settle_steps),
             "reach_only": bool(args.reach_only),
             "reach_threshold_xy_m": float(args.reach_threshold_xy_m),

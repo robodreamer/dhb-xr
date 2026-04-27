@@ -209,6 +209,44 @@ object-free: close from current contact readiness, hold from persistent gripper
 state, and open only from the learned release-ready output rather than from a
 raw future gripper pulse.
 
+Follow-up executed:
+
+- Added and trained
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentready_objectrelease.yaml`
+  from the useful currentready transport-release partial. It preserves the
+  currentready close-readiness head and routes dense gripper/phase supervision
+  to offline object-target release labels (`dhb.object_release_*`), while
+  keeping rollout object-free.
+- The first sweep exposed an evaluation-contract bug: `--max-policy-steps 0`
+  caps full-task rollout to the nominal demo length. For episode `1,+3 cm`,
+  that stops at `84` policy steps, before known controlled baselines close
+  (`91-103`). The rollout and sweep scripts now warn/record
+  `demo_length_cap_warning`; full-task offset evaluation must use an explicit
+  long horizon such as `--max-policy-steps 240`.
+- Under the corrected fixed `rollout_seed=70`, true-no-gate,
+  `max_policy_steps=240` protocol, the object-release branch learns a real
+  no-gate reopen but still misses placement. Step `300` closes at `82`,
+  reopens at `153`, reaches `1.8 mm` minimum dynamic bowl XY, but has
+  `51.7 mm` close-vector error, `121.1 mm` reopen target XY,
+  `116.1 mm` final target XY, and `11` IK failures.
+- Generic hysteresis diagnostics show calibration tradeoffs, not a solution.
+  `close=0.60/open=0.60/debounce=1` improves actual close to `37.9 mm`
+  close-vector error and `12.8 mm` close XY, with a learned reopen at `139`,
+  but final target XY remains `110.6 mm` and IK failures rise to `64`.
+  Direct `contact_phase` decoding is worse (`75 -> 87` close/open,
+  `73.7 mm` close-vector error, `75` IK failures).
+
+Next action:
+
+Keep the hybrid currentready + dense gripper-state decoder as the active
+deployment path. Do not continue scalar threshold sweeps as the main line.
+The next high-leverage training change should strengthen held-object
+transport/release supervision after close, preferably with a persistent
+release-ready or object-target progress signal that cannot collapse into a
+short close/open pulse. Continue evaluating with fixed rollout seeds,
+`--disable-gripper-gates`, and `--max-policy-steps 240` for full-task offset
+runs.
+
 ## 2026-04-25 Late Update: Reach Is Now Validated, Full Task Is Phase-Limited
 
 The current highest-confidence executable result is no longer the older

@@ -1195,3 +1195,40 @@ Story implication:
 This is now the cleanest implementation path for the manuscript story: minimum
 demo data plus simulation-derived spatial supervision, learned into the VLA
 heads without object-specific deployment gates.
+
+2026-04-27 object-release rollout update:
+
+- The first object-release evaluation exposed a protocol trap: full-task
+  offset sweeps using `--max-policy-steps 0` stop at demo length. For the
+  episode `1`, `+3 cm` case that means `84` policy steps, before controlled
+  baselines usually close. The rollout scripts now warn and record
+  `demo_length_cap_warning`; full-task claims should use an explicit long
+  horizon such as `--max-policy-steps 240`.
+- Under the corrected fixed-seed protocol (`rollout_seed=70`, true gripper
+  gates disabled, `max_policy_steps=240`), object-release `steps_300` closes at
+  step `82`, reopens at step `153`, and reaches `1.8 mm` minimum dynamic bowl
+  XY. This validates a learned object-free close/reopen sequence from the new
+  offline release labels.
+- It is still not a full pick-place result: actual close-vector error is
+  `51.7 mm`, reopen target XY is `121.1 mm`, final target XY is `116.1 mm`,
+  and late IK failures remain (`11`). Step `150` is similar but weaker:
+  close `86`, reopen `201`, final target XY `122.6 mm`, `12` IK failures.
+- Generic hysteresis calibration can improve one metric at the cost of
+  another. `close=0.60/open=0.60/debounce=1` improves actual close to
+  `37.9 mm` close-vector error and `12.8 mm` close XY, with learned reopen at
+  step `139`, but final target XY remains `110.6 mm` and IK failures rise to
+  `64`. Direct `contact_phase` decoding is worse (`75 -> 87` close/open,
+  `73.7 mm` close-vector error, `75` IK failures).
+
+Story implication:
+
+- We can now claim the object-release supervision path is mechanically
+  validated and produces no-gate learned release behavior, but not successful
+  placement.
+- The current paper boundary is clean: robust offset reach and learned
+  close/reopen sequencing are supported; held-object transport and release to
+  the plate are not yet supported.
+- The next compelling result must reduce final bowl-plate XY from roughly
+  `110-120 mm` toward the scorer gate while preserving learned close
+  affordance and avoiding IK failures. More threshold sweeps or direct
+  `contact_phase` decoding are not the main path.
