@@ -94,6 +94,9 @@ Immediate next actions:
    by `steps_600` it again fails to reopen. The next branch should couple
    gripper phase persistence with post-contact transport, not only oversample
    release labels.
+   A target-aware smoothness loss has now been implemented and tested; it
+   removes flicker/IK collapse but suppresses release in the first weighting.
+   Use it as a building block, not as the final full-task result.
 4. Preserve the reach gate before every full-task claim: `5/5`, average bowl
    XY near `38-40 mm`, and `0` IK failures under benchmark init/raw images.
 5. Treat full pick-place as unclaimed until a no-gate run passes both

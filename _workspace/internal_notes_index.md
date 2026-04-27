@@ -186,6 +186,16 @@ Latest active result to preserve:
   `41.9 mm` but causes the close/open collapse (`87 -> 89`). Step `600`
   restores `0` IK failures but loses reopen. Treat this branch as evidence that
   the next model needs phase persistence plus post-contact transport coupling.
+- Latest smooth gripper-state branch:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_releasegrip_smooth.yaml`
+  adds a target-aware smoothness loss on dense gripper-state probabilities. It
+  mechanically fixes the close/open flicker failure and preserves `0` IK
+  failures, with step `200-400` rollouts reaching `0.2-0.6 mm` minimum bowl XY.
+  It still does not reopen, and close-vector error remains `46.8-49.0 mm`.
+  Keep this loss as a useful stabilizer, but do not treat the first weighting
+  as a solved release policy. The next branch should couple side-affordance
+  close, hold/transport persistence, and object-target release instead of only
+  increasing release sampling or scalar thresholds.
 
 Historical diagnostics were moved to:
 

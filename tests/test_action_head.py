@@ -358,6 +358,30 @@ class TestDHBActionHead:
         assert torch.isfinite(result["loss_gripper_state"])
         assert result["loss_gripper_state"].item() > 0.0
 
+    def test_gripper_state_smooth_loss_penalizes_same_phase_flicker(self):
+        head = DHBActionHead(
+            vlm_dim=128,
+            action_horizon=8,
+            invariant_dim=8,
+            hidden_dim=64,
+            num_heads=4,
+            num_layers=2,
+            gripper_state_dim=1,
+            lambda_gripper_state=0.0,
+            gripper_state_loss_type="bce",
+            lambda_gripper_state_smooth=1.0,
+        )
+        vlm_hidden = torch.randn(self.B, self.S, 128)
+        target_gripper_state = torch.zeros(self.B, 8, dtype=torch.long)
+        target_gripper_state[:, 4:] = 1
+
+        result = head(vlm_hidden, target_gripper_state=target_gripper_state)
+
+        assert "loss_gripper_state_smooth" in result
+        assert torch.isfinite(result["loss_gripper_state_smooth"])
+        assert result["loss_gripper_state_smooth"].item() > 0.0
+        assert "loss" in result
+
     def test_action_loss_can_ignore_gripper_dim(self):
         head = DHBActionHead(
             vlm_dim=128,

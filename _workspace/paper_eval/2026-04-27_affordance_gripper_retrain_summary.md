@@ -86,6 +86,19 @@ XY. This suggests release supervision is present and learnable, but the current
 head needs phase persistence and transport coupling rather than more
 release-heavy sampling alone.
 
+To address the flicker directly, a target-aware gripper-state smoothness loss
+was added and tested in:
+
+`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_releasegrip_smooth.yaml`
+
+The loss penalizes adjacent closed-probability changes only when the supervised
+gripper state does not change. The implementation is useful, but this first
+configuration is still negative for full pick-place. Step `200` and step `400`
+both keep `0` IK failures and reach extremely close center contact
+(`0.2-0.6 mm` minimum bowl XY), but neither reopens. Close-vector error remains
+`46.8-49.0 mm`, so the branch stabilizes gripper state but does not solve the
+side-affordance grasp or object-target release.
+
 ## Interpretation
 
 The current evidence is positive for the specific claim that learned gripper
@@ -98,6 +111,8 @@ positive for full pick-place. The active blocker is now more specific:
   chunk-relative timing even under BCE event training;
 - release-heavy dense-gripper training can produce a no-gate reopen at early
   checkpoints, but not a stable close-hold-transport-release sequence;
+- target-aware gripper-state smoothness suppresses flicker and IK collapse, but
+  in the tested weighting it also suppresses release;
 - the policy does not yet learn the demo side-grasp affordance tightly enough;
 - post-close transport and release remain unvalidated.
 

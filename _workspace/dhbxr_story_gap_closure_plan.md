@@ -907,3 +907,32 @@ Story implication:
 - For the paper story, this supports the broader thesis better than another
   threshold sweep. DHB-XR should encode the reusable geometric relation needed
   for grasping, not just minimize distance to the object's center.
+
+2026-04-27 smooth gripper-state update:
+
+- The release-focused dense-gripper branch showed that no-gate reopen is
+  learnable, but early checkpoints flicker and late checkpoints suppress
+  release. To isolate that failure, a target-aware gripper-state smoothness loss
+  was added to the DHB action head and exposed through the StarVLA wrapper.
+- The first smooth branch
+  (`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_releasegrip_smooth.yaml`,
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_releasegrip_smooth_fromgrip800`)
+  trains cleanly and removes the immediate close/open collapse. Step `200` and
+  step `400` both keep `0` IK failures and reach extremely close center contact
+  (`0.2-0.6 mm` minimum bowl XY).
+- It is not a full-task solution. The policy still does not reopen under the
+  tested weighting, and close-vector error remains `46.8-49.0 mm` because the
+  contact remains center-biased rather than matching the demo side-grasp
+  affordance.
+
+Story implication:
+
+- The gripper story is now more precise: learned gripper state can outperform
+  demo replay and can be stabilized without deployment-time object gates, but
+  the missing result is a coupled phase policy, not a smoother scalar gripper
+  probability.
+- The next high-impact branch should combine side-affordance close supervision,
+  held-object/transport persistence, and object-target release. The smooth loss
+  should remain available as a regularizer, likely at lower weight or applied
+  only within same-phase hold segments, but more threshold sweeps are unlikely
+  to close the remaining claim gap.
