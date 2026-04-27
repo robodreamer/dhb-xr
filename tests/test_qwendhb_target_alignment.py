@@ -11,6 +11,8 @@ if str(STARVLA_ROOT) not in sys.path:
     sys.path.insert(0, str(STARVLA_ROOT))
 
 from starVLA.model.framework.VLM4A.QwenDHB import (
+    _extract_gt_contact_phase,
+    _extract_gt_gripper_state,
     _extract_gt_object_target,
     _slice_temporal_target,
 )
@@ -92,3 +94,32 @@ def test_extract_gt_object_target_can_concatenate_configured_fields() -> None:
         target[0, 0],
         torch.tensor([1.0, 2.0, 3.0, -1.0, -2.0, -3.0]),
     )
+
+
+def test_configured_gripper_and_phase_fields_override_defaults() -> None:
+    examples = [
+        {
+            "dhb.gripper_state": [0, 0, 0],
+            "dhb.gripper_phase": [0, 0, 0],
+            "dhb.object_release_gripper_state": [0, 1, 0],
+            "dhb.object_release_phase": [0, 1, 2],
+        },
+        {
+            "dhb.gripper_state": [0, 0, 0],
+            "dhb.gripper_phase": [0, 0, 0],
+            "dhb.object_release_gripper_state": [1, 1, 0],
+            "dhb.object_release_phase": [1, 1, 2],
+        },
+    ]
+
+    gripper = _extract_gt_gripper_state(
+        examples,
+        field="dhb.object_release_gripper_state",
+    )
+    phase = _extract_gt_contact_phase(
+        examples,
+        field="dhb.object_release_phase",
+    )
+
+    torch.testing.assert_close(gripper, torch.tensor([[0, 1, 0], [1, 1, 0]]))
+    torch.testing.assert_close(phase, torch.tensor([[0, 1, 2], [1, 1, 2]]))

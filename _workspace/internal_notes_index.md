@@ -325,6 +325,15 @@ Latest active result to preserve:
   these as negative result/provenance. The next active branch should train a
   learned release-ready signal and hold persistence from the same offline
   geometry rather than adding more scalar object-vector context.
+- Latest object-target release branch:
+  the converter now exports `dhb.object_release_*` and
+  `dhb.object_hold_transport` labels from generic object-minus-target geometry.
+  `QwenDHB` can route phase/gripper supervision to configured fields, and the
+  new active config is
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentready_objectrelease.yaml`.
+  The refreshed dataset has `500` episodes / `62,250` frames, and the targeted
+  regression suite plus one-step StarVLA smoke pass. Evaluate this branch under
+  fixed `rollout_seed=70` with true gripper gates disabled.
 
 Historical diagnostics were moved to:
 

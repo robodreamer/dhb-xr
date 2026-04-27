@@ -458,3 +458,32 @@ phase decision more explicitly: current-ready close, persistent hold/transport,
 and a learned release-ready signal trained from offline object-target geometry.
 Do not continue scalar object-target loss or residual-weight sweeps without a
 release-ready/persistence objective.
+
+## Object-Target Release Label Implementation
+
+The next branch now implements that release-ready/persistence objective. The
+converter exports generic object-target release labels computed offline from
+the object-minus-target vector:
+
+- `dhb.object_release_ready`
+- `dhb.object_release_contact`
+- `dhb.object_release_event`
+- `dhb.object_release_phase`
+- `dhb.object_release_gripper_state`
+- `dhb.object_hold_transport`
+
+These labels are training supervision only. The policy deployment contract
+remains object-free: live rollouts use images, language, state history, DHB/
+action context, and learned contact/gripper heads, with true gripper gates
+disabled for claim-level evaluation.
+
+`QwenDHB` now has configurable target fields for contact, contact phase, and
+dense gripper state. The active branch:
+
+`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentready_objectrelease.yaml`
+
+preserves the currentready close-readiness head and routes
+`contact_phase_head` plus `gripper_state_head` to the new object-release
+labels. The refreshed affordance-transport dataset has `500` episodes and
+`62,250` frames. A one-step StarVLA smoke passes, so the next evidence point is
+the seed-controlled embodied rollout at `steps_150/300`.

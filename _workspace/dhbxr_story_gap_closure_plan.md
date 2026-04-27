@@ -1175,3 +1175,23 @@ Story implication:
 - The next result should explicitly train release readiness and hold
   persistence from the offline object-target geometry, while keeping the live
   policy object-free and learned.
+
+2026-04-27 object-target release objective update:
+
+- The converter now exports generic object-target release labels:
+  `dhb.object_release_ready`, `dhb.object_release_contact`,
+  `dhb.object_release_event`, `dhb.object_release_phase`,
+  `dhb.object_release_gripper_state`, and `dhb.object_hold_transport`.
+- These labels come from offline simulator/demo object-minus-target geometry
+  with a sustained-ready requirement. They are not rollout gates.
+- `QwenDHB` now supports configurable `contact_target_field`,
+  `contact_phase_field`, and `gripper_state_field`, and StarVLA sampling can
+  use `gripper_phase_sampling_key` for the object-release phase.
+- The active branch is
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentready_objectrelease.yaml`.
+  It preserves the currentready close-readiness head and trains the phase plus
+  dense gripper heads against object-target release/hold labels.
+
+This is now the cleanest implementation path for the manuscript story: minimum
+demo data plus simulation-derived spatial supervision, learned into the VLA
+heads without object-specific deployment gates.

@@ -124,6 +124,9 @@ LIBERO_CLOSE_GATE_Z_M = 0.05
 LIBERO_RELEASE_GATE_XY_M = 0.05
 LIBERO_RELEASE_GATE_Z_M = 0.06
 LIBERO_CLOSE_AFFORDANCE_TOLERANCE_M = 0.03
+LIBERO_OBJECT_RELEASE_GATE_XY_M = 0.05
+LIBERO_OBJECT_RELEASE_GATE_Z_M = 0.06
+LIBERO_OBJECT_RELEASE_READY_SUSTAIN_STEPS = 6
 DEFAULT_DHB_OAT_ACTION_HORIZON = 8
 DEFAULT_DHB_OAT_NUM_REGISTERS = 8
 DEFAULT_DHB_OAT_INIT_SEED = 0
@@ -300,6 +303,14 @@ class _LiberoGeometryLabeler:
             (gripper_state > 0)
             & (open_contact <= 0.5)
         ).astype(np.float32)
+        object_minus_target_pos = _object_minus_target_from_eef_relative(
+            object_rel=bowl_rel,
+            target_rel=plate_rel,
+        )
+        object_release = _object_target_release_features(
+            object_minus_target_pos=object_minus_target_pos,
+            close_contact=close_contact,
+        )
         return {
             "close_contact": close_contact,
             "open_contact": open_contact,
@@ -308,11 +319,9 @@ class _LiberoGeometryLabeler:
             "gripper_state": gripper_state,
             "object_to_eef_pos": bowl_rel.astype(np.float32, copy=False),
             "target_to_eef_pos": plate_rel.astype(np.float32, copy=False),
-            "object_minus_target_pos": _object_minus_target_from_eef_relative(
-                object_rel=bowl_rel,
-                target_rel=plate_rel,
-            ),
+            "object_minus_target_pos": object_minus_target_pos,
             "transport_phase": transport_phase,
+            **object_release,
         }
 
     def build_labels(
@@ -503,6 +512,121 @@ def _object_minus_target_from_eef_relative(
     return (object_rel[:, :3] - target_rel[:, :3]).astype(np.float32, copy=False)
 
 
+def _phase_window_labels(ready_mask: np.ndarray, window_steps: int) -> np.ndarray:
+    ready_mask = np.asarray(ready_mask, dtype=bool)
+    phase = np.zeros(len(ready_mask), dtype=np.float32)
+    phase_steps = max(1, int(window_steps))
+    onset = ready_mask.copy()
+    onset[1:] &= ~ready_mask[:-1]
+    for idx in np.flatnonzero(onset):
+        end = min(len(phase), idx + phase_steps)
+        phase[idx:end] = np.maximum(phase[idx:end], ready_mask[idx:end].astype(np.float32))
+    return phase
+
+
+def _event_class_from_phase_windows(
+    *,
+    close_contact: np.ndarray,
+    open_contact: np.ndarray,
+    onset_steps: int = 1,
+) -> np.ndarray:
+    close_contact = np.asarray(close_contact, dtype=np.float32).reshape(-1)
+    open_contact = np.asarray(open_contact, dtype=np.float32).reshape(-1)
+    if len(close_contact) != len(open_contact):
+        raise ValueError(
+            "close/open phase windows must share length: "
+            f"close={close_contact.shape}, open={open_contact.shape}"
+        )
+
+    close_edge = close_contact > 0.5
+    close_edge[1:] &= ~(close_contact[:-1] > 0.5)
+    open_edge = open_contact > 0.5
+    open_edge[1:] &= ~(open_contact[:-1] > 0.5)
+
+    event = np.zeros(len(close_contact), dtype=np.int64)
+    steps = max(1, int(onset_steps))
+    for idx in np.flatnonzero(close_edge):
+        event[idx : min(len(event), idx + steps)] = 1
+    for idx in np.flatnonzero(open_edge):
+        event[idx : min(len(event), idx + steps)] = 2
+    return event
+
+
+def _object_target_release_features(
+    *,
+    object_minus_target_pos: np.ndarray,
+    close_contact: np.ndarray,
+    release_gate_xy_m: float = LIBERO_OBJECT_RELEASE_GATE_XY_M,
+    release_gate_z_m: float = LIBERO_OBJECT_RELEASE_GATE_Z_M,
+    ready_sustain_steps: int = LIBERO_OBJECT_RELEASE_READY_SUSTAIN_STEPS,
+    release_phase_steps: int = 6,
+) -> Dict[str, np.ndarray]:
+    """Build generic object-target release and hold labels for training.
+
+    These labels are computed from simulator/demo geometry offline. They are
+    intentionally exported as supervision only; rollout policy code should
+    infer release from learned heads, not consume object-target distances.
+    """
+    object_minus_target_pos = np.asarray(object_minus_target_pos, dtype=np.float32)
+    close_contact = np.asarray(close_contact, dtype=np.float32).reshape(-1)
+    if object_minus_target_pos.ndim != 2 or object_minus_target_pos.shape[1] < 3:
+        raise ValueError(
+            "object_minus_target_pos must have shape (T, >=3), "
+            f"got {object_minus_target_pos.shape}"
+        )
+    if object_minus_target_pos.shape[0] != len(close_contact):
+        raise ValueError(
+            "object release labels require matching object-target and close lengths: "
+            f"object={object_minus_target_pos.shape}, close={close_contact.shape}"
+        )
+
+    close_edge = close_contact > 0.5
+    close_edge[1:] &= ~(close_contact[:-1] > 0.5)
+    has_closed = np.cumsum(close_edge.astype(np.int32)) > 0
+    object_target_near = (
+        (np.linalg.norm(object_minus_target_pos[:, :2], axis=1) <= float(release_gate_xy_m))
+        & (np.abs(object_minus_target_pos[:, 2]) <= float(release_gate_z_m))
+    )
+    ready_candidate = object_target_near & has_closed
+
+    sustain = max(1, int(ready_sustain_steps))
+    if sustain > 1 and len(ready_candidate):
+        sustained = np.zeros_like(ready_candidate, dtype=bool)
+        run = 0
+        for idx, is_ready in enumerate(ready_candidate):
+            run = run + 1 if bool(is_ready) else 0
+            sustained[idx] = run >= sustain
+        release_ready = sustained
+    else:
+        release_ready = ready_candidate.astype(bool, copy=True)
+
+    object_release_contact = _phase_window_labels(release_ready, release_phase_steps)
+    object_release_phase = np.zeros(len(close_contact), dtype=np.int64)
+    object_release_phase[close_contact > 0.5] = 1
+    object_release_phase[object_release_contact > 0.5] = 2
+    object_release_event = _event_class_from_phase_windows(
+        close_contact=close_contact,
+        open_contact=object_release_contact,
+    )
+    object_release_gripper_state = _gripper_state_from_events(
+        gripper_open=np.ones(len(close_contact), dtype=np.float32),
+        close_contact=close_contact,
+        open_contact=object_release_contact,
+    )
+    hold_transport = (
+        (object_release_gripper_state > 0)
+        & (object_release_contact <= 0.5)
+    ).astype(np.float32)
+    return {
+        "object_release_ready": release_ready.astype(np.float32),
+        "object_release_contact": object_release_contact.astype(np.float32),
+        "object_release_event": object_release_event.astype(np.int64),
+        "object_release_phase": object_release_phase.astype(np.int64),
+        "object_release_gripper_state": object_release_gripper_state.astype(np.int64),
+        "object_hold_transport": hold_transport,
+    }
+
+
 def _geometry_contact_labels(
     *,
     bowl_rel: np.ndarray,
@@ -576,32 +700,14 @@ def _geometry_contact_labels(
         & has_closed_before
     )
 
-    def _phase_window_labels(ready_mask: np.ndarray, window_steps: int) -> np.ndarray:
-        ready_mask = np.asarray(ready_mask, dtype=bool)
-        phase = np.zeros(len(ready_mask), dtype=np.float32)
-        phase_steps = max(1, int(window_steps))
-        onset = ready_mask.copy()
-        onset[1:] &= ~ready_mask[:-1]
-        for idx in np.flatnonzero(onset):
-            end = min(len(phase), idx + phase_steps)
-            phase[idx:end] = np.maximum(phase[idx:end], ready_mask[idx:end].astype(np.float32))
-        return phase
-
     close_contact = _phase_window_labels(close_ready_mask, close_phase_steps)
     open_contact = _phase_window_labels(open_ready_mask, open_phase_steps)
     onset_steps = max(1, int(event_onset_steps))
-    close_edge = close_contact > 0.5
-    close_edge[1:] &= ~(close_contact[:-1] > 0.5)
-    open_edge = open_contact > 0.5
-    open_edge[1:] &= ~(open_contact[:-1] > 0.5)
-
-    gripper_event = np.zeros(len(open_now), dtype=np.int64)
-    for idx in np.flatnonzero(close_edge):
-        end = min(len(gripper_event), idx + onset_steps)
-        gripper_event[idx:end] = 1
-    for idx in np.flatnonzero(open_edge):
-        end = min(len(gripper_event), idx + onset_steps)
-        gripper_event[idx:end] = 2
+    gripper_event = _event_class_from_phase_windows(
+        close_contact=close_contact,
+        open_contact=open_contact,
+        onset_steps=onset_steps,
+    )
     gripper_phase = np.zeros(len(open_now), dtype=np.int64)
     gripper_phase[close_contact > 0.5] = 1
     gripper_phase[open_contact > 0.5] = 2
@@ -1039,16 +1145,27 @@ def create_episode_dataframe(
         ("target_to_eef_pos", "dhb.target_to_eef_pos"),
         ("object_minus_target_pos", "dhb.object_minus_target_pos"),
         ("transport_phase", "dhb.transport_phase"),
+        ("object_release_ready", "dhb.object_release_ready"),
+        ("object_release_contact", "dhb.object_release_contact"),
+        ("object_release_event", "dhb.object_release_event"),
+        ("object_release_phase", "dhb.object_release_phase"),
+        ("object_release_gripper_state", "dhb.object_release_gripper_state"),
+        ("object_hold_transport", "dhb.object_hold_transport"),
     ):
         value = geometry_features.get(source_key)
         if value is not None:
-            arr = np.asarray(value, dtype=np.float32)
+            dtype = (
+                np.int64
+                if source_key in {"object_release_event", "object_release_phase", "object_release_gripper_state"}
+                else np.float32
+            )
+            arr = np.asarray(value, dtype=dtype)
             if arr.shape[0] != length:
                 raise ValueError(
                     f"Geometry feature '{source_key}' length mismatch for episode {episode_index}: "
                     f"{arr.shape[0]} != {length}"
                 )
-            data_dict[export_key] = arr.astype(np.float32).tolist()
+            data_dict[export_key] = arr.astype(dtype).tolist()
     
     df = pd.DataFrame(data_dict)
     return df

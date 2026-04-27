@@ -1721,3 +1721,37 @@ Updated unattended target:
    supervision on terminal/release chunks.
 4. Keep rollout decisions object-free. Use simulator geometry only for labels,
    scoring, and diagnostic summaries.
+
+## 2026-04-27 Object-Target Release Branch
+
+The next active branch is now implemented:
+
+- config:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentready_objectrelease.yaml`
+- dataset:
+  `/home/andypark/Projects/data/libero_lerobot_affordance_transport`
+- new offline labels:
+  `dhb.object_release_ready`, `dhb.object_release_contact`,
+  `dhb.object_release_event`, `dhb.object_release_phase`,
+  `dhb.object_release_gripper_state`, and `dhb.object_hold_transport`
+
+The important change is that release/hold supervision is derived from the
+generic object-minus-target vector in the dataset, not from rollout-time
+object gates. `QwenDHB` now supports configurable `contact_phase_field` and
+`gripper_state_field`, so this branch can preserve the currentready
+close-readiness head while training the phase/gripper heads against object-
+target release labels. The StarVLA sampler can also oversample chunks from
+`dhb.object_release_phase`.
+
+Validation so far:
+
+- full dataset refreshed: `500` episodes, `62,250` frames
+- regression tests: `60 passed`
+- train-step smoke:
+  `_workspace/dhb_commanded_affordancegrasp_currentready_objectrelease_train_step_smoke.json`
+
+Next run: train the object-release branch to `steps_150/300`, then evaluate
+with fixed `rollout_seed=70`, true `--disable-gripper-gates`, and
+`--model-gripper-decode-source contact_gripper_state`. The claim gate is
+whether release/hold improves without losing the currentready close score or
+reintroducing open-close flicker.

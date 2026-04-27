@@ -12,6 +12,7 @@ from examples.integration.libero_to_lerobot import (
     _geometry_contact_labels,
     _infer_close_affordance_target,
     _object_minus_target_from_eef_relative,
+    _object_target_release_features,
     create_episode_dataframe,
     load_libero_demo,
 )
@@ -127,6 +128,12 @@ def test_create_episode_dataframe_exports_offline_geometry_features(tmp_path: Pa
                     target_rel=target_rel,
                 ),
                 "transport_phase": np.array([0, 1, 0], dtype=np.float32),
+                "object_release_ready": np.array([0, 0, 1], dtype=np.float32),
+                "object_release_contact": np.array([0, 0, 1], dtype=np.float32),
+                "object_release_event": np.array([0, 1, 2], dtype=np.int64),
+                "object_release_phase": np.array([0, 1, 2], dtype=np.int64),
+                "object_release_gripper_state": np.array([0, 1, 0], dtype=np.int64),
+                "object_hold_transport": np.array([0, 1, 0], dtype=np.float32),
             }
 
     demo_data = load_libero_demo(h5_path, 0)
@@ -140,12 +147,24 @@ def test_create_episode_dataframe_exports_offline_geometry_features(tmp_path: Pa
     assert "dhb.target_to_eef_pos" in df.columns
     assert "dhb.object_minus_target_pos" in df.columns
     assert "dhb.transport_phase" in df.columns
+    assert "dhb.object_release_ready" in df.columns
+    assert "dhb.object_release_contact" in df.columns
+    assert "dhb.object_release_event" in df.columns
+    assert "dhb.object_release_phase" in df.columns
+    assert "dhb.object_release_gripper_state" in df.columns
+    assert "dhb.object_hold_transport" in df.columns
     np.testing.assert_allclose(
         np.stack(df["dhb.object_minus_target_pos"].map(np.asarray)),
         [[-0.10, -0.02, -0.01], [-0.10, -0.01, -0.01], [-0.06, 0.0, 0.0]],
         atol=1e-6,
     )
     np.testing.assert_array_equal(np.asarray(df["dhb.gripper_state"], dtype=np.int64), [0, 1, 0])
+    np.testing.assert_array_equal(np.asarray(df["dhb.object_release_event"], dtype=np.int64), [0, 1, 2])
+    np.testing.assert_array_equal(np.asarray(df["dhb.object_release_phase"], dtype=np.int64), [0, 1, 2])
+    np.testing.assert_array_equal(
+        np.asarray(df["dhb.object_release_gripper_state"], dtype=np.int64),
+        [0, 1, 0],
+    )
 
 
 def test_create_episode_dataframe_exports_dhb_oat_token_targets(tmp_path: Path):
@@ -378,3 +397,36 @@ def test_gripper_state_from_events_tracks_geometry_aligned_state():
     )
 
     np.testing.assert_array_equal(gripper_state, [0, 1, 1, 1, 0, 0])
+
+
+def test_object_target_release_features_delay_until_sustained_target_contact():
+    object_minus_target = np.array(
+        [
+            [0.12, 0.00, 0.00],
+            [0.10, 0.00, 0.00],
+            [0.04, 0.00, 0.00],
+            [0.03, 0.00, 0.00],
+            [0.02, 0.00, 0.00],
+            [0.01, 0.00, 0.00],
+            [0.01, 0.00, 0.00],
+            [0.08, 0.00, 0.00],
+        ],
+        dtype=np.float32,
+    )
+    close_contact = np.array([0, 1, 1, 0, 0, 0, 0, 0], dtype=np.float32)
+
+    features = _object_target_release_features(
+        object_minus_target_pos=object_minus_target,
+        close_contact=close_contact,
+        release_gate_xy_m=0.05,
+        release_gate_z_m=0.02,
+        ready_sustain_steps=3,
+        release_phase_steps=2,
+    )
+
+    np.testing.assert_array_equal(features["object_release_ready"], [0, 0, 0, 0, 1, 1, 1, 0])
+    np.testing.assert_array_equal(features["object_release_contact"], [0, 0, 0, 0, 1, 1, 0, 0])
+    np.testing.assert_array_equal(features["object_release_event"], [0, 1, 0, 0, 2, 0, 0, 0])
+    np.testing.assert_array_equal(features["object_release_phase"], [0, 1, 1, 0, 2, 2, 0, 0])
+    np.testing.assert_array_equal(features["object_release_gripper_state"], [0, 1, 1, 1, 0, 0, 0, 0])
+    np.testing.assert_array_equal(features["object_hold_transport"], [0, 1, 1, 1, 0, 0, 0, 0])
