@@ -892,3 +892,72 @@ Interpretation:
   The next meaningful work must train a post-contact residual/action module
   that is active after physical gripper closure while preserving the base
   reach behavior.
+
+## 2026-04-26 Overnight Update: Full Task Is Now A Precision-Contact Problem
+
+Two staged branches were added and tested:
+
+- `configs/libero_dhbxr_qwen_fresh_actionres_postcontact.yaml`
+- `configs/libero_dhbxr_qwen_fresh_actionres_releasegrip.yaml`
+
+The post-contact residual branch warms from the BCE gripper checkpoint and
+trains only the physical-gripper-gated closed residual. It preserves the
+corrected reach gate:
+
+- run:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_postcontact_fromgripbce800`
+- checkpoint: `steps_800_pytorch_model.pt`
+- reach gate: `5/5`, average minimum dynamic bowl XY `41.4 mm`, `0` IK
+  failures
+- full-task no-gate diagnostic at threshold `0.35`: `success=false`,
+  `close_step=101`, `ik_fail_total=16`, bowl motion about `80.1 mm`
+
+Compared with the previous BCE checkpoint, this is a modest real improvement:
+IK failures drop from `30` to `16`, object motion increases from about
+`74-75 mm` to `80 mm`, and final bowl-plate XY improves slightly. It is not a
+full-task breakthrough.
+
+The release-gripper branch warms from post-contact and trains only the generic
+contact-phase/gripper-state path. It also preserves reach:
+
+- run:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_releasegrip_frompost800`
+- checkpoint: `steps_600_pytorch_model.pt`
+- reach gate: `5/5`, average minimum dynamic bowl XY `41.5 mm`, `0` IK
+  failures
+
+However, release training over-calibrates close probability under the default
+threshold:
+
+- threshold `0.35`: closes at step `65`, about `124 mm` XY / `115 mm` Z from
+  the bowl; no reopen; no success
+- threshold `0.90`: closes at step `93`, about `56 mm` XY / `45 mm` Z from the
+  bowl; no reopen; no success
+- `contact_phase` decoder: no close event, so it is not currently usable as a
+  rollout gripper source
+
+The highest-signal new finding is that the old `50 mm` reach success threshold
+is too loose for physical grasp. With direct-action Y scale increased from
+`1.35` to `1.55`, the same release checkpoint improves the 5-case reach metric
+from `41.5 mm` to `34.8 mm` average XY. On the full task with
+`--direct-action-xyz-scale 1.0 1.55 1.15` and learned close threshold `0.90`,
+close geometry improves to about `[1.5, -25.5, 44.7] mm` relative to the bowl,
+and the closest dynamic EE-bowl approach reaches `24.7 mm` XY / `43.4 mm` 3D.
+A delayed threshold `0.94` shows the trajectory can reach `17.1 mm` XY /
+`30.2 mm` 3D, but it closes too late at step `177` after IK failures.
+
+Decision:
+
+1. Keep both new configs as diagnostic branches because they preserve reach and
+   expose the next bottleneck cleanly.
+2. Do not claim full pick-place success yet.
+3. Replace the old reach-only gate for grasp work with a stricter
+   contact-ready gate: target `<=20 mm` dynamic bowl XY and `<=35-40 mm` 3D at
+   or before the learned close event.
+4. Do not continue gripper-head-only training as the main path. It can preserve
+   reach, but it does not learn release from off-demo rollout states and can
+   make close timing too early.
+5. Next training should target high-precision contact approach while preserving
+   the base reach path: residual-only action correction, current-state history,
+   strong close/contact sampling, and explicit validation against the stricter
+   contact-ready metric before returning to full release.

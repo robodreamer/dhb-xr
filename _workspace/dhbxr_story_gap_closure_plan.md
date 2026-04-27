@@ -551,3 +551,43 @@ Story implication:
   backbone plus a concrete, isolated post-contact training gap. Full pick-place
   should not be claimed until a physically closed-state residual can move the
   object toward the plate and reopen without object-specific gates.
+
+2026-04-26 overnight precision-contact update:
+
+- A post-contact residual branch
+  (`configs/libero_dhbxr_qwen_fresh_actionres_postcontact.yaml`,
+  `steps_800`) preserves the corrected `5/5` reach gate and modestly improves
+  full-task transport diagnostics. IK failures drop from `30` to `16`, bowl
+  displacement increases to about `80 mm`, but the rollout still never
+  reopens or succeeds.
+- A release/gripper-state branch
+  (`configs/libero_dhbxr_qwen_fresh_actionres_releasegrip.yaml`, `steps_600`)
+  also preserves the `5/5` reach gate, but it over-calibrates close
+  probability. At low threshold it closes much too early; at higher threshold
+  it closes near contact but still does not reopen.
+- The most important result is that grasp requires a stricter metric than the
+  current reach-only success threshold. The default calibrated scale
+  `1.0,1.35,1.15` reaches reliably, but often only to `~40-50 mm` bowl XY,
+  while physical grasp likely needs `<=15-20 mm`.
+- A global, object-agnostic direct-action Y-scale calibration from `1.35` to
+  `1.55` improves the 5-case average dynamic bowl XY from `41.5 mm` to
+  `34.8 mm`. In the full task, the same calibration brings the close pose to
+  about `[1.5, -25.5, 44.7] mm` from the bowl, and the closest dynamic
+  approach reaches `24.7 mm` XY / `43.4 mm` 3D.
+- A delayed close threshold (`0.94`) shows the trajectory can reach
+  `17.1 mm` XY / `30.2 mm` 3D, but it closes too late (`step 177`) and after
+  IK failures. This cleanly separates the remaining problem into contact-ready
+  precision plus learned phase timing.
+
+Story implication:
+
+- The robust offset-reach story is intact and now better bounded: it is a
+  reach/adaptation result, not yet a grasp success result.
+- The next breakthrough claim should be framed around turning robust reach into
+  contact-ready grasp without object-specific gates. The target evidence is
+  `<=20 mm` dynamic bowl XY at learned close time, object lift/transport toward
+  the plate, and a learned reopen event.
+- The DHB-XR story is still coherent for CoRL: DHB gives a structured,
+  reach-preserving action interface; naive joint contact training breaks or
+  miscalibrates behavior; staged residual/contact modules are the principled
+  route to full manipulation.
