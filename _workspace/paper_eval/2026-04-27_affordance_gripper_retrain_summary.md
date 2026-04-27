@@ -67,6 +67,25 @@ nearly every chunk, so the event head is still learning a relative-in-chunk
 close prior rather than a sufficiently perception/state-conditioned contact
 event.
 
+A release-focused dense-gripper continuation was also tested:
+
+`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_releasegrip.yaml`
+
+This run oversampled terminal/release chunks while freezing the action path.
+It gives a useful partial signal but not a full-task solution. At step `300`,
+the no-gate dense gripper decoder learns to reopen (`close_step=137`,
+`reopen_step=165`), but the close is center-contact rather than the demo
+side-grasp affordance (`54.4 mm` close-vector error), release is still far from
+the plate (`119.9 mm` bowl-plate XY), and post-release IK failures rise to
+`124`. Lowering the generic close threshold to `0.45` improves close-vector
+error to `41.9 mm`, but causes an immediate close/open pair
+(`close_step=87`, `reopen_step=89`) and still fails placement. By step `600`,
+the same branch overfits to chunk-relative gripper pulses and no longer
+reopens, although it keeps `0` IK failures and reaches `6.5 mm` minimum bowl
+XY. This suggests release supervision is present and learnable, but the current
+head needs phase persistence and transport coupling rather than more
+release-heavy sampling alone.
+
 ## Interpretation
 
 The current evidence is positive for the specific claim that learned gripper
@@ -77,6 +96,8 @@ positive for full pick-place. The active blocker is now more specific:
 - learned gripper-state can close without object-distance heuristics;
 - contact-phase event logits are still poorly calibrated and overfit to
   chunk-relative timing even under BCE event training;
+- release-heavy dense-gripper training can produce a no-gate reopen at early
+  checkpoints, but not a stable close-hold-transport-release sequence;
 - the policy does not yet learn the demo side-grasp affordance tightly enough;
 - post-close transport and release remain unvalidated.
 

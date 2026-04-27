@@ -88,6 +88,12 @@ Immediate next actions:
    negative result: `0.55` closes at step `3` with `339.3 mm` close-vector
    error, while stricter generic thresholds `0.80-0.90` delay close to
    `74-75` but still leave `76-80 mm` close-vector error and no release.
+   A release-heavy dense-gripper continuation shows release supervision is
+   learnable (`steps_300` reopens at step `165` with no gripper gates), but it
+   either reopens far from the plate or creates an immediate close/open pair;
+   by `steps_600` it again fails to reopen. The next branch should couple
+   gripper phase persistence with post-contact transport, not only oversample
+   release labels.
 4. Preserve the reach gate before every full-task claim: `5/5`, average bowl
    XY near `38-40 mm`, and `0` IK failures under benchmark init/raw images.
 5. Treat full pick-place as unclaimed until a no-gate run passes both

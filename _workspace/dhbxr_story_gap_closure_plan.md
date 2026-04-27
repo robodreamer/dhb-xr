@@ -247,6 +247,14 @@ images, language, state history, DHB/action tokens, and learned heads.
   closure to steps `74-75` but still miss the side-grasp affordance by
   `76-80 mm` and never release. The trace shows close probabilities ramping
   within chunks, so the head is still too chunk-time-biased.
+- A release-focused dense-gripper continuation gives one useful partial result:
+  `steps_300` can close and reopen with no object-distance gates
+  (`close_step=137`, `reopen_step=165`). It still fails the side-grasp and
+  release metrics, and a lower close threshold produces the unwanted
+  close/open timing collapse (`87 -> 89`). By `steps_600`, the branch no
+  longer reopens. This means release labels are available and learnable, but
+  release must be coupled to a stable held-object/transport phase rather than
+  trained as isolated per-step gripper state.
 
 Story implication: the claim boundary improves but remains honest. We can say
 that learned gripper state from DHB/observation context is better than demo

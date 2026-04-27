@@ -175,6 +175,17 @@ Latest active result to preserve:
   that the event head is chunk-time-biased, not just decoder-bugged. Debug
   traces now also record the event close/open thresholds per chunk; see
   `tests/test_chunk_rollout.py`.
+- Latest release-focused branch:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_releasegrip.yaml`
+  trains only generic contact/gripper heads from the affordance-gripper
+  `steps_800` checkpoint with release-heavy sampling. It confirms that no-gate
+  reopen is learnable (`steps_300`, threshold `0.55`, closes at `137` and
+  reopens at `165`), but the close is still center-contact (`54.4 mm`
+  close-vector error), release target XY is `119.9 mm`, and IK failures rise
+  to `124`. Lowering close threshold to `0.45` improves close-vector error to
+  `41.9 mm` but causes the close/open collapse (`87 -> 89`). Step `600`
+  restores `0` IK failures but loses reopen. Treat this branch as evidence that
+  the next model needs phase persistence plus post-contact transport coupling.
 
 Historical diagnostics were moved to:
 
