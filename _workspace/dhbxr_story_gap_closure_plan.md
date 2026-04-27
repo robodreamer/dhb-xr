@@ -1046,3 +1046,36 @@ Story implication:
   geometric phase structure, but the manuscript should not claim full
   manipulation until this current-ready versus persistent-hold split is
   validated in no-gate rollouts.
+
+2026-04-27 current-prefix/currentready update:
+
+- The `current_prefix` alignment branch
+  (`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentprefix.yaml`)
+  is a negative result. Prefix-scoped current labels preserve IK stability and
+  reach the bowl (`0.34 mm` minimum bowl XY), but dense gripper-state decoding
+  still closes at step `80` with `60.2 mm` close-vector error and no target
+  progress (`112.1 mm` final target XY). Contact-phase decoding closes at step
+  `74` and never reopens.
+- The `currentready` branch
+  (`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentready.yaml`)
+  is the first clean learned no-gate close-readiness result. It trains the
+  generic contact head as a current-observation close-readiness classifier and
+  keeps the dense gripper-state head future-aligned for persistence. The hybrid
+  decoder is object-free: contact readiness closes, dense gripper state reopens.
+- Currentready closes at step `103`, has `0` IK failures, reaches `10.2 mm`
+  minimum bowl XY, and scores `37.1 mm` actual close-vector error with
+  `19.0 mm` close XY. This beats the prior learned no-gate actual-close score
+  and validates the two-signal design for close timing.
+- It still never reopens and leaves the bowl `118.0 mm` from the plate. The
+  remaining high-impact gap is now post-close transport/release, not
+  open-before-contact calibration.
+
+Story implication:
+
+- The current story is credible for robust DHB-XR reaching/adaptation and for
+  learned, object-free contact-readiness improving over demo replay and pure
+  future gripper-state labels.
+- The full manipulation claim should remain conditional until a no-gate
+  release/transport branch moves the bowl toward the plate. The next best
+  result would preserve the currentready close head and train release/transport
+  without changing the deployment contract.

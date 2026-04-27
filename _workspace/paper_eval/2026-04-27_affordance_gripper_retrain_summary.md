@@ -267,3 +267,46 @@ keep future-aligned dense gripper-state labels for hold/release persistence
 while adding a current-aligned open/contact-ready margin over the actually
 executed prefix of each chunk. Full current broadcast is too destructive; pure
 future labels fire too early.
+
+## Current-Prefix And Contact-Ready Split Follow-Up
+
+The `current_prefix` alignment branch tested a softer version of full current
+broadcast:
+
+`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentprefix.yaml`
+
+It repeats the current label over only the first four supervised prefix steps,
+then keeps the remainder future-aligned. This is also negative. With true
+gripper gates disabled, dense gripper-state decoding closes at step `80`,
+reaches `0.34 mm` minimum bowl XY, and has `0` IK failures, but the close
+vector error remains `60.2 mm` and final target XY remains `112.1 mm`.
+Contact-phase decoding from the same branch closes even earlier at step `74`
+and never reopens. The prefix target alone suppresses neither the early-close
+prior nor the missing release/transport behavior enough to close the claim.
+
+The next branch explicitly decouples close-readiness from hold/release state:
+
+`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentready.yaml`
+
+Here the generic contact head is trained as a current-observation
+contact-readiness signal from `dhb.gripper_state`, while the dense
+`gripper_state_head` remains future-aligned for persistence. Rollout uses the
+object-free hybrid decoder `contact_gripper_state`: the contact-readiness head
+controls only the open-to-closed transition, and the dense gripper-state head
+controls closed-state persistence and reopening.
+
+This is the first clean learned no-gate close result near physical contact.
+With generic `close=0.55/open=0.40` hysteresis, true gripper gates disabled,
+and `0` IK failures, the rollout closes at step `103`, reaches `10.2 mm`
+minimum bowl XY, and scores `37.1 mm` close-vector error with `19.0 mm` close
+XY. The close snapshot is approximately `[-12.2, -14.6, 21.9] mm`
+EE-minus-bowl. This beats the previous learned no-gate actual-close score and
+shows that current-readiness supervision fixes the major early-close failure.
+
+The result is still not a full pick-place success. The model never reopens,
+and final bowl-plate XY is `118.0 mm`. The remaining gap is therefore no
+longer generic "gripper timing"; it is post-close transport/release under a
+persistent learned closed state. The next useful branch should preserve the
+currentready close-readiness head and focus release/transport supervision on
+the dense gripper-state/contact-phase heads, with rollout decisions still made
+only from learned model outputs rather than object-distance gates.

@@ -265,6 +265,21 @@ Latest active result to preserve:
   close-affordance opportunity at step `122`. Next target is a prefix-scoped
   current open/contact-ready margin plus future-aligned hold persistence, not
   another threshold sweep.
+- Latest current-prefix result:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentprefix.yaml`
+  is negative. It keeps IK stable and reaches the bowl (`0.34 mm` minimum bowl
+  XY), but dense gripper-state decoding still closes at step `80` with
+  `60.2 mm` close-vector error and `112.1 mm` final target XY. Contact-phase
+  decoding closes at step `74` and never reopens.
+- Latest currentready result:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentready.yaml`
+  is the new best learned no-gate close-readiness evidence. The object-free
+  `contact_gripper_state` decoder closes from the current contact-readiness
+  head and reopens from the future dense gripper-state head. It closes at step
+  `103`, has `0` IK failures, reaches `10.2 mm` minimum bowl XY, and scores
+  `37.1 mm` close-vector error with `19.0 mm` close XY. It never reopens and
+  leaves `118.0 mm` final target XY, so the remaining active blocker is
+  post-close transport/release.
 
 Historical diagnostics were moved to:
 

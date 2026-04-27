@@ -204,6 +204,9 @@ def test_runner_hybrid_contact_ready_closes_and_dense_state_reopens():
 
     assert prepared["debug"]["gripper_source_used"] == "contact_gripper_state_probs"
     assert prepared["gripper_cmds"].tolist() == [-1.0, -1.0, 1.0, 1.0, -1.0]
+    assert np.allclose(
+        prepared["debug"]["state_close_probs"], [0.05, 0.1, 0.9, 0.3, 0.28]
+    )
     assert prepared["debug"]["gripper_close_threshold"] == 0.6
     assert prepared["debug"]["gripper_open_threshold"] == 0.4
 

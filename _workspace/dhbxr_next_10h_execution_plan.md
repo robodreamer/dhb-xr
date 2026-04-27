@@ -1577,3 +1577,40 @@ Next implementation target:
 4. Gate the next branch on three metrics simultaneously: actual close-vector
    error below the current `42.1 mm` best learned no-gate score, no immediate
    close/open pulse, and low IK failures.
+
+## 2026-04-27 Currentready Result And Remaining Gap
+
+The prefix-only current target was tested and is not enough:
+
+- config:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentprefix.yaml`
+- result:
+  dense gripper-state decoding closes at step `80`, reaches `0.34 mm`
+  minimum bowl XY, keeps `0` IK failures, but still has `60.2 mm`
+  close-vector error and `112.1 mm` final target XY
+- interpretation:
+  current-prefix labels alone do not break the early-close prior
+
+The two-signal currentready branch is the new best learned no-gate close result:
+
+- config:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentready.yaml`
+- decoder:
+  `--model-gripper-decode-source contact_gripper_state`
+- result:
+  close step `103`, `0` IK failures, `10.2 mm` minimum bowl XY, `37.1 mm`
+  close-vector error, and `19.0 mm` close XY
+- failure:
+  no reopen and `118.0 mm` final target XY
+
+Updated unattended target:
+
+1. Preserve the currentready close-readiness head; it is now the strongest
+   learned close-timing evidence.
+2. Add/validate release diagnostics that expose dense state-close probability
+   after the hybrid close transition, because release is now the blocker.
+3. Try a release/transport branch that starts from currentready, freezes the
+   contact-readiness head, and focuses dense gripper-state/contact-phase
+   supervision on terminal/release chunks.
+4. Keep rollout decisions object-free. Use simulator geometry only for labels,
+   scoring, and diagnostic summaries.

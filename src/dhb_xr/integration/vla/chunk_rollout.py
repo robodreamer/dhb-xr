@@ -390,6 +390,7 @@ class TrajectoryChunkRunner:
                 "gripper_source_used": gripper_debug.get("source"),
                 "close_probs": gripper_debug.get("close_probs"),
                 "open_probs": gripper_debug.get("open_probs"),
+                "state_close_probs": gripper_debug.get("state_close_probs"),
                 "gripper_threshold": gripper_debug.get("threshold"),
                 "gripper_close_threshold": gripper_debug.get("close_threshold"),
                 "gripper_open_threshold": gripper_debug.get("open_threshold"),
