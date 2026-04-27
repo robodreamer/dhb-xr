@@ -1491,6 +1491,32 @@ close-vector score but destabilize phase persistence and IK. The heavy
 checkpoint/final-model artifacts were deleted; lightweight summaries and score
 JSONs remain.
 
+## 2026-04-27 Sparse Contact-Event Negative Result
+
+The checkpoint sweep now supports explicit learned-gripper decoder selection:
+
+- flag:
+  `--model-gripper-decode-source`
+- supported values:
+  `auto`, `gripper_state`, `contact_phase`, `contact`, `normalized_action`
+- regression test:
+  `tests/test_live_checkpoint_sweep.py`
+
+The sparse generic contact-event branch has also been executed:
+
+- config:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_contactevent.yaml`
+- purpose:
+  train the existing generic `contact_head` on 3-way sparse close/open event
+  labels, then decode with `--model-gripper-decode-source contact`
+- result:
+  close step `3`, no reopen, close-vector error `339.3 mm`, minimum bowl XY
+  `160.3 mm`, final bowl-plate XY `129.6 mm`, and `0` IK failures
+
+Interpretation: the existing sparse event supervision is also chunk-time-biased
+under offset-stretched rollout. Switching among dense state, contact phase, and
+generic contact heads does not solve contact readiness by itself.
+
 Updated next unattended target:
 
 1. Do not continue threshold-only sweeps or sampler-only gripper branches.

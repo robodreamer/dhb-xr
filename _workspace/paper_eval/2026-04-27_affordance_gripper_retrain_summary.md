@@ -188,3 +188,22 @@ sequence. The next model change should not be a scalar threshold or a sampler
 only. It should create a contact-ready target that keeps approach open until
 the predicted/observed state is truly at the grasp affordance, while separately
 maintaining post-close hold/transport persistence.
+
+A sparse generic contact-event branch was also tested after adding
+`--model-gripper-decode-source` passthrough to the checkpoint sweep:
+
+`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_contactevent.yaml`
+
+This branch trains the existing `contact_head` with 3-way sparse event labels
+and evaluates with `--model-gripper-decode-source contact`. It is also
+negative. The contact decoder closes at step `3`, never reopens, and has
+`339.3 mm` close-vector error. This confirms that the early-close problem is
+not specific to the dense gripper-state head or the 3-class contact-phase head.
+Current sparse event supervision still learns a chunk-position prior when the
+rollout timing stretches under offset adaptation.
+
+The working conclusion is now stricter: the next breakthrough likely requires
+explicit contact-ready supervision or hard-negative calibration tied to the
+current visual/proprioceptive state, not another head type trained on the same
+short event windows. Offline simulator geometry can provide the labels, but
+deployment must remain object-free.

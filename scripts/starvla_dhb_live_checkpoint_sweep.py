@@ -49,6 +49,7 @@ def _run_case(
     delta_continuation_alpha: float,
     delta_continuation_steps: int,
     gripper_source: str,
+    model_gripper_decode_source: str,
     init_state_source: str,
     gripper_threshold: float,
     gripper_close_threshold: float,
@@ -110,6 +111,8 @@ def _run_case(
         str(delta_continuation_steps),
         "--gripper-source",
         gripper_source,
+        "--model-gripper-decode-source",
+        model_gripper_decode_source,
         "--init-state-source",
         init_state_source,
         "--gripper-threshold",
@@ -241,6 +244,15 @@ def main() -> None:
     parser.add_argument("--delta-continuation-alpha", type=float, default=0.0)
     parser.add_argument("--delta-continuation-steps", type=int, default=0)
     parser.add_argument("--gripper-source", choices=("demo", "model"), default="demo")
+    parser.add_argument(
+        "--model-gripper-decode-source",
+        choices=("auto", "gripper_state", "contact_phase", "contact", "normalized_action"),
+        default="auto",
+        help=(
+            "Which learned gripper signal to decode when --gripper-source=model. "
+            "Forwarded to the rollout script for reproducible gripper-head ablations."
+        ),
+    )
     parser.add_argument("--init-state-source", choices=("demo", "benchmark"), default="demo")
     parser.add_argument("--gripper-threshold", type=float, default=0.5)
     parser.add_argument("--gripper-close-threshold", type=float, default=0.6)
@@ -364,6 +376,7 @@ def main() -> None:
                 delta_continuation_alpha=args.delta_continuation_alpha,
                 delta_continuation_steps=args.delta_continuation_steps,
                 gripper_source=args.gripper_source,
+                model_gripper_decode_source=args.model_gripper_decode_source,
                 init_state_source=args.init_state_source,
                 gripper_threshold=float(args.gripper_threshold),
                 gripper_close_threshold=float(args.gripper_close_threshold),
@@ -414,6 +427,7 @@ def main() -> None:
             "delta_continuation_alpha": float(args.delta_continuation_alpha),
             "delta_continuation_steps": int(args.delta_continuation_steps),
             "gripper_source": args.gripper_source,
+            "model_gripper_decode_source": args.model_gripper_decode_source,
             "gripper_threshold": float(args.gripper_threshold),
             "gripper_close_threshold": float(args.gripper_close_threshold),
             "gripper_open_threshold": float(args.gripper_open_threshold),

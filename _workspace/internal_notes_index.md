@@ -227,6 +227,15 @@ Latest active result to preserve:
   score summaries as a negative result. The next model change should add a
   learned contact-ready supervision path, not more threshold/sampler-only
   sweeps.
+- Latest sparse contact-event branch:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_contactevent.yaml`
+  trains the existing generic `contact_head` with 3-way sparse event labels and
+  evaluates via the new sweep flag `--model-gripper-decode-source contact`. It
+  is negative: close at step `3`, no reopen, `339.3 mm` close-vector error, and
+  `160.3 mm` minimum bowl XY. Heavy artifacts were deleted; summaries/scores
+  remain. This rules out simply switching to the existing sparse event head.
+  The next breakthrough needs contact-ready supervision/calibration tied to
+  current visual/proprioceptive state.
 
 Historical diagnostics were moved to:
 

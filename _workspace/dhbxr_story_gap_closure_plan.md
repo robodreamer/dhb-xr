@@ -989,6 +989,12 @@ Story implication:
   is a negative result. It improves close-vector error to `42.1 mm`, but
   immediately reopens (`87 -> 89`) and introduces `72` IK failures. Its heavy
   checkpoints were deleted; summaries and scores are retained.
+- The sparse generic contact-event branch
+  (`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_contactevent.yaml`)
+  is also negative. It trains the existing `contact_head` with 3-way sparse
+  event labels and evaluates with `--model-gripper-decode-source contact`, but
+  closes at step `3` with `339.3 mm` close-vector error and no reopen. This
+  rules out a simple "use a different existing gripper head" fix.
 
 Story implication:
 

@@ -43,6 +43,7 @@ def test_run_case_forwards_disable_gripper_gates(monkeypatch, tmp_path):
         delta_continuation_alpha=0.0,
         delta_continuation_steps=0,
         gripper_source="model",
+        model_gripper_decode_source="contact",
         init_state_source="benchmark",
         gripper_threshold=0.55,
         gripper_close_threshold=0.55,
@@ -65,3 +66,4 @@ def test_run_case_forwards_disable_gripper_gates(monkeypatch, tmp_path):
 
     assert calls
     assert "--disable-gripper-gates" in calls[0]
+    assert calls[0][calls[0].index("--model-gripper-decode-source") + 1] == "contact"
