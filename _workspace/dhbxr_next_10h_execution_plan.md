@@ -961,3 +961,48 @@ Decision:
    the base reach path: residual-only action correction, current-state history,
    strong close/contact sampling, and explicit validation against the stricter
    contact-ready metric before returning to full release.
+
+## 2026-04-26 Contact-Precision Residual Diagnostic: Negative
+
+A narrower pre-contact residual branch was trained to test whether the
+learned approach could be tightened without touching the base direct-action
+head, the physical-gripper-gated closed residual, or the learned gripper
+heads:
+
+- config:
+  `configs/libero_dhbxr_qwen_fresh_actionres_contactprecision.yaml`
+- run:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_contactprecision_fromrelease600`
+- warm start:
+  `dhb_starvla_qwen_fresh_actionres_releasegrip_frompost800/steps_600`
+- trainable path: the small additive action residual adapter only
+- final checkpoint: `steps_400_pytorch_model.pt`
+
+This branch failed the corrected reach-preservation gate:
+
+- reach artifact:
+  `live_reach_corrected_raw_max140_5case.json`
+- result: `2/5` reach successes
+- average minimum dynamic bowl XY: `70.8 mm`
+- average minimum dynamic bowl XYZ: `73.6 mm`
+- average IK failures: `0`
+
+The result is useful because it rules out a tempting but unsafe fix. Even a
+small residual with low residual L2 can systematically pull the open-loop
+approach field away from the bowl under offset rollout. This means the next
+training step should not be "more pre-contact residual tuning" unless it
+includes an explicit reach-preservation or base-action-consistency constraint
+that is validated before any full-task rollout.
+
+Updated overnight priorities:
+
+1. Keep the `actionxyz_from2000/steps_400` and release/post-contact reach
+   gates as the paper-safe behavior evidence.
+2. Treat `contactprecision_fromrelease600/steps_400` as a negative diagnostic,
+   not as a candidate for full-task videos.
+3. If contact precision is revisited, use a constrained objective that
+   preserves base endpoint direction and endpoint proximity, not a standalone
+   weighted action residual.
+4. Spend the next compute on claim closure: matched QwenDHB/QwenOFT tables,
+   strict contact-ready diagnostics, and paper-ready reach videos rather than
+   unconstrained residual fine-tunes.

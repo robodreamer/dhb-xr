@@ -591,3 +591,31 @@ Story implication:
   reach-preserving action interface; naive joint contact training breaks or
   miscalibrates behavior; staged residual/contact modules are the principled
   route to full manipulation.
+
+2026-04-26 contact-precision diagnostic:
+
+- A narrow pre-contact residual branch
+  (`configs/libero_dhbxr_qwen_fresh_actionres_contactprecision.yaml`,
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_contactprecision_fromrelease600`,
+  `steps_400`) trained only the small additive action residual adapter from
+  the release/gripper checkpoint.
+- It failed the corrected 5-case reach-preservation gate: `2/5` reach
+  successes, average dynamic bowl XY `70.8 mm`, average dynamic bowl XYZ
+  `73.6 mm`, and `0` IK failures.
+- This is a clean negative result. The failure is behavioral drift, not IK
+  infeasibility. It shows that residual capacity alone is not enough; the
+  objective must explicitly preserve the validated base reach field while
+  improving contact readiness.
+
+Story implication:
+
+- The strongest story remains robust offset reaching plus a principled
+  isolation of the remaining contact/release gap. Do not present the latest
+  residual branch as progress toward full pick-place.
+- The next breakthrough evidence should be a constrained contact-ready policy
+  that reaches `<=20 mm` dynamic bowl XY before learned close while preserving
+  `5/5` reach under the canonical benchmark-init/raw-image/long-horizon
+  evaluator.
+- Until that result exists, the paper narrative should emphasize that DHB-XR
+  exposes and preserves geometric reach structure, while full grasping needs a
+  separate contact-quality module rather than naive action-head fine-tuning.
