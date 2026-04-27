@@ -1544,7 +1544,7 @@ The current-alignment implementation and two follow-up branches have now been
 tested:
 
 - implementation:
-  `vendor/starVLA/starVLA/models/backbones/QwenDHB.py`
+  `vendor/starVLA/starVLA/model/framework/VLM4A/QwenDHB.py`
 - tests:
   `tests/test_qwendhb_target_alignment.py`
 - full current branch:

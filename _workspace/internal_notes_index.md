@@ -242,7 +242,7 @@ Latest active result to preserve:
   The next breakthrough needs contact-ready supervision/calibration tied to
   current visual/proprioceptive state.
 - Latest current-alignment implementation:
-  `vendor/starVLA/starVLA/models/backbones/QwenDHB.py` now supports
+  `vendor/starVLA/starVLA/model/framework/VLM4A/QwenDHB.py` now supports
   `contact_target_alignment`, `contact_phase_target_alignment`, and
   `gripper_state_target_alignment` with default `future` behavior and optional
   `current` broadcast behavior. Coverage lives in

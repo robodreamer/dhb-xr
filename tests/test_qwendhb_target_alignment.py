@@ -39,6 +39,26 @@ def test_slice_temporal_target_broadcasts_current_multichannel_label() -> None:
     torch.testing.assert_close(aligned[:, -1], target[:, 2])
 
 
+def test_slice_temporal_target_can_broadcast_current_prefix_only() -> None:
+    target = torch.arange(10, dtype=torch.long).reshape(1, 10)
+
+    aligned = _slice_temporal_target(
+        target,
+        window_size=6,
+        alignment="current_prefix",
+        current_prefix_steps=3,
+    )
+
+    torch.testing.assert_close(aligned, torch.tensor([[4, 4, 4, 7, 8, 9]]))
+
+
+def test_slice_temporal_target_rejects_current_prefix_without_steps() -> None:
+    target = torch.arange(10, dtype=torch.long).reshape(1, 10)
+
+    with pytest.raises(ValueError, match="current_prefix_steps"):
+        _slice_temporal_target(target, window_size=4, alignment="current_prefix")
+
+
 def test_slice_temporal_target_rejects_unknown_alignment() -> None:
     target = torch.zeros(1, 4)
 
