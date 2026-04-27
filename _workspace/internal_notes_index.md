@@ -535,7 +535,8 @@ explicitly references them. They are kept for provenance only.
   but still reopens at `136.5 mm` target XY with `34` IK failures. Treat this
   as evidence that nominal demo-side object-target supervision is insufficient;
   the next breakthrough needs generated or replayed post-close target-reaching
-  positives.
+  positives. Transport mining shows only `10.4 mm` target progress at `0 cm`
+  and `6.5 mm` at `3 cm`.
 - Transport correction miner:
   `scripts/libero_rollout_transport_miner.py`. On active closed-transport
   `steps_300`, post-close target progress is only about `10 mm` in both fixed

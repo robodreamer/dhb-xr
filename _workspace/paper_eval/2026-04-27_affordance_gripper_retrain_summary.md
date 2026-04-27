@@ -1064,6 +1064,9 @@ Physical scoring:
   XY `136.5 mm`, final target XY is `145.0 mm`, and IK failures rise to `34`.
 - The `0 cm` case still fails the close affordance, with physical close vector
   error `79.5 mm`.
+- The transport miner confirms the object-transport branch does not improve
+  post-close progress: `steps_300` improves target XY by only `10.4 mm` at
+  `0 cm` and `6.5 mm` at `3 cm`, with no target-reached steps.
 
 Updated interpretation: demo-side object-target conditioning is not sufficient
 from the current rollout distribution. It can preserve the learned contact
