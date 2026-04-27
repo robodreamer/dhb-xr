@@ -377,3 +377,30 @@ right coupling direction but overtraining quickly destabilizes the gripper
 phase. The next attempt should either early-stop around `steps_200` and focus
 on a stronger closed-transport target, or add an explicit hold-through-transport
 loss/gate in training so release cannot become a short local pulse.
+
+## Closed-Transport Action-Only Follow-Up
+
+An action-only closed-transport continuation was trained from the useful
+transport-release `steps_200` checkpoint:
+
+`configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentready_closedtransport_actiononly.yaml`
+
+This branch freezes all gripper/contact heads and trains only the
+`action_closed_residual_adapter` (`0.267M` trainable parameters). The goal was
+to isolate whether the remaining failure was simply weak post-close motion.
+
+The controlled `rollout_seed=70` results are negative. Step `150` closes at
+step `91`, never reopens, keeps `0` IK failures, reaches a best
+close-affordance opportunity of `6.9 mm`, but ends `123.9 mm` from the target.
+Step `300` restores the same close/reopen timing as the transport-release
+partial (`close_step=103`, `reopen_step=237`, `0` IK failures) and scores
+`37.1 mm` close-vector error with `19.0 mm` close XY, but final target XY is
+still `112.9 mm`.
+
+This rules out pure closed-residual action MSE as the breakthrough. The
+transport failure is not caused by lack of post-close actuator motion alone;
+the model needs a more explicit object-level transport/release supervision
+signal during training. That signal can be derived offline from simulator/demo
+geometry, but rollout should continue to use only learned predictions from
+images, language, state history, and DHB/action heads, with no object-distance
+deployment gate.

@@ -160,6 +160,25 @@ weights closed-phase XY action/trajectory toward the object-target segment.
 Use `steps_200` from the transport-release branch as the diagnostic reference,
 not as a solved policy.
 
+Follow-up executed:
+
+- Added
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentready_closedtransport_actiononly.yaml`.
+  It starts from the transport-release `steps_200` partial, freezes every
+  gripper/contact head, and trains only the closed-state residual adapter
+  (`0.267M` trainable parameters).
+- This isolated action-only test is negative under controlled
+  `rollout_seed=70`. Step `150` closes at `91`, never reopens, keeps `0` IK
+  failures, and ends `123.9 mm` from the target. Step `300` closes at `103`,
+  reopens at `237`, keeps `0` IK failures, and matches the useful
+  transport-release close score (`37.1 mm` close-vector error, `19.0 mm` close
+  XY), but final target XY remains `112.9 mm`.
+- Conclusion: closed residual action MSE alone cannot solve held-object
+  transport. The next high-leverage change should add an explicit offline
+  object-level transport/release target or post-contact relabeling signal, then
+  deploy only learned model outputs. Do not keep sweeping scalar residual
+  weights or thresholds.
+
 ## 2026-04-25 Late Update: Reach Is Now Validated, Full Task Is Phase-Limited
 
 The current highest-confidence executable result is no longer the older

@@ -1125,6 +1125,13 @@ Story implication:
 - Step `400` overtrains into close/open flicker (`85 -> 89`) and adds IK
   failures. The missing piece is not another longer run; it is a stronger
   held-object transport objective and phase-persistence constraint.
+- A follow-up closed-transport action-only branch tested that hypothesis by
+  starting from transport-release `steps_200`, freezing all gripper/contact
+  heads, and training only the closed-state residual adapter. It is negative:
+  step `150` has no release and `123.9 mm` final target XY; step `300` closes
+  at `103`, reopens at `237`, keeps `0` IK failures, and preserves the
+  `37.1 mm` close-vector score, but final target XY is still `112.9 mm`.
+  This rules out pure post-close action MSE as the missing mechanism.
 
 Story implication:
 
@@ -1134,3 +1141,7 @@ Story implication:
   still weak.
 - Do not overclaim release. The best release result is still about `114 mm`
   from the plate, so it is evidence of learned phase transition, not placement.
+- The next compelling result needs an offline object-transport or relabeled
+  post-contact supervision signal. This can use simulator/demo geometry during
+  data generation and scoring, but the deployment path should remain learned
+  and object-free.

@@ -303,6 +303,15 @@ Latest active result to preserve:
   target XY under `rollout_seed=70`. Step `400` overtrains into close/open
   flicker (`85 -> 89`) and `12` IK failures. The next branch should strengthen
   held-object transport and phase persistence, not extend this weighting.
+- Latest action-only closed-transport branch:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_currentready_closedtransport_actiononly.yaml`
+  starts from the useful transport-release `steps_200` partial and trains only
+  `action_closed_residual_adapter` (`0.267M` trainable). It is negative:
+  step `150` never reopens and ends `123.9 mm` from target; step `300` closes
+  at `103`, reopens at `237`, keeps `0` IK failures, but final target XY is
+  still `112.9 mm`. This rules out pure closed-residual action fitting as the
+  next breakthrough. Use offline object-level transport/release supervision or
+  post-contact relabeling next, while keeping rollout learned/no-gate.
 
 Historical diagnostics were moved to:
 
