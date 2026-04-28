@@ -712,3 +712,18 @@ explicitly references them. They are kept for provenance only.
   min bowl XY `11.5 mm`, average min XYZ `53.8 mm`, and average IK `3.7`.
   Treat the feature as useful infrastructure, but stop sweeping weight
   constants on this data.
+- Closed-loop contact-correction mining:
+  `scripts/libero_rollout_contact_miner.py` now optionally exports normalized
+  `target_action`, `target_gripper_state`, object-pair context fields, and
+  three-class phase labels for hard-negative close states. This keeps geometry
+  as offline supervision only and does not add runtime object-distance gates.
+  The trace-derived correction manifest
+  `_workspace/paper_eval/2026-04-28_contactmine_chweights_step100_correction_dhbtargets_manifest.jsonl`
+  has `128` trainable rows after mask filtering and `505` supervised close
+  affordance steps (`356` hard-negative corrections, `149` positives). A
+  combined continuation from the channel-weight step-100 checkpoint improved
+  the `+3 cm` close vector at step `50` to about `[-9, -14, 28] mm`, but still
+  yielded `0/3` full-task success and no release. Longer continuation
+  increased IK or regressed close quality. Use this as a data-mechanism
+  positive, not as a solved result; next mine/generate post-close transport
+  positives from the best corrected close cases.

@@ -582,3 +582,72 @@ but this particular phase-weighted warm-start does not solve the root cause.
 The next breakthrough likely needs better post-contact target-reaching data or
 a more structured action representation than weighted residual regression; do
 not keep sweeping channel-weight constants on the same manifest.
+
+## Closed-Loop Contact-Correction Mining Diagnostic
+
+The next diagnostic used the channel-weighted step-100 checkpoint to record
+policy traces on `0 cm`, `+3 cm`, and `-3 cm` offsets. The trace confirmed a
+more precise failure mode: the policy often reaches the bowl in XY, but close
+is high or on the wrong side of the demo-side contact affordance. The command
+close vectors were:
+
+| Case | Close step | EE-bowl at close mm | Affordance verdict |
+| --- | ---: | ---: | --- |
+| `0 cm` | `91` | `[-25.0, 6.8, 57.4]` | high/wrong-side close, fail |
+| `+3 cm` | `90` | `[-19.6, -30.5, 52.6]` | near pass after physical close |
+| `-3 cm` | `79` | `[-34.6, 2.0, 79.6]` | very high close, fail |
+
+The contact miner now supports an offline-only corrective target-action export:
+hard-negative close states are labeled with an open-gripper action that moves
+the EE toward the demo contact affordance, while positive states keep a close
+label. This does not add object-distance gates at deployment; geometry is used
+only to build supervised rows from recorded rollouts. Validation passed:
+`python3 -m py_compile scripts/libero_rollout_contact_miner.py` and
+`pytest tests/test_libero_rollout_contact_miner.py -q` (`5 passed`).
+
+Generated artifacts:
+
+- Trace sweep:
+  `_workspace/paper_eval/2026-04-28_phaseobj9_chweights_step100_contactmine_trace_sweep.json`
+- Contact-mined correction manifest:
+  `_workspace/paper_eval/2026-04-28_contactmine_chweights_step100_correction_manifest.jsonl`
+- DHB-target augmented correction manifest:
+  `_workspace/paper_eval/2026-04-28_contactmine_chweights_step100_correction_dhbtargets_manifest.jsonl`
+
+The mined manifest has `180` policy chunks, with `128` trainable correction
+rows after mask filtering. It contributes `505` supervised steps: `356`
+hard-negative correction steps and `149` positive close-affordance steps.
+After DHB augmentation it has `720` invariant/action target steps, split as
+`carry=364` and `lower=356`.
+
+A bounded combined continuation was trained from the channel-weighted step-100
+checkpoint:
+
+`_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_contactcorr_combined_from_chweights100`
+
+This run combined the previous attached lift/transport/release manifest with
+the new closed-loop contact-correction manifest and unfroze only the always-on
+action residual adapter, keeping the large backbone and base action head
+frozen. The train-step smoke passed with peak memory about `4770 MB`.
+
+Live sweep result:
+
+| Checkpoint | Close rate | Avg min EE-bowl XY mm | Avg min EE-bowl XYZ mm | Avg IK fails | Verdict |
+| ---: | ---: | ---: | ---: | ---: | --- |
+| step 50 | `3/3` | `8.4` | `53.1` | `4.0` | best planar reach; `+3 cm` close nearly matches demo affordance |
+| step 100 | `3/3` | `34.8` | `68.6` | `9.3` | overfits/regresses close quality |
+| step 150 | `3/3` | `20.3` | `49.2` | `11.7` | better object motion but still high/IK-heavy |
+
+The clearest partial positive is step `50` at `+3 cm`, which closes with
+EE-bowl approximately `[-9.4, -13.8, 27.5] mm`, close to the demo-side contact
+height. However, full-task success remains `0/3`, no checkpoint reopens, and
+final bowl-plate XY remains about `113-129 mm` in the relevant cases. Step `150`
+moves the bowl more in some cases but increases IK and still misses placement.
+
+Conclusion: closed-loop contact correction is a useful data mechanism and
+produces measurable close-affordance improvement in the offset case, but more
+epochs on this objective are not the next lever. The remaining blocker is
+post-close transport/release after a good close. Next work should mine
+trace-enabled post-close transport from the best corrected close cases and
+generate attached-state target-reaching positives, instead of further tuning
+contact thresholds or repeating the same correction run.

@@ -63,6 +63,14 @@ short-loop alternatives:
   planar bowl distance but still averages `53.8 mm` XYZ distance, `3.7` IK
   failures, and `0/3` success. Do not keep sweeping channel-weight constants
   on the same manifest.
+- Closed-loop contact-correction mining is now implemented and validated. The
+  miner can export generic offline target-action rows that move hard-negative
+  close states toward the demo-side contact affordance, while preserving
+  learned deployment without object-distance gates. The combined correction run
+  improves one important offset close (`+3 cm`, step `50`, EE-bowl close vector
+  about `[-9, -14, 28] mm`) but still gives `0/3` full-task success and no
+  release. Later checkpoints overfit or add IK. This is a partial positive for
+  the data mechanism, not a reason to run more contact-correction epochs.
 
 Immediate next actions:
 
@@ -88,6 +96,11 @@ Immediate next actions:
    tuning: generate or mine verified post-contact target-reaching positives
    with lower close height and real lift/carry/lower, then use the existing
    channel-weight and contact-phase harnesses as validation gates.
+8. Use the corrected-contact step `50`/`150` artifacts only as mining sources:
+   run trace-enabled post-close transport mining on the cases that physically
+   move the bowl, then generate attached target-reaching/release positives from
+   those states. Do not keep training the same contact-correction manifest
+   without new post-contact data.
 
 ## 2026-04-25 Current Correction: Evaluation Contract Was the Root Cause
 

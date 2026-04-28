@@ -130,6 +130,82 @@ def test_builds_policy_manifest_rows_from_mined_labels() -> None:
     assert rows[0]["hard_negative_mask"] == [0.0, 1.0, 0.0, 1.0]
 
 
+def test_policy_manifest_rows_can_emit_contact_correction_actions() -> None:
+    rollout = {
+        "checkpoint": "ckpt.pt",
+        "task_id": 0,
+        "episode_idx": 1,
+        "offset_cm": 3.0,
+        "chunks": [{"t_start": 4, "n_use": 2, "close_probs": [0.2, 0.7]}],
+        "policy_trace": [
+            {
+                "chunk_index": 0,
+                "t_start": 4,
+                "n_use": 2,
+                "npz_path": "chunk_0000_t0004.npz",
+            }
+        ],
+        "step_trace": [
+            {
+                "step": 4,
+                "ee_minus_bowl": [0.0, -0.05, 0.026],
+                "ee_minus_plate": [0.20, 0.10, 0.04],
+                "bowl_minus_plate": [0.20, 0.15, 0.014],
+            },
+            {
+                "step": 5,
+                "ee_minus_bowl": [0.08, 0.0, 0.06],
+                "ee_minus_plate": [0.28, 0.15, 0.074],
+                "bowl_minus_plate": [0.20, 0.15, 0.014],
+                "desired_grip": 1.0,
+            },
+        ],
+    }
+    result = contact_miner.mine_contact_samples(
+        rollout,
+        rollout_json="rollout.json",
+        close_reference_m=[0.0, -0.050, 0.026],
+        ee_object_field="ee_minus_bowl",
+        positive_tolerance_mm=10.0,
+        positive_component_tolerance_mm=None,
+        best_positive_top_k_per_rollout=0,
+        best_positive_max_error_mm=float("inf"),
+        best_positive_window=0,
+        positive_prob_margin=0.65,
+        hard_negative_prob=0.55,
+        near_object_hard_negative_xy_mm=None,
+        near_object_hard_negative_z_min_mm=float("-inf"),
+        near_object_hard_negative_z_max_mm=float("inf"),
+    )
+    action_stats = {
+        "min": [-1.0] * 7,
+        "max": [1.0] * 7,
+        "mask": [True, True, True, True, True, True, False],
+    }
+
+    rows = contact_miner.policy_manifest_rows(
+        rollout,
+        result,
+        action_stats=action_stats,
+        close_reference_m=[0.0, -0.050, 0.026],
+        max_action_step_mm=12.0,
+        correction_steps=4,
+        object_target_field="bowl_minus_plate",
+    )
+
+    assert rows[0]["target_action_normalized"] is True
+    assert rows[0]["target_contact_phase"] == [1, 0]
+    assert rows[0]["target_contact_release_phase"] == [1, 0]
+    assert rows[0]["target_gripper_state"] == [[1.0], [0.0]]
+    assert rows[0]["target_action"][0][:3] == [0.0, 0.0, 0.0]
+    assert abs(rows[0]["target_action"][1][0] + 0.012) < 1e-6
+    assert abs(rows[0]["target_action"][1][1] + 0.012) < 1e-6
+    assert rows[0]["target_action"][1][2] < 0.0
+    assert rows[0]["target_object_to_eef"][1] == [-0.08, -0.0, -0.06]
+    assert rows[0]["target_target_to_eef"][1] == [-0.28, -0.15, -0.074]
+    assert rows[0]["target_object_target"][1] == [0.20, 0.15, 0.014]
+
+
 def test_component_tolerance_filters_broad_vector_positive_to_hard_negative() -> None:
     rollout = {
         "chunks": [

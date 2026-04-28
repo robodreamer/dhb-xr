@@ -15,6 +15,8 @@ import math
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+
 
 def _vector3(value: Any, *, field: str) -> list[float] | None:
     if not isinstance(value, list | tuple) or len(value) < 3:
@@ -42,6 +44,60 @@ def _mean(vectors: list[list[float]]) -> list[float]:
     if not vectors:
         raise ValueError("cannot average an empty vector list")
     return [sum(vec[i] for vec in vectors) / len(vectors) for i in range(3)]
+
+
+def _extract_action_stats(payload: dict[str, Any]) -> dict[str, Any]:
+    if "action" in payload:
+        return payload["action"]
+    if "franka" in payload and isinstance(payload["franka"], dict):
+        return payload["franka"]["action"]
+    first_key = next(iter(payload.keys()))
+    return payload[first_key]["action"]
+
+
+def _normalize_raw_action(raw_action: list[float], action_stats: dict[str, Any]) -> list[float]:
+    raw = np.asarray(raw_action, dtype=np.float32)
+    low = np.asarray(action_stats["min"], dtype=np.float32)
+    high = np.asarray(action_stats["max"], dtype=np.float32)
+    mask = np.asarray(
+        action_stats.get("mask", np.ones_like(low, dtype=bool)),
+        dtype=bool,
+    )
+    denom = np.where(np.abs(high - low) < 1e-8, 1.0, high - low)
+    normalized = 2.0 * (raw - low) / denom - 1.0
+    normalized = np.where(mask, normalized, raw)
+    return np.clip(normalized, -1.0, 1.0).astype(np.float32).tolist()
+
+
+def _object_pair_to_eef_targets(
+    trace_row: dict[str, Any] | None,
+    object_target_field: str | None,
+) -> tuple[list[float], list[float]]:
+    zero = [0.0, 0.0, 0.0]
+    if not trace_row or not object_target_field or "_minus_" not in object_target_field:
+        return zero, zero
+    object_token, target_token = object_target_field.split("_minus_", 1)
+
+    def _neg_ee_minus(token: str) -> list[float]:
+        value = _vector3(trace_row.get(f"ee_minus_{token}"), field=f"ee_minus_{token}")
+        if value is None:
+            return zero
+        return [-float(value[0]), -float(value[1]), -float(value[2])]
+
+    return _neg_ee_minus(object_token), _neg_ee_minus(target_token)
+
+
+def _object_target_vector(
+    trace_row: dict[str, Any] | None,
+    object_target_field: str | None,
+) -> list[float]:
+    if not trace_row or not object_target_field:
+        return [0.0, 0.0, 0.0]
+    return _vector3(trace_row.get(object_target_field), field=object_target_field) or [
+        0.0,
+        0.0,
+        0.0,
+    ]
 
 
 def _reference_vector(demo_geometry: dict[str, Any], event_name: str, key: str) -> list[float]:
@@ -257,16 +313,36 @@ def mine_contact_samples(
 def policy_manifest_rows(
     rollout: dict[str, Any],
     mined_result: dict[str, Any],
+    *,
+    action_stats: dict[str, Any] | None = None,
+    close_reference_m: list[float] | None = None,
+    max_action_step_mm: float = 12.0,
+    correction_steps: int = 4,
+    correction_gain: float = 1.0,
+    object_target_field: str | None = None,
 ) -> list[dict[str, Any]]:
     """Build chunk-level supervision rows for exported policy-trace NPZ files."""
     policy_trace = rollout.get("policy_trace")
     if not isinstance(policy_trace, list):
         return []
 
+    emit_action_targets = action_stats is not None and close_reference_m is not None
+    max_step_m = float(max_action_step_mm) / 1000.0
+    horizon = max(1, int(correction_steps))
+    close_reference = (
+        np.asarray(close_reference_m, dtype=np.float32).reshape(3)
+        if close_reference_m is not None
+        else None
+    )
     sample_by_step = {
         sample["step"]: sample
         for sample in mined_result.get("samples", [])
         if isinstance(sample, dict) and isinstance(sample.get("step"), int)
+    }
+    trace_by_step = {
+        row["step"]: row
+        for row in rollout.get("step_trace", [])
+        if isinstance(row, dict) and isinstance(row.get("step"), int)
     }
     rows: list[dict[str, Any]] = []
     for chunk in policy_trace:
@@ -283,36 +359,89 @@ def policy_manifest_rows(
         hard_negative_mask: list[float] = []
         close_vector_error_mm: list[float | None] = []
         labels: list[str | None] = []
+        target_action: list[list[float]] = []
+        target_gripper_state: list[list[float]] = []
+        target_object_target: list[list[float]] = []
+        target_object_to_eef: list[list[float]] = []
+        target_target_to_eef: list[list[float]] = []
         for step in range(t_start, t_start + n_use):
             sample = sample_by_step.get(step)
             label = sample.get("label") if sample else None
             labels.append(label)
-            target_close.append(1.0 if label in {"positive", "missed_positive"} else 0.0)
-            train_mask.append(1.0 if label in {"positive", "missed_positive", "hard_negative"} else 0.0)
-            hard_negative_mask.append(1.0 if label == "hard_negative" else 0.0)
+            is_positive = label in {"positive", "missed_positive"}
+            is_hard_negative = label == "hard_negative"
+            supervised = is_positive or is_hard_negative
+            target_close.append(1.0 if is_positive else 0.0)
+            train_mask.append(1.0 if supervised else 0.0)
+            hard_negative_mask.append(1.0 if is_hard_negative else 0.0)
             close_vector_error_mm.append(
                 None if sample is None else sample.get("close_vector_error_mm")
             )
+            if emit_action_targets:
+                raw_xyz = np.zeros(3, dtype=np.float32)
+                raw_gripper = 1.0 if is_positive else 0.0
+                if is_hard_negative and sample is not None and close_reference is not None:
+                    current = np.asarray(sample["ee_minus_object_m"], dtype=np.float32).reshape(3)
+                    desired_delta = (close_reference - current) * float(correction_gain)
+                    raw_xyz = np.clip(desired_delta / float(horizon), -max_step_m, max_step_m)
+                raw_action = [
+                    float(raw_xyz[0]),
+                    float(raw_xyz[1]),
+                    float(raw_xyz[2]),
+                    0.0,
+                    0.0,
+                    0.0,
+                    float(raw_gripper),
+                ]
+                target_action.append(_normalize_raw_action(raw_action, action_stats))
+                target_gripper_state.append([1.0 if is_positive else 0.0])
+                trace_row = trace_by_step.get(step)
+                target_object_target.append(_object_target_vector(trace_row, object_target_field))
+                object_to_eef, target_to_eef = _object_pair_to_eef_targets(
+                    trace_row,
+                    object_target_field,
+                )
+                target_object_to_eef.append(object_to_eef)
+                target_target_to_eef.append(target_to_eef)
 
-        rows.append(
-            {
-                "rollout_json": mined_result.get("rollout_json"),
-                "checkpoint": mined_result.get("checkpoint"),
-                "task_id": mined_result.get("task_id"),
-                "episode_idx": mined_result.get("episode_idx"),
-                "offset_cm": mined_result.get("offset_cm"),
-                "chunk_index": chunk.get("chunk_index"),
-                "t_start": t_start,
-                "n_use": n_use,
-                "npz_path": str(npz_path),
-                "target_close": target_close,
-                "train_mask": train_mask,
-                "hard_negative_mask": hard_negative_mask,
-                "close_vector_error_mm": close_vector_error_mm,
-                "labels": labels,
-                "rel_live": chunk.get("rel_live"),
-            }
-        )
+        row = {
+            "rollout_json": mined_result.get("rollout_json"),
+            "checkpoint": mined_result.get("checkpoint"),
+            "task_id": mined_result.get("task_id"),
+            "episode_idx": mined_result.get("episode_idx"),
+            "offset_cm": mined_result.get("offset_cm"),
+            "chunk_index": chunk.get("chunk_index"),
+            "t_start": t_start,
+            "n_use": n_use,
+            "npz_path": str(npz_path),
+            "target_close": target_close,
+            "train_mask": train_mask,
+            "hard_negative_mask": hard_negative_mask,
+            "close_vector_error_mm": close_vector_error_mm,
+            "labels": labels,
+            "rel_live": chunk.get("rel_live"),
+        }
+        if emit_action_targets:
+            row.update(
+                {
+                    "target_action": target_action,
+                    "target_action_normalized": True,
+                    "target_gripper_state": target_gripper_state,
+                    "target_contact_phase": [1 if value > 0.5 else 0 for value in target_close],
+                    "target_contact_release_phase": [
+                        1 if value > 0.5 else 0 for value in target_close
+                    ],
+                    "target_object_target": target_object_target,
+                    "target_object_to_eef": target_object_to_eef,
+                    "target_target_to_eef": target_target_to_eef,
+                    "contact_correction_steps": int(horizon),
+                    "contact_correction_max_action_step_mm": float(max_action_step_mm),
+                    "contact_correction_gain": float(correction_gain),
+                    "contact_correction_reference_m": close_reference_m,
+                    "contact_correction_object_target_field": object_target_field,
+                }
+            )
+        rows.append(row)
     return rows
 
 
@@ -383,10 +512,40 @@ def main() -> None:
     )
     parser.add_argument("--near-object-hard-negative-z-min-mm", type=float, default=-math.inf)
     parser.add_argument("--near-object-hard-negative-z-max-mm", type=float, default=math.inf)
+    parser.add_argument(
+        "--emit-correction-action-targets",
+        action="store_true",
+        help=(
+            "When saving a policy manifest, also emit normalized target_action "
+            "rows that move hard negatives toward the demo contact affordance. "
+            "This is offline training supervision only."
+        ),
+    )
+    parser.add_argument("--action-stats-json")
+    parser.add_argument("--contact-correction-steps", type=int, default=4)
+    parser.add_argument("--contact-correction-max-action-step-mm", type=float, default=12.0)
+    parser.add_argument("--contact-correction-gain", type=float, default=1.0)
+    parser.add_argument(
+        "--object-target-field",
+        default=None,
+        help=(
+            "Optional generic object-minus-target field to copy into correction "
+            "manifest rows, e.g. bowl_minus_plate for the current LIBERO task."
+        ),
+    )
     args = parser.parse_args()
 
     demo_geometry = json.loads(Path(args.demo_geometry_json).read_text(encoding="utf-8"))
     close_reference = _reference_vector(demo_geometry, args.close_event, args.demo_close_field)
+    action_stats = None
+    if args.emit_correction_action_targets:
+        if not args.save_policy_manifest_jsonl:
+            raise ValueError("--emit-correction-action-targets requires --save-policy-manifest-jsonl")
+        if not args.action_stats_json:
+            raise ValueError("--emit-correction-action-targets requires --action-stats-json")
+        action_stats = _extract_action_stats(
+            json.loads(Path(args.action_stats_json).read_text(encoding="utf-8"))
+        )
 
     results = []
     manifest_rows: list[dict[str, Any]] = []
@@ -417,7 +576,18 @@ def main() -> None:
             near_object_hard_negative_z_max_mm=float(args.near_object_hard_negative_z_max_mm),
         )
         results.append(result)
-        manifest_rows.extend(policy_manifest_rows(rollout, result))
+        manifest_rows.extend(
+            policy_manifest_rows(
+                rollout,
+                result,
+                action_stats=action_stats,
+                close_reference_m=close_reference if action_stats is not None else None,
+                max_action_step_mm=float(args.contact_correction_max_action_step_mm),
+                correction_steps=max(1, int(args.contact_correction_steps)),
+                correction_gain=float(args.contact_correction_gain),
+                object_target_field=args.object_target_field,
+            )
+        )
 
     summary = {
         "demo_geometry_json": args.demo_geometry_json,
@@ -442,6 +612,12 @@ def main() -> None:
         ),
         "near_object_hard_negative_z_min_mm": float(args.near_object_hard_negative_z_min_mm),
         "near_object_hard_negative_z_max_mm": float(args.near_object_hard_negative_z_max_mm),
+        "emit_correction_action_targets": bool(args.emit_correction_action_targets),
+        "contact_correction_steps": max(1, int(args.contact_correction_steps)),
+        "contact_correction_max_action_step_mm": float(args.contact_correction_max_action_step_mm),
+        "contact_correction_gain": float(args.contact_correction_gain),
+        "object_target_field": args.object_target_field,
+        "policy_manifest_rows": int(len(manifest_rows)),
         "close_reference_m": close_reference,
         "results": results,
     }
