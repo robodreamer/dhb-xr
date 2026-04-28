@@ -1,5 +1,39 @@
 # DHB-XR Next 10h Execution Plan
 
+## 2026-04-28 Paper Closure Checkpoint
+
+Before launching more unattended experiments, use
+`_workspace/dhbxr_paper_result_pack_2026-04-28.md` as the active claim
+boundary. The highest-impact next step is not another scalar sweep; it is to
+turn the current evidence into a clean draft/result package and only run a new
+experiment if it directly targets held-object transport with a stronger data
+contract.
+
+Current paper-safe status:
+
+- Clean validated result: continuous DHB direct-action reach gets `5/5`
+  successes across `0,+3,-3 cm` offsets with `0` IK failures under
+  benchmark-init/raw-image/long-horizon evaluation.
+- Controlled comparison: matched short-budget `QwenDHB` beats matched
+  `QwenOFT` on final task outcome for task 0 (`1/3` at each tested offset
+  versus `0/3`), but the claim must include the DHB late-IK caveat.
+- Contact evidence: learned side-grasp close can match the physical demo
+  affordance within `9.2 mm`, but full transport/release remains unsolved.
+- Token evidence: release/contact tokens are learnable offline; discrete
+  action tokens are not yet a validated streaming-control path.
+- Active blocker: held-object lift/carry/lower/release, not basic reaching,
+  gripper polarity, or runtime distance gating.
+
+Next hard gate:
+
+1. Generate or mine successful post-grasp target-reaching positives with real
+   or simulated object attachment, including release tails.
+2. Keep phase labels separate from continuous object-pair geometry.
+3. Require object-target XY MAE near `20-30 mm` before any live adapter sweep.
+4. Preserve the corrected `5/5`, `0` IK reach gate before claiming progress.
+5. Run the matched regular-head control before claiming a DHB transport
+   advantage.
+
 ## 2026-04-28 Active Stop Rule: Do Not Continue Scalar Transport Tuning
 
 The latest object-pair attached-transport diagnostics closed the most likely

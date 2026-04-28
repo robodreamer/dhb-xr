@@ -5,6 +5,17 @@
 This note turns the current evidence into a concise story plan: what can be
 claimed now, what remains weak, and which validations should come next.
 
+Current paper-facing consolidation:
+
+- Use `_workspace/dhbxr_paper_result_pack_2026-04-28.md` as the compact
+  source for draft wording, canonical metrics, artifact paths, video
+  priorities, and the next hard-gated experiment.
+- The safest current story is robust continuous-DHB offset reaching, a bounded
+  matched-head prototype advantage over QwenOFT, learned contact/release-token
+  feasibility, and an explicit held-object transport limitation.
+- Do not claim full pick-place or discrete-token streaming execution until the
+  next transport/release gate passes.
+
 ## Current Big-Picture Story
 
 DHB-XR is best framed as a geometric action interface for low-data VLA scaling.

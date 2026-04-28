@@ -2,6 +2,9 @@
 
 Use these top-level notes as the current source of truth:
 
+- `dhbxr_paper_result_pack_2026-04-28.md`: current paper-facing claim
+  boundary, canonical result table, artifact list, draft wording, project-page
+  video priorities, and hard-gated next experiment.
 - `dhbxr_story_gap_closure_plan.md`: paper story, safe claims, and remaining
   evidence gaps.
 - `dhbxr_next_10h_execution_plan.md`: execution order for the next active work
@@ -20,6 +23,14 @@ Use these top-level notes as the current source of truth:
 
 Latest active result to preserve:
 
+- Paper/storytelling closure:
+  `_workspace/dhbxr_paper_result_pack_2026-04-28.md` is now the compact source
+  for draft claims. The safe story is robust continuous-DHB offset reaching
+  (`5/5`, `0` IK), a bounded matched-head advantage over QwenOFT on task-0
+  (`1/3` at each offset versus `0/3`), learned side-grasp contact evidence
+  (`9.2 mm` physical close-vector error), and offline release/contact-token
+  learnability. Full pick-place remains unclaimed because held-object
+  lift/carry/lower/release is still the active failure.
 - Current strategy correction:
   `_workspace/dhbxr_gripper_contract_audit_2026-04-28.md` supersedes
   center-contact selection as the active full-task objective. The guarded
