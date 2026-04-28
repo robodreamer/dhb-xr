@@ -1754,3 +1754,25 @@ Story implication:
   compelling experiment must scale this augmentation beyond two narrow
   manifests and compare DHB-XR against a matched regular action head on the
   same successful augmented trajectories.
+
+2026-04-28 external infrastructure check:
+
+- The newly released VLA Foundry report/code is most relevant as validation of
+  infrastructure choices, not as a drop-in fix. It uses explicit robotics
+  preprocessing, action/proprioception fields, WebDataset-style manifests,
+  gripper fields separate from pose fields, and past/future masks for chunked
+  diffusion-policy generation.
+- TRI-LBM's useful lesson is action-type-aware normalization. That maps well to
+  DHB-XR's claim that compact geometric/phase tokens can make augmented
+  trajectories easier to learn; it does not remove the need for successful
+  grasp-attached transport data.
+
+Story implication:
+
+- This supports a cleaner claim: DHB-XR should be presented as a compact
+  geometric action-token interface that can absorb simulator/world-model
+  augmentation, while the benchmark infrastructure follows modern VLA practice
+  by keeping action fields, gripper fields, proprioception, and chunk masks
+  explicit. The evidence gap remains empirical: demonstrate that DHB-XR learns
+  the broadened successful lift/transport/release positives better than the
+  matched regular action head.

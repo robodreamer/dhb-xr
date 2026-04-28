@@ -2476,3 +2476,32 @@ Updated immediate priority:
 4. If time allows before the next long training run, add validation that the
    exported lift-transport chunks reconstruct target progress and action scale
    correctly from the exact streaming policy-trace interface.
+
+2026-04-28 community-code check:
+
+- VLA Foundry's current public code and report reinforce the evaluation
+  contract we are converging on: explicit action/proprioception fields, separate
+  gripper fields, streaming-friendly dataset manifests, and past/future masks
+  for chunked action generation. The diffusion policy preserves past actions
+  and denoises future actions, which is conceptually closer to our desired
+  streaming/prefix-conditioned loop than more one-off execution gains.
+- VLA Foundry's LBM/robotics preprocessing keeps pose actions and gripper
+  actions as separately configured fields. This supports keeping our gripper
+  signal as a learned action/contact component while avoiding runtime
+  object-distance gates.
+- TRI-LBM is useful mainly as a normalization cue: it has an action-type
+  classifier/normalizer that stores per-action-type statistics before inverse
+  normalization. For DHB-XR, the analogous high-leverage idea is phase- or
+  token-type-specific normalization/weighting for reach, grasp-attached
+  transport, and release tokens, not another scalar rollout heuristic.
+
+Updated immediate priority:
+
+1. Do not port either external stack wholesale during this work block.
+2. Keep using our existing StarVLA harness, but borrow the robust contracts:
+   explicit past/future masks, per-field action/gripper accounting,
+   proprio/state conditioning, and phase/action-type-specific normalization
+   audits.
+3. Before a long training run, validate that policy-trace rows preserve exactly
+   the action scale, gripper state, object-pair labels, and chunk masks expected
+   by the streaming policy loop.

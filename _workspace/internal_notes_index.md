@@ -39,6 +39,12 @@ Latest active result to preserve:
   small two-manifest continuation still failed the no-gate placement gate, so
   broad regenerated augmentation plus a matched regular-head control is the
   active next step.
+- Latest community-code check:
+  VLA Foundry and TRI-LBM support explicit action/proprio/gripper field
+  contracts, chunk past/future masks, and action-type-aware normalization as
+  useful infrastructure ideas. They do not suggest runtime object gates or more
+  scalar threshold sweeps as the route through the current post-contact
+  transport failure.
 - `dhb_starvla_qwen_fresh_actionxyz_from2000/steps_400` with
   `--trajectory-source direct_action` and
   `--direct-action-xyz-scale 1.0 1.35 1.15` reaches `5/5` across
