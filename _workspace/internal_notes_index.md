@@ -750,3 +750,11 @@ explicitly references them. They are kept for provenance only.
   on post-contact rows. The strongest next path is stricter successful
   post-grasp data or stronger generic object grounding, not runtime
   object-distance heuristics.
+- Geometry-only object token follow-up:
+  The 6-D `object_to_eef + target_to_eef` token is better than the 9-D
+  phase-coupled token (`~32 mm` best XY MAE versus `~55-65 mm`), so keep phase
+  labels separate from continuous object-pair geometry. A final bounded
+  geometry-only direct-adapter run was still negative: it pushed the bowl
+  `27-29 cm` from the plate and introduced `29-38` IK failures. Close the
+  adapter-only branch; the next transport attempt needs constrained
+  lift/carry/lower/release objectives and rollout-safe bounds.

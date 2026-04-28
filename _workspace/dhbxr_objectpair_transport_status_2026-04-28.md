@@ -761,3 +761,38 @@ perception token. The manifest labels contain useful geometry/action signal, but
 the learned visual object/target token is not accurate enough after grasp to
 drive held-object transport. The next viable path is a stronger object-grounding
 or dataset-level intervention, not another small adapter continuation.
+
+## Geometry-Only Object Token Check
+
+The older 6-D object-pair checkpoints were audited with the new object-token
+probe to test whether coupling the transport phase onehot into the object token
+was the problem. The geometry-only `object_to_eef + target_to_eef` run is much
+better than the 9-D phase-coupled token:
+
+| Run | Checkpoint | Object-minus-target XY MAE |
+| --- | ---: | ---: |
+| lifttransport 6-D | step 50 | `38.8 mm` |
+| lifttransport 6-D | step 100 | `32.0 mm` |
+| lifttransport 6-D | step 150 | `35.1 mm` |
+| dagger-gated 6-D | step 150 | `72.6 mm` |
+| phase-coupled 9-D | best joint-calib step 250 | `55.2 mm` |
+
+This shows the phase-onehot dimensions should not be packed into the same
+object-target token used for transport control. However, a bounded direct
+adapter continuation on the best 6-D geometry checkpoint is also negative:
+
+`_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_closedobjdelta6_from_lifttransport100`
+
+| Checkpoint | Success | Close | Final bowl-plate XY mm | IK fails | Verdict |
+| ---: | ---: | ---: | ---: | ---: | --- |
+| step 50 | `0/1` | `1/1` | `290.4` | `29` | aggressive overshoot |
+| step 100 | `0/1` | `1/1` | `273.7` | `30` | aggressive overshoot |
+| step 150 | `0/1` | `1/1` | `280.3` | `38` | aggressive overshoot |
+
+The component diagnostics show a large positive-Y object-delta contribution
+after close. So the geometry-only token is better, but the adapter objective is
+still underconstrained: it can exploit action MSE to push hard in one direction
+without learning a release-ready placement policy. This closes the adapter-only
+branch. Future transport work should separate geometry tokens from phase tokens
+and use explicit lift/carry/lower/release supervision with rollout-safe bounds,
+not a free residual adapter.

@@ -2717,3 +2717,17 @@ Updated next steps:
 4. Before any new live sweep, run the object-token probe plus contact-phase
    probe as cheap gates. If either conditioning token is poor, train/evaluate
    that token offline first rather than consuming rollout time.
+
+2026-04-28 geometry-only adapter closure:
+
+- The 6-D geometry-only object token is better than the 9-D phase-coupled token:
+  the best lifttransport checkpoint has about `32 mm` object-minus-target XY
+  MAE. This suggests phase labels should not be packed into the same continuous
+  object-pair token used for transport control.
+- A bounded direct adapter continuation on that best 6-D checkpoint is still
+  negative. It learns a large positive-Y closed correction, pushes the bowl
+  `27-29 cm` from the plate, and introduces `29-38` IK failures.
+- This closes the small-adapter branch. The next transport attempt needs a
+  constrained phase/action-type objective: separate geometry tokens, separate
+  phase tokens, explicit lift/carry/lower/release targets, and rollout-safe
+  action bounds. Do not run more adapter-only epochs.
