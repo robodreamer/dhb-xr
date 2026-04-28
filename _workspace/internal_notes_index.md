@@ -758,3 +758,11 @@ explicitly references them. They are kept for provenance only.
   `27-29 cm` from the plate and introduced `29-38` IK failures. Close the
   adapter-only branch; the next transport attempt needs constrained
   lift/carry/lower/release objectives and rollout-safe bounds.
+- `vla-ideas` scan:
+  The useful transfer is not code reuse but experimental structure. The
+  `async_chunking_compare` toy study emphasizes prefix/history-conditioned
+  execution under delay, while the RECAP demos frame latent/advantage tokens as
+  decision context rather than unconstrained residual actions. For DHB-XR, this
+  supports the next design constraint: transport should condition on committed
+  prefix/history and separated phase geometry, with bounded rollout-safe action
+  targets, rather than adding another free adapter residual.
