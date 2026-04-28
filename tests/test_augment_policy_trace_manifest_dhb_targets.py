@@ -61,14 +61,18 @@ def test_augments_manifest_with_chunk_local_dhb_targets(tmp_path: Path) -> None:
         manifest_path,
         out_path,
         action_stats_json=stats_path,
+        phase_z_threshold_mm=5.0,
     )
 
     assert summary["rows"] == 1
     assert summary["invariant_steps"] == 2
+    assert summary["phase_counts"] == {"carry": 1, "lift": 1}
     row = json.loads(out_path.read_text(encoding="utf-8").strip())
     linear = np.asarray(row["target_linear_invariants"], dtype=np.float32)
     angular = np.asarray(row["target_angular_invariants"], dtype=np.float32)
     assert row["target_dhb_invariants_chunk_local"] is True
+    assert row["target_transport_phase"] == ["lift", "carry"]
+    assert row["target_transport_phase_onehot"] == [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
     assert linear.shape == (2, 4)
     assert angular.shape == (2, 4)
     assert np.isfinite(linear).all()

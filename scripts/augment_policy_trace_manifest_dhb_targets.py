@@ -67,6 +67,27 @@ def _denormalize_action(action: np.ndarray, action_stats: dict[str, Any]) -> np.
     return np.where(mask, raw, action).astype(np.float32)
 
 
+def _transport_phase_from_action(raw_action: np.ndarray, *, z_threshold_mm: float) -> str:
+    action = np.asarray(raw_action, dtype=np.float32).reshape(-1)
+    z_mm = float(action[2] * 1000.0) if action.shape[0] >= 3 else 0.0
+    threshold = max(0.0, float(z_threshold_mm))
+    if z_mm > threshold:
+        return "lift"
+    if z_mm < -threshold:
+        return "lower"
+    return "carry"
+
+
+def _transport_phase_onehot(phase: str, *, scale: float = 1.0) -> list[float]:
+    classes = ("lift", "carry", "lower")
+    out = [0.0, 0.0, 0.0]
+    try:
+        out[classes.index(str(phase))] = float(scale)
+    except ValueError:
+        out[classes.index("carry")] = float(scale)
+    return out
+
+
 def _row_current_state(row: dict[str, Any]) -> np.ndarray:
     npz_path = Path(str(row.get("npz_path", "")))
     if not npz_path.exists():
@@ -80,7 +101,13 @@ def _row_current_state(row: dict[str, Any]) -> np.ndarray:
     return state.reshape(-1)
 
 
-def augment_row(row: dict[str, Any], *, action_stats: dict[str, Any]) -> dict[str, Any]:
+def augment_row(
+    row: dict[str, Any],
+    *,
+    action_stats: dict[str, Any],
+    phase_z_threshold_mm: float = 1.0,
+    phase_onehot_scale: float = 1.0,
+) -> dict[str, Any]:
     action = np.asarray(row.get("target_action", []), dtype=np.float32)
     if action.ndim != 2 or action.shape[0] == 0:
         raise ValueError("manifest row is missing 2-D target_action")
@@ -94,6 +121,17 @@ def augment_row(row: dict[str, Any], *, action_stats: dict[str, Any]) -> dict[st
     out["target_linear_invariants"] = linear.astype(np.float32).tolist()
     out["target_angular_invariants"] = angular.astype(np.float32).tolist()
     out["target_dhb_invariants_chunk_local"] = True
+    phases = row.get("target_transport_phase")
+    if phases is None:
+        phases = [
+            _transport_phase_from_action(raw_action, z_threshold_mm=phase_z_threshold_mm)
+            for raw_action in action
+        ]
+        out["target_transport_phase"] = phases
+    out["target_transport_phase_onehot"] = [
+        _transport_phase_onehot(phase, scale=phase_onehot_scale)
+        for phase in phases
+    ]
     return out
 
 
@@ -102,17 +140,32 @@ def augment_manifest(
     output_jsonl: Path,
     *,
     action_stats_json: Path,
+    phase_z_threshold_mm: float = 1.0,
+    phase_onehot_scale: float = 1.0,
 ) -> dict[str, Any]:
     rows = _read_jsonl(manifest_jsonl)
     action_stats = _extract_action_stats(json.loads(action_stats_json.read_text(encoding="utf-8")))
-    augmented = [augment_row(row, action_stats=action_stats) for row in rows]
+    augmented = [
+        augment_row(
+            row,
+            action_stats=action_stats,
+            phase_z_threshold_mm=phase_z_threshold_mm,
+            phase_onehot_scale=phase_onehot_scale,
+        )
+        for row in rows
+    ]
     _write_jsonl(output_jsonl, augmented)
     invariant_steps = sum(len(row.get("target_linear_invariants", [])) for row in augmented)
+    phase_counts: dict[str, int] = {}
+    for row in augmented:
+        for phase in row.get("target_transport_phase", []):
+            phase_counts[str(phase)] = phase_counts.get(str(phase), 0) + 1
     return {
         "input_jsonl": str(manifest_jsonl),
         "output_jsonl": str(output_jsonl),
         "rows": int(len(augmented)),
         "invariant_steps": int(invariant_steps),
+        "phase_counts": dict(sorted(phase_counts.items())),
     }
 
 
@@ -121,6 +174,8 @@ def main() -> None:
     parser.add_argument("--manifest-jsonl", required=True)
     parser.add_argument("--output-jsonl", required=True)
     parser.add_argument("--action-stats-json", required=True)
+    parser.add_argument("--phase-z-threshold-mm", type=float, default=1.0)
+    parser.add_argument("--phase-onehot-scale", type=float, default=1.0)
     parser.add_argument("--save-summary-json")
     args = parser.parse_args()
 
@@ -128,6 +183,8 @@ def main() -> None:
         Path(args.manifest_jsonl),
         Path(args.output_jsonl),
         action_stats_json=Path(args.action_stats_json),
+        phase_z_threshold_mm=float(args.phase_z_threshold_mm),
+        phase_onehot_scale=float(args.phase_onehot_scale),
     )
     if args.save_summary_json:
         out = Path(args.save_summary_json)

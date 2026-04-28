@@ -258,6 +258,10 @@ def _export_policy_trace_chunks(
             )
             for record in chunk
         ]
+        target_transport_phase_onehot = [
+            _transport_phase_onehot(phase)
+            for phase in target_transport_phase
+        ]
         action_loss_weight = [
             _transport_phase_loss_weight(
                 phase,
@@ -293,6 +297,7 @@ def _export_policy_trace_chunks(
                 "target_close": [1.0 for _ in chunk],
                 "train_mask": [1.0 for _ in chunk],
                 "target_transport_phase": target_transport_phase,
+                "target_transport_phase_onehot": target_transport_phase_onehot,
                 "action_loss_weight": action_loss_weight,
                 "labels": ["attached_transport_positive" for _ in chunk],
                 "object_target_xy_mm": [
@@ -335,6 +340,16 @@ def _transport_phase_loss_weight(
         "lower": float(lower_weight),
     }
     return max(0.0, weights.get(str(phase), 1.0))
+
+
+def _transport_phase_onehot(phase: str) -> list[float]:
+    classes = ("lift", "carry", "lower")
+    out = [0.0, 0.0, 0.0]
+    try:
+        out[classes.index(str(phase))] = 1.0
+    except ValueError:
+        out[classes.index("carry")] = 1.0
+    return out
 
 
 def _target_ready(

@@ -218,6 +218,7 @@ def test_rollout_policy_trace_export_preserves_lift_transport_targets(tmp_path: 
     assert np.isfinite(np.asarray(row["target_linear_invariants"], dtype=np.float32)).all()
     assert float(np.abs(np.asarray(row["target_linear_invariants"], dtype=np.float32)).sum()) > 0.0
     assert row["target_transport_phase"] == ["lift", "carry"]
+    assert row["target_transport_phase_onehot"] == [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
     assert row["action_loss_weight"] == [3.0, 1.0]
     np.testing.assert_allclose(row["target_action"][0][:3], [0.0, 0.0, 0.8], atol=1e-6)
     np.testing.assert_allclose(row["target_action"][1][:3], [-0.5, 0.2, 0.4], atol=1e-6)
