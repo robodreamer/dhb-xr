@@ -1,0 +1,19 @@
+{
+  "config_yaml": "configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_policytrace.yaml",
+  "overrides": [],
+  "output_dir": "/home/andypark/Projects/repos/dhb-xr/_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_policytrace_guarded_fromclosedtransport300",
+  "batch_len": 1,
+  "frozen_qwen_params": 3754622976,
+  "trainable_params": 85109797,
+  "step_time_ms": 563.28,
+  "metrics": {
+    "action_loss": 0.7394717931747437,
+    "loss_act": 0.6559505462646484,
+    "loss_contact": 0.7871928811073303,
+    "loss_gripper_state": 0.4563811421394348,
+    "loss_object_target": 0.12375444918870926,
+    "loss_action_closed_residual_l2": 0.0
+  },
+  "gpu_name": "NVIDIA RTX 3500 Ada Generation Laptop GPU",
+  "peak_memory_mb": 4730.09
+}

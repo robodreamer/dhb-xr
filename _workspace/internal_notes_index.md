@@ -6,6 +6,9 @@ Use these top-level notes as the current source of truth:
   evidence gaps.
 - `dhbxr_next_10h_execution_plan.md`: execution order for the next active work
   block.
+- `dhbxr_gripper_contract_audit_2026-04-28.md`: latest stop-and-audit note
+  comparing our gripper/action-loop assumptions against OpenVLA, StarVLA, VLA
+  Foundry, and the current best attached-transport trace.
 - `dhbxr_matched_head_comparison_v1.md`: current matched `QwenDHB` versus
   `QwenOFT` evidence and next comparison matrix.
 - `dhbxr_unattended_benchmark_runbook.md`: commands and gates for benchmark
@@ -13,6 +16,13 @@ Use these top-level notes as the current source of truth:
 
 Latest active result to preserve:
 
+- Current strategy correction:
+  `_workspace/dhbxr_gripper_contract_audit_2026-04-28.md` supersedes
+  center-contact selection as the active full-task objective. The guarded
+  attached-transport step-100 checkpoint is useful evidence for smooth reach
+  and physical close, but the close pose is near bowl center instead of the
+  demo side-grasp affordance. The next gate is close-vector affordance error
+  plus object/EE coupling, not minimum bowl-center XY alone.
 - `dhb_starvla_qwen_fresh_actionxyz_from2000/steps_400` with
   `--trajectory-source direct_action` and
   `--direct-action-xyz-scale 1.0 1.35 1.15` reaches `5/5` across
@@ -218,6 +228,16 @@ Latest active result to preserve:
   contact (`60.2 mm` close-vector error) and release remains far from the plate
   (`118.1 mm` bowl-plate XY). Raising close threshold to `0.85` only moves
   close to step `83`; contact-phase decoding closes at step `2`.
+- Latest 2026-04-28 audit:
+  the guarded attached-transport continuation improves smooth center reach but
+  should not be scaled blindly. Step `100` closes with `0` IK failures and
+  physically closes the gripper (`observed qpos` about `0.034 -> 0.0069`), but
+  it closes at EE-minus-bowl about `[-8.8, -15.3, +29.2] mm`, while demo
+  physical close is a side-grasp affordance around `[-13.6, -45.1, +26.7] mm`.
+  Minimum bowl-center XY is therefore misleading for full manipulation. Use
+  close-vector affordance error, observed qpos closure, post-close object/EE
+  coupling, and target progress as the next gate. Detailed note:
+  `_workspace/dhbxr_gripper_contract_audit_2026-04-28.md`.
   A trace-scored rerun strengthens the diagnosis: actual close at step `79`
   has `63.2 mm` close-vector error, but the same no-gate trajectory reaches a
   `26.1 mm` best close-affordance opportunity at step `123` with `0` IK

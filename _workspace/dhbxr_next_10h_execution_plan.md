@@ -2405,3 +2405,39 @@ Updated immediate priority:
    continuation, not add runtime object-distance logic.
 3. After transport can reach the target window under no-gate rollout, rerun the
    release miner to create honest near-target release positives.
+
+2026-04-28 gripper-contract audit and priority correction:
+
+- The guarded attached-positive continuation is mechanically useful but not the
+  next thing to scale blindly. Step `100` reaches good bowl-center proximity
+  (`13.3 mm` minimum XY) and keeps `0` IK failures, but the detailed trace shows
+  the close occurs at EE-minus-bowl about `[-8.8, -15.3, +29.2] mm`.
+- Physical gripper close is confirmed: observed qpos drops from about `0.034`
+  at the first close command to about `0.0069` two policy steps later. The
+  gripper sign and actuator path are therefore not the active bug.
+- Demo physical close geometry is a side-grasp affordance, not a center-contact
+  target. The first-three-demo probe reports close-phys mean
+  `[-13.6, -45.1, +26.7] mm`; the older 50-demo probe reported the same
+  pattern. The current rollout closes too near bowl center and then pushes the
+  object toward the side, so object/EE coupling is weak.
+- Community-code check supports this pivot: OpenVLA and StarVLA execute
+  LIBERO with `-1 = open`, `+1 = close`; OpenVLA keeps gripper absolute and
+  unnormalized, while VLA Foundry adds gripper hysteresis/debounce at the action
+  adapter. None of these references suggest object-distance gates or more
+  gripper-threshold sweeps as the core solution.
+
+Updated immediate priority:
+
+1. Stop using minimum bowl-center XY as the full-task selection metric. Use
+   close-vector affordance error, observed qpos close, post-close object/EE
+   coupling, and object-target progress.
+2. Before more attached-transport training, generate or mine side-affordance
+   pre-close/close positives from current rollout states. Target the demo
+   EE-minus-object side-grasp vector, not the object center.
+3. After side-affordance close passes, reintroduce attached transport positives
+   as the simulator-assisted augmentation experiment. That is the clean story:
+   real/demo data plus simulator-generated spatially adapted trajectories, all
+   learned through DHB-XR tokens without runtime object gates.
+4. Keep the guarded attached-transport step-100 checkpoint as evidence that the
+   policy can preserve smooth center reach/contact, not as the active full-task
+   baseline.

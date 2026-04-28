@@ -1,0 +1,871 @@
+{
+  "config_yaml": "_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_policytrace_guarded_fromclosedtransport300/config.full.yaml",
+  "run_dir": "_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_policytrace_guarded_fromclosedtransport300",
+  "checkpoint_steps": [
+    50,
+    100,
+    150,
+    200
+  ],
+  "task_suite_name": "libero_spatial",
+  "task_id": 0,
+  "cases": [
+    {
+      "episode_idx": 1,
+      "offset_cm": 3.0
+    }
+  ],
+  "settings": {
+    "replan_every": 4,
+    "max_first_offset_mm": 35.0,
+    "max_step_mm": 20.0,
+    "smooth_window": 3,
+    "blend_overlap_alpha": 0.6,
+    "blend_mode": "constant",
+    "commit_prefix_steps": 0,
+    "adaptive_commit_threshold_mm": 0.0,
+    "adaptive_commit_max_steps": 0,
+    "delta_continuation_alpha": 0.0,
+    "delta_continuation_steps": 0,
+    "gripper_source": "model",
+    "model_gripper_decode_source": "contact_release_phase",
+    "gripper_threshold": 0.5,
+    "gripper_close_threshold": 0.5,
+    "gripper_open_threshold": 0.5,
+    "gripper_transition_debounce_steps": 2,
+    "image_orientation": "raw",
+    "trajectory_source": "direct_action",
+    "state_history_update_rate": "policy",
+    "state_gripper_source": "commanded",
+    "disable_gripper_gates": true,
+    "direct_action_xyz_scale": [
+      0.85,
+      1.55,
+      1.15
+    ],
+    "direct_action_xyz_bias_mm": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "closed_direct_action_xyz_scale": [
+      0.85,
+      1.55,
+      1.15
+    ],
+    "closed_direct_action_xyz_bias_mm": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "init_state_source": "benchmark",
+    "rollout_seed": 70,
+    "max_policy_steps": 240,
+    "demo_length_cap_warning": false,
+    "settle_steps": 60,
+    "reach_only": false,
+    "reach_threshold_xy_m": 0.05,
+    "reach_threshold_z_m": 0.08,
+    "reach_stop_on_success": false,
+    "record_step_trace": false,
+    "record_sim_state_trace": false
+  },
+  "ranked": [
+    {
+      "checkpoint": "_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_policytrace_guarded_fromclosedtransport300/checkpoints/steps_100_pytorch_model.pt",
+      "step": 100,
+      "cases": [
+        {
+          "config_yaml": "_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_policytrace_guarded_fromclosedtransport300/config.full.yaml",
+          "checkpoint": "_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_policytrace_guarded_fromclosedtransport300/checkpoints/steps_100_pytorch_model.pt",
+          "task_suite_name": "libero_spatial",
+          "task_id": 0,
+          "episode_idx": 1,
+          "offset_cm": 3.0,
+          "config_seed": 86,
+          "rollout_seed": 70,
+          "task_language": "pick up the black bowl between the plate and the ramekin and place it on the plate",
+          "num_demo_steps": 84,
+          "max_policy_steps": 240,
+          "rollout_steps": 240,
+          "demo_length_cap_warning": false,
+          "replan_every": 4,
+          "max_first_offset_mm": 35.0,
+          "max_step_mm": 20.0,
+          "smooth_window": 3,
+          "blend_overlap_alpha": 0.6,
+          "blend_mode": "constant",
+          "commit_prefix_steps": 0,
+          "adaptive_commit_threshold_mm": 0.0,
+          "adaptive_commit_max_steps": 0,
+          "delta_continuation_alpha": 0.0,
+          "delta_continuation_steps": 0,
+          "approach_blend_mode": null,
+          "approach_commit_prefix_steps": -1,
+          "approach_bowl_xy_m": 0.1,
+          "approach_bowl_z_m": 0.1,
+          "state_history_window": 4,
+          "gripper_source": "model",
+          "model_gripper_decode_source": "contact_release_phase",
+          "gripper_threshold": 0.5,
+          "gripper_close_threshold": 0.5,
+          "gripper_open_threshold": 0.5,
+          "gripper_transition_debounce_steps": 2,
+          "image_orientation": "raw",
+          "trajectory_source": "direct_action",
+          "direct_action_xyz_scale": [
+            0.85,
+            1.55,
+            1.15
+          ],
+          "direct_action_xyz_bias_mm": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "closed_direct_action_xyz_scale": [
+            0.85,
+            1.55,
+            1.15
+          ],
+          "closed_direct_action_xyz_bias_mm": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "state_history_update_rate": "policy",
+          "state_gripper_source": "commanded",
+          "init_state_source": "benchmark",
+          "init_state_l2_diff": 0.4650380611419678,
+          "close_gate_xy_m": 0.05,
+          "close_gate_z_m": 0.05,
+          "disable_gripper_gates": true,
+          "reach_only": false,
+          "reach_threshold_xy_m": 0.05,
+          "reach_threshold_z_m": 0.08,
+          "reach_stop_on_success": false,
+          "record_step_trace": false,
+          "record_sim_state_trace": false,
+          "policy_trace_dir": null,
+          "policy_trace": null,
+          "success": false,
+          "success_at": null,
+          "reward": 0.0,
+          "ik_fail_total": 0,
+          "first_ik_fail_chunk": null,
+          "num_chunks": 60,
+          "close_step": 100,
+          "reopen_step": null,
+          "close_snapshot": {
+            "ee_pos": [
+              -0.06996699422597885,
+              0.22141502797603607,
+              0.9267116785049438
+            ],
+            "bowl_pos": [
+              -0.06172092631459236,
+              0.23556023836135864,
+              0.9002946019172668
+            ],
+            "ee_minus_bowl": [
+              -0.008246069156773499,
+              -0.014145213432955162,
+              0.026417064005604174
+            ],
+            "plate_pos": [
+              0.06130269542336464,
+              0.19505564868450165,
+              0.9025063514709473
+            ],
+            "ee_minus_plate": [
+              -0.1312696910020816,
+              0.02635938329644255,
+              0.024205339975528872
+            ],
+            "bowl_minus_plate": [
+              -0.1230236218453081,
+              0.04050459672939771,
+              -0.0022117240300753016
+            ]
+          },
+          "reopen_snapshot": null,
+          "final_snapshot": {
+            "ee_pos": [
+              -0.0029912134632468224,
+              0.23926158249378204,
+              0.9176923632621765
+            ],
+            "bowl_pos": [
+              -0.027175297960639,
+              0.27934378385543823,
+              0.901395320892334
+            ],
+            "ee_minus_bowl": [
+              0.024184084534425,
+              -0.04008219183094808,
+              0.01629705359542788
+            ],
+            "plate_pos": [
+              0.07068897038698196,
+              0.1855488121509552,
+              0.9025063514709473
+            ],
+            "ee_minus_plate": [
+              -0.07368018703774915,
+              0.05371276365248692,
+              0.015186024732761538
+            ],
+            "bowl_minus_plate": [
+              -0.09786427157217414,
+              0.093794955483435,
+              -0.0011110288626663412
+            ]
+          },
+          "min_bowl_xy_m": 0.012090780772268772,
+          "min_bowl_xyz_m": 0.029587341472506523,
+          "min_plate_xy_m": 0.08910594135522842,
+          "min_plate_xyz_m": 0.08982837945222855,
+          "scene_refs": {
+            "bowl_ref": "body:akita_black_bowl_1_main",
+            "plate_ref": "body:plate_1_main",
+            "initial_bowl_pos": [
+              -0.06431526690721512,
+              0.2269788235425949,
+              0.9700000286102295
+            ],
+            "initial_plate_pos": [
+              0.061294570565223694,
+              0.1950579732656479,
+              0.9700000286102295
+            ]
+          },
+          "motion_metrics": {
+            "num_points": 781,
+            "path_length_m": 0.5044472813606262,
+            "net_displacement_m": 0.4059436321258545,
+            "path_efficiency": 0.8047295468238393,
+            "mean_step_mm": 0.6467272639274597,
+            "std_step_mm": 1.0735864639282227,
+            "max_step_mm": 26.55253028869629,
+            "hold_fraction": 0.0641025641025641,
+            "mean_accel_mm": 0.16965791583061218,
+            "max_accel_mm": 30.310379028320312,
+            "mean_jerk_mm": 0.23863160610198975,
+            "max_jerk_mm": 33.84040451049805,
+            "direction_flip_fraction": 0.0027434842249657062
+          },
+          "chunks": "<60 chunks saved to _workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_policytrace_guarded_fromclosedtransport300/live_checkpoint_sweep/attached_transport_guarded_ep1_offset3_seed70/step_100/steps_100_pytorch_model_ep1_offset3.0cm_summary.json>",
+          "step_trace": null,
+          "video_path": null,
+          "overrides": []
+        }
+      ],
+      "aggregate": {
+        "success_count": 0,
+        "close_count": 1,
+        "avg_min_bowl_xyz_m": 0.029587341472506523,
+        "avg_min_bowl_xy_m": 0.012090780772268772,
+        "avg_ik_fail_total": 0.0,
+        "avg_mean_accel_mm": 0.16965791583061218,
+        "avg_hold_fraction": 0.0641025641025641
+      }
+    },
+    {
+      "checkpoint": "_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_policytrace_guarded_fromclosedtransport300/checkpoints/steps_200_pytorch_model.pt",
+      "step": 200,
+      "cases": [
+        {
+          "config_yaml": "_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_policytrace_guarded_fromclosedtransport300/config.full.yaml",
+          "checkpoint": "_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_policytrace_guarded_fromclosedtransport300/checkpoints/steps_200_pytorch_model.pt",
+          "task_suite_name": "libero_spatial",
+          "task_id": 0,
+          "episode_idx": 1,
+          "offset_cm": 3.0,
+          "config_seed": 86,
+          "rollout_seed": 70,
+          "task_language": "pick up the black bowl between the plate and the ramekin and place it on the plate",
+          "num_demo_steps": 84,
+          "max_policy_steps": 240,
+          "rollout_steps": 240,
+          "demo_length_cap_warning": false,
+          "replan_every": 4,
+          "max_first_offset_mm": 35.0,
+          "max_step_mm": 20.0,
+          "smooth_window": 3,
+          "blend_overlap_alpha": 0.6,
+          "blend_mode": "constant",
+          "commit_prefix_steps": 0,
+          "adaptive_commit_threshold_mm": 0.0,
+          "adaptive_commit_max_steps": 0,
+          "delta_continuation_alpha": 0.0,
+          "delta_continuation_steps": 0,
+          "approach_blend_mode": null,
+          "approach_commit_prefix_steps": -1,
+          "approach_bowl_xy_m": 0.1,
+          "approach_bowl_z_m": 0.1,
+          "state_history_window": 4,
+          "gripper_source": "model",
+          "model_gripper_decode_source": "contact_release_phase",
+          "gripper_threshold": 0.5,
+          "gripper_close_threshold": 0.5,
+          "gripper_open_threshold": 0.5,
+          "gripper_transition_debounce_steps": 2,
+          "image_orientation": "raw",
+          "trajectory_source": "direct_action",
+          "direct_action_xyz_scale": [
+            0.85,
+            1.55,
+            1.15
+          ],
+          "direct_action_xyz_bias_mm": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "closed_direct_action_xyz_scale": [
+            0.85,
+            1.55,
+            1.15
+          ],
+          "closed_direct_action_xyz_bias_mm": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "state_history_update_rate": "policy",
+          "state_gripper_source": "commanded",
+          "init_state_source": "benchmark",
+          "init_state_l2_diff": 0.4650380611419678,
+          "close_gate_xy_m": 0.05,
+          "close_gate_z_m": 0.05,
+          "disable_gripper_gates": true,
+          "reach_only": false,
+          "reach_threshold_xy_m": 0.05,
+          "reach_threshold_z_m": 0.08,
+          "reach_stop_on_success": false,
+          "record_step_trace": false,
+          "record_sim_state_trace": false,
+          "policy_trace_dir": null,
+          "policy_trace": null,
+          "success": false,
+          "success_at": null,
+          "reward": 0.0,
+          "ik_fail_total": 0,
+          "first_ik_fail_chunk": null,
+          "num_chunks": 60,
+          "close_step": 99,
+          "reopen_step": null,
+          "close_snapshot": {
+            "ee_pos": [
+              -0.07154324650764465,
+              0.21921241283416748,
+              0.9288232922554016
+            ],
+            "bowl_pos": [
+              -0.06278566271066666,
+              0.2345525622367859,
+              0.8995822668075562
+            ],
+            "ee_minus_bowl": [
+              -0.00875758486642611,
+              -0.015340148499092265,
+              0.02924102112827942
+            ],
+            "plate_pos": [
+              0.06130269542336464,
+              0.19505564868450165,
+              0.9025063514709473
+            ],
+            "ee_minus_plate": [
+              -0.1328459432837474,
+              0.02415676815457396,
+              0.026316953725986636
+            ],
+            "bowl_minus_plate": [
+              -0.1240883584173213,
+              0.039496916653666225,
+              -0.002924067402292785
+            ]
+          },
+          "reopen_snapshot": null,
+          "final_snapshot": {
+            "ee_pos": [
+              -0.007916802540421486,
+              0.19143517315387726,
+              0.9193118214607239
+            ],
+            "bowl_pos": [
+              -0.022143172100186348,
+              0.23708243668079376,
+              0.9036034345626831
+            ],
+            "ee_minus_bowl": [
+              0.014226369882246764,
+              -0.04564725904363745,
+              0.015708390553884066
+            ],
+            "plate_pos": [
+              0.08820370584726334,
+              0.18551693856716156,
+              0.9025063514709473
+            ],
+            "ee_minus_plate": [
+              -0.09612050896834914,
+              0.005918239783553658,
+              0.016805482931308124
+            ],
+            "bowl_minus_plate": [
+              -0.11034687885059591,
+              0.05156549882719111,
+              0.0010970923774240582
+            ]
+          },
+          "min_bowl_xy_m": 0.013334515504539013,
+          "min_bowl_xyz_m": 0.032428305596113205,
+          "min_plate_xy_m": 0.09430429339408875,
+          "min_plate_xyz_m": 0.09473242610692978,
+          "scene_refs": {
+            "bowl_ref": "body:akita_black_bowl_1_main",
+            "plate_ref": "body:plate_1_main",
+            "initial_bowl_pos": [
+              -0.06431526690721512,
+              0.2269788235425949,
+              0.9700000286102295
+            ],
+            "initial_plate_pos": [
+              0.061294570565223694,
+              0.1950579732656479,
+              0.9700000286102295
+            ]
+          },
+          "motion_metrics": {
+            "num_points": 781,
+            "path_length_m": 0.4937678575515747,
+            "net_displacement_m": 0.37598732113838196,
+            "path_efficiency": 0.7614657685552356,
+            "mean_step_mm": 0.6330357193946838,
+            "std_step_mm": 1.0733698606491089,
+            "max_step_mm": 26.55253028869629,
+            "hold_fraction": 0.04230769230769231,
+            "mean_accel_mm": 0.14863181114196777,
+            "max_accel_mm": 30.310379028320312,
+            "mean_jerk_mm": 0.20803503692150116,
+            "max_jerk_mm": 33.84040451049805,
+            "direction_flip_fraction": 0.002677376171352075
+          },
+          "chunks": "<60 chunks saved to _workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_policytrace_guarded_fromclosedtransport300/live_checkpoint_sweep/attached_transport_guarded_ep1_offset3_seed70/step_200/steps_200_pytorch_model_ep1_offset3.0cm_summary.json>",
+          "step_trace": null,
+          "video_path": null,
+          "overrides": []
+        }
+      ],
+      "aggregate": {
+        "success_count": 0,
+        "close_count": 1,
+        "avg_min_bowl_xyz_m": 0.032428305596113205,
+        "avg_min_bowl_xy_m": 0.013334515504539013,
+        "avg_ik_fail_total": 0.0,
+        "avg_mean_accel_mm": 0.14863181114196777,
+        "avg_hold_fraction": 0.04230769230769231
+      }
+    },
+    {
+      "checkpoint": "_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_policytrace_guarded_fromclosedtransport300/checkpoints/steps_50_pytorch_model.pt",
+      "step": 50,
+      "cases": [
+        {
+          "config_yaml": "_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_policytrace_guarded_fromclosedtransport300/config.full.yaml",
+          "checkpoint": "_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_policytrace_guarded_fromclosedtransport300/checkpoints/steps_50_pytorch_model.pt",
+          "task_suite_name": "libero_spatial",
+          "task_id": 0,
+          "episode_idx": 1,
+          "offset_cm": 3.0,
+          "config_seed": 86,
+          "rollout_seed": 70,
+          "task_language": "pick up the black bowl between the plate and the ramekin and place it on the plate",
+          "num_demo_steps": 84,
+          "max_policy_steps": 240,
+          "rollout_steps": 240,
+          "demo_length_cap_warning": false,
+          "replan_every": 4,
+          "max_first_offset_mm": 35.0,
+          "max_step_mm": 20.0,
+          "smooth_window": 3,
+          "blend_overlap_alpha": 0.6,
+          "blend_mode": "constant",
+          "commit_prefix_steps": 0,
+          "adaptive_commit_threshold_mm": 0.0,
+          "adaptive_commit_max_steps": 0,
+          "delta_continuation_alpha": 0.0,
+          "delta_continuation_steps": 0,
+          "approach_blend_mode": null,
+          "approach_commit_prefix_steps": -1,
+          "approach_bowl_xy_m": 0.1,
+          "approach_bowl_z_m": 0.1,
+          "state_history_window": 4,
+          "gripper_source": "model",
+          "model_gripper_decode_source": "contact_release_phase",
+          "gripper_threshold": 0.5,
+          "gripper_close_threshold": 0.5,
+          "gripper_open_threshold": 0.5,
+          "gripper_transition_debounce_steps": 2,
+          "image_orientation": "raw",
+          "trajectory_source": "direct_action",
+          "direct_action_xyz_scale": [
+            0.85,
+            1.55,
+            1.15
+          ],
+          "direct_action_xyz_bias_mm": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "closed_direct_action_xyz_scale": [
+            0.85,
+            1.55,
+            1.15
+          ],
+          "closed_direct_action_xyz_bias_mm": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "state_history_update_rate": "policy",
+          "state_gripper_source": "commanded",
+          "init_state_source": "benchmark",
+          "init_state_l2_diff": 0.4650380611419678,
+          "close_gate_xy_m": 0.05,
+          "close_gate_z_m": 0.05,
+          "disable_gripper_gates": true,
+          "reach_only": false,
+          "reach_threshold_xy_m": 0.05,
+          "reach_threshold_z_m": 0.08,
+          "reach_stop_on_success": false,
+          "record_step_trace": false,
+          "record_sim_state_trace": false,
+          "policy_trace_dir": null,
+          "policy_trace": null,
+          "success": false,
+          "success_at": null,
+          "reward": 0.0,
+          "ik_fail_total": 0,
+          "first_ik_fail_chunk": null,
+          "num_chunks": 60,
+          "close_step": 87,
+          "reopen_step": null,
+          "close_snapshot": {
+            "ee_pos": [
+              -0.08807612955570221,
+              0.18882548809051514,
+              0.9583384394645691
+            ],
+            "bowl_pos": [
+              -0.0643068477511406,
+              0.22694197297096252,
+              0.8984071016311646
+            ],
+            "ee_minus_bowl": [
+              -0.023769280833890738,
+              -0.03811647927875195,
+              0.059931364366485496
+            ],
+            "plate_pos": [
+              0.06130269542336464,
+              0.19505564868450165,
+              0.9025063514709473
+            ],
+            "ee_minus_plate": [
+              -0.14937882633180496,
+              -0.006230156589078384,
+              0.055832100935154116
+            ],
+            "bowl_minus_plate": [
+              -0.12560954549791423,
+              0.03188632268967356,
+              -0.004099263431331379
+            ]
+          },
+          "reopen_snapshot": null,
+          "final_snapshot": {
+            "ee_pos": [
+              -0.0027300624642521143,
+              0.235000342130661,
+              0.9245468378067017
+            ],
+            "bowl_pos": [
+              -0.028567632660269737,
+              0.26750320196151733,
+              0.9002104997634888
+            ],
+            "ee_minus_bowl": [
+              0.02583756959902305,
+              -0.032502868882133384,
+              0.024336322308748826
+            ],
+            "plate_pos": [
+              0.07390961050987244,
+              0.19937831163406372,
+              0.9025063514709473
+            ],
+            "ee_minus_plate": [
+              -0.07663967318609811,
+              0.03562203758152832,
+              0.022040499277286685
+            ],
+            "bowl_minus_plate": [
+              -0.10247724278512116,
+              0.0681249064636617,
+              -0.002295823031462141
+            ]
+          },
+          "min_bowl_xy_m": 0.0394759476184845,
+          "min_bowl_xyz_m": 0.043933358043432236,
+          "min_plate_xy_m": 0.08383889496326447,
+          "min_plate_xyz_m": 0.08505912870168686,
+          "scene_refs": {
+            "bowl_ref": "body:akita_black_bowl_1_main",
+            "plate_ref": "body:plate_1_main",
+            "initial_bowl_pos": [
+              -0.06431526690721512,
+              0.2269788235425949,
+              0.9700000286102295
+            ],
+            "initial_plate_pos": [
+              0.061294570565223694,
+              0.1950579732656479,
+              0.9700000286102295
+            ]
+          },
+          "motion_metrics": {
+            "num_points": 781,
+            "path_length_m": 0.5105574131011963,
+            "net_displacement_m": 0.39927414059638977,
+            "path_efficiency": 0.7820357326145623,
+            "mean_step_mm": 0.6545608043670654,
+            "std_step_mm": 1.0479023456573486,
+            "max_step_mm": 26.55253028869629,
+            "hold_fraction": 0.04358974358974359,
+            "mean_accel_mm": 0.18964824080467224,
+            "max_accel_mm": 30.310379028320312,
+            "mean_jerk_mm": 0.263369083404541,
+            "max_jerk_mm": 33.84040451049805,
+            "direction_flip_fraction": 0.002680965147453083
+          },
+          "chunks": "<60 chunks saved to _workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_policytrace_guarded_fromclosedtransport300/live_checkpoint_sweep/attached_transport_guarded_ep1_offset3_seed70/step_50/steps_50_pytorch_model_ep1_offset3.0cm_summary.json>",
+          "step_trace": null,
+          "video_path": null,
+          "overrides": []
+        }
+      ],
+      "aggregate": {
+        "success_count": 0,
+        "close_count": 1,
+        "avg_min_bowl_xyz_m": 0.043933358043432236,
+        "avg_min_bowl_xy_m": 0.0394759476184845,
+        "avg_ik_fail_total": 0.0,
+        "avg_mean_accel_mm": 0.18964824080467224,
+        "avg_hold_fraction": 0.04358974358974359
+      }
+    },
+    {
+      "checkpoint": "_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_policytrace_guarded_fromclosedtransport300/checkpoints/steps_150_pytorch_model.pt",
+      "step": 150,
+      "cases": [
+        {
+          "config_yaml": "_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_policytrace_guarded_fromclosedtransport300/config.full.yaml",
+          "checkpoint": "_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_policytrace_guarded_fromclosedtransport300/checkpoints/steps_150_pytorch_model.pt",
+          "task_suite_name": "libero_spatial",
+          "task_id": 0,
+          "episode_idx": 1,
+          "offset_cm": 3.0,
+          "config_seed": 86,
+          "rollout_seed": 70,
+          "task_language": "pick up the black bowl between the plate and the ramekin and place it on the plate",
+          "num_demo_steps": 84,
+          "max_policy_steps": 240,
+          "rollout_steps": 240,
+          "demo_length_cap_warning": false,
+          "replan_every": 4,
+          "max_first_offset_mm": 35.0,
+          "max_step_mm": 20.0,
+          "smooth_window": 3,
+          "blend_overlap_alpha": 0.6,
+          "blend_mode": "constant",
+          "commit_prefix_steps": 0,
+          "adaptive_commit_threshold_mm": 0.0,
+          "adaptive_commit_max_steps": 0,
+          "delta_continuation_alpha": 0.0,
+          "delta_continuation_steps": 0,
+          "approach_blend_mode": null,
+          "approach_commit_prefix_steps": -1,
+          "approach_bowl_xy_m": 0.1,
+          "approach_bowl_z_m": 0.1,
+          "state_history_window": 4,
+          "gripper_source": "model",
+          "model_gripper_decode_source": "contact_release_phase",
+          "gripper_threshold": 0.5,
+          "gripper_close_threshold": 0.5,
+          "gripper_open_threshold": 0.5,
+          "gripper_transition_debounce_steps": 2,
+          "image_orientation": "raw",
+          "trajectory_source": "direct_action",
+          "direct_action_xyz_scale": [
+            0.85,
+            1.55,
+            1.15
+          ],
+          "direct_action_xyz_bias_mm": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "closed_direct_action_xyz_scale": [
+            0.85,
+            1.55,
+            1.15
+          ],
+          "closed_direct_action_xyz_bias_mm": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "state_history_update_rate": "policy",
+          "state_gripper_source": "commanded",
+          "init_state_source": "benchmark",
+          "init_state_l2_diff": 0.4650380611419678,
+          "close_gate_xy_m": 0.05,
+          "close_gate_z_m": 0.05,
+          "disable_gripper_gates": true,
+          "reach_only": false,
+          "reach_threshold_xy_m": 0.05,
+          "reach_threshold_z_m": 0.08,
+          "reach_stop_on_success": false,
+          "record_step_trace": false,
+          "record_sim_state_trace": false,
+          "policy_trace_dir": null,
+          "policy_trace": null,
+          "success": false,
+          "success_at": null,
+          "reward": 0.0,
+          "ik_fail_total": 0,
+          "first_ik_fail_chunk": null,
+          "num_chunks": 60,
+          "close_step": 95,
+          "reopen_step": null,
+          "close_snapshot": {
+            "ee_pos": [
+              -0.0769905298948288,
+              0.20910607278347015,
+              0.9387503862380981
+            ],
+            "bowl_pos": [
+              -0.06427554786205292,
+              0.22710762917995453,
+              0.8981291055679321
+            ],
+            "ee_minus_bowl": [
+              -0.01271497923457908,
+              -0.01800155937768913,
+              0.040621299389108634
+            ],
+            "plate_pos": [
+              0.06130269542336464,
+              0.19505564868450165,
+              0.9025063514709473
+            ],
+            "ee_minus_plate": [
+              -0.13829322667093155,
+              0.014050428103876633,
+              0.03624404770868317
+            ],
+            "bowl_minus_plate": [
+              -0.12557824743635246,
+              0.032051987481565763,
+              -0.004377251680425465
+            ]
+          },
+          "reopen_snapshot": null,
+          "final_snapshot": {
+            "ee_pos": [
+              -0.019240867346525192,
+              0.20942215621471405,
+              0.9214707612991333
+            ],
+            "bowl_pos": [
+              -0.03238724172115326,
+              0.2513408660888672,
+              0.8996399641036987
+            ],
+            "ee_minus_bowl": [
+              0.013146372671317602,
+              -0.04191872403269403,
+              0.021830821554779112
+            ],
+            "plate_pos": [
+              0.06916425377130508,
+              0.18683072924613953,
+              0.9025063514709473
+            ],
+            "ee_minus_plate": [
+              -0.08840512174170803,
+              0.022591425455843278,
+              0.018964422769718325
+            ],
+            "bowl_minus_plate": [
+              -0.10155149441302563,
+              0.06451014948853731,
+              -0.0028663987850607864
+            ]
+          },
+          "min_bowl_xy_m": 0.02203921228647232,
+          "min_bowl_xyz_m": 0.04621490091085434,
+          "min_plate_xy_m": 0.09020601958036423,
+          "min_plate_xyz_m": 0.09062805026769638,
+          "scene_refs": {
+            "bowl_ref": "body:akita_black_bowl_1_main",
+            "plate_ref": "body:plate_1_main",
+            "initial_bowl_pos": [
+              -0.06431526690721512,
+              0.2269788235425949,
+              0.9700000286102295
+            ],
+            "initial_plate_pos": [
+              0.061294570565223694,
+              0.1950579732656479,
+              0.9700000286102295
+            ]
+          },
+          "motion_metrics": {
+            "num_points": 781,
+            "path_length_m": 0.4751332104206085,
+            "net_displacement_m": 0.3782472014427185,
+            "path_efficiency": 0.7960866408556827,
+            "mean_step_mm": 0.6091451644897461,
+            "std_step_mm": 1.0749690532684326,
+            "max_step_mm": 26.55253028869629,
+            "hold_fraction": 0.1346153846153846,
+            "mean_accel_mm": 0.15181155502796173,
+            "max_accel_mm": 30.310379028320312,
+            "mean_jerk_mm": 0.21175754070281982,
+            "max_jerk_mm": 33.84040451049805,
+            "direction_flip_fraction": 0.002967359050445104
+          },
+          "chunks": "<60 chunks saved to _workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_policytrace_guarded_fromclosedtransport300/live_checkpoint_sweep/attached_transport_guarded_ep1_offset3_seed70/step_150/steps_150_pytorch_model_ep1_offset3.0cm_summary.json>",
+          "step_trace": null,
+          "video_path": null,
+          "overrides": []
+        }
+      ],
+      "aggregate": {
+        "success_count": 0,
+        "close_count": 1,
+        "avg_min_bowl_xyz_m": 0.04621490091085434,
+        "avg_min_bowl_xy_m": 0.02203921228647232,
+        "avg_ik_fail_total": 0.0,
+        "avg_mean_accel_mm": 0.15181155502796173,
+        "avg_hold_fraction": 0.1346153846153846
+      }
+    }
+  ]
+}

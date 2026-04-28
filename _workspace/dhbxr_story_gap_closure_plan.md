@@ -1695,3 +1695,34 @@ Story implication:
   training path. The next evidence gap is whether a narrow no-gate policy
   continuation trained on these positives improves closed-loop target transport
   over the regular action-head/control baseline.
+
+2026-04-28 gripper-contract and strategy audit:
+
+- Community-code check: OpenVLA and StarVLA both execute LIBERO gripper commands
+  with `-1 = open`, `+1 = close`, while treating gripper as a special binary
+  absolute dimension rather than an ordinary normalized Cartesian delta. VLA
+  Foundry follows the same broader contract: explicit action/proprio fields,
+  relative-pose conversion through a reference pose, and gripper hysteresis in
+  the execution adapter. This validates our object-free deployment direction
+  and makes a sign bug unlikely.
+- The reproduced step-100 attached-transport trace confirms the gripper actuator
+  works. At close step `99`, commanded gripper is `+1.0`; observed qpos falls
+  from about `0.034` to `0.0069` by step `101`.
+- The real failure is affordance geometry. The rollout closes near bowl center:
+  EE-minus-bowl is about `[-8.8, -15.3, +29.2] mm`. Demo physical closes for
+  the same task are side grasps around `[-13.6, -45.1, +26.7] mm` in the first
+  three demos, consistent with the earlier 50-demo side-affordance probe.
+- This means the current `13 mm` bowl-center proximity metric is misleading for
+  full manipulation. The policy reaches the center well, then physically pushes
+  or slides the bowl toward the side-grasp offset after close, so the object is
+  not reliably grasp-attached.
+
+Story implication:
+
+- Stop framing the remaining gap as generic transport only. The next scientific
+  and engineering gate is side-affordance physical grasp formation plus
+  post-close object/EE coupling. Attached simulator positives still support the
+  big augmentation story, but they only become meaningful in live rollout after
+  the policy can enter a real grasp-attached state. This avoids the ineffective
+  loop of adding more epochs or scalar transport losses to a branch that is
+  optimizing the wrong precondition.
