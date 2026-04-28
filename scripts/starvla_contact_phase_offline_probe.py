@@ -20,13 +20,41 @@ from starvla_dhb_predict_smoke import (
 )
 
 
-def _phase_metrics(sample: dict, traj: dict, index: int) -> dict:
+def _align_phase_target(target: np.ndarray, *, alignment: str, current_prefix_steps: int) -> np.ndarray:
+    alignment = str(alignment or "future").strip().lower()
+    if alignment == "future" or target.size == 0:
+        return target
+    if alignment == "current":
+        return np.full_like(target, target[0])
+    if alignment == "current_prefix":
+        out = target.copy()
+        prefix = max(1, int(current_prefix_steps or 0))
+        out[: min(prefix, out.size)] = out[0]
+        return out
+    raise ValueError(
+        "contact_phase_target_alignment must be one of 'future', 'current', "
+        f"or 'current_prefix', got {alignment!r}"
+    )
+
+
+def _phase_metrics(
+    sample: dict,
+    traj: dict,
+    index: int,
+    *,
+    target_alignment: str,
+    current_prefix_steps: int,
+) -> dict:
     target = np.asarray(sample.get("dhb.contact_phase", []), dtype=np.int64).reshape(-1)
     mask = np.asarray(sample.get("dhb.action_valid_mask", []), dtype=np.float32).reshape(-1)
     probs = np.asarray(traj["pred_contact_phase_probs"][0], dtype=np.float32)
 
     n = min(len(target), len(mask), probs.shape[0])
-    target = target[:n]
+    target = _align_phase_target(
+        target[:n],
+        alignment=target_alignment,
+        current_prefix_steps=current_prefix_steps,
+    )
     mask = mask[:n] > 0.5
     probs = probs[:n]
     pred = probs.argmax(axis=-1)
@@ -95,6 +123,33 @@ def _aggregate(rows: list[dict]) -> dict:
             noevent_open_argmax += int(np.sum(pred[noevent_mask] == 2))
             noevent_steps += int(noevent_mask.sum())
 
+    class_count: dict[str, int] = {}
+    pred_count: dict[str, int] = {}
+    confusion: dict[str, dict[str, int]] = {}
+    correct = 0
+    total = 0
+    for row in rows:
+        target = np.asarray(row["target_phase"], dtype=np.int64)
+        pred = np.asarray(row["pred_phase"], dtype=np.int64)
+        valid = np.asarray(row["valid_mask"], dtype=bool)
+        n = min(len(target), len(pred), len(valid))
+        for target_phase, pred_phase, is_valid in zip(target[:n], pred[:n], valid[:n]):
+            if not bool(is_valid):
+                continue
+            target_key = str(int(target_phase))
+            pred_key = str(int(pred_phase))
+            class_count[target_key] = class_count.get(target_key, 0) + 1
+            pred_count[pred_key] = pred_count.get(pred_key, 0) + 1
+            confusion.setdefault(target_key, {})
+            confusion[target_key][pred_key] = confusion[target_key].get(pred_key, 0) + 1
+            correct += int(int(target_phase) == int(pred_phase))
+            total += 1
+
+    class_recall: dict[str, float] = {}
+    for target_key, pred_by_class in confusion.items():
+        denom = max(1, sum(pred_by_class.values()))
+        class_recall[target_key] = float(pred_by_class.get(target_key, 0) / denom)
+
     release_open_arr = np.asarray(release_open_probs, dtype=np.float32)
     noevent_open_arr = np.asarray(noevent_open_probs, dtype=np.float32)
     return {
@@ -103,6 +158,13 @@ def _aggregate(rows: list[dict]) -> dict:
         "supervised_steps": int(supervised),
         "release_steps": int(release),
         "noevent_steps": int(noevent_steps),
+        "phase_accuracy": float(correct / max(1, total)) if total else None,
+        "phase_target_counts": dict(sorted(class_count.items())),
+        "phase_pred_counts": dict(sorted(pred_count.items())),
+        "phase_confusion": {
+            key: dict(sorted(value.items())) for key, value in sorted(confusion.items())
+        },
+        "phase_recall": dict(sorted(class_recall.items())),
         "max_open_prob": float(max((row["max_open_prob"] for row in rows), default=0.0)),
         "max_close_prob": float(max((row["max_close_prob"] for row in rows), default=0.0)),
         "mean_open_prob": float(np.mean([row["mean_open_prob"] for row in rows])) if rows else 0.0,
@@ -163,6 +225,9 @@ def main() -> None:
         model = model.to(torch.device("cuda"))
 
     dataset = PolicyTraceContactDataset(cfg.datasets.vla_data)
+    action_cfg = getattr(cfg.framework, "action_model", {})
+    target_alignment = str(getattr(action_cfg, "contact_phase_target_alignment", "future"))
+    current_prefix_steps = int(getattr(action_cfg, "contact_phase_current_prefix_steps", 0) or 0)
     rows: list[dict] = []
     for index in range(len(dataset)):
         sample = dataset[index]
@@ -174,7 +239,15 @@ def main() -> None:
             continue
         with torch.inference_mode():
             traj = model.predict_trajectory(sample)
-        rows.append(_phase_metrics(sample, traj, index))
+        rows.append(
+            _phase_metrics(
+                sample,
+                traj,
+                index,
+                target_alignment=target_alignment,
+                current_prefix_steps=current_prefix_steps,
+            )
+        )
         if args.limit > 0 and len(rows) >= args.limit:
             break
 
@@ -183,6 +256,8 @@ def main() -> None:
         "checkpoint": args.checkpoint,
         "overrides": dotlist,
         "release_only": bool(args.release_only),
+        "target_alignment": target_alignment,
+        "current_prefix_steps": current_prefix_steps,
         "summary": _aggregate(rows),
         "rows": rows,
     }

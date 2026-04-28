@@ -470,3 +470,62 @@ infrastructure, but do not spend more time calibrating release until transport
 can bring the object inside the plate target window. The next transport branch
 needs broader target-reaching positives or a stronger phase/action-token
 objective, not another release-head-only run.
+
+## Three-Class Contact Phase Token Audit
+
+The latest audit found a real data-contract gap in the integrated gripper-token
+story. The previous release-token path only labeled `0/2` release state and the
+live `contact_release_phase` decoder still depended on a separate close
+probability head. In the newest phase-object configs, that close head had
+`lambda_contact=0.0`, so close timing was not actually being learned as part of
+the same three-class token.
+
+The new manifest builder fixes the training target contract without adding any
+deployment object-distance heuristics:
+
+- script: `scripts/build_starvla_contact_phase_manifest.py`
+- target: `target_contact_phase`
+- class `0`: no event / open approach
+- class `1`: close or keep closed
+- class `2`: release / open after placement
+
+The combined calibration manifest is:
+
+`_workspace/paper_eval/2026-04-28_contactphase3_demo_sidegrasp_attached_releasebal8_manifest.jsonl`
+
+It combines demo contact, side-grasp contact, and attached release rows. The
+summary has `1062` rows and supervised phase counts `0:2917`, `1:3157`,
+`2:896`. The offline probe now aligns targets according to the config
+`contact_phase_target_alignment`, so current-state contact heads are evaluated
+against the same label semantics used during training.
+
+The extra negative-offset data-diversity run improved planar reach but did not
+solve contact height or post-close transport:
+
+| Checkpoint | Cases | Close rate | Avg min EE-bowl XY mm | Avg min EE-bowl XYZ mm | Avg IK fails | Verdict |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| extraep1neg3 step 50 | `0:0`, `1:+3`, `1:-3` | `3/3` | `10.6` | `52.5` | `0.3` | best stable planar reach, close often high |
+| extraep1neg3 step 100 | same | `3/3` | `12.5` | `54.0` | `2.7` | no contact-quality gain |
+| extraep1neg3 step 150 | same | `3/3` | `22.1` | `58.6` | `11.3` | overfits into IK-heavy behavior |
+
+Head-only three-class contact calibration is mechanically learnable offline but
+not rollout-ready:
+
+| Run | Checkpoint | Phase accuracy | Recall class 0 | Recall class 1 | Recall class 2 | Live verdict |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| release-only head calibration | 150 | `63.4%` | `98.2%` | `3.5%` | `91.8%` | learns release, loses close |
+| balanced three-class calibration | 200 | `60.9%` | `61.9%` | `50.9%` | `91.8%` | closes inconsistently and has false phase triggers |
+| balanced three-class calibration | 600 | `72.2%` | `83.5%` | `74.8%` | `0.0%` | forgets release |
+
+The live pure `contact_phase` rollout from balanced step `200` is negative:
+`0/3` successes, `2/3` closes, average min EE-bowl XY `20.8 mm`, average min
+EE-bowl XYZ `44.2 mm`, and average IK failures `31.3`. This is worse than the
+hybrid decoder and should not be tuned further by thresholds alone.
+
+Current conclusion: the integrated gripper-token infrastructure is now correct
+enough to validate, but it is not the active breakthrough lever. The active
+blocker is still action/contact quality: the policy reaches the bowl in XY but
+often misses the vertical/contact affordance and cannot reliably perform
+held-object lift/carry/lower to a release-ready state. The next useful work
+should improve the action objective and data generation, then reuse this
+three-class contact-phase harness as a gate.

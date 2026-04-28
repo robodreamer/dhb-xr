@@ -688,3 +688,15 @@ explicitly references them. They are kept for provenance only.
   release probability stays low. Treat this as evidence that release is
   mechanically trainable, while the active blocker remains held-object
   transport/lower to a release-ready state.
+- Three-class gripper-token audit:
+  `scripts/build_starvla_contact_phase_manifest.py` now builds generic
+  `0=no_event`, `1=close_or_closed`, and `2=release_or_open` supervision from
+  existing manifest labels and gripper-state targets, avoiding deployment
+  object-distance heuristics. The combined calibration manifest is
+  `_workspace/paper_eval/2026-04-28_contactphase3_demo_sidegrasp_attached_releasebal8_manifest.jsonl`
+  with phase counts `0:2917`, `1:3157`, `2:896`. Offline head-only calibration
+  proves the integrated token path is learnable, but live pure
+  `contact_phase` rollout is negative (`0/3` success, `2/3` close, average IK
+  `31.3`). Do not keep tuning contact thresholds/classes now; the next
+  bottleneck is action/contact quality, especially vertical contact and
+  held-object lift/carry/lower.

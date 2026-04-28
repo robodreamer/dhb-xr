@@ -40,25 +40,43 @@ short-loop alternatives:
   because the bowl remains about `10-11 cm` from the plate and release
   probability stays low. Therefore, release learning is no longer the active
   bottleneck; transport-to-target is.
+- The three-class integrated contact-phase token path is now implemented and
+  validated as infrastructure. `scripts/build_starvla_contact_phase_manifest.py`
+  builds generic `0=no_event`, `1=close_or_closed`, `2=release_or_open` labels
+  from existing manifest semantics and gripper-state targets, not from
+  object-distance deployment heuristics. The offline probe now reports aligned
+  phase confusion/recall.
+- Three-class head-only calibration is a negative rollout result. Balanced
+  step `200` learns both close and release offline but has high background
+  false triggers; step `600` improves close/no-event but forgets release. A
+  pure `contact_phase` live rollout at step `200` is worse than the hybrid
+  decoder (`0/3` success, `2/3` close, average IK `31.3`). Do not spend the
+  next unattended block on contact-phase thresholds or class weights.
+- Extra negative-offset attached data improved planar reach across
+  `0 cm`, `+3 cm`, and `-3 cm` cases, but did not improve vertical/contact
+  quality. Step `50` is the stable diagnostic checkpoint; longer training
+  regresses into IK-heavy behavior.
 
 Immediate next actions:
 
 1. Keep the per-step action-loss-weight plumbing because it is generic
    infrastructure and does not add deployment heuristics.
-2. Stop unattended sweeps over residual scale, loss weights, or more epochs on
-   the same `65`-row warm-start objective.
-3. Preserve `scripts/starvla_contact_phase_offline_probe.py` as the gate for
-   learned release-token calibration. Do not run long live sweeps unless the
-   offline gate shows both release recall and low non-release false-open rate.
-4. Regenerate attached positives with release tails only after actual
+2. Stop unattended sweeps over residual scale, contact thresholds, contact
+   class weights, or more epochs on the same warm-start objectives.
+3. Preserve `scripts/starvla_contact_phase_offline_probe.py` and the
+   three-class manifest builder as validation gates for learned gripper-token
+   calibration. Do not run long live gripper sweeps unless the offline gate
+   shows acceptable close, no-event, and release recall simultaneously.
+4. Shift the next implementation effort to action/contact quality: vertical
+   contact, lift/carry/lower balance, and phase/action-type-specific action
+   normalization or loss. The current failure is not gripper polarity.
+5. Regenerate attached positives with release tails only after actual
    target-reaching replay success. Train with `contact_phase_dim=3`,
    `contact_phase_field=dhb.contact_phase`, and rollout
-   `--model-gripper-decode-source contact_release_phase` so open/release is
-   learned from exported traces rather than hardcoded distances.
-5. Build the next branch around explicit post-contact phase/action-token
-   supervision: hold/no-event, lift, carry, lower, and release.
-6. Only after that, run the matched regular-head control on the same data to
-   support a clean DHB-XR transport claim.
+   `--model-gripper-decode-source contact_phase` only when the three-class
+   offline gate passes.
+6. Run the matched regular-head control on the same augmented positives before
+   claiming a DHB-XR transport advantage.
 
 ## 2026-04-25 Current Correction: Evaluation Contract Was the Root Cause
 
