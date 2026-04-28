@@ -1,0 +1,206 @@
+{
+  "demo_geometry_json": "_workspace/paper_eval/2026-04-28_demo_grasp_geometry_probe_task0_first3.json",
+  "scores": [
+    {
+      "task_suite_name": "libero_spatial",
+      "task_id": 0,
+      "episode_idx": 1,
+      "offset_cm": 3.0,
+      "checkpoint": "_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_policytrace_guarded_fromclosedtransport300/checkpoints/steps_100_pytorch_model.pt",
+      "close_step": 99,
+      "physical_close_step": 101,
+      "reopen_step": null,
+      "success": false,
+      "ik_fail_total": 0,
+      "min_ee_object_xy_mm": 13.334515504539013,
+      "min_ee_object_xyz_mm": 32.428305596113205,
+      "reference": {
+        "close": {
+          "event": "close_phys",
+          "key": "ee_minus_object_m",
+          "count": 3,
+          "mean_m": [
+            -0.013600607731103687,
+            -0.04508092315794259,
+            0.026692691563618937
+          ],
+          "std_m": [
+            0.008153563074437856,
+            0.006406194816867624,
+            0.0032393766464749955
+          ],
+          "mean_mm": [
+            -13.600607731103686,
+            -45.08092315794259,
+            26.692691563618936
+          ],
+          "std_mm": [
+            8.153563074437857,
+            6.406194816867624,
+            3.2393766464749953
+          ],
+          "xy_mean_m": 0.04763954706195067,
+          "xy_std_m": 0.0074336829364970445
+        },
+        "release": {
+          "event": "open_phys",
+          "key": "object_minus_target_m",
+          "count": 3,
+          "mean_m": [
+            -0.0001698788506950752,
+            0.0004981991188438376,
+            0.0038658316174920992
+          ],
+          "std_m": [
+            0.004586612114796463,
+            0.006271527519292194,
+            9.553029673676517e-05
+          ],
+          "mean_mm": [
+            -0.1698788506950752,
+            0.4981991188438376,
+            3.8658316174920992
+          ],
+          "std_mm": [
+            4.586612114796463,
+            6.271527519292194,
+            0.09553029673676516
+          ],
+          "xy_mean_m": 0.0068022330241437196,
+          "xy_std_m": 0.0037915373119640798
+        },
+        "close_vector_tolerance_mm": 30.0,
+        "release_xy_tolerance_mm": 40.0
+      },
+      "events": {
+        "close": {
+          "vector_m": [
+            -0.008989381524441273,
+            -0.04451833129063387,
+            0.02663505781640485
+          ],
+          "vector_mm": [
+            -8.989381524441272,
+            -44.518331290633874,
+            26.63505781640485
+          ],
+          "reference_mean_mm": [
+            -13.600607731103686,
+            -45.08092315794259,
+            26.692691563618936
+          ],
+          "component_error_mm": [
+            4.611226206662415,
+            0.5625918673087191,
+            -0.05763374721408712
+          ],
+          "vector_error_m": 0.004645776403034275,
+          "vector_error_mm": 4.645776403034275,
+          "xy_m": 0.045416855913796995,
+          "xy_mm": 45.416855913796994,
+          "reference_xy_mean_mm": 47.63954706195067,
+          "xy_error_to_demo_mean_mm": 2.2226911481536757
+        },
+        "close_command": {
+          "vector_m": [
+            -0.00875758486642611,
+            -0.015340148499092265,
+            0.02924102112827942
+          ],
+          "vector_mm": [
+            -8.757584866426111,
+            -15.340148499092265,
+            29.24102112827942
+          ],
+          "reference_mean_mm": [
+            -13.600607731103686,
+            -45.08092315794259,
+            26.692691563618936
+          ],
+          "component_error_mm": [
+            4.843022864677577,
+            29.740774658850327,
+            2.5483295646604835
+          ],
+          "vector_error_m": 0.030240081536702677,
+          "vector_error_mm": 30.24008153670268,
+          "xy_m": 0.017663959031509847,
+          "xy_mm": 17.663959031509847,
+          "reference_xy_mean_mm": 47.63954706195067,
+          "xy_error_to_demo_mean_mm": 29.975588030440825
+        },
+        "reopen": null,
+        "final": {
+          "vector_m": [
+            -0.0977023833768724,
+            0.08631539509371638,
+            -0.001965337726561156
+          ],
+          "vector_mm": [
+            -97.7023833768724,
+            86.31539509371639,
+            -1.965337726561156
+          ],
+          "reference_mean_mm": [
+            -0.1698788506950752,
+            0.4981991188438376,
+            3.8658316174920992
+          ],
+          "component_error_mm": [
+            -97.53250452617732,
+            85.81719597487255,
+            -5.831169344053255
+          ],
+          "vector_error_m": 0.13004300481016848,
+          "vector_error_mm": 130.04300481016847,
+          "xy_m": 0.1303691035011966,
+          "xy_mm": 130.3691035011966,
+          "reference_xy_mean_mm": 6.802233024143719,
+          "xy_error_to_demo_mean_mm": 123.56687047705287
+        }
+      },
+      "best": {
+        "close_affordance_match": {
+          "step": 101,
+          "vector_m": [
+            -0.008989381524441273,
+            -0.04451833129063387,
+            0.02663505781640485
+          ],
+          "vector_mm": [
+            -8.989381524441272,
+            -44.518331290633874,
+            26.63505781640485
+          ],
+          "vector_error_m": 0.004645776403034275,
+          "vector_error_mm": 4.645776403034275,
+          "xy_m": 0.045416855913796995,
+          "xy_mm": 45.416855913796994
+        },
+        "release_xy_after_close": {
+          "step": 216,
+          "vector_m": [
+            -0.09897150588409254,
+            0.07674929825043875,
+            -0.0030352824561279412
+          ],
+          "vector_mm": [
+            -98.97150588409254,
+            76.74929825043874,
+            -3.0352824561279412
+          ],
+          "xy_m": 0.12524301880304453,
+          "xy_mm": 125.24301880304454
+        }
+      },
+      "gates": {
+        "has_close": true,
+        "has_reopen": false,
+        "close_affordance_pass": true,
+        "release_xy_pass": false,
+        "success": false
+      },
+      "rollout_json": "_workspace/paper_eval/2026-04-28_best_step100_gripper_contract_trace_sweepmatch.json"
+    }
+  ]
+}

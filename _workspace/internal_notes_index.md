@@ -20,9 +20,11 @@ Latest active result to preserve:
   `_workspace/dhbxr_gripper_contract_audit_2026-04-28.md` supersedes
   center-contact selection as the active full-task objective. The guarded
   attached-transport step-100 checkpoint is useful evidence for smooth reach
-  and physical close, but the close pose is near bowl center instead of the
-  demo side-grasp affordance. The next gate is close-vector affordance error
-  plus object/EE coupling, not minimum bowl-center XY alone.
+  and physical close; the physical close event actually matches the demo
+  side-grasp affordance, while target-directed transport still fails. The next
+  gate is physical close-vector affordance error, object/EE coupling,
+  bowl-plate target progress, and release proximity, not minimum bowl-center XY
+  alone.
 - `dhb_starvla_qwen_fresh_actionxyz_from2000/steps_400` with
   `--trajectory-source direct_action` and
   `--direct-action-xyz-scale 1.0 1.35 1.15` reaches `5/5` across
@@ -231,12 +233,14 @@ Latest active result to preserve:
 - Latest 2026-04-28 audit:
   the guarded attached-transport continuation improves smooth center reach but
   should not be scaled blindly. Step `100` closes with `0` IK failures and
-  physically closes the gripper (`observed qpos` about `0.034 -> 0.0069`), but
-  it closes at EE-minus-bowl about `[-8.8, -15.3, +29.2] mm`, while demo
-  physical close is a side-grasp affordance around `[-13.6, -45.1, +26.7] mm`.
-  Minimum bowl-center XY is therefore misleading for full manipulation. Use
-  close-vector affordance error, observed qpos closure, post-close object/EE
-  coupling, and target progress as the next gate. Detailed note:
+  physically closes the gripper (`observed qpos` about `0.034 -> 0.0069`).
+  Command-close is near bowl center, but physical close is close to the demo
+  side-grasp affordance: `4.6 mm` close-vector error against the first-three
+  demo mean. Minimum bowl-center XY is therefore misleading, but the active
+  failure is target-directed transport/release after close: no reopen, best
+  bowl-plate XY about `125 mm`, final about `130 mm`. Use physical
+  close-vector pass, observed qpos closure, post-close object/EE coupling,
+  target progress, and release proximity as the next gate. Detailed note:
   `_workspace/dhbxr_gripper_contract_audit_2026-04-28.md`.
   A trace-scored rerun strengthens the diagnosis: actual close at step `79`
   has `63.2 mm` close-vector error, but the same no-gate trajectory reaches a

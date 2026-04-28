@@ -1708,21 +1708,23 @@ Story implication:
 - The reproduced step-100 attached-transport trace confirms the gripper actuator
   works. At close step `99`, commanded gripper is `+1.0`; observed qpos falls
   from about `0.034` to `0.0069` by step `101`.
-- The real failure is affordance geometry. The rollout closes near bowl center:
-  EE-minus-bowl is about `[-8.8, -15.3, +29.2] mm`. Demo physical closes for
-  the same task are side grasps around `[-13.6, -45.1, +26.7] mm` in the first
-  three demos, consistent with the earlier 50-demo side-affordance probe.
-- This means the current `13 mm` bowl-center proximity metric is misleading for
-  full manipulation. The policy reaches the center well, then physically pushes
-  or slides the bowl toward the side-grasp offset after close, so the object is
-  not reliably grasp-attached.
+- The command-close event is near bowl center, but the physical close event is
+  not. The first close command occurs at EE-minus-bowl about
+  `[-8.8, -15.3, +29.2] mm`; by physical close the vector is about
+  `[-9.0, -44.5, +26.6] mm`, only `4.6 mm` from the first-three-demo side-grasp
+  mean of `[-13.6, -45.1, +26.7] mm`.
+- This means the current `13 mm` bowl-center proximity metric is insufficient
+  but not because the policy cannot reach a side-grasp affordance. The stronger
+  failure is after physical close: no reopen, best bowl-plate XY about
+  `125 mm`, final bowl-plate XY about `130 mm`.
 
 Story implication:
 
-- Stop framing the remaining gap as generic transport only. The next scientific
-  and engineering gate is side-affordance physical grasp formation plus
-  post-close object/EE coupling. Attached simulator positives still support the
-  big augmentation story, but they only become meaningful in live rollout after
-  the policy can enter a real grasp-attached state. This avoids the ineffective
-  loop of adding more epochs or scalar transport losses to a branch that is
-  optimizing the wrong precondition.
+- Stop framing the remaining gap as gripper polarity, center reach, or
+  side-affordance discovery. The next scientific and engineering gate is
+  target-directed held-object transport plus release after a physically
+  plausible side-grasp close. Attached simulator positives still support the big
+  augmentation story, but the current 3-D target continuation is too weak; the
+  next evidence should use stronger object/target conditioning and report
+  physical close-vector pass, post-close coupling, target progress, and release
+  proximity together.

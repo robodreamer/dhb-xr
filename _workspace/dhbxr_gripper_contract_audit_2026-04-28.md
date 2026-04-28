@@ -51,47 +51,56 @@ Best attached-transport continuation trace:
   `_workspace/paper_eval/2026-04-28_best_step100_gripper_contract_trace_sweepmatch.json`
 - Demo geometry probe:
   `_workspace/paper_eval/2026-04-28_demo_grasp_geometry_probe_task0_first3.json`
+- Affordance score:
+  `_workspace/paper_eval/2026-04-28_best_step100_gripper_contract_affordance_score.json`
 
 The gripper sign and actuator contract are not the bug. At close step `99`, the
 policy commands `+1.0`; observed gripper qpos falls from about `0.0341` to
 `0.0069` by step `101`, which confirms physical close is happening.
 
-The actual failure is grasp-affordance geometry. The rollout closes at
-EE-minus-bowl roughly `[-8.8, -15.3, +29.2] mm`, which is near the bowl center
-in XY. Successful demos close from a side-grasp pose: the first three demos
-show physical close mean around `[-13.6, -45.1, +26.7] mm`, and the earlier
-50-demo probe reported the same side-affordance pattern. After the rollout
-closes near center, the bowl is pushed/slid until EE-bowl XY is about `46 mm`,
-but it is not securely grasp-attached.
+The command-close event is not the same as physical close. The first close
+command happens near the bowl center: EE-minus-bowl is roughly
+`[-8.8, -15.3, +29.2] mm`. However, by the time the gripper is physically
+closed, the bowl has moved into a side-grasp geometry:
+`[-9.0, -44.5, +26.6] mm`. The affordance scorer reports only `4.6 mm` error
+to the first-three-demo physical close mean of `[-13.6, -45.1, +26.7] mm`.
 
-This explains the apparent contradiction in previous metrics. The current run
-can report excellent minimum bowl-center XY (`13.3 mm`) while still failing the
-real grasp. Bowl-center proximity is therefore the wrong primary full-task
-metric for this task.
+This corrects the failure diagnosis. The current run can form a plausible
+physical side-grasp, but it does not turn that grasp into target-directed
+transport. After close, best bowl-plate XY remains about `125 mm`, final
+bowl-plate XY is about `130 mm`, and there is no reopen.
+
+This explains the apparent contradiction in previous metrics. Minimum
+bowl-center XY (`13.3 mm`) is not sufficient, but the active blocker is now
+post-close target transport and release after a physically plausible close, not
+gripper polarity or side-affordance discovery.
 
 ## Updated Decision
 
 Do not continue tuning attached post-contact transport from the same branch
-until the side-grasp contact gate is passed. The attached replay positives are
-useful for the big augmentation story, but they assume a grasp-attached state.
-The live policy has not yet produced that state reliably.
+without changing the transport supervision. The branch already passes the
+side-grasp close-affordance gate in the reproduced trace, but its learned
+post-close motion does not reduce bowl-plate XY enough.
 
-The next breakthrough target is side-affordance grasp acquisition:
+The next breakthrough target is target-directed held-object transport:
 
-1. Train/evaluate the pre-close and close transition against demo
-   EE-minus-object affordance vectors, not bowl-center distance.
-2. Require a pass gate that includes close-vector error, observed closed qpos,
-   post-close object/EE coupling, and object-target progress.
-3. Only after physical coupling is reliable should attached-object transport
-   positives be used to train target-reaching transport and release.
+1. Keep scoring the close transition against demo EE-minus-object affordance
+   vectors, not bowl-center distance, because command-close and physical-close
+   can differ.
+2. Require a pass gate that includes physical close-vector error, observed
+   closed qpos, post-close object/EE coupling, object-target progress, and
+   release proximity.
+3. Replace the current 3-D attached transport target with stronger
+   held-object/target conditioning, such as object-to-EE plus target-to-EE
+   features or phase-conditioned transport tokens.
 4. Keep rollout deployment object-free. Simulator geometry is valid for offline
    labels, probes, and scoring only.
 
 ## Claim Impact
 
-This audit prevents an ineffective loop: the problem is not more epochs on the
-current attached-positive branch, not gripper polarity, and not another scalar
-open/close threshold sweep. The manuscript story should say that DHB-XR now has
-the infrastructure for simulator-assisted augmented transport tokens, but the
-current embodied gap is side-affordance physical grasp formation before those
-transport tokens become meaningful in live closed-loop rollout.
+This audit prevents an ineffective loop: the problem is not gripper polarity,
+not another scalar open/close threshold sweep, and not simply "get closer to the
+bowl center." The manuscript story should say that DHB-XR now has the
+infrastructure for simulator-assisted augmented transport tokens, and the
+current embodied gap is target-directed transport/release after a physically
+plausible side-grasp close.
