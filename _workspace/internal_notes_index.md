@@ -50,8 +50,15 @@ Latest active result to preserve:
   negative: scale `0.75` worsens transport/IK, and scale `0.45` improves
   contact proximity while ending at `106.5 mm` final bowl-plate XY, still worse
   than the broad unweighted step-50 `96.2 mm` result. Stop this scalar
-  loss-weight loop; the next object-pair transport path should add explicit
-  phase/token targets and broader successful positives.
+  loss-weight loop. The attached-positive data path now also exports
+  chunk-local DHB invariant targets, and the current `65`-row manifest was
+  retrofitted to
+  `_workspace/paper_eval/2026-04-28_attached_replay_lifttransport_gated_step50_100_dhbtargets_manifest.jsonl`
+  (`472` invariant-supervised steps). The first invariant-supervised
+  continuation trains cleanly and removes IK at step `100`, but its best
+  average final bowl-plate XY is `105.3 mm`, still behind the broad baseline.
+  The next object-pair transport path should therefore add explicit phase/token
+  targets and broader successful positives, not just invariant loss.
 - Latest community-code check:
   VLA Foundry and TRI-LBM support explicit action/proprio/gripper field
   contracts, chunk past/future masks, and action-type-aware normalization as

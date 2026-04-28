@@ -16,6 +16,11 @@ short-loop alternatives:
   but the first phase-weighted diagnostics are negative. Scale `0.75` worsens
   final transport, while scale `0.45` improves contact proximity but still
   ends at `106.5 mm` final bowl-plate XY with no release.
+- Chunk-local DHB invariant target export is now implemented and tested. The
+  current `65`-row attached manifest has been retrofitted with `472`
+  invariant-supervised steps, and a bounded invariant-supervised continuation
+  trains cleanly. Live rollout still does not beat the broad baseline: best
+  average final bowl-plate XY is `105.3 mm` with `0` IK failures.
 
 Immediate next actions:
 

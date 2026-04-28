@@ -302,3 +302,59 @@ Updated next step:
    but still warns that DHB invariant targets are absent.
 5. Run the matched regular-head control on the same augmented positives before
    claiming a DHB-XR transport advantage.
+
+## Chunk-Local DHB Target Retrofit
+
+The attached-positive supervision gap was then fixed directly. New policy-trace
+exports now include chunk-local `target_linear_invariants` and
+`target_angular_invariants`, computed from the raw action chunk and the saved
+chunk-start state. The policy-trace dataset now emits those fields as
+`dhb.linear_invariants` and `dhb.angular_invariants`, so QwenDHB can supervise
+the invariant branch and derive OAT/discrete token labels from the same data.
+
+Implementation commits:
+
+- parent repo: `d00ec3c Export DHB targets for policy trace positives`
+- vendor StarVLA: `c8b5f38 Expose policy trace DHB invariant targets`
+- parent repo: `863836d Add policy trace DHB target augmentation`
+
+Regression:
+
+`PYTHONPATH=vendor/starVLA:src:${PYTHONPATH:-} ./.pixi-home/bin/pixi run pytest tests/test_policy_trace_contact_dataset.py tests/test_libero_postcontact_correction_plan.py tests/test_action_head.py -q`
+
+Result: `53 passed`.
+
+The existing broad `65`-row manifest was retrofitted without rerunning LIBERO:
+
+`_workspace/paper_eval/2026-04-28_attached_replay_lifttransport_gated_step50_100_dhbtargets_manifest.jsonl`
+
+Summary:
+
+- rows: `65`
+- invariant-supervised steps: `472`
+- finite targets: yes
+- nonzero linear-invariant rows: `65/65`
+
+A bounded 100-step continuation was trained from the same broad objective with
+`lambda_invariant=0.15`, training the closed adapter plus invariant head:
+
+`_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_objectpair_lifttransport_broad_dhbtargets_fromdagger100`
+
+Training was mechanically healthy: `loss_inv_raw` dropped from about `0.048`
+at step `50` to `0.021` at step `100`, and the previous missing-invariant
+warning is gone.
+
+Controlled no-gate sweep, `rollout_seed=70`, cases `0:0` and `1:+3 cm`:
+
+| Run | Step | Avg min EE-bowl XY mm | Avg min plate XY mm | Avg final bowl-plate XY mm | Avg IK fails | Verdict |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| broad baseline | 50 | 22.7 | 107.1 | 96.2 | 0.0 | best stable transport trend |
+| DHB-target continuation | 50 | 22.0 | 109.1 | 105.3 | 0.0 | improves `+3 cm`, hurts episode 0 |
+| DHB-target continuation | 100 | 24.9 | 101.7 | 110.7 | 0.0 | removes IK but no target breakthrough |
+
+Conclusion: chunk-local DHB target export is a necessary correctness fix and a
+useful token-supervision bridge, but invariant loss alone does not solve
+post-contact transport. It improves the non-zero-offset final target distance
+in this two-case diagnostic while regressing the zero-offset case, so the
+missing piece is still an explicit held-object phase/action-type objective and
+more diverse target-reaching positives.
