@@ -54,6 +54,30 @@ def _object_pos_key(object_target_field: str) -> str | None:
     return f"{object_name}_pos"
 
 
+def _coupling_stats(rows: list[dict[str, Any]], *, object_key: str | None) -> dict[str, float | None]:
+    object_points: list[list[float]] = []
+    ee_points: list[list[float]] = []
+    if object_key is not None:
+        for row in rows:
+            object_pos = _vector3(row.get(object_key))
+            ee_pos = _vector3(row.get("ee_pos"))
+            if object_pos is None or ee_pos is None:
+                continue
+            object_points.append(object_pos)
+            ee_points.append(ee_pos)
+    object_path_mm = _path_length_mm(object_points)
+    ee_path_mm = _path_length_mm(ee_points)
+    return {
+        "object_motion_path_mm": object_path_mm,
+        "object_motion_net_mm": _net_displacement_mm(object_points),
+        "ee_motion_path_mm": ee_path_mm,
+        "ee_motion_net_mm": _net_displacement_mm(ee_points),
+        "object_ee_coupling_ratio": None
+        if ee_path_mm <= 1e-6
+        else object_path_mm / ee_path_mm,
+    }
+
+
 def _physical_close_step(
     trace: list[dict[str, Any]],
     *,
@@ -143,6 +167,10 @@ def mine_transport_samples(
     gripper_qpos_threshold: float,
     correction_top_k: int,
     correction_sort: str = "best_target_xy",
+    coupling_window_steps: int = 8,
+    min_correction_coupling_ratio: float = 0.0,
+    min_correction_ee_path_mm: float = 0.0,
+    min_correction_object_path_mm: float = 0.0,
 ) -> dict[str, Any]:
     trace = [row for row in rollout.get("step_trace", []) if isinstance(row, dict)]
     close_step = rollout.get("close_step")
@@ -158,10 +186,12 @@ def mine_transport_samples(
         reopen_step = None
 
     samples: list[dict[str, Any]] = []
+    row_by_step: dict[int, dict[str, Any]] = {}
     for row in trace:
         step = row.get("step")
         if not isinstance(step, int):
             continue
+        row_by_step[step] = row
         vector = _vector3(row.get(object_target_field))
         if vector is None:
             continue
@@ -203,6 +233,25 @@ def mine_transport_samples(
             }
         )
 
+    object_key = _object_pos_key(object_target_field)
+    sample_by_step = {int(sample["step"]): sample for sample in samples}
+    sorted_steps = sorted(row_by_step)
+    coupling_window = max(1, int(coupling_window_steps))
+    for sample in samples:
+        start_step = int(sample["step"])
+        local_rows = [
+            row_by_step[step]
+            for step in sorted_steps
+            if start_step <= step <= start_step + coupling_window
+            and sample_by_step.get(step, {}).get("transport_closed")
+        ]
+        stats = _coupling_stats(local_rows, object_key=object_key)
+        sample["local_object_motion_path_mm"] = stats["object_motion_path_mm"]
+        sample["local_object_motion_net_mm"] = stats["object_motion_net_mm"]
+        sample["local_ee_motion_path_mm"] = stats["ee_motion_path_mm"]
+        sample["local_ee_motion_net_mm"] = stats["ee_motion_net_mm"]
+        sample["local_object_ee_coupling_ratio"] = stats["object_ee_coupling_ratio"]
+
     post_close = [
         sample
         for sample in samples
@@ -213,26 +262,13 @@ def mine_transport_samples(
         for sample in samples
         if sample.get("transport_closed")
     }
-    object_key = _object_pos_key(object_target_field)
-    object_points: list[list[float]] = []
-    ee_points: list[list[float]] = []
+    transport_rows = []
     for row in sorted(trace, key=lambda item: int(item.get("step", 10**9))):
         step = row.get("step")
         if not isinstance(step, int) or step not in transport_closed_steps:
             continue
-        if object_key is None:
-            continue
-        object_pos = _vector3(row.get(object_key))
-        ee_pos = _vector3(row.get("ee_pos"))
-        if object_pos is None or ee_pos is None:
-            continue
-        object_points.append(object_pos)
-        ee_points.append(ee_pos)
-    object_path_mm = _path_length_mm(object_points)
-    ee_path_mm = _path_length_mm(ee_points)
-    object_net_mm = _net_displacement_mm(object_points)
-    ee_net_mm = _net_displacement_mm(ee_points)
-    coupling_ratio = None if ee_path_mm <= 1e-6 else object_path_mm / ee_path_mm
+        transport_rows.append(row)
+    episode_coupling = _coupling_stats(transport_rows, object_key=object_key)
     close_sample = next(
         (sample for sample in samples if physical_close is not None and sample["step"] == physical_close),
         None,
@@ -247,6 +283,30 @@ def mine_transport_samples(
         for sample in post_close
         if sample["label"] == "closed_transport_candidate"
     ]
+    if float(min_correction_coupling_ratio) > 0.0:
+        correction_candidates = [
+            sample
+            for sample in correction_candidates
+            if (
+                sample.get("local_object_ee_coupling_ratio") is not None
+                and float(sample["local_object_ee_coupling_ratio"])
+                >= float(min_correction_coupling_ratio)
+            )
+        ]
+    if float(min_correction_ee_path_mm) > 0.0:
+        correction_candidates = [
+            sample
+            for sample in correction_candidates
+            if float(sample.get("local_ee_motion_path_mm") or 0.0)
+            >= float(min_correction_ee_path_mm)
+        ]
+    if float(min_correction_object_path_mm) > 0.0:
+        correction_candidates = [
+            sample
+            for sample in correction_candidates
+            if float(sample.get("local_object_motion_path_mm") or 0.0)
+            >= float(min_correction_object_path_mm)
+        ]
     if correction_sort == "earliest":
         correction_candidates = sorted(correction_candidates, key=lambda item: int(item["step"]))
     elif correction_sort == "latest":
@@ -254,6 +314,14 @@ def mine_transport_samples(
             correction_candidates,
             key=lambda item: int(item["step"]),
             reverse=True,
+        )
+    elif correction_sort == "best_coupling":
+        correction_candidates = sorted(
+            correction_candidates,
+            key=lambda item: (
+                -float(item.get("local_object_ee_coupling_ratio") or 0.0),
+                item["object_target_xy_mm"],
+            ),
         )
     elif correction_sort == "best_target_xy":
         correction_candidates = sorted(
@@ -280,6 +348,11 @@ def mine_transport_samples(
                 "object_minus_target_m": vector,
                 "desired_object_delta_to_target_m": [-vector[0], -vector[1], -vector[2]],
                 "object_target_xy_mm": sample["object_target_xy_mm"],
+                "local_object_ee_coupling_ratio": sample.get(
+                    "local_object_ee_coupling_ratio"
+                ),
+                "local_object_motion_path_mm": sample.get("local_object_motion_path_mm"),
+                "local_ee_motion_path_mm": sample.get("local_ee_motion_path_mm"),
                 "reason": "closed_post_contact_state_needs_target_transport",
             }
         )
@@ -312,17 +385,21 @@ def mine_transport_samples(
         "target_progress_mm": progress_mm,
         "target_progress_fraction": progress_fraction,
         "transport_closed_steps": int(len(transport_closed_steps)),
-        "object_motion_path_mm": object_path_mm,
-        "object_motion_net_mm": object_net_mm,
-        "ee_motion_path_during_transport_mm": ee_path_mm,
-        "ee_motion_net_during_transport_mm": ee_net_mm,
-        "object_ee_coupling_ratio": coupling_ratio,
+        "object_motion_path_mm": episode_coupling["object_motion_path_mm"],
+        "object_motion_net_mm": episode_coupling["object_motion_net_mm"],
+        "ee_motion_path_during_transport_mm": episode_coupling["ee_motion_path_mm"],
+        "ee_motion_net_during_transport_mm": episode_coupling["ee_motion_net_mm"],
+        "object_ee_coupling_ratio": episode_coupling["object_ee_coupling_ratio"],
         "target_reached": counts.get("target_reached", 0) > 0,
         "needs_transport_correction": counts.get("target_reached", 0) == 0
         and bool(correction_requests),
         "best_target_candidate": best,
         "correction_requests": correction_requests,
         "correction_sort": correction_sort,
+        "coupling_window_steps": coupling_window,
+        "min_correction_coupling_ratio": float(min_correction_coupling_ratio),
+        "min_correction_ee_path_mm": float(min_correction_ee_path_mm),
+        "min_correction_object_path_mm": float(min_correction_object_path_mm),
         "samples": samples,
     }
 
@@ -464,7 +541,7 @@ def main() -> None:
     parser.add_argument("--correction-top-k", type=int, default=3)
     parser.add_argument(
         "--correction-sort",
-        choices=("best_target_xy", "earliest", "latest"),
+        choices=("best_target_xy", "earliest", "latest", "best_coupling"),
         default="best_target_xy",
         help=(
             "How to choose correction requests. best_target_xy is diagnostic; "
@@ -472,6 +549,10 @@ def main() -> None:
             "physical close before grasp degradation."
         ),
     )
+    parser.add_argument("--coupling-window-steps", type=int, default=8)
+    parser.add_argument("--min-correction-coupling-ratio", type=float, default=0.0)
+    parser.add_argument("--min-correction-ee-path-mm", type=float, default=0.0)
+    parser.add_argument("--min-correction-object-path-mm", type=float, default=0.0)
     parser.add_argument("--action-stats-json")
     parser.add_argument("--correction-steps", type=int, default=8)
     parser.add_argument("--max-action-step-mm", type=float, default=18.0)
@@ -500,6 +581,10 @@ def main() -> None:
             gripper_qpos_threshold=float(args.gripper_qpos_threshold),
             correction_top_k=max(0, int(args.correction_top_k)),
             correction_sort=args.correction_sort,
+            coupling_window_steps=max(1, int(args.coupling_window_steps)),
+            min_correction_coupling_ratio=max(0.0, float(args.min_correction_coupling_ratio)),
+            min_correction_ee_path_mm=max(0.0, float(args.min_correction_ee_path_mm)),
+            min_correction_object_path_mm=max(0.0, float(args.min_correction_object_path_mm)),
         )
         results.append(result)
         correction_requests.extend(result["correction_requests"])
@@ -523,6 +608,10 @@ def main() -> None:
         "gripper_qpos_threshold": float(args.gripper_qpos_threshold),
         "correction_top_k": max(0, int(args.correction_top_k)),
         "correction_sort": args.correction_sort,
+        "coupling_window_steps": max(1, int(args.coupling_window_steps)),
+        "min_correction_coupling_ratio": max(0.0, float(args.min_correction_coupling_ratio)),
+        "min_correction_ee_path_mm": max(0.0, float(args.min_correction_ee_path_mm)),
+        "min_correction_object_path_mm": max(0.0, float(args.min_correction_object_path_mm)),
         "policy_manifest_rows": int(len(policy_rows)),
         "policy_correction_steps": max(1, int(args.correction_steps)),
         "policy_max_action_step_mm": float(args.max_action_step_mm),

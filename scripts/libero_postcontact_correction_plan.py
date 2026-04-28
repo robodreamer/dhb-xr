@@ -61,11 +61,13 @@ def scripted_closed_correction_actions(
     correction_steps: int,
     max_action_step_mm: float,
     include_z: bool,
+    correction_gain: float = 1.0,
 ) -> np.ndarray:
     """Return closed-gripper delta actions that move along target direction."""
     horizon = max(1, int(correction_steps))
     max_step_m = max(0.0, float(max_action_step_mm)) / 1000.0
     desired_delta = -_vector3(object_minus_target_m, field="object_minus_target_m")
+    desired_delta = desired_delta * max(0.0, float(correction_gain))
     if not include_z:
         desired_delta[2] = 0.0
     per_step = desired_delta / float(horizon)
@@ -85,6 +87,7 @@ def build_plan_rows(
     correction_steps: int,
     max_action_step_mm: float,
     include_z: bool,
+    correction_gain: float = 1.0,
 ) -> list[dict[str, Any]]:
     entries = step_entry_by_step(rollout)
     rows: list[dict[str, Any]] = []
@@ -100,6 +103,7 @@ def build_plan_rows(
             correction_steps=correction_steps,
             max_action_step_mm=max_action_step_mm,
             include_z=include_z,
+            correction_gain=correction_gain,
         )
         sim_state = None if entry is None else entry.get("sim_state")
         sim_state_dim = None
@@ -131,6 +135,7 @@ def build_plan_rows(
                 "correction_steps": max(1, int(correction_steps)),
                 "max_action_step_mm": float(max_action_step_mm),
                 "correction_include_z": bool(include_z),
+                "correction_gain": float(correction_gain),
                 "expected_ee_delta_m": actions[:, :3].sum(axis=0).astype(np.float32).tolist(),
                 "needs_sim_state_capture": sim_state is None,
             }
@@ -153,6 +158,7 @@ def main() -> None:
     parser.add_argument("--correction-steps", type=int, default=16)
     parser.add_argument("--max-action-step-mm", type=float, default=10.0)
     parser.add_argument("--include-z", action="store_true")
+    parser.add_argument("--correction-gain", type=float, default=1.0)
     args = parser.parse_args()
 
     source_path = Path(args.source_rollout_json)
@@ -165,6 +171,7 @@ def main() -> None:
         correction_steps=max(1, int(args.correction_steps)),
         max_action_step_mm=float(args.max_action_step_mm),
         include_z=bool(args.include_z),
+        correction_gain=max(0.0, float(args.correction_gain)),
     )
     rows = rows[: max(0, int(args.max_requests))]
     payload = {

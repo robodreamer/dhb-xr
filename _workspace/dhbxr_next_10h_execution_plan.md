@@ -2348,3 +2348,26 @@ Updated immediate priority:
    assistance to initialize an actually grasp-attached bowl state before
    generating transport-to-target positives. This aligns directly with the
    manuscript's simulator/world-model augmentation story.
+
+Coupling-aware replay update:
+
+- The transport miner now reports local object/EE coupling per candidate and
+  can select correction starts by `best_coupling` with minimum local EE/object
+  motion thresholds.
+- Coupling-aware starts in the `+3 cm` sim-state trace are much better than
+  earliest physical-close starts. Fixed open-loop correction improves target XY
+  from about `131 mm` to `98-105 mm` with zero IK failures.
+- Simulator-only closed-loop recomputation improves consistently but still does
+  not produce target-reaching positives: the best `+3 cm` coupled starts make
+  about `31-33 mm` target progress and stall near `97-100 mm` from target, with
+  IK failures over the longer horizon.
+
+Updated immediate priority:
+
+1. Use coupling-aware selection as the default filter for post-contact mining.
+2. Do not treat partial replay corrections as positive release/placement data.
+   They are hard evidence that naturally mined grasps are weak.
+3. The next breakthrough step is simulator-assisted grasp-attached target
+   transport generation: initialize or stabilize the object as actually held,
+   then execute target-reaching corrections and export those successful
+   trajectories as DHB-XR policy-trace positives.

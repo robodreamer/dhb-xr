@@ -255,3 +255,49 @@ def test_can_select_earliest_correction_requests() -> None:
     )
 
     assert [row["step"] for row in result["correction_requests"]] == [1, 2]
+
+
+def test_can_select_coupled_correction_requests() -> None:
+    rollout = {
+        "close_step": 1,
+        "step_trace": [
+            {
+                "step": 1,
+                "bowl_minus_plate": [0.12, 0.0, 0.0],
+                "bowl_pos": [0.12, 0.0, 0.0],
+                "ee_pos": [0.0, 0.0, 0.0],
+                "observed_state_gripper": 0.01,
+            },
+            {
+                "step": 2,
+                "bowl_minus_plate": [0.10, 0.0, 0.0],
+                "bowl_pos": [0.10, 0.0, 0.0],
+                "ee_pos": [-0.02, 0.0, 0.0],
+                "observed_state_gripper": 0.01,
+            },
+            {
+                "step": 3,
+                "bowl_minus_plate": [0.07, 0.0, 0.0],
+                "bowl_pos": [0.10, 0.0, 0.0],
+                "ee_pos": [-0.08, 0.0, 0.0],
+                "observed_state_gripper": 0.01,
+            },
+        ],
+    }
+
+    result = transport_miner.mine_transport_samples(
+        rollout,
+        rollout_json="rollout.json",
+        object_target_field="bowl_minus_plate",
+        target_xy_tolerance_mm=45.0,
+        target_z_min_mm=-20.0,
+        target_z_max_mm=55.0,
+        gripper_qpos_threshold=0.015,
+        correction_top_k=1,
+        correction_sort="best_coupling",
+        coupling_window_steps=1,
+        min_correction_coupling_ratio=0.5,
+    )
+
+    assert [row["step"] for row in result["correction_requests"]] == [1]
+    assert result["correction_requests"][0]["local_object_ee_coupling_ratio"] >= 0.5

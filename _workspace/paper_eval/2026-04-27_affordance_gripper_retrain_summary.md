@@ -1179,3 +1179,27 @@ Updated interpretation: physical close near the bowl is not enough. The next
 dataset gap is grasp-attached transport: states must be selected or generated
 where the object actually follows the end effector before target-reaching
 corrections can become useful training positives.
+
+### Coupling-Aware Replay Follow-Up
+
+The transport miner now computes local object/EE coupling for each correction
+candidate and supports coupling-aware candidate selection. This avoids both
+early physical-close states where the object does not move and static late
+states where the coupling ratio is numerically inflated by near-zero EE motion.
+
+Coupling-aware `+3 cm` starts:
+
+`_workspace/paper_eval/2026-04-27_closedtransport_simstate_transport_correction_requests_coupledstarts.jsonl`
+
+Open-loop reset/replay from the best coupled starts gives consistent partial
+transport. The five selected `+3 cm` rows improve target XY by about `26-33 mm`
+with zero IK failures, ending around `98-105 mm` from target.
+
+Closed-loop recomputed replay from the same coupled starts remains insufficient:
+the best rows still stall around `97-100 mm` from target and accumulate IK
+failures over a longer horizon.
+
+Updated interpretation: coupling-aware mining is now the right default for
+post-contact diagnostics, but these are not positive placement examples. The
+next data-generation step needs simulator-assisted grasp-attached target
+transport, not further scalar gains on weak naturally mined grasps.

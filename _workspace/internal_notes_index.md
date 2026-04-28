@@ -566,3 +566,10 @@ explicitly references them. They are kept for provenance only.
   give `0.0 mm` target progress, and a later reset gives only `2.6 mm`. The
   next gap is verified grasp-attached state generation/selection, not more
   direction-label tuning.
+- Coupling-aware replay status:
+  Transport mining now supports local coupling-aware correction selection with
+  minimum EE/object motion thresholds. Coupled `+3 cm` starts improve target XY
+  by about `26-33 mm` under replay, versus `0 mm` for earliest physical-close
+  starts, but still stall around `97-100 mm` and do not create release/placement
+  positives. Use coupling-aware mining for diagnostics; the next breakthrough
+  still requires simulator-assisted grasp-attached target-reaching positives.

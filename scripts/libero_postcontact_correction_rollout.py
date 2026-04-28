@@ -77,6 +77,54 @@ def _target_xy_mm(snapshot: dict[str, Any], field: str) -> float | None:
     return float(np.linalg.norm(arr[:2]) * 1000.0)
 
 
+def _target_ready(
+    snapshot: dict[str, Any],
+    field: str,
+    *,
+    target_xy_tolerance_mm: float,
+    target_z_min_mm: float,
+    target_z_max_mm: float,
+) -> bool:
+    target_vec = snapshot.get(field)
+    if target_vec is None:
+        return False
+    arr = np.asarray(target_vec, dtype=np.float32)
+    if arr.shape[0] < 3:
+        return False
+    xy_mm = float(np.linalg.norm(arr[:2]) * 1000.0)
+    z_mm = float(arr[2] * 1000.0)
+    return (
+        xy_mm <= float(target_xy_tolerance_mm)
+        and float(target_z_min_mm) <= z_mm <= float(target_z_max_mm)
+    )
+
+
+def _closed_loop_action(
+    snapshot: dict[str, Any],
+    field: str,
+    *,
+    remaining_steps: int,
+    max_action_step_mm: float,
+    correction_gain: float,
+    include_z: bool,
+) -> np.ndarray:
+    target_vec = snapshot.get(field)
+    if target_vec is None:
+        raise KeyError(f"Snapshot does not contain object target field '{field}'")
+    desired = -np.asarray(target_vec, dtype=np.float32).reshape(-1)[:3]
+    if not include_z:
+        desired[2] = 0.0
+    desired = desired * max(0.0, float(correction_gain))
+    per_step = desired / float(max(1, int(remaining_steps)))
+    max_step_m = max(0.0, float(max_action_step_mm)) / 1000.0
+    if max_step_m > 0.0:
+        per_step = np.clip(per_step, -max_step_m, max_step_m)
+    action = np.zeros((7,), dtype=np.float32)
+    action[:3] = per_step.astype(np.float32)
+    action[6] = 1.0
+    return action
+
+
 def execute_plan_row(
     *,
     env,
@@ -88,6 +136,11 @@ def execute_plan_row(
     output_max: float,
     kp: float,
     substeps: int,
+    closed_loop_recompute: bool,
+    closed_loop_steps: int,
+    max_action_step_mm: float,
+    correction_gain: float,
+    include_z: bool,
 ) -> dict[str, Any]:
     sim_state = row.get("sim_state")
     if sim_state is None:
@@ -128,7 +181,31 @@ def execute_plan_row(
 
     q_seed = np.zeros(robot_model.nq, dtype=np.float64)
     q_seed[:7] = np.asarray(robot._joint_positions, dtype=np.float64)
-    for step_idx, action in enumerate(raw_actions):
+    action_count = max(1, int(closed_loop_steps)) if closed_loop_recompute else len(raw_actions)
+    executed_actions: list[list[float]] = []
+    for step_idx in range(action_count):
+        if closed_loop_recompute:
+            pre_snapshot = _relative_snapshot(obs["robot0_eef_pos"], scene_refs, env=env)
+            if _target_ready(
+                pre_snapshot,
+                object_target_field,
+                target_xy_tolerance_mm=target_xy_tolerance_mm,
+                target_z_min_mm=target_z_min_mm,
+                target_z_max_mm=target_z_max_mm,
+            ):
+                target_reached_step = int(step_idx)
+                break
+            action = _closed_loop_action(
+                pre_snapshot,
+                object_target_field,
+                remaining_steps=max(1, action_count - step_idx),
+                max_action_step_mm=max_action_step_mm,
+                correction_gain=correction_gain,
+                include_z=include_z,
+            )
+        else:
+            action = raw_actions[step_idx]
+        executed_actions.append(action.astype(np.float32).tolist())
         ee_now = np.asarray(obs["robot0_eef_pos"], dtype=np.float64)
         robot_model.update_configuration(q_seed)
         current_rot = np.asarray(
@@ -162,16 +239,13 @@ def execute_plan_row(
                 if min_target_xy_mm is None
                 else min(float(min_target_xy_mm), target_xy_mm)
             )
-        target_vec = snapshot.get(object_target_field)
-        target_ready = False
-        if target_vec is not None:
-            arr = np.asarray(target_vec, dtype=np.float32)
-            xy_mm = float(np.linalg.norm(arr[:2]) * 1000.0)
-            z_mm = float(arr[2] * 1000.0) if arr.shape[0] >= 3 else 0.0
-            target_ready = (
-                xy_mm <= float(target_xy_tolerance_mm)
-                and float(target_z_min_mm) <= z_mm <= float(target_z_max_mm)
-            )
+        target_ready = _target_ready(
+            snapshot,
+            object_target_field,
+            target_xy_tolerance_mm=target_xy_tolerance_mm,
+            target_z_min_mm=target_z_min_mm,
+            target_z_max_mm=target_z_max_mm,
+        )
         if target_ready and target_reached_step is None:
             target_reached_step = int(step_idx)
         trace.append(
@@ -196,6 +270,9 @@ def execute_plan_row(
         "offset_cm": row.get("offset_cm"),
         "object_target_field": object_target_field,
         "num_actions": int(len(raw_actions)),
+        "num_executed_actions": int(len(executed_actions)),
+        "closed_loop_recompute": bool(closed_loop_recompute),
+        "executed_actions": executed_actions,
         "ik_failures": int(ik_failures),
         "reward": float(reward),
         "success": bool(env.check_success()),
@@ -226,6 +303,11 @@ def main() -> None:
     parser.add_argument("--output-max", type=float, default=0.5)
     parser.add_argument("--kp", type=float, default=150.0)
     parser.add_argument("--substeps", type=int, default=3)
+    parser.add_argument("--closed-loop-recompute", action="store_true")
+    parser.add_argument("--closed-loop-steps", type=int, default=48)
+    parser.add_argument("--max-action-step-mm", type=float, default=10.0)
+    parser.add_argument("--correction-gain", type=float, default=1.0)
+    parser.add_argument("--include-z", action="store_true")
     args = parser.parse_args()
 
     _seed(int(args.rollout_seed))
@@ -274,6 +356,11 @@ def main() -> None:
                         output_max=float(args.output_max),
                         kp=float(args.kp),
                         substeps=max(1, int(args.substeps)),
+                        closed_loop_recompute=bool(args.closed_loop_recompute),
+                        closed_loop_steps=max(1, int(args.closed_loop_steps)),
+                        max_action_step_mm=float(args.max_action_step_mm),
+                        correction_gain=max(0.0, float(args.correction_gain)),
+                        include_z=bool(args.include_z),
                     )
                 )
         finally:

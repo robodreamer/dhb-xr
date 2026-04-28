@@ -1647,3 +1647,25 @@ Story implication:
   transport trajectories, and DHB-XR should be evaluated on whether its compact
   invariant/action token learns those spatially adapted trajectories more
   efficiently than ordinary action heads.
+
+2026-04-27 coupling-aware replay update:
+
+- Coupling-aware mining can now rank post-contact reset states by local
+  object/EE coupling while filtering out static numerical artifacts.
+- This found better `+3 cm` reset states: fixed correction plans produce about
+  `26-33 mm` target progress with zero IK failures, compared with `0 mm` for
+  earliest physical-close resets.
+- The result is still not a solved data source. Closed-loop recomputed
+  correction replay stalls around `97-100 mm` target XY and accumulates IK
+  failures over longer horizons.
+
+Story implication:
+
+- This is a useful partial bridge from failure diagnosis to the big story.
+  DHB-XR now has infrastructure to mine and replay spatial correction starts,
+  and coupling-aware selection measurably improves target transport. However,
+  the decisive missing ingredient is still successful grasp-attached
+  target-reaching augmentation. The next manuscript-strengthening experiment
+  should show simulator/world-model generation of those successful coupled
+  trajectories, then compare DHB-XR token learning against regular action-head
+  learning on the same augmented data.

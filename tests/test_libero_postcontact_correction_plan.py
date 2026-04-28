@@ -27,6 +27,15 @@ def test_scripted_closed_correction_actions_clip_and_hold_closed() -> None:
     np.testing.assert_allclose(actions[:, 2], [0.0, 0.0, 0.0, 0.0])
     np.testing.assert_allclose(actions[:, 6], [1.0, 1.0, 1.0, 1.0])
 
+    gained = correction_plan.scripted_closed_correction_actions(
+        [0.04, 0.0, 0.0],
+        correction_steps=4,
+        max_action_step_mm=20.0,
+        include_z=False,
+        correction_gain=2.0,
+    )
+    np.testing.assert_allclose(gained[:, 0], [-0.02, -0.02, -0.02, -0.02])
+
 
 def test_build_plan_rows_marks_available_sim_state() -> None:
     rollout = {
