@@ -1,5 +1,36 @@
 # DHB-XR Next 10h Execution Plan
 
+## 2026-04-28 Active Stop Rule: Do Not Continue Scalar Transport Tuning
+
+The latest object-pair attached-transport diagnostics closed the most likely
+short-loop alternatives:
+
+- Broad unweighted lift-transport continuation remains the best stable
+  transport trend: step `50`, average final bowl-plate XY `96.2 mm`, average
+  min EE-bowl XY `22.7 mm`, and `0` IK failures across cases `0:0` and
+  `1:+3 cm`.
+- Increasing closed residual scale can create lift, but it also creates
+  uncontrolled excursions and IK failures. Scale `0.9` retraining averaged
+  `22` IK failures at step `50` and `15` at step `100`.
+- Generic per-timestep action-loss weighting is now implemented and tested,
+  but the first phase-weighted diagnostics are negative. Scale `0.75` worsens
+  final transport, while scale `0.45` improves contact proximity but still
+  ends at `106.5 mm` final bowl-plate XY with no release.
+
+Immediate next actions:
+
+1. Keep the per-step action-loss-weight plumbing because it is generic
+   infrastructure and does not add deployment heuristics.
+2. Stop unattended sweeps over residual scale, loss weights, or more epochs on
+   the same `65`-row warm-start objective.
+3. Build the next branch around explicit post-contact phase/action-token
+   supervision: hold, lift, carry, lower, release.
+4. Regenerate attached positives with chunk-local DHB invariant/action-token
+   targets and filter them by actual target-reaching replay success before
+   training.
+5. Only after that, run the matched regular-head control on the same data to
+   support a clean DHB-XR transport claim.
+
 ## 2026-04-25 Current Correction: Evaluation Contract Was the Root Cause
 
 The latest debugging found that several "good" and "bad" artifacts were not

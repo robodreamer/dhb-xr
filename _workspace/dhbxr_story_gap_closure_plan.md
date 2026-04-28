@@ -18,6 +18,29 @@ execution. It keeps discrete invariant tokens as a scaling/compression
 hypothesis, not yet a validated policy path. It does not yet support the
 broader low-data or world-model augmentation claim.
 
+2026-04-28 object-pair transport update:
+
+- The strongest integrated full-task result is still not task success. The
+  broad attached lift-transport continuation reaches a useful diagnostic trend
+  at step `50`: average final bowl-plate XY `96.2 mm`, average minimum EE-bowl
+  XY `22.7 mm`, and `0` IK failures across the controlled `0 cm` and `+3 cm`
+  sweep.
+- The root cause is now narrower than "gripper failed." The policy can close
+  near the bowl and move the object, but the learned closed-state action does
+  not reliably produce held-object lift/carry/lower/release toward the plate.
+- Scalar fixes are now ruled down. Larger closed residual scale creates lift
+  but also overshoot and IK failures; generic phase-weighted action-loss
+  training improves contact proximity in places but does not beat the broad
+  unweighted step-50 transport result.
+- The next paper-relevant path is explicit phase/token supervision plus
+  broader successful attached positives, not another threshold/gain/loss-weight
+  sweep.
+
+Story implication: the defensible claim is robust offset reaching plus
+prototype learned contact/object-motion evidence. Full pick-place remains a
+specific post-contact phase/control gap until explicit phase-token transport
+and matched regular-head controls are validated.
+
 2026-04-25 late update:
 
 - 2026-04-25 current correction: the canonical reach artifact is now the

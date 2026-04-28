@@ -240,3 +240,65 @@ sliding with too little lift, while high scale learns lift but produces large
 uncontrolled excursions. The next fix should make lift, carry, lower, and
 release explicit phase/action types with their own normalization or loss
 weights, rather than amplifying the whole closed residual vector.
+
+## Phase-Weighted Action-Loss Diagnostic
+
+The next controlled intervention added a generic per-step action-loss weight to
+policy-trace training. The trace manifest can now carry `action_loss_weight`,
+and the StarVLA/DHB action head applies it only to supervised action residual
+loss. This keeps deployment object-free: no object-distance gates or
+environment-specific runtime logic are added.
+
+The phase-weighted manifest is:
+
+`_workspace/paper_eval/2026-04-28_attached_replay_lifttransport_gated_step50_100_phaseweighted_manifest.jsonl`
+
+It contains the same `65` broad lift-transport rows as the previous manifest,
+but labels per-step target actions as `lift`, `carry`, or `lower` from raw Z
+motion with a `1.0 mm` threshold. The counts are `175` lift, `237` carry, and
+`60` lower steps. The first diagnostic used weights `lift=4.0`, `carry=1.0`,
+and `lower=2.0`.
+
+Implementation commits:
+
+- parent repo: `e907750 Add phase-weighted action trace loss`
+- vendor StarVLA: `7b7aa1e Support per-step DHB action loss weights`
+
+Tests:
+
+`PYTHONPATH=vendor/starVLA:src:${PYTHONPATH:-} ./.pixi-home/bin/pixi run pytest tests/test_policy_trace_contact_dataset.py tests/test_libero_postcontact_correction_plan.py tests/test_action_head.py -q`
+
+Result: `53 passed`.
+
+Controlled no-gate sweep, `rollout_seed=70`, cases `0:0` and `1:+3 cm`:
+
+| Run | Step | Avg min EE-bowl XY mm | Avg min plate XY mm | Avg final bowl-plate XY mm | Avg IK fails | Verdict |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| broad baseline | 50 | 22.7 | 107.1 | 96.2 | 0.0 | best stable transport trend |
+| phase-weighted, scale `0.75` | 50 | 13.2 | 121.3 | 153.6 | 10.0 | worse transport and IK |
+| phase-weighted, scale `0.75` | 100 | 8.9 | 108.9 | 177.9 | 0.5 | better contact, much worse target |
+| phase-weighted, scale `0.45` | 50 | 7.7 | 93.5 | 106.5 | 0.0 | stable contact gain, no transport gain |
+| phase-weighted, scale `0.45` | 100 | 13.4 | 77.8 | 113.7 | 2.0 | similar to baseline step 100 |
+
+Conclusion: per-step loss weighting is useful infrastructure but not a
+breakthrough by itself. It improves contact proximity in some checkpoints, but
+it does not produce learned held-object transport or release, and the strongest
+stable final-target result remains the unweighted broad step-50 checkpoint.
+This closes the scalar tuning loop: more residual scale, more epochs, or more
+loss-weight sweeps on this same warm-start objective are unlikely to be the
+most effective path.
+
+Updated next step:
+
+1. Preserve per-step action-loss weighting because it is generic and tested,
+   but treat the phase-weighted runs as negative diagnostics.
+2. Generate a larger, filtered set of successful attached-object positives that
+   includes explicit hold, lift, carry, lower, and release phases across more
+   episodes and offsets.
+3. Add an explicit learned phase/token objective for post-contact transport so
+   the model predicts the action type, not only a weighted continuous residual.
+4. Recompute or export chunk-local DHB invariant/action-token targets for the
+   attached traces; the current attached-positive loop trains action residuals
+   but still warns that DHB invariant targets are absent.
+5. Run the matched regular-head control on the same augmented positives before
+   claiming a DHB-XR transport advantage.

@@ -44,7 +44,14 @@ Latest active result to preserve:
   active next step is trace diagnosis plus broader/diverse augmentation and a
   matched regular-head control. The trace diagnosis is now complete: step-50
   has real post-close object coupling but inconsistent lift, and scalar
-  closed-residual scale tuning is a dead end.
+  closed-residual scale tuning is a dead end. The follow-up generic
+  per-timestep `action_loss_weight` implementation is tested (`53 passed`) and
+  committed in both repos, but the phase-weighted diagnostics are also
+  negative: scale `0.75` worsens transport/IK, and scale `0.45` improves
+  contact proximity while ending at `106.5 mm` final bowl-plate XY, still worse
+  than the broad unweighted step-50 `96.2 mm` result. Stop this scalar
+  loss-weight loop; the next object-pair transport path should add explicit
+  phase/token targets and broader successful positives.
 - Latest community-code check:
   VLA Foundry and TRI-LBM support explicit action/proprio/gripper field
   contracts, chunk past/future masks, and action-type-aware normalization as
