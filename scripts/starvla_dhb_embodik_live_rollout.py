@@ -901,6 +901,29 @@ def main() -> None:
                         np.linalg.norm(pred_object_target_chunk[-1])
                     ),
                 }
+                if pred_object_target_chunk.shape[-1] >= 6:
+                    pred_object_to_eef = pred_object_target_chunk[:, :3]
+                    pred_target_to_eef = pred_object_target_chunk[:, 3:6]
+                    pred_object_minus_target = pred_object_to_eef - pred_target_to_eef
+                    object_target_debug.update(
+                        {
+                            "pred_object_to_eef_first": pred_object_to_eef[0].tolist(),
+                            "pred_target_to_eef_first": pred_target_to_eef[0].tolist(),
+                            "pred_object_minus_target_first": pred_object_minus_target[0].tolist(),
+                            "pred_object_minus_target_xy_mm_mean": float(
+                                np.linalg.norm(pred_object_minus_target[:, :2], axis=-1).mean()
+                                * 1000.0
+                            ),
+                            "pred_object_to_eef_xy_mm_mean": float(
+                                np.linalg.norm(pred_object_to_eef[:, :2], axis=-1).mean()
+                                * 1000.0
+                            ),
+                            "pred_target_to_eef_xy_mm_mean": float(
+                                np.linalg.norm(pred_target_to_eef[:, :2], axis=-1).mean()
+                                * 1000.0
+                            ),
+                        }
+                    )
 
         gt_count = max(0, min(n_use, num_demo_steps - t))
         gt_chunk = demo["ee_pos"][t : t + gt_count] if gt_count > 0 else None

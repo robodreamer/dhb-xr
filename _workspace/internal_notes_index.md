@@ -9,6 +9,10 @@ Use these top-level notes as the current source of truth:
 - `dhbxr_gripper_contract_audit_2026-04-28.md`: latest stop-and-audit note
   comparing our gripper/action-loop assumptions against OpenVLA, StarVLA, VLA
   Foundry, and the current best attached-transport trace.
+- `dhbxr_objectpair_transport_status_2026-04-28.md`: current object-pair
+  transport attempt status, including the 6-D policy-trace export, bounded
+  continuation result, and the hard-stop diagnosis for the small 20-chunk
+  attached-transport objective.
 - `dhbxr_matched_head_comparison_v1.md`: current matched `QwenDHB` versus
   `QwenOFT` evidence and next comparison matrix.
 - `dhbxr_unattended_benchmark_runbook.md`: commands and gates for benchmark
@@ -25,6 +29,12 @@ Latest active result to preserve:
   gate is physical close-vector affordance error, object/EE coupling,
   bowl-plate target progress, and release proximity, not minimum bowl-center XY
   alone.
+- Latest object-pair transport result:
+  `_workspace/dhbxr_objectpair_transport_status_2026-04-28.md` records that
+  object-pair supervision is wired and trainable, but the current small
+  policy-only continuation does not produce reliable target transport. Do not
+  extend this exact 20-chunk warm-start loop; generate broader target-reaching
+  attached positives or revisit fresh/full dataset training.
 - `dhb_starvla_qwen_fresh_actionxyz_from2000/steps_400` with
   `--trajectory-source direct_action` and
   `--direct-action-xyz-scale 1.0 1.35 1.15` reaches `5/5` across

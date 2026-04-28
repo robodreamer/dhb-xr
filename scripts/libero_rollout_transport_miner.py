@@ -172,7 +172,8 @@ def mine_transport_samples(
     min_correction_ee_path_mm: float = 0.0,
     min_correction_object_path_mm: float = 0.0,
 ) -> dict[str, Any]:
-    trace = [row for row in rollout.get("step_trace", []) if isinstance(row, dict)]
+    raw_trace = rollout.get("step_trace") or []
+    trace = [row for row in raw_trace if isinstance(row, dict)]
     close_step = rollout.get("close_step")
     if not isinstance(close_step, int):
         close_step = None

@@ -88,6 +88,29 @@ def _object_token_from_target_field(field: str) -> str:
     return field.split("_minus_", 1)[0] if "_minus_" in field else field
 
 
+def _object_pair_to_eef_targets(
+    snapshot: dict[str, Any],
+    object_target_field: str,
+) -> tuple[list[float], list[float]]:
+    """Return generic object->EEF and target->EEF vectors for object-minus-target fields."""
+
+    zero = [0.0, 0.0, 0.0]
+    if "_minus_" not in object_target_field:
+        return zero, zero
+    object_token, target_token = object_target_field.split("_minus_", 1)
+
+    def _neg_ee_minus(token: str) -> list[float]:
+        value = snapshot.get(f"ee_minus_{token}")
+        if value is None:
+            return zero
+        arr = np.asarray(value, dtype=np.float32).reshape(-1)
+        if arr.shape[0] < 3:
+            return zero
+        return (-arr[:3]).astype(np.float32).tolist()
+
+    return _neg_ee_minus(object_token), _neg_ee_minus(target_token)
+
+
 def _body_name_from_ref(ref: str | None) -> str | None:
     if not ref or ":" not in ref:
         return None
@@ -192,6 +215,18 @@ def _export_policy_trace_chunks(
             for record in chunk
         ]
         target_object = [record["object_target"] for record in chunk]
+        target_object_to_eef = [
+            record.get("object_to_eef", [0.0, 0.0, 0.0])
+            for record in chunk
+        ]
+        target_target_to_eef = [
+            record.get("target_to_eef", [0.0, 0.0, 0.0])
+            for record in chunk
+        ]
+        target_object_pair_to_eef = [
+            list(object_to_eef) + list(target_to_eef)
+            for object_to_eef, target_to_eef in zip(target_object_to_eef, target_target_to_eef)
+        ]
         n_use = len(chunk)
         manifest_rows.append(
             {
@@ -209,6 +244,9 @@ def _export_policy_trace_chunks(
                 "target_action": target_action,
                 "target_action_normalized": True,
                 "target_object_target": target_object,
+                "target_object_to_eef": target_object_to_eef,
+                "target_target_to_eef": target_target_to_eef,
+                "target_object_pair_to_eef": target_object_pair_to_eef,
                 "target_gripper_state": [[1.0] for _ in chunk],
                 "target_close": [1.0 for _ in chunk],
                 "train_mask": [1.0 for _ in chunk],
@@ -386,6 +424,10 @@ def execute_plan_row(
         object_target = pre_snapshot.get(object_target_field)
         if object_target is not None:
             object_target = np.asarray(object_target, dtype=np.float32).reshape(-1)[:3].tolist()
+        object_to_eef, target_to_eef = _object_pair_to_eef_targets(
+            pre_snapshot,
+            object_target_field,
+        )
         policy_records.append(
             {
                 "agentview_image": np.asarray(obs["agentview_image"], dtype=np.uint8),
@@ -394,6 +436,8 @@ def execute_plan_row(
                 "ee_pos_live": np.asarray(obs["robot0_eef_pos"], dtype=np.float32),
                 "raw_action": action.astype(np.float32).tolist(),
                 "object_target": object_target or [0.0, 0.0, 0.0],
+                "object_to_eef": object_to_eef,
+                "target_to_eef": target_to_eef,
                 "target_xy_mm": _target_xy_mm(pre_snapshot, object_target_field),
             }
         )

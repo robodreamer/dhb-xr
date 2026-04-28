@@ -52,6 +52,18 @@ def _write_policy_trace_fixture(tmp_path: Path) -> Path:
                     [0.0, 0.2, 0.0],
                     [0.0, 0.0, 0.0],
                 ],
+                "target_object_to_eef": [
+                    [0.0, 0.0, 0.0],
+                    [-0.1, -0.2, -0.3],
+                    [-0.4, -0.5, -0.6],
+                    [0.0, 0.0, 0.0],
+                ],
+                "target_target_to_eef": [
+                    [0.0, 0.0, 0.0],
+                    [0.7, 0.8, 0.9],
+                    [1.0, 1.1, 1.2],
+                    [0.0, 0.0, 0.0],
+                ],
                 "target_gripper_state": [[0.0], [1.0], [1.0], [0.0]],
                 "hard_negative_mask": [0.0, 0.0, 1.0, 0.0],
                 "labels": ["background", "positive", "hard_negative", "background"],
@@ -93,6 +105,32 @@ def test_policy_trace_contact_dataset_packs_qwendhb_sample(tmp_path):
     np.testing.assert_allclose(sample["action"][1, :3], [0.1, 0.2, 0.3], atol=1e-3)
     np.testing.assert_allclose(sample["dhb.object_minus_target_pos"][2], [0.0, 0.2, 0.0])
     np.testing.assert_allclose(sample["dhb.gripper_state"][:4, 0], [0.0, 1.0, 1.0, 0.0])
+
+
+def test_policy_trace_contact_dataset_supports_multi_object_targets(tmp_path):
+    manifest_path = _write_policy_trace_fixture(tmp_path)
+    dataset = PolicyTraceContactDataset(
+        {
+            "policy_trace_contact_manifest_jsonl": str(manifest_path),
+            "action_window_size": 8,
+            "policy_trace_object_target_field": [
+                "target_object_to_eef",
+                "target_target_to_eef",
+            ],
+            "policy_trace_object_target_output_field": [
+                "dhb.object_to_eef_pos",
+                "dhb.target_to_eef_pos",
+            ],
+            "policy_trace_object_target_dim": [3, 3],
+        }
+    )
+
+    sample = dataset[0]
+
+    assert sample["dhb.object_to_eef_pos"].shape == (8, 3)
+    assert sample["dhb.target_to_eef_pos"].shape == (8, 3)
+    np.testing.assert_allclose(sample["dhb.object_to_eef_pos"][1], [-0.1, -0.2, -0.3])
+    np.testing.assert_allclose(sample["dhb.target_to_eef_pos"][2], [1.0, 1.1, 1.2])
 
 
 def test_policy_trace_contact_dataset_filters_unmasked_rows(tmp_path):
