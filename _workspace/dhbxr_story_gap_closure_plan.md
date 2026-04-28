@@ -1799,3 +1799,24 @@ Story implication:
   The next decisive story gap is a matched comparison on a larger, more diverse
   successful augmentation set: DHB-XR action tokens versus a regular action
   head, both trained on the same lift/transport/release positives.
+
+2026-04-28 lift/carry/lower diagnosis:
+
+- Targeted traces show the current best broad checkpoint has learned some
+  post-close object coupling, but not a robust lift/carry/lower sequence. It
+  moves the bowl after close, yet the learned closed Z action is near zero or
+  slightly downward in live chunks.
+- Capacity-only fixes are negative. A high closed-residual scale can induce
+  lift, but it also induces large uncontrolled arm excursions and IK failures;
+  a midpoint scale loses object motion. This rules out scalar gain tuning as
+  the next credible route.
+
+Story implication:
+
+- This is a useful refinement for the DHB-XR narrative. The paper should not
+  claim that a generic continuous residual head plus a few replay positives is
+  enough. The stronger and more DHB-specific claim to validate next is that
+  compact phase/action tokens can represent lift, carry, lower, and release as
+  distinct geometric events with phase-specific normalization. That aligns
+  better with the invariant-token story than treating post-contact manipulation
+  as one undifferentiated Cartesian residual.

@@ -2531,3 +2531,28 @@ Updated immediate priority:
 3. If the trace confirms remaining sliding/late placement, move to data
    diversity and objective design: more source episodes/offsets, explicit
    phase/action-type normalization, and a matched regular-head control.
+
+2026-04-28 trace diagnosis and scale hard stop:
+
+- Broad step-50 does create post-close object motion, but lift is inconsistent.
+  The `0 cm` trace lifts the bowl about `17.5 mm`; the `+3 cm` trace lifts only
+  about `1.4 mm` and mostly moves laterally.
+- Chunk diagnostics show the learned closed action has near-zero or slightly
+  downward Z after close, despite the generated lift labels having large
+  positive normalized Z targets.
+- Raising `action_closed_residual_scale` is not sufficient. Direct inference at
+  `0.9` lifts aggressively but causes `40` IK failures in the `+3 cm` trace.
+  A short `0.9` retrain also regresses, with `15-22` average IK failures. A
+  midpoint `0.6` inference diagnostic keeps IK stable but fails to move the
+  bowl.
+
+Updated immediate priority:
+
+1. Stop scalar closed-residual scale tuning for this branch.
+2. Implement the next training objective around explicit phase/action types:
+   lift, carry, lower, and release. Use phase-specific normalization/loss
+   weights so Z lift is not diluted by lateral transport and lateral transport
+   is not amplified when only lift is needed.
+3. Preserve the object-free deployment contract: the phase token or phase label
+   can be supervised offline, but rollout should still execute learned outputs
+   from observation/state/history, not object-distance gates.

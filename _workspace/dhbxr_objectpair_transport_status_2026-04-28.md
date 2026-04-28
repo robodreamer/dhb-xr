@@ -199,3 +199,44 @@ Updated next step:
 3. Generate the next augmentation set with more diverse source episodes,
    target placements, and phase/action-type normalization, then compare against
    a matched regular action head.
+
+## Step-50 Trace and Capacity Diagnostics
+
+Two no-video simulator-state traces were captured for the broad step-50
+checkpoint:
+
+- `_workspace/paper_eval/2026-04-28_broad_lifttransport_step50_ep0_trace.json`
+- `_workspace/paper_eval/2026-04-28_broad_lifttransport_step50_ep1_offset3_trace.json`
+
+The traces show real post-close object motion but inconsistent lift:
+
+| Case | Close | IK fails | Final bowl-plate XY mm | Bowl Z lift after close mm | Post-close bowl XY motion mm | Notes |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| ep0, `0 cm` | 91 | 0 | 100.4 | 17.5 | 112.8 | partial lift and coupled transport |
+| ep1, `+3 cm` | 99 | 0 | 113.3 | 1.4 | 139.8 | mostly lateral motion; plate can be disturbed |
+
+Chunk diagnostics expose the active implementation/objective gap. After the
+gripper closes, the learned normalized Z action is about `+0.013`, which
+denormalizes to roughly `-0.35 mm` per action step. The offline lift labels
+contain initial normalized Z targets around `+0.56`, so the labels exist but
+are not being learned strongly enough in the streaming policy.
+
+The residual-capacity hypothesis was tested:
+
+- Directly evaluating the same step-50 weights with
+  `action_closed_residual_scale=0.9` creates strong lift, but overshoots badly:
+  the `+3 cm` trace lifts the bowl to about `1.10 m`, ends `206 mm` from the
+  plate, and accumulates `40` IK failures.
+- A bounded retrain from the same base with `action_closed_residual_scale=0.9`
+  is also negative. Step `50` averages `22` IK failures and step `100` averages
+  `15` IK failures across the `0 cm`/`+3 cm` sweep.
+- A midpoint inference diagnostic at `action_closed_residual_scale=0.6` keeps
+  `0` IK failures on the `+3 cm` case but closes earlier/high, fails to move
+  the bowl, and worsens min bowl distance.
+
+Conclusion: the root cause is not a simple execution gain. The current closed
+adapter/objective sits between two bad regimes: low scale learns stable lateral
+sliding with too little lift, while high scale learns lift but produces large
+uncontrolled excursions. The next fix should make lift, carry, lower, and
+release explicit phase/action types with their own normalization or loss
+weights, rather than amplifying the whole closed residual vector.

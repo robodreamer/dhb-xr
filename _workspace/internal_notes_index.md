@@ -42,7 +42,9 @@ Latest active result to preserve:
   is still not a full-task success and later checkpoints overfit. Preserve the
   broad step-50 checkpoint as the current diagnostic transport trend; the
   active next step is trace diagnosis plus broader/diverse augmentation and a
-  matched regular-head control.
+  matched regular-head control. The trace diagnosis is now complete: step-50
+  has real post-close object coupling but inconsistent lift, and scalar
+  closed-residual scale tuning is a dead end.
 - Latest community-code check:
   VLA Foundry and TRI-LBM support explicit action/proprio/gripper field
   contracts, chunk past/future masks, and action-type-aware normalization as
@@ -643,4 +645,11 @@ explicitly references them. They are kept for provenance only.
   `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_objectpair_lifttransport_broad_fromdagger100`.
   Its step-50 checkpoint is the current best diagnostic transport trend
   (`96.2 mm` average final bowl-plate XY, `0` average IK), but it is not solved;
-  do not continue by simply adding epochs.
+  do not continue by simply adding epochs. Targeted traces are
+  `_workspace/paper_eval/2026-04-28_broad_lifttransport_step50_ep0_trace.json`
+  and
+  `_workspace/paper_eval/2026-04-28_broad_lifttransport_step50_ep1_offset3_trace.json`.
+  They show post-close object motion but weak learned Z lift. The scale tests
+  show why the next path should be phase/action-type normalization: `0.9`
+  scale causes aggressive lift and IK failures, while `0.6` loses object
+  motion. Stop scalar gain tuning.
