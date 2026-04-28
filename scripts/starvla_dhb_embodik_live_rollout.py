@@ -249,6 +249,50 @@ def _relative_snapshot(ee_pos, refs, env=None):
     return snap
 
 
+def _action_component_debug(result: dict, n_use: int) -> dict:
+    """Summarize normalized action components emitted by the DHB action head."""
+
+    debug: dict[str, object] = {}
+    component_keys = {
+        "pred_actions_base": "action_base",
+        "pred_action_residual": "action_residual",
+        "pred_action_closed_residual": "action_closed_residual",
+        "pred_action_closed_residual_raw": "action_closed_residual_raw",
+        "pred_action_closed_object_delta": "action_closed_object_delta",
+        "pred_action_closed_object_delta_raw": "action_closed_object_delta_raw",
+    }
+    for key, prefix in component_keys.items():
+        value = result.get(key)
+        if value is None:
+            continue
+        arr = np.asarray(value, dtype=np.float32)
+        if arr.ndim == 3:
+            arr = arr[0]
+        if arr.ndim != 2 or arr.shape[0] == 0:
+            continue
+        chunk = arr[: max(1, min(int(n_use), arr.shape[0]))]
+        xyz = chunk[:, : min(3, chunk.shape[1])]
+        if xyz.shape[1] == 0:
+            continue
+        debug[f"{prefix}_xyz_first"] = xyz[0].tolist()
+        debug[f"{prefix}_xyz_mean"] = xyz.mean(axis=0).tolist()
+        debug[f"{prefix}_xyz_norm_mean"] = float(np.linalg.norm(xyz, axis=-1).mean())
+        debug[f"{prefix}_xyz_norm_last"] = float(np.linalg.norm(xyz[-1]))
+
+    gate = result.get("action_closed_residual_gate")
+    if gate is not None:
+        gate_arr = np.asarray(gate, dtype=np.float32)
+        if gate_arr.ndim == 3:
+            gate_arr = gate_arr[0]
+        gate_arr = gate_arr.reshape(-1)
+        if gate_arr.size:
+            gate_chunk = gate_arr[: max(1, min(int(n_use), gate_arr.size))]
+            debug["action_closed_residual_gate_min"] = float(gate_chunk.min())
+            debug["action_closed_residual_gate_mean"] = float(gate_chunk.mean())
+            debug["action_closed_residual_gate_max"] = float(gate_chunk.max())
+    return debug
+
+
 def _preprocess_libero_image(image: np.ndarray, orientation: str) -> np.ndarray:
     image = np.asarray(image, dtype=np.uint8)
     if orientation == "raw":
@@ -902,6 +946,7 @@ def main() -> None:
 
         gripper_cmds = prepared["gripper_cmds"]
         gripper_debug = prepared["debug"]
+        action_component_debug = _action_component_debug(result, n_use)
         pred_object_target = result.get("pred_object_target")
         object_target_debug = {}
         if pred_object_target is not None:
@@ -965,6 +1010,7 @@ def main() -> None:
                 "first_gt_pos": first_gt_pos,
                 "trajectory_source": args.trajectory_source,
                 **direct_action_debug,
+                **action_component_debug,
                 **object_target_debug,
                 **gripper_debug,
             }

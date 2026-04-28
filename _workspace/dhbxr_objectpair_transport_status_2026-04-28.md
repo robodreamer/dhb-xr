@@ -725,3 +725,39 @@ policy. More epochs on this branch are unlikely to help. The next productive
 step is not another continuation, but debugging the live streaming contract for
 release/transport predictions and generating stricter true-positive
 post-contact data.
+
+## Object-Token Adapter Audit
+
+A direct closed-loop object-delta action adapter was added to the DHB action
+head and StarVLA wrapper. The adapter gates on the same commanded closed-gripper
+state as the existing closed residual, consumes `pred_object_target`, and emits
+diagnostics for `pred_action_closed_object_delta[_raw]` in live chunk summaries.
+Unit tests cover the gated action path.
+
+Adapter-only training from the contact-corrected step-50 checkpoint is negative.
+The learned object-delta component remains nearly constant across chunks even
+when `pred_object_minus_target_xy_mm_mean` changes. The old hidden closed
+residual branch also remains almost constant. This rules out the gate being
+accidentally off; the issue is the conditioning signal/action mapping, not the
+streaming gate.
+
+An offline object-token probe was added at
+`scripts/starvla_object_token_offline_probe.py` to evaluate `pred_object_target`
+against supervised policy-trace object fields before launching live sweeps. On
+the adapter-only step-150 checkpoint, post-contact rows show about `63.5 mm`
+object-minus-target XY MAE. A joint object-token plus direct-adapter
+calibration run reduced the best checkpoint only modestly: step `250` gives
+about `55.2 mm` object-minus-target XY MAE, while other checkpoints regress.
+
+Focused live rollouts for the joint calibration are still negative:
+
+| Checkpoint | Success | Close | Reopen | Final bowl-plate XY mm | IK fails | Verdict |
+| ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| step 50 | `0/1` | `1/1` | `0/1` | `118.3` | `0` | smoother, still far from plate |
+| step 250 | `0/1` | `1/1` | `0/1` | `149.4` | `0` | regresses transport |
+
+Conclusion: do not continue object-delta adapter sweeps on the current
+perception token. The manifest labels contain useful geometry/action signal, but
+the learned visual object/target token is not accurate enough after grasp to
+drive held-object transport. The next viable path is a stronger object-grounding
+or dataset-level intervention, not another small adapter continuation.

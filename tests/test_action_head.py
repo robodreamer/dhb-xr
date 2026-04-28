@@ -831,6 +831,43 @@ class TestDHBActionHead:
         )
         assert "loss" in result
 
+    def test_closed_object_delta_adapter_adds_gated_action_from_object_token(self):
+        head = DHBActionHead(
+            vlm_dim=128,
+            action_horizon=8,
+            invariant_dim=8,
+            hidden_dim=64,
+            num_heads=4,
+            num_layers=2,
+            dropout=0.0,
+            action_dim=7,
+            object_target_dim=3,
+            use_action_closed_object_delta_adapter=True,
+            action_closed_object_delta_hidden_dim=16,
+            action_closed_object_delta_scale=1.0,
+            action_closed_residual_gate_source="none",
+        )
+        with torch.no_grad():
+            head.action_head.weight.zero_()
+            head.action_head.bias.zero_()
+            head.action_closed_object_delta_adapter[-1].bias.fill_(0.5)
+
+        vlm_hidden = torch.randn(1, self.S, 128)
+        with torch.no_grad():
+            result = head(vlm_hidden)
+
+        assert "pred_action_closed_object_delta" in result
+        assert torch.allclose(
+            result["pred_actions"][..., :6],
+            torch.full_like(result["pred_actions"][..., :6], 0.5),
+            atol=1e-6,
+        )
+        assert torch.allclose(
+            result["pred_actions"][..., 6],
+            torch.zeros_like(result["pred_actions"][..., 6]),
+            atol=1e-6,
+        )
+
     def test_committed_prefix_conditioning_biases_marked_queries_only(self):
         class ReturnQueries(nn.Module):
             def forward(self, queries, memory):

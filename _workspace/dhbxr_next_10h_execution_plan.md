@@ -2686,3 +2686,34 @@ Next 10-hour execution priority:
 4. Only launch another bounded live sweep after a concrete bug or a clearly
    stronger positive dataset is found. The success claim should not rely on
    repeated epochs over failed pushes.
+
+2026-04-28 object-token hard stop:
+
+- A direct closed object-delta adapter was implemented and trained, then a joint
+  object-token plus adapter calibration was tried. Both preserve the reach/close
+  trend but fail held-object transport/release.
+- The new offline probe
+  `scripts/starvla_object_token_offline_probe.py` shows the key blocker:
+  post-contact `pred_object_target` has object-minus-target XY error on the
+  order of `55-65 mm`, and the phase-onehot dimensions are poorly calibrated.
+  The live adapter therefore learns fixed correction biases rather than a
+  state-dependent transport policy.
+- Stop spending unattended time on object-delta adapter epochs unless the
+  object-token probe first shows a clear drop below roughly `20-30 mm` XY MAE on
+  post-contact rows. That threshold is not a final paper metric; it is a
+  practical gate for whether the token is accurate enough to drive placement.
+
+Updated next steps:
+
+1. Preserve the direct object-delta adapter and object-token probe as useful
+   infrastructure, but do not claim this branch as a solved result.
+2. For the next true breakthrough attempt, either collect/generate stricter
+   successful post-grasp reset/replay rows with visible object displacement, or
+   add a stronger generic object-grounding path. Avoid task-specific runtime
+   object-distance gates.
+3. Keep the story focused on the validated parts: DHB/invariant tokens improve
+   reach/close adaptation under offsets, gripper/release tokens are learnable
+   offline, and the remaining gap is perception-grounded held-object transport.
+4. Before any new live sweep, run the object-token probe plus contact-phase
+   probe as cheap gates. If either conditioning token is poor, train/evaluate
+   that token offline first rather than consuming rollout time.

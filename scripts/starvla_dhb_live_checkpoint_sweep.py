@@ -71,9 +71,9 @@ def _run_case(
     reach_threshold_xy_m: float,
     reach_threshold_z_m: float,
     reach_stop_on_success: bool,
-    record_step_trace: bool,
-    record_sim_state_trace: bool,
-    save_policy_trace: bool,
+    record_step_trace: bool = False,
+    record_sim_state_trace: bool = False,
+    save_policy_trace: bool = False,
 ) -> dict:
     summary_path = output_dir / (
         f"{checkpoint.stem}_ep{episode_idx}_offset{offset_cm:.1f}cm_summary.json"

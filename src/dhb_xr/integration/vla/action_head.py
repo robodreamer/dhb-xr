@@ -143,6 +143,10 @@ if HAS_TORCH:
             action_closed_residual_hard_gate: bool = False,
             action_closed_residual_zero_gripper_dim: bool = True,
             lambda_action_closed_residual_l2: float = 0.0,
+            use_action_closed_object_delta_adapter: bool = False,
+            action_closed_object_delta_hidden_dim: Optional[int] = None,
+            action_closed_object_delta_scale: float = 1.0,
+            action_closed_object_delta_zero_gripper_dim: bool = True,
             object_target_dim: int = 0,
             lambda_object_target: float = 0.0,
             object_target_loss_type: str = "smooth_l1",
@@ -219,6 +223,12 @@ if HAS_TORCH:
             self.action_closed_residual_hard_gate = bool(action_closed_residual_hard_gate)
             self.action_closed_residual_zero_gripper_dim = bool(action_closed_residual_zero_gripper_dim)
             self.lambda_action_closed_residual_l2 = float(lambda_action_closed_residual_l2)
+            self.use_action_closed_object_delta_adapter = bool(use_action_closed_object_delta_adapter)
+            self.action_closed_object_delta_hidden_dim = action_closed_object_delta_hidden_dim
+            self.action_closed_object_delta_scale = float(action_closed_object_delta_scale)
+            self.action_closed_object_delta_zero_gripper_dim = bool(
+                action_closed_object_delta_zero_gripper_dim
+            )
             self.object_target_dim = int(object_target_dim or 0)
             self.lambda_object_target = float(lambda_object_target)
             self.object_target_loss_type = str(object_target_loss_type)
@@ -286,6 +296,10 @@ if HAS_TORCH:
                 raise ValueError(
                     "action_closed_residual_gate_source must be 'none' or 'state_gripper', "
                     f"got {self.action_closed_residual_gate_source!r}"
+                )
+            if self.use_action_closed_object_delta_adapter and self.object_target_dim <= 0:
+                raise ValueError(
+                    "use_action_closed_object_delta_adapter requires object_target_dim > 0"
                 )
             if self.object_target_loss_type not in {"smooth_l1", "mse", "l1"}:
                 raise ValueError(
@@ -454,6 +468,7 @@ if HAS_TORCH:
             self.action_head = None
             self.action_residual_adapter = None
             self.action_closed_residual_adapter = None
+            self.action_closed_object_delta_adapter = None
             self.object_target_head = None
             self.object_target_context_proj = None
             self.object_target_query_embed = None
@@ -501,7 +516,24 @@ if HAS_TORCH:
                     )
                     nn.init.zeros_(self.action_closed_residual_adapter[-1].weight)
                     nn.init.zeros_(self.action_closed_residual_adapter[-1].bias)
-            elif self.use_action_residual_adapter or self.use_action_closed_residual_adapter:
+                if self.use_action_closed_object_delta_adapter:
+                    object_delta_hidden_dim = int(
+                        action_closed_object_delta_hidden_dim
+                        or max(32, self.object_target_dim * 8)
+                    )
+                    self.action_closed_object_delta_adapter = nn.Sequential(
+                        nn.LayerNorm(self.object_target_dim),
+                        nn.Linear(self.object_target_dim, object_delta_hidden_dim),
+                        nn.GELU(),
+                        nn.Linear(object_delta_hidden_dim, action_dim),
+                    )
+                    nn.init.zeros_(self.action_closed_object_delta_adapter[-1].weight)
+                    nn.init.zeros_(self.action_closed_object_delta_adapter[-1].bias)
+            elif (
+                self.use_action_residual_adapter
+                or self.use_action_closed_residual_adapter
+                or self.use_action_closed_object_delta_adapter
+            ):
                 raise ValueError("action residual adapters require action_dim to be set")
 
             self.contact_head = None
@@ -1325,12 +1357,15 @@ if HAS_TORCH:
             pred_action_residual = None
             pred_action_closed_residual = None
             pred_action_closed_residual_raw = None
+            pred_action_closed_object_delta = None
+            pred_action_closed_object_delta_raw = None
             if self.action_head is not None:
                 pred_actions_base = self.action_head(head_features)  # (B, T, action_dim)
                 pred_actions = pred_actions_base
                 if (
                     self.action_residual_adapter is not None
                     or self.action_closed_residual_adapter is not None
+                    or self.action_closed_object_delta_adapter is not None
                 ):
                     result["pred_actions_base"] = pred_actions_base
                 if self.action_residual_adapter is not None:
@@ -1360,6 +1395,39 @@ if HAS_TORCH:
                     pred_actions = pred_actions + pred_action_closed_residual
                     result["pred_action_closed_residual_raw"] = pred_action_closed_residual_raw
                     result["pred_action_closed_residual"] = pred_action_closed_residual
+                    result["action_closed_residual_gate"] = closed_gate.expand(
+                        -1,
+                        self.action_horizon,
+                        -1,
+                    )
+                if (
+                    self.action_closed_object_delta_adapter is not None
+                    and pred_object_target is not None
+                ):
+                    closed_gate = self._closed_residual_gate(
+                        state_flat,
+                        batch_size=B,
+                        device=head_features.device,
+                        dtype=head_features.dtype,
+                    )
+                    pred_action_closed_object_delta_raw = (
+                        self.action_closed_object_delta_adapter(pred_object_target)
+                        * self.action_closed_object_delta_scale
+                    )
+                    if (
+                        self.action_closed_object_delta_zero_gripper_dim
+                        and pred_action_closed_object_delta_raw.shape[-1] >= 7
+                    ):
+                        pred_action_closed_object_delta_raw = (
+                            pred_action_closed_object_delta_raw.clone()
+                        )
+                        pred_action_closed_object_delta_raw[..., 6] = 0.0
+                    pred_action_closed_object_delta = pred_action_closed_object_delta_raw * closed_gate
+                    pred_actions = pred_actions + pred_action_closed_object_delta
+                    result["pred_action_closed_object_delta_raw"] = (
+                        pred_action_closed_object_delta_raw
+                    )
+                    result["pred_action_closed_object_delta"] = pred_action_closed_object_delta
                     result["action_closed_residual_gate"] = closed_gate.expand(
                         -1,
                         self.action_horizon,
@@ -1633,12 +1701,20 @@ if HAS_TORCH:
                         else total + self.lambda_action_base_cumsum_l2 * loss_action_base_cumsum_l2
                     )
 
+            closed_residual_l2_terms = [
+                value.pow(2).mean(dim=-1)
+                for value in (
+                    pred_action_closed_residual_raw,
+                    pred_action_closed_object_delta_raw,
+                )
+                if value is not None
+            ]
             if (
-                pred_action_closed_residual_raw is not None
+                closed_residual_l2_terms
                 and self.lambda_action_closed_residual_l2 > 0.0
                 and target_actions is not None
             ):
-                per_step_closed_residual_l2 = pred_action_closed_residual_raw.pow(2).mean(dim=-1)
+                per_step_closed_residual_l2 = sum(closed_residual_l2_terms)
                 loss_action_closed_residual_l2 = self._masked_temporal_mean(
                     per_step_closed_residual_l2,
                     temporal_loss_mask,

@@ -738,3 +738,15 @@ explicitly references them. They are kept for provenance only.
   Stop repeating epochs on these rows. The next meaningful gap is to audit the
   live streaming/decode contract for release/transport and then generate
   stricter true-positive post-contact reset/replay data.
+- Object-token/action-adapter hard stop:
+  `scripts/starvla_object_token_offline_probe.py` now audits
+  `pred_object_target` against configured object-target fields on supervised
+  policy-trace rows. A direct closed object-delta adapter and a joint
+  object-token calibration run were both negative in live rollout. The measured
+  blocker is post-contact object-minus-target token error of roughly `55-65 mm`
+  XY, so the adapter learns fixed biases rather than state-dependent transport.
+  Use the probe as a gate before future live sweeps; do not continue adapter
+  epochs unless the object token first reaches approximately `20-30 mm` XY MAE
+  on post-contact rows. The strongest next path is stricter successful
+  post-grasp data or stronger generic object grounding, not runtime
+  object-distance heuristics.
