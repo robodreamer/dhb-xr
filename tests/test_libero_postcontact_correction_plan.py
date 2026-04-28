@@ -179,6 +179,9 @@ def test_rollout_policy_trace_export_preserves_lift_transport_targets(tmp_path: 
             ]
         )
     ]
+    records[1]["target_gripper_state"] = [0.0]
+    records[1]["target_close"] = 0.0
+    records[1]["label"] = "attached_transport_release"
     action_stats = {
         "min": [-0.01, -0.01, -0.01, -1.0, -1.0, -1.0, -1.0],
         "max": [0.01, 0.01, 0.01, 1.0, 1.0, 1.0, 1.0],
@@ -212,7 +215,9 @@ def test_rollout_policy_trace_export_preserves_lift_transport_targets(tmp_path: 
     assert row["target_action_normalized"] is True
     assert row["target_reached"] is True
     assert row["train_mask"] == [1.0, 1.0]
-    assert row["target_gripper_state"] == [[1.0], [1.0]]
+    assert row["target_gripper_state"] == [[1.0], [0.0]]
+    assert row["target_close"] == [1.0, 0.0]
+    assert row["labels"] == ["attached_transport_positive", "attached_transport_release"]
     assert np.asarray(row["target_linear_invariants"], dtype=np.float32).shape == (2, 4)
     assert np.asarray(row["target_angular_invariants"], dtype=np.float32).shape == (2, 4)
     assert np.isfinite(np.asarray(row["target_linear_invariants"], dtype=np.float32)).all()

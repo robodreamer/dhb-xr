@@ -125,6 +125,14 @@ def _object_pair_to_eef_targets(
     return _neg_ee_minus(object_token), _neg_ee_minus(target_token)
 
 
+def _record_gripper_state(record: dict[str, Any]) -> list[float]:
+    value = record.get("target_gripper_state", [1.0])
+    arr = np.asarray(value, dtype=np.float32).reshape(-1)
+    if arr.size == 0:
+        return [1.0]
+    return [float(arr[0])]
+
+
 def _body_name_from_ref(ref: str | None) -> str | None:
     if not ref or ":" not in ref:
         return None
@@ -228,10 +236,7 @@ def _export_policy_trace_chunks(
                 dtype=np.float32,
             ),
         )
-        target_action = [
-            _normalize_raw_action(record["raw_action"], action_stats)
-            for record in chunk
-        ]
+        target_action = [_normalize_raw_action(record["raw_action"], action_stats) for record in chunk]
         raw_action = np.asarray([record["raw_action"] for record in chunk], dtype=np.float32)
         current_state = np.asarray(first["state_window"], dtype=np.float32)
         current_state = current_state[-1] if current_state.ndim == 2 else current_state.reshape(-1)
@@ -293,13 +298,16 @@ def _export_policy_trace_chunks(
                 "target_object_to_eef": target_object_to_eef,
                 "target_target_to_eef": target_target_to_eef,
                 "target_object_pair_to_eef": target_object_pair_to_eef,
-                "target_gripper_state": [[1.0] for _ in chunk],
-                "target_close": [1.0 for _ in chunk],
+                "target_gripper_state": [_record_gripper_state(record) for record in chunk],
+                "target_close": [float(record.get("target_close", 1.0)) for record in chunk],
                 "train_mask": [1.0 for _ in chunk],
                 "target_transport_phase": target_transport_phase,
                 "target_transport_phase_onehot": target_transport_phase_onehot,
                 "action_loss_weight": action_loss_weight,
-                "labels": ["attached_transport_positive" for _ in chunk],
+                "labels": [
+                    str(record.get("label", "attached_transport_positive"))
+                    for record in chunk
+                ],
                 "object_target_xy_mm": [
                     record.get("target_xy_mm")
                     for record in chunk
@@ -461,6 +469,7 @@ def execute_plan_row(
     carry_action_loss_weight: float = 1.0,
     lower_action_loss_weight: float = 1.0,
     phase_z_threshold_mm: float = 1.0,
+    release_tail_steps: int = 0,
 ) -> dict[str, Any]:
     sim_state = row.get("sim_state")
     if sim_state is None:
@@ -572,6 +581,9 @@ def execute_plan_row(
                 "object_to_eef": object_to_eef,
                 "target_to_eef": target_to_eef,
                 "target_xy_mm": _target_xy_mm(pre_snapshot, object_target_field),
+                "target_gripper_state": [1.0],
+                "target_close": 1.0,
+                "label": "attached_transport_positive",
             }
         )
         executed_actions.append(action.astype(np.float32).tolist())
@@ -633,6 +645,44 @@ def execute_plan_row(
                 **snapshot,
             }
         )
+
+    release_tail_count = max(0, int(release_tail_steps))
+    if target_reached_step is not None and release_tail_count > 0:
+        release_action = np.zeros((7,), dtype=np.float32)
+        release_action[6] = -1.0
+        for release_idx in range(release_tail_count):
+            state_window = _closed_policy_state_window(
+                state_history,
+                obs,
+                history_window=state_history_window,
+            )
+            release_snapshot = _relative_snapshot(obs["robot0_eef_pos"], scene_refs, env=env)
+            object_target = release_snapshot.get(object_target_field)
+            if object_target is not None:
+                object_target = np.asarray(object_target, dtype=np.float32).reshape(-1)[:3].tolist()
+            object_to_eef, target_to_eef = _object_pair_to_eef_targets(
+                release_snapshot,
+                object_target_field,
+            )
+            policy_records.append(
+                {
+                    "agentview_image": np.asarray(obs["agentview_image"], dtype=np.uint8),
+                    "wrist_image": np.asarray(obs["robot0_eye_in_hand_image"], dtype=np.uint8),
+                    "state_window": state_window.astype(np.float32),
+                    "ee_pos_live": np.asarray(obs["robot0_eef_pos"], dtype=np.float32),
+                    "raw_action": release_action.astype(np.float32).tolist(),
+                    "object_target": object_target or [0.0, 0.0, 0.0],
+                    "object_to_eef": object_to_eef,
+                    "target_to_eef": target_to_eef,
+                    "target_xy_mm": _target_xy_mm(release_snapshot, object_target_field),
+                    "target_gripper_state": [0.0],
+                    "target_close": 0.0,
+                    "label": "attached_transport_release",
+                }
+            )
+            for _ in range(max(1, int(substeps))):
+                obs, r, done, info = env.step(np.concatenate([np.zeros(7, dtype=np.float32), [-1.0]]))
+                reward = max(reward, float(r))
 
     final_snapshot = _relative_snapshot(obs["robot0_eef_pos"], scene_refs, env=env)
     final_target_xy_mm = _target_xy_mm(final_snapshot, object_target_field)
@@ -750,6 +800,16 @@ def main() -> None:
     parser.add_argument("--policy-trace-lower-weight", type=float, default=1.0)
     parser.add_argument("--policy-trace-phase-z-threshold-mm", type=float, default=1.0)
     parser.add_argument(
+        "--policy-trace-release-tail-steps",
+        type=int,
+        default=0,
+        help=(
+            "After an attached replay reaches the target gate, append this many "
+            "zero-motion open-gripper labels to the exported policy trace. This "
+            "is offline release supervision, not deployment logic."
+        ),
+    )
+    parser.add_argument(
         "--export-only-target-reached",
         action="store_true",
         help=(
@@ -841,6 +901,7 @@ def main() -> None:
                         carry_action_loss_weight=float(args.policy_trace_carry_weight),
                         lower_action_loss_weight=float(args.policy_trace_lower_weight),
                         phase_z_threshold_mm=float(args.policy_trace_phase_z_threshold_mm),
+                        release_tail_steps=int(args.policy_trace_release_tail_steps),
                     )
                 )
         finally:
