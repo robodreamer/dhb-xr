@@ -88,6 +88,31 @@ def _transport_phase_onehot(phase: str, *, scale: float = 1.0) -> list[float]:
     return out
 
 
+def _contact_release_phase_from_row(row: dict[str, Any]) -> list[int]:
+    labels = list(row.get("labels", []))
+    target_close = list(row.get("target_close", []))
+    target_gripper_state = list(row.get("target_gripper_state", []))
+    n = max(len(labels), len(target_close), len(target_gripper_state))
+    phases: list[int] = []
+    for idx in range(n):
+        label = str(labels[idx]) if idx < len(labels) else ""
+        if "release" in label:
+            phases.append(2)
+            continue
+        if idx < len(target_close):
+            close = np.asarray(target_close[idx], dtype=np.float32).reshape(-1)
+            if close.size and float(close[0]) <= 0.5:
+                phases.append(2)
+                continue
+        if idx < len(target_gripper_state):
+            state = np.asarray(target_gripper_state[idx], dtype=np.float32).reshape(-1)
+            if state.size and float(state[0]) <= 0.5:
+                phases.append(2)
+                continue
+        phases.append(0)
+    return phases
+
+
 def _row_current_state(row: dict[str, Any]) -> np.ndarray:
     npz_path = Path(str(row.get("npz_path", "")))
     if not npz_path.exists():
@@ -132,6 +157,10 @@ def augment_row(
         _transport_phase_onehot(phase, scale=phase_onehot_scale)
         for phase in phases
     ]
+    if row.get("target_contact_release_phase") is None:
+        release_phase = _contact_release_phase_from_row(row)
+        if release_phase:
+            out["target_contact_release_phase"] = release_phase
     return out
 
 

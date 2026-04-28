@@ -217,6 +217,7 @@ def test_rollout_policy_trace_export_preserves_lift_transport_targets(tmp_path: 
     assert row["train_mask"] == [1.0, 1.0]
     assert row["target_gripper_state"] == [[1.0], [0.0]]
     assert row["target_close"] == [1.0, 0.0]
+    assert row["target_contact_release_phase"] == [0, 2]
     assert row["labels"] == ["attached_transport_positive", "attached_transport_release"]
     assert np.asarray(row["target_linear_invariants"], dtype=np.float32).shape == (2, 4)
     assert np.asarray(row["target_angular_invariants"], dtype=np.float32).shape == (2, 4)

@@ -358,3 +358,62 @@ post-contact transport. It improves the non-zero-offset final target distance
 in this two-case diagnostic while regressing the zero-offset case, so the
 missing piece is still an explicit held-object phase/action-type objective and
 more diverse target-reaching positives.
+
+## Explicit Phase-Target Diagnostic
+
+The next diagnostic used the same attached positives but added a learned
+transport phase target. The manifest now includes a three-class
+`target_transport_phase_onehot` for `lift`, `carry`, and `lower`, with counts:
+
+- `lift`: `175`
+- `carry`: `237`
+- `lower`: `60`
+
+The phase-aware manifest is:
+
+`_workspace/paper_eval/2026-04-28_attached_replay_lifttransport_gated_step50_100_dhbtargets_phase3_manifest.jsonl`
+
+The first phase run concatenated
+`[dhb.object_to_eef_pos, dhb.target_to_eef_pos, dhb.transport_phase_onehot]`
+into a 9-D object-target prediction and kept closed residual conditioning on
+that predicted vector:
+
+`_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_objectpair_lifttransport_broad_phaseobj9_fromdagger100`
+
+Because the 6-D object-target head became 9-D, the checkpoint loader
+intentionally skipped the mismatched object-target head tensors and
+reinitialized that small readout. Training remained bounded at `100` steps.
+
+Controlled no-gate sweep, `rollout_seed=70`, cases `0:0` and `1:+3 cm`:
+
+| Run | Step | Avg min EE-bowl XY mm | Avg min plate XY mm | Avg final bowl-plate XY mm | Avg IK fails | Verdict |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| broad baseline | 50 | 22.7 | 107.1 | 96.2 | 0.0 | best final target |
+| DHB-target continuation | 50 | 22.0 | 109.1 | 105.3 | 0.0 | invariant-only negative |
+| phase-object 9-D | 50 | 17.8 | 99.8 | 97.2 | 0.0 | nearly matches baseline, better contact/plate proximity |
+| phase-object 9-D | 100 | 15.8 | 89.7 | 108.0 | 0.0 | stable but worse final target |
+
+Conclusion: explicit phase prediction is directionally better than invariant
+loss alone and avoids the IK regression, but it still does not solve placement
+or release. This is the first result that supports the phase/action-type
+objective as a plausible next path, but it needs more data and release labels
+before it can become a full-task result.
+
+Implementation follow-up:
+
+`fa1cd67 Support release labels in attached policy traces`
+
+The attached-positive exporter no longer hardcodes every policy-trace row as
+closed. It can preserve per-record gripper labels and optionally append
+zero-motion open-gripper release-tail rows after a target-reaching replay. This
+fix matters because all current broad attached positives are closed-only, so
+the no-reopen behavior is expected. The next data generation pass should export
+release tails for rows that actually reach the target gate.
+
+The training interface now also exposes this as an explicit learned phase
+target: exported rows can carry `target_contact_release_phase`, and the
+StarVLA policy-trace dataset maps it to `dhb.contact_phase`. This aligns the
+data contract with the existing `contact_release_phase` rollout decoder, where
+close still comes from learned contact readiness and release comes from a
+learned release-phase probability. This remains generic: no deployment module
+uses object-specific distance thresholds.

@@ -32,9 +32,17 @@ broader low-data or world-model augmentation claim.
   but also overshoot and IK failures; generic phase-weighted action-loss
   training improves contact proximity in places but does not beat the broad
   unweighted step-50 transport result.
-- The next paper-relevant path is explicit phase/token supervision plus
-  broader successful attached positives, not another threshold/gain/loss-weight
-  sweep.
+- The first explicit phase-object diagnostic is better than invariant-only
+  continuation and nearly matches the broad baseline (`97.2 mm` average final
+  bowl-plate XY at step `50`, `0` IK failures), but it still has no placement
+  or release.
+- The no-release gap is now an implementation/data gap, not a conceptual
+  mystery: the attached positives used for that run were closed-only. The
+  code path now supports generic release-phase labels in policy-trace data
+  (`target_contact_release_phase` to `dhb.contact_phase`), which trains the
+  same learned release head used at deployment. The next paper-relevant path
+  is release-tail target-reaching positives plus explicit phase/token
+  supervision, not another threshold/gain/loss-weight sweep.
 
 Story implication: the defensible claim is robust offset reaching plus
 prototype learned contact/object-motion evidence. Full pick-place remains a

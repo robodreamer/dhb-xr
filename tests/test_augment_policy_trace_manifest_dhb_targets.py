@@ -34,9 +34,12 @@ def test_augments_manifest_with_chunk_local_dhb_targets(tmp_path: Path) -> None:
                 "target_action_normalized": True,
                 "target_action": [
                     [0.0, 0.0, 0.8, 0.0, 0.0, 0.0, 1.0],
-                    [-0.5, 0.2, 0.4, 0.0, 0.0, 0.0, 1.0],
+                    [-0.5, 0.2, 0.4, 0.0, 0.0, 0.0, -1.0],
                 ],
                 "train_mask": [1.0, 1.0],
+                "target_gripper_state": [[1.0], [0.0]],
+                "target_close": [1.0, 0.0],
+                "labels": ["attached_transport_positive", "attached_transport_release"],
             }
         )
         + "\n",
@@ -73,6 +76,7 @@ def test_augments_manifest_with_chunk_local_dhb_targets(tmp_path: Path) -> None:
     assert row["target_dhb_invariants_chunk_local"] is True
     assert row["target_transport_phase"] == ["lift", "carry"]
     assert row["target_transport_phase_onehot"] == [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
+    assert row["target_contact_release_phase"] == [0, 2]
     assert linear.shape == (2, 4)
     assert angular.shape == (2, 4)
     assert np.isfinite(linear).all()

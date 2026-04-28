@@ -21,6 +21,17 @@ short-loop alternatives:
   invariant-supervised steps, and a bounded invariant-supervised continuation
   trains cleanly. Live rollout still does not beat the broad baseline: best
   average final bowl-plate XY is `105.3 mm` with `0` IK failures.
+- Explicit phase-object supervision is directionally better than invariant
+  loss alone. The first 9-D phase-object run reaches `97.2 mm` average final
+  bowl-plate XY at step `50` with `0` IK failures and better contact/plate
+  proximity, but it still has no release. This is an infrastructure-positive
+  diagnostic, not a completed full-task result.
+- The release-label gap is now concrete: current broad attached positives are
+  closed-only, so no-reopen behavior is expected. The exporter and
+  policy-trace dataset now support generic `target_contact_release_phase`
+  labels that train `dhb.contact_phase`, matching the existing
+  `contact_release_phase` deployment decoder without object-distance runtime
+  rules.
 
 Immediate next actions:
 
@@ -28,11 +39,13 @@ Immediate next actions:
    infrastructure and does not add deployment heuristics.
 2. Stop unattended sweeps over residual scale, loss weights, or more epochs on
    the same `65`-row warm-start objective.
-3. Build the next branch around explicit post-contact phase/action-token
-   supervision: hold, lift, carry, lower, release.
-4. Regenerate attached positives with chunk-local DHB invariant/action-token
-   targets and filter them by actual target-reaching replay success before
-   training.
+3. Regenerate attached positives with release tails only after actual
+   target-reaching replay success. Train the next branch with
+   `contact_phase_dim=3`, `contact_phase_field=dhb.contact_phase`, and
+   rollout `--model-gripper-decode-source contact_release_phase` so open/release
+   is learned from exported traces rather than hardcoded distances.
+4. Build the next branch around explicit post-contact phase/action-token
+   supervision: hold/no-event, lift, carry, lower, and release.
 5. Only after that, run the matched regular-head control on the same data to
    support a clean DHB-XR transport claim.
 

@@ -133,6 +133,27 @@ def _record_gripper_state(record: dict[str, Any]) -> list[float]:
     return [float(arr[0])]
 
 
+def _contact_release_phase(record: dict[str, Any]) -> int:
+    """Return 0=hold/no event, 2=open/release.
+
+    Close readiness is supervised by target_close/dhb.close_contact. This phase
+    label trains only the release side used by contact_release_phase decoding.
+    Class 1 remains reserved for close-event datasets that provide one later.
+    """
+    label = str(record.get("label", ""))
+    if "release" in label:
+        return 2
+    target_close = record.get("target_close")
+    if target_close is not None:
+        close = np.asarray(target_close, dtype=np.float32).reshape(-1)
+        if close.size and float(close[0]) <= 0.5:
+            return 2
+    gripper_state = _record_gripper_state(record)[0]
+    if gripper_state <= 0.5:
+        return 2
+    return 0
+
+
 def _body_name_from_ref(ref: str | None) -> str | None:
     if not ref or ":" not in ref:
         return None
@@ -300,6 +321,10 @@ def _export_policy_trace_chunks(
                 "target_object_pair_to_eef": target_object_pair_to_eef,
                 "target_gripper_state": [_record_gripper_state(record) for record in chunk],
                 "target_close": [float(record.get("target_close", 1.0)) for record in chunk],
+                "target_contact_release_phase": [
+                    _contact_release_phase(record)
+                    for record in chunk
+                ],
                 "train_mask": [1.0 for _ in chunk],
                 "target_transport_phase": target_transport_phase,
                 "target_transport_phase_onehot": target_transport_phase_onehot,

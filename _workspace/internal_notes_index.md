@@ -57,8 +57,16 @@ Latest active result to preserve:
   (`472` invariant-supervised steps). The first invariant-supervised
   continuation trains cleanly and removes IK at step `100`, but its best
   average final bowl-plate XY is `105.3 mm`, still behind the broad baseline.
-  The next object-pair transport path should therefore add explicit phase/token
-  targets and broader successful positives, not just invariant loss.
+  A first explicit 9-D phase-object continuation nearly matches the broad
+  baseline while improving contact/plate proximity (`97.2 mm` final
+  bowl-plate XY at step `50`, `0` IK failures), but still does not place or
+  release. The no-reopen behavior is now explained by the closed-only
+  attached positives. The exporter/dataset path now carries a generic
+  `target_contact_release_phase` / `dhb.contact_phase` target so future
+  release-tail positives can train the same learned release head consumed by
+  `contact_release_phase` rollout decoding. The next object-pair transport
+  path should therefore use release-tail target-reaching positives plus
+  explicit phase/token targets, not more scalar invariant/loss-weight sweeps.
 - Latest community-code check:
   VLA Foundry and TRI-LBM support explicit action/proprio/gripper field
   contracts, chunk past/future masks, and action-type-aware normalization as
