@@ -1102,9 +1102,82 @@
           that a VLA can learn from.
         </div>
 
+        <div class="box mb-4" style="background:#fff7ed; border:1px solid #fed7aa;">
+          <h4 class="subtitle is-6 mb-3" style="font-family:'Google Sans',sans-serif; color:#c2410c;">
+            2026 Qwen/StarVLA DHB-XR Status: paper-safe closed-loop evidence
+          </h4>
+          <p style="font-size:0.9rem; line-height:1.7; color:#374151;">
+            The current paper-safe VLA evidence uses a Qwen2.5-VL/StarVLA prototype rather than the older
+            SmolVLA smoke checkpoint. The clean validated result is <strong>robust offset reaching</strong>:
+            the continuous DHB direct-action head reaches across <code>0,+3,-3 cm</code> offset cases with
+            <strong>5 / 5</strong> success, average minimum bowl XY <strong>39.2 mm</strong>, and
+            <strong>0</strong> IK failures under benchmark initialization and raw LIBERO images.
+          </p>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:0.8rem; margin:1rem 0;">
+            <div style="background:#fff; border:1px solid #fed7aa; border-radius:10px; padding:0.85rem; text-align:center;">
+              <div style="font-size:1.5rem; color:#059669; font-weight:700;">5 / 5</div>
+              <div style="font-size:0.78rem; color:#6b7280;">closed-loop reach<br>across 0,+3,-3 cm</div>
+            </div>
+            <div style="background:#fff; border:1px solid #fed7aa; border-radius:10px; padding:0.85rem; text-align:center;">
+              <div style="font-size:1.5rem; color:#059669; font-weight:700;">0</div>
+              <div style="font-size:0.78rem; color:#6b7280;">IK failures<br>in the reach sweep</div>
+            </div>
+            <div style="background:#fff; border:1px solid #fed7aa; border-radius:10px; padding:0.85rem; text-align:center;">
+              <div style="font-size:1.5rem; color:#2563eb; font-weight:700;">1 / 3 vs 0 / 3</div>
+              <div style="font-size:0.78rem; color:#6b7280;">matched task-0 outcome<br>DHB vs QwenOFT per offset</div>
+            </div>
+            <div style="background:#fff; border:1px solid #fed7aa; border-radius:10px; padding:0.85rem; text-align:center;">
+              <div style="font-size:1.5rem; color:#c2410c; font-weight:700;">9.2 mm</div>
+              <div style="font-size:0.78rem; color:#6b7280;">best learned side-grasp<br>physical close-vector error</div>
+            </div>
+          </div>
+          <p style="font-size:0.88rem; line-height:1.65; color:#374151;">
+            The honest interpretation is that DHB-XR now has a stable continuous closed-loop reach/adaptation result
+            and a bounded matched-head advantage over a regular QwenOFT head. Full pick-place is <strong>not</strong>
+            yet solved: learned contact can hit the demonstrated side-grasp geometry, but held-object lift/carry/lower
+            and release remain the active bottleneck.
+          </p>
+          <div class="demo-task-title">
+            <span class="perturb-pill is-blue">Qwen/StarVLA</span>
+            <span class="perturb-pill is-green">continuous DHB action</span>
+            Current paper-safe videos
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:1rem; margin-bottom:1rem;">
+            <div class="video-card">
+              <video autoplay muted loop playsinline>
+                <source src="assets/starvla_dhb_reach_ep1_offset3.mp4" type="video/mp4" />
+              </video>
+              <div class="video-label dhb">
+                StarVLA/Qwen DHB reach, episode 1, <code>+3 cm</code> &mdash; <strong>REACH SUCCESS</strong>
+              </div>
+            </div>
+            <div class="video-card">
+              <video autoplay muted loop playsinline>
+                <source src="assets/starvla_dhb_reach_ep0_offset_neg3.mp4" type="video/mp4" />
+              </video>
+              <div class="video-label dhb">
+                StarVLA/Qwen DHB reach, episode 0, <code>-3 cm</code> &mdash; <strong>REACH SUCCESS</strong>
+              </div>
+            </div>
+            <div class="video-card">
+              <video autoplay muted loop playsinline>
+                <source src="assets/starvla_dhb_sidegrasp_contact_ep1_offset3.mp4" type="video/mp4" />
+              </video>
+              <div class="video-label comparison">
+                Learned side-grasp contact at <code>+3 cm</code> &mdash; contact aligns, transport/release still fails
+              </div>
+            </div>
+          </div>
+          <p style="font-size:0.78rem; line-height:1.55; color:#6b7280; margin-bottom:0;">
+            Canonical internal result pack:
+            <code>_workspace/dhbxr_paper_result_pack_2026-04-28.md</code>. This section intentionally scopes the
+            current claim to robust reach, bounded matched-head evidence, and partial learned contact.
+          </p>
+        </div>
+
         <div class="box mb-4" style="background:#f8fafc; border:1px solid #dbeafe;">
           <h4 class="subtitle is-6 mb-3" style="font-family:'Google Sans',sans-serif; color:#1d4ed8;">
-            Current SmolVLA + DHB Action Head Status
+            Archived SmolVLA + DHB Action Head Diagnostic
           </h4>
           <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:1rem; margin-bottom:1rem;">
             <div style="background:#fff; border:1px solid #dbeafe; border-radius:10px; padding:1rem;">
@@ -1139,9 +1212,9 @@
           </p>
           <p style="font-size:0.9rem; line-height:1.7; color:#374151;">
             The failure video above is the <strong>base SmolVLA baseline</strong>, not the current DHB action-head path.
-            In the latest SmolVLA validation, the state-aware <code>DHBActionHead</code> reaches
+            In the earlier SmolVLA validation, the state-aware <code>DHBActionHead</code> reaches
             <strong>2 / 3 (66.7%)</strong> success at <code>0 cm</code> and <strong>1 / 3 (33.3%)</strong> at <code>+3 cm</code>
-            on the smoke checkpoint. That phase should be read as <strong>integration validation</strong>, not a final benchmark:
+            on the smoke checkpoint. That archived phase should be read as <strong>integration validation</strong>, not a final benchmark:
             the state-drop bug is fixed, rotation runaway is gone, and the <code>embodik</code> execution path is stable,
             but robustness is still limited by demo-specific placement error.
           </p>
@@ -1163,9 +1236,9 @@
         </div>
 
         <div class="demo-task-title">
-          <span class="perturb-pill is-blue">current DHB head</span>
+          <span class="perturb-pill is-blue">archived DHB head</span>
           <span class="perturb-pill is-green">smoke checkpoint</span>
-          Current state-aware SmolVLA + DHBActionHead rollouts
+          Archived state-aware SmolVLA + DHBActionHead rollouts
         </div>
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:1rem; margin-bottom:1.25rem;">
           <div class="video-card">
@@ -1173,7 +1246,7 @@
               <source src="assets/smolvla_dhb_smoke_success_0cm.mp4" type="video/mp4" />
             </video>
             <div class="video-label dhb">
-              Current DHB head at 0 cm, <code>demo_0</code> &mdash; <strong>SUCCESS</strong>
+              Archived DHB head at 0 cm, <code>demo_0</code> &mdash; <strong>SUCCESS</strong>
             </div>
           </div>
           <div class="video-card">
@@ -1181,7 +1254,7 @@
               <source src="assets/smolvla_dhb_smoke_success_3cm.mp4" type="video/mp4" />
             </video>
             <div class="video-label dhb">
-              Current DHB head at +3 cm, <code>demo_0</code> &mdash; <strong>SUCCESS</strong>
+              Archived DHB head at +3 cm, <code>demo_0</code> &mdash; <strong>SUCCESS</strong>
             </div>
           </div>
           <div class="video-card">
@@ -1189,13 +1262,13 @@
               <source src="assets/smolvla_dhb_smoke_fail_0cm.mp4" type="video/mp4" />
             </video>
             <div class="video-label naive">
-              Current DHB head at 0 cm, <code>demo_1</code> &mdash; <strong>FAIL</strong> due to final placement miss
+              Archived DHB head at 0 cm, <code>demo_1</code> &mdash; <strong>FAIL</strong> due to final placement miss
             </div>
           </div>
         </div>
 
         <p class="has-text-grey is-size-7 mb-4">
-          These are the newer smoke-diagnostic rollouts used for the current DHB action-head readout.
+          These archived smoke-diagnostic rollouts were used for the earlier DHB action-head readout.
           The main pattern is not random instability: <code>demo_0</code> is consistently recoverable, while the harder
           demos fail late with a structured under-reach in <code>Y</code> and a smaller <code>Z</code> bias near placement.
         </p>
@@ -1205,7 +1278,7 @@
           <code>panda_hand_tcp</code> frame) &rarr; robosuite JOINT_POSITION PD (kp=150) &rarr; MuJoCo physics.
           Left: agentview. Right: eye-in-hand.
           DHB-XR videos are <strong>open-loop geometric adaptation</strong>, not closed-loop VLA inference.
-          Base SmolVLA receives out-of-distribution action tokens at the shifted position; the newer
+          Base SmolVLA receives out-of-distribution action tokens at the shifted position; the archived
           SmolVLA + DHB action-head path partially recovers but is not yet robust across all demos.
         </p>
 
