@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import json
 import random
+import sys
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -23,10 +24,15 @@ import numpy as np
 from libero.libero import benchmark, get_libero_path
 from libero.libero.envs import OffScreenRenderEnv
 
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
 from dhb_xr.integration.vla.libero import (
     build_libero_state_vector_from_obs,
     build_state_history_window,
 )
+
 from scripts.libero_rollout_transport_miner import _extract_action_stats, _normalize_raw_action
 
 try:
@@ -193,6 +199,18 @@ def _set_freejoint_pos(env, joint_name: str, pos: np.ndarray) -> None:
 
 def _refresh_obs(env) -> dict[str, Any]:
     return env.regenerate_obs_from_state(env.get_sim_state())
+
+
+def _clear_done_flag(env) -> None:
+    """Allow reset-to-state replay after a previous row terminated the wrapper episode."""
+
+    for candidate in (env, getattr(env, "env", None)):
+        if candidate is None:
+            continue
+        if hasattr(candidate, "done"):
+            setattr(candidate, "done", False)
+        if hasattr(candidate, "timestep"):
+            setattr(candidate, "timestep", 0)
 
 
 def _apply_attached_object(
@@ -506,6 +524,7 @@ def execute_plan_row(
         )
 
     obs = env.regenerate_obs_from_state(np.asarray(sim_state, dtype=np.float64))
+    _clear_done_flag(env)
     robot = env.env.robots[0]
     _setup_controller(robot, output_max=output_max, kp=kp)
 
@@ -550,6 +569,7 @@ def execute_plan_row(
     min_target_xy_mm = _target_xy_mm(start_snapshot, object_target_field)
     target_reached_step = None
     reward = 0.0
+    terminated = False
 
     q_seed = np.zeros(robot_model.nq, dtype=np.float64)
     q_seed[:7] = np.asarray(robot._joint_positions, dtype=np.float64)
@@ -636,6 +656,7 @@ def execute_plan_row(
             full_action = np.concatenate([joint_action, [1.0]])
             obs, r, done, info = env.step(full_action)
             reward = max(reward, float(r))
+            terminated = bool(done)
             if attach_object_to_ee and attach_joint_name is not None and attach_offset is not None:
                 obs = _apply_attached_object(
                     env,
@@ -643,6 +664,8 @@ def execute_plan_row(
                     ee_pos=np.asarray(obs["robot0_eef_pos"], dtype=np.float64),
                     object_minus_ee=attach_offset,
                 )
+            if terminated:
+                break
 
         snapshot = _relative_snapshot(obs["robot0_eef_pos"], scene_refs, env=env)
         target_xy_mm = _target_xy_mm(snapshot, object_target_field)
@@ -670,6 +693,8 @@ def execute_plan_row(
                 **snapshot,
             }
         )
+        if terminated:
+            break
 
     release_tail_count = max(0, int(release_tail_steps))
     if target_reached_step is not None and release_tail_count > 0:
@@ -705,9 +730,15 @@ def execute_plan_row(
                     "label": "attached_transport_release",
                 }
             )
-            for _ in range(max(1, int(substeps))):
-                obs, r, done, info = env.step(np.concatenate([np.zeros(7, dtype=np.float32), [-1.0]]))
-                reward = max(reward, float(r))
+            if not terminated:
+                for _ in range(max(1, int(substeps))):
+                    obs, r, done, info = env.step(
+                        np.concatenate([np.zeros(7, dtype=np.float32), [-1.0]])
+                    )
+                    reward = max(reward, float(r))
+                    terminated = bool(done)
+                    if terminated:
+                        break
 
     final_snapshot = _relative_snapshot(obs["robot0_eef_pos"], scene_refs, env=env)
     final_target_xy_mm = _target_xy_mm(final_snapshot, object_target_field)
@@ -722,6 +753,7 @@ def execute_plan_row(
         "object_target_field": object_target_field,
         "num_actions": int(len(raw_actions)),
         "num_executed_actions": int(len(executed_actions)),
+        "terminated": bool(terminated),
         "closed_loop_recompute": bool(closed_loop_recompute),
         "transport_profile": str(transport_profile),
         "lift_height_mm": float(lift_height_mm),

@@ -727,3 +727,14 @@ explicitly references them. They are kept for provenance only.
   increased IK or regressed close quality. Use this as a data-mechanism
   positive, not as a solved result; next mine/generate post-close transport
   positives from the best corrected close cases.
+- Post-close transport/release status:
+  `scripts/libero_rollout_transport_miner.py` now emits the full object-pair
+  target contract needed by the current training setup, and
+  `scripts/libero_postcontact_correction_rollout.py` clears stale done/timestep
+  state after reset-to-state replay. Direct training on mined failed pushes is
+  negative, and the relaxed `75 mm` attached replay continuation is only a
+  partial contact-preservation result: step `25` gives `0/2` success, `2/2`
+  close, average min EE-bowl XY `9.3 mm`, but no release; step `50` regresses.
+  Stop repeating epochs on these rows. The next meaningful gap is to audit the
+  live streaming/decode contract for release/transport and then generate
+  stricter true-positive post-contact reset/replay data.

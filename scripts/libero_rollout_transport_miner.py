@@ -54,6 +54,26 @@ def _object_pos_key(object_target_field: str) -> str | None:
     return f"{object_name}_pos"
 
 
+def _object_pair_to_eef_targets(
+    trace_row: dict[str, Any] | None,
+    object_target_field: str,
+) -> tuple[list[float], list[float]]:
+    """Return generic object->EEF and target->EEF vectors for object-minus-target fields."""
+
+    zero = [0.0, 0.0, 0.0]
+    if not trace_row or "_minus_" not in object_target_field:
+        return zero, zero
+    object_token, target_token = object_target_field.split("_minus_", 1)
+
+    def _neg_ee_minus(token: str) -> list[float]:
+        value = _vector3(trace_row.get(f"ee_minus_{token}"))
+        if value is None:
+            return zero
+        return [-float(value[0]), -float(value[1]), -float(value[2])]
+
+    return _neg_ee_minus(object_token), _neg_ee_minus(target_token)
+
+
 def _coupling_stats(rows: list[dict[str, Any]], *, object_key: str | None) -> dict[str, float | None]:
     object_points: list[list[float]] = []
     ee_points: list[list[float]] = []
@@ -424,6 +444,11 @@ def policy_manifest_rows(
         for sample in mined_result.get("samples", [])
         if isinstance(sample, dict) and isinstance(sample.get("step"), int)
     }
+    trace_by_step = {
+        row["step"]: row
+        for row in rollout.get("step_trace", [])
+        if isinstance(row, dict) and isinstance(row.get("step"), int)
+    }
     max_step_m = float(max_action_step_mm) / 1000.0
     horizon = max(1, int(correction_steps))
     rows: list[dict[str, Any]] = []
@@ -438,6 +463,8 @@ def policy_manifest_rows(
 
         target_action: list[list[float]] = []
         target_object: list[list[float]] = []
+        target_object_to_eef: list[list[float]] = []
+        target_target_to_eef: list[list[float]] = []
         target_gripper_state: list[list[float]] = []
         target_close: list[float] = []
         train_mask: list[float] = []
@@ -464,6 +491,12 @@ def policy_manifest_rows(
                 ]
                 target_action.append(_normalize_raw_action(raw_action, action_stats))
                 target_object.append(vector.astype(np.float32).tolist())
+                object_to_eef, target_to_eef = _object_pair_to_eef_targets(
+                    trace_by_step.get(step),
+                    str(mined_result.get("object_target_field") or sample["object_target_field"]),
+                )
+                target_object_to_eef.append(object_to_eef)
+                target_target_to_eef.append(target_to_eef)
                 target_gripper_state.append([1.0])
                 target_close.append(1.0)
                 train_mask.append(1.0)
@@ -471,6 +504,8 @@ def policy_manifest_rows(
             else:
                 target_action.append([0.0] * 7)
                 target_object.append([0.0, 0.0, 0.0])
+                target_object_to_eef.append([0.0, 0.0, 0.0])
+                target_target_to_eef.append([0.0, 0.0, 0.0])
                 target_gripper_state.append([1.0])
                 target_close.append(1.0)
                 train_mask.append(0.0)
@@ -492,8 +527,11 @@ def policy_manifest_rows(
                 "target_action": target_action,
                 "target_action_normalized": True,
                 "target_object_target": target_object,
+                "target_object_to_eef": target_object_to_eef,
+                "target_target_to_eef": target_target_to_eef,
                 "target_gripper_state": target_gripper_state,
                 "target_close": target_close,
+                "target_contact_release_phase": [0 for _ in range(n_use)],
                 "train_mask": train_mask,
                 "labels": labels,
                 "object_target_xy_mm": object_target_xy_mm,

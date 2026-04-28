@@ -2658,3 +2658,31 @@ Updated immediate priority:
 3. Preserve the object-free deployment contract: the phase token or phase label
    can be supervised offline, but rollout should still execute learned outputs
    from observation/state/history, not object-distance gates.
+
+2026-04-28 late-block update:
+
+- Disk is healthy after cleanup: about `373G` free on the working filesystem.
+- The post-close transport miner and reset/replay harness are now stabilized:
+  mined transport manifests include object-target, object-to-EEF,
+  target-to-EEF, and contact/release phase targets; reset-to-state replay clears
+  stale terminated wrapper state before executing a row.
+- Direct training on mined failed-push transport rows is negative. It preserves
+  some close behavior but does not produce target placement or release.
+- A relaxed `75 mm` attached replay gate produced one `+3 cm` release-tail
+  manifest, but the continuation is not enough: step `25` preserves contact,
+  step `50` regresses, and neither checkpoint reopens or succeeds.
+
+Next 10-hour execution priority:
+
+1. Stop blind continuation training on the current transport/release manifests.
+2. Debug the streaming contract first: confirm whether release/transport logits
+   and action channels are present in live chunks, whether train masks cover
+   release rows, and whether any head is accidentally frozen or decoded from the
+   wrong source.
+3. If the live contract is correct, focus on stricter positive data generation:
+   reset/replay rows must actually reach the target window with low IK and
+   export true release-ready states. Relaxed near-miss rows should remain
+   auxiliary, not the main training signal.
+4. Only launch another bounded live sweep after a concrete bug or a clearly
+   stronger positive dataset is found. The success claim should not rely on
+   repeated epochs over failed pushes.

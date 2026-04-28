@@ -651,3 +651,77 @@ post-close transport/release after a good close. Next work should mine
 trace-enabled post-close transport from the best corrected close cases and
 generate attached-state target-reaching positives, instead of further tuning
 contact thresholds or repeating the same correction run.
+
+## Post-Close Transport Mining And Reset Replay
+
+The best contact-corrected checkpoint was re-run with policy traces and sim-state
+traces at `0 cm` and `+3 cm`. It still gives the cleanest near-contact evidence:
+the `+3 cm` case closes at approximately `[-7.1, -15.9, 25.1] mm` relative to
+the bowl, while both cases remain about `11-14 cm` from the plate after close.
+
+The transport miner now exports the full object-pair training contract for
+post-close correction rows:
+
+- `target_object_target`
+- `target_object_to_eef`
+- `target_target_to_eef`
+- `target_contact_release_phase`
+
+This fixed the training-side mismatch where object-pair supervision expected all
+configured fields but the mined transport manifest only contained the
+object-target vector.
+
+Reset-to-state replay also now clears terminated wrapper state after
+`regenerate_obs_from_state`. This matters because post-close rows can be replayed
+from saved simulator states after a previous row has already ended the wrapper
+episode; without clearing `done` and `timestep`, later rows could silently
+terminate early and export misleading correction data.
+
+## Transport Continuation Results
+
+A direct continuation on the mined failed-transport pushes was trained from the
+best contact-corrected step-50 checkpoint:
+
+`_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_transportcorr_combined_from_contactcorr50_v2`
+
+Live evaluation is negative. The model preserves close in most cases but does
+not learn reliable held-object transport or release:
+
+| Checkpoint | Success | Close | Avg min EE-bowl XY mm | Avg min EE-bowl XYZ mm | Verdict |
+| ---: | ---: | ---: | ---: | ---: | --- |
+| step 25 | `0/2` | `2/2` | `37.9` | `80.3` | weak contact, little object motion |
+| step 50 | `0/2` | `2/2` | `18.3` | `52.2` | best contact, still no target progress/release |
+| step 75 | `0/2` | `2/2` | `28.3` | `67.6` | regresses |
+| step 100 | `0/2` | `2/2` | `30.5` | `67.7` | regresses |
+
+Conclusion: do not continue direct training on mined failed pushes. These rows
+are useful diagnostics, but the target actions are not clean positives.
+
+## Attached Replay With Relaxed Target Gate
+
+Simulator reset/replay was then used to generate attached-object post-contact
+positives. The strict `45 mm` placement gate produced no target-reaching rows.
+A relaxed `75 mm` gate on the `+3 cm` near-contact state produced one usable
+row, exported as:
+
+`_workspace/paper_eval/2026-04-28_steps_50_ep1p3_postcontact_attached_lift_gate75_manifest.jsonl`
+
+This manifest contributes `46` supervised steps: `38` attached transport steps
+and `8` release-tail steps. It is not a solved demonstration because the
+environment reward remains `0` and success is false; it is only a relaxed-gate
+augmentation signal.
+
+The bounded continuation from contact-corrected step 50 is mixed-negative:
+
+`_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_gate75release_from_contactcorr50`
+
+| Checkpoint | Success | Close | Avg min EE-bowl XY mm | Avg min EE-bowl XYZ mm | Avg IK fails | Verdict |
+| ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| step 25 | `0/2` | `2/2` | `9.3` | `36.7` | `5.0` | preserves/improves contact, no release |
+| step 50 | `0/2` | `2/2` | `32.2` | `71.5` | `0.0` | contact regresses, no release |
+
+Conclusion: the relaxed gate is too weak to drive a successful integrated
+policy. More epochs on this branch are unlikely to help. The next productive
+step is not another continuation, but debugging the live streaming contract for
+release/transport predictions and generating stricter true-positive
+post-contact data.

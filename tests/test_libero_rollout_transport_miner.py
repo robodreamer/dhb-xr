@@ -125,10 +125,34 @@ def test_builds_policy_manifest_rows_with_normalized_corrective_actions() -> Non
             }
         ],
         "step_trace": [
-            {"step": 0, "bowl_minus_plate": [0.12, 0.0, 0.0], "observed_state_gripper": 0.04},
-            {"step": 1, "bowl_minus_plate": [0.12, 0.0, 0.0], "observed_state_gripper": 0.01},
-            {"step": 2, "bowl_minus_plate": [0.08, 0.0, 0.0], "observed_state_gripper": 0.01},
-            {"step": 3, "bowl_minus_plate": [0.06, 0.0, 0.0], "observed_state_gripper": 0.01},
+            {
+                "step": 0,
+                "bowl_minus_plate": [0.12, 0.0, 0.0],
+                "ee_minus_bowl": [0.0, 0.0, 0.0],
+                "ee_minus_plate": [0.12, 0.0, 0.0],
+                "observed_state_gripper": 0.04,
+            },
+            {
+                "step": 1,
+                "bowl_minus_plate": [0.12, 0.0, 0.0],
+                "ee_minus_bowl": [0.01, 0.02, 0.03],
+                "ee_minus_plate": [0.13, 0.02, 0.03],
+                "observed_state_gripper": 0.01,
+            },
+            {
+                "step": 2,
+                "bowl_minus_plate": [0.08, 0.0, 0.0],
+                "ee_minus_bowl": [0.04, 0.05, 0.06],
+                "ee_minus_plate": [0.12, 0.05, 0.06],
+                "observed_state_gripper": 0.01,
+            },
+            {
+                "step": 3,
+                "bowl_minus_plate": [0.06, 0.0, 0.0],
+                "ee_minus_bowl": [0.07, 0.08, 0.09],
+                "ee_minus_plate": [0.13, 0.08, 0.09],
+                "observed_state_gripper": 0.01,
+            },
         ],
     }
     result = transport_miner.mine_transport_samples(
@@ -166,6 +190,9 @@ def test_builds_policy_manifest_rows_with_normalized_corrective_actions() -> Non
     assert rows[0]["target_action"][2][0] == -0.8999999761581421
     assert rows[0]["target_action"][3][0] == -0.75
     np.testing.assert_allclose(rows[0]["target_object_target"][2], [0.08, 0.0, 0.0])
+    np.testing.assert_allclose(rows[0]["target_object_to_eef"][2], [-0.04, -0.05, -0.06])
+    np.testing.assert_allclose(rows[0]["target_target_to_eef"][2], [-0.12, -0.05, -0.06])
+    assert rows[0]["target_contact_release_phase"] == [0, 0, 0, 0]
 
 
 def test_ignores_preclose_target_ready_states() -> None:
