@@ -331,6 +331,7 @@ def execute_plan_row(
     policy_trace_dir: Path | None = None,
     manifest_rows: list[dict[str, Any]] | None = None,
     action_stats: dict[str, Any] | None = None,
+    export_only_target_reached: bool = False,
     action_horizon: int = 8,
     state_history_window: int = 4,
 ) -> dict[str, Any]:
@@ -540,6 +541,10 @@ def execute_plan_row(
         and manifest_rows is not None
         and action_stats is not None
         and policy_records
+        and (
+            not bool(export_only_target_reached)
+            or result.get("target_reached_step") is not None
+        )
     ):
         _export_policy_trace_chunks(
             row=row,
@@ -584,6 +589,15 @@ def main() -> None:
     parser.add_argument("--save-policy-trace-dir")
     parser.add_argument("--save-policy-manifest-jsonl")
     parser.add_argument("--action-stats-json")
+    parser.add_argument(
+        "--export-only-target-reached",
+        action="store_true",
+        help=(
+            "When exporting policy-trace positives, skip replay rows that did "
+            "not reach the target gate. Use for DAgger-style correction data "
+            "so failed replays do not become positive transport supervision."
+        ),
+    )
     parser.add_argument("--action-horizon", type=int, default=8)
     parser.add_argument("--state-history-window", type=int, default=4)
     args = parser.parse_args()
@@ -655,6 +669,7 @@ def main() -> None:
                         policy_trace_dir=policy_trace_dir,
                         manifest_rows=manifest_rows,
                         action_stats=action_stats,
+                        export_only_target_reached=bool(args.export_only_target_reached),
                         action_horizon=max(1, int(args.action_horizon)),
                         state_history_window=max(1, int(args.state_history_window)),
                     )
@@ -685,6 +700,7 @@ def main() -> None:
         ),
         "policy_manifest_jsonl": args.save_policy_manifest_jsonl,
         "policy_manifest_rows": int(len(manifest_rows)),
+        "export_only_target_reached": bool(args.export_only_target_reached),
         "results": results,
     }
     out = Path(args.save_json)
