@@ -1776,3 +1776,26 @@ Story implication:
   explicit. The evidence gap remains empirical: demonstrate that DHB-XR learns
   the broadened successful lift/transport/release positives better than the
   matched regular action head.
+
+2026-04-28 broad lift-transport continuation update:
+
+- The next broader attached-positive run used `65` successful offline
+  lift/carry/lower policy-trace rows across step-50 and step-100 source
+  checkpoints, two episodes, and `0 cm`/`+3 cm` offsets.
+- This improved the best stable transport metric but did not solve full
+  placement. The best checkpoint, step `50`, reaches average final bowl-plate
+  XY `96.2 mm` with `0` average IK failures across the controlled `0 cm` and
+  `+3 cm` cases. The narrow lift run's best stable checkpoint was about
+  `122.6 mm`, so the broader positives matter. However, later checkpoints
+  overfit or create IK, and none of the checkpoints produce a clean full-task
+  success.
+
+Story implication:
+
+- The story is now more concrete but still bounded. We can honestly say that
+  simulator-assisted attached lift/transport augmentation improves the
+  direction of learned object transport, while also showing that the current
+  objective/data diversity is insufficient for a paper-safe pick-place claim.
+  The next decisive story gap is a matched comparison on a larger, more diverse
+  successful augmentation set: DHB-XR action tokens versus a regular action
+  head, both trained on the same lift/transport/release positives.

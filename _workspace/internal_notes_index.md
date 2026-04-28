@@ -36,9 +36,13 @@ Latest active result to preserve:
   extend this exact 20-chunk warm-start loop; generate broader target-reaching
   attached positives or revisit fresh/full dataset training. The latest
   lift-transport audit fixed the missing-Z attached-positive labels, but the
-  small two-manifest continuation still failed the no-gate placement gate, so
-  broad regenerated augmentation plus a matched regular-head control is the
-  active next step.
+  small two-manifest continuation still failed the no-gate placement gate. A
+  broader `65`-row lift-transport continuation improved the best stable final
+  bowl-plate XY to `96.2 mm` with `0` average IK failures at step `50`, but it
+  is still not a full-task success and later checkpoints overfit. Preserve the
+  broad step-50 checkpoint as the current diagnostic transport trend; the
+  active next step is trace diagnosis plus broader/diverse augmentation and a
+  matched regular-head control.
 - Latest community-code check:
   VLA Foundry and TRI-LBM support explicit action/proprio/gripper field
   contracts, chunk past/future masks, and action-type-aware normalization as
@@ -632,3 +636,11 @@ explicitly references them. They are kept for provenance only.
   `_workspace/paper_eval/2026-04-28_attached_transport_policy_manifest_ep1_offset3.jsonl`
   (`30` rows). Next step is a narrow closed-transport continuation from active
   closed-transport `steps_300`; keep runtime deployment object-gate-free.
+- Latest lift-transport augmentation status:
+  `_workspace/paper_eval/2026-04-28_attached_replay_lifttransport_gated_step50_100_manifest.jsonl`
+  combines `65` successful attached lift/carry/lower rows across step-50 and
+  step-100 source checkpoints. The broad continuation run is
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_objectpair_lifttransport_broad_fromdagger100`.
+  Its step-50 checkpoint is the current best diagnostic transport trend
+  (`96.2 mm` average final bowl-plate XY, `0` average IK), but it is not solved;
+  do not continue by simply adding epochs.

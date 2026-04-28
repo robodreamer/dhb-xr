@@ -153,3 +153,49 @@ Updated next step:
    gates before it becomes training data.
 3. Compare the same augmented positives against the matched regular action head
    before claiming DHB-XR transport superiority.
+
+## Broader Lift-Transport Continuation
+
+The narrow two-manifest result above was expanded with additional successful
+offline lift-transport replays from both the step-50 and step-100 source
+checkpoints. The combined manifest is:
+
+`_workspace/paper_eval/2026-04-28_attached_replay_lifttransport_gated_step50_100_manifest.jsonl`
+
+It contains `65` rows:
+
+- step-50, episode `0`, offset `0 cm`: `15` target-reaching rows.
+- step-50, episode `1`, offset `+3 cm`: `18` target-reaching rows.
+- step-100, episode `0`, offset `0 cm`: `24` target-reaching rows.
+- step-100, episode `1`, offset `+3 cm`: `8` target-reaching rows.
+
+The broader continuation run is:
+
+`_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_objectpair_lifttransport_broad_fromdagger100`
+
+Controlled no-gate sweep, `rollout_seed=70`, cases `0:0` and `1:+3 cm`:
+
+| Step | Avg min EE-bowl XY mm | Avg min plate XY mm | Avg final bowl-plate XY mm | Avg IK fails | Verdict |
+| ---: | ---: | ---: | ---: | ---: | --- |
+| 50 | 22.7 | 107.1 | 96.2 | 0.0 | best current transport trend, still no placement |
+| 100 | 13.1 | 80.0 | 114.4 | 2.0 | good grasp proximity, worse final transport |
+| 150 | 16.5 | 75.5 | 117.8 | 13.5 | increasing IK |
+| 200 | 35.0 | 43.3 | 120.9 | 19.5 | reaches plate area in one case, unstable |
+
+Conclusion: broadening the attached lift positives helped relative to the
+narrow lift run. The best checkpoint improves average final bowl-plate XY from
+about `122.6 mm` to `96.2 mm` while keeping `0` IK failures. It is still not a
+paper-safe full-task result because it does not produce reliable placement or
+release, and later checkpoints overfit into IK-heavy behavior. This is a data
+diversity and objective-design gap, not an indication to keep training this
+same run for more epochs.
+
+Updated next step:
+
+1. Preserve the broad step-50 checkpoint as the current best diagnostic
+   transport trend, but do not claim success from it.
+2. Run targeted traces on step 50 to inspect whether improvement comes from
+   genuine lift/carry or residual sliding.
+3. Generate the next augmentation set with more diverse source episodes,
+   target placements, and phase/action-type normalization, then compare against
+   a matched regular action head.
