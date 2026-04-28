@@ -34,7 +34,11 @@ Latest active result to preserve:
   object-pair supervision is wired and trainable, but the current small
   policy-only continuation does not produce reliable target transport. Do not
   extend this exact 20-chunk warm-start loop; generate broader target-reaching
-  attached positives or revisit fresh/full dataset training.
+  attached positives or revisit fresh/full dataset training. The latest
+  lift-transport audit fixed the missing-Z attached-positive labels, but the
+  small two-manifest continuation still failed the no-gate placement gate, so
+  broad regenerated augmentation plus a matched regular-head control is the
+  active next step.
 - `dhb_starvla_qwen_fresh_actionxyz_from2000/steps_400` with
   `--trajectory-source direct_action` and
   `--direct-action-xyz-scale 1.0 1.35 1.15` reaches `5/5` across

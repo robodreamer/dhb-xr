@@ -776,6 +776,7 @@ def main() -> None:
         with torch.inference_mode():
             result = model.predict_trajectory([example])
 
+        direct_action_debug = {}
         if args.trajectory_source == "direct_action":
             normalized_actions = result.get("normalized_actions")
             if normalized_actions is None:
@@ -807,6 +808,21 @@ def main() -> None:
                 ):
                     raw_actions = raw_actions.copy()
                     raw_actions[:, :3] = raw_actions[:, :3] * closed_xyz_scale + closed_xyz_bias_m
+            raw_xyz = np.asarray(raw_actions[:, :3], dtype=np.float32)
+            norm_xyz = np.asarray(normalized_actions[0][:, :3], dtype=np.float32)
+            direct_action_debug = {
+                "normalized_action_xyz_first": norm_xyz[0].tolist(),
+                "normalized_action_xyz_mean": norm_xyz.mean(axis=0).tolist(),
+                "raw_action_xyz_first_m": raw_xyz[0].tolist(),
+                "raw_action_xyz_mean_m": raw_xyz.mean(axis=0).tolist(),
+                "raw_action_xyz_norm_mean_mm": float(
+                    np.linalg.norm(raw_xyz, axis=-1).mean() * 1000.0
+                ),
+                "raw_action_xyz_norm_last_mm": float(
+                    np.linalg.norm(raw_xyz[-1]) * 1000.0
+                ),
+                "closed_direct_action_scale_active": bool(last_effective_grip > 0.0),
+            }
             positions, quaternions = integrate_delta_action_chunk(
                 start_pos=ee_pos_live,
                 start_quat_wxyz=np.asarray(obs["robot0_eef_quat"], dtype=np.float32),
@@ -948,6 +964,7 @@ def main() -> None:
                 "first_stabilized_pos": prepared["first_stabilized_pos"],
                 "first_gt_pos": first_gt_pos,
                 "trajectory_source": args.trajectory_source,
+                **direct_action_debug,
                 **object_target_debug,
                 **gripper_debug,
             }

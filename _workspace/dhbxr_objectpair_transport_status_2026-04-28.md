@@ -102,3 +102,54 @@ manifest. The next step should be broader and cleaner data generation:
 4. Train release only after transport has a clean target-reaching gate; current
    no-reopen behavior is expected because this continuation deliberately kept
    release/contact heads frozen.
+
+## Lift-Transport Label Audit
+
+The next failure mode was a supervision bug in the attached-positive export, not
+a gripper sign problem. The original attached transport rows had effectively
+zero raw Z action in the closed phase, so the model was trained to drag the
+attached object laterally rather than lift, carry, and lower it.
+
+`scripts/libero_postcontact_correction_rollout.py` now has a generic offline
+`lift_transport_place` profile for data generation. It raises an attached object
+to a clearance height, carries laterally, and lowers near the target. This stays
+outside deployment: no object-distance gates or environment-specific gripper
+logic are added to the policy path.
+
+Two new replay manifests were generated:
+
+- `_workspace/paper_eval/2026-04-28_steps100_ep0_attached_replay_lifttransport_gated_manifest.jsonl`
+- `_workspace/paper_eval/2026-04-28_steps100_ep1_offset3_attached_replay_lifttransport_gated_manifest.jsonl`
+
+The manifest audit confirms non-zero lift/lower supervision. Raw Z action spans
+about `-3.7 mm` to `+8.0 mm` per action, while the original no-lift rows were
+near zero in raw Z.
+
+The narrow continuation run is:
+
+`_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_objectpair_lifttransport_fromdagger100`
+
+Controlled no-gate sweep, `rollout_seed=70`, cases `0:0` and `1:+3 cm`:
+
+| Step | Avg min EE-bowl XY mm | Avg min plate XY mm | Avg final bowl-plate XY mm | Avg IK fails | Verdict |
+| ---: | ---: | ---: | ---: | ---: | --- |
+| 50 | 27.8 | 67.7 | 122.6 | 0.0 | stable but no placement gain |
+| 100 | 19.3 | 96.7 | 113.9 | 28.5 | slight final gain, unacceptable IK |
+| 150 | 29.8 | 104.0 | 131.5 | 44.0 | regressed |
+
+Conclusion: the lift/lower label fix is necessary and should be kept, but this
+small warm-start continuation is not a breakthrough. The branch improves the
+training signal quality and confirms the data-generation path, yet it does not
+produce a clean embodied placement result. Do not spend more unattended time on
+closed-gain or more epochs for this exact run.
+
+Updated next step:
+
+1. Move from narrow policy-trace warm-starts to a broader regenerated training
+   set that includes successful grasp-attached lift/transport/lower positives
+   across multiple episodes and offsets.
+2. Keep the current lift-transport generator as offline augmentation
+   infrastructure, and require each exported row to pass target-window and IK
+   gates before it becomes training data.
+3. Compare the same augmented positives against the matched regular action head
+   before claiming DHB-XR transport superiority.

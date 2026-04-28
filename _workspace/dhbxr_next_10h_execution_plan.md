@@ -2446,3 +2446,33 @@ Updated immediate priority:
 4. Keep the guarded attached-transport step-100 checkpoint as evidence that the
    policy can preserve smooth reach and physically close in a plausible
    side-grasp geometry, not as the active full-task baseline.
+
+2026-04-28 lift-transport audit and hard stop:
+
+- Direct-action diagnostics exposed the closed-phase label problem: the
+  attached-positive rows mostly supervised lateral dragging, with near-zero raw
+  Z action.
+- Added an offline `lift_transport_place` profile to the post-contact replay
+  exporter. It creates generic lift, carry, and lower actions for attached
+  objects and records the profile in each result payload.
+- Generated fresh 0 cm and +3 cm lift-transport manifests from the guarded
+  attached-transport step-100 checkpoint. The manifests contain non-zero Z
+  actions and pass the policy-trace loader path.
+- A bounded continuation from the DAgger step-100 checkpoint trained to
+  `steps_150`, but the controlled no-gate sweep did not pass the placement
+  gate. Step `50` is stable but ends about `123 mm` from the plate on average;
+  step `100` improves one case but introduces `21-36` IK failures; step `150`
+  regresses further.
+
+Updated immediate priority:
+
+1. Keep the lift-transport generator and diagnostics; they fixed a real
+   supervision flaw.
+2. Stop this exact narrow warm-start loop. More closed gain or more epochs on
+   the same two lift manifests is unlikely to produce a paper-safe result.
+3. Prepare a broader regenerated augmentation/training path: multiple
+   episodes, multiple offsets, successful target-window rows only, full
+   lift/carry/lower Z supervision, and a matched regular-action-head control.
+4. If time allows before the next long training run, add validation that the
+   exported lift-transport chunks reconstruct target progress and action scale
+   correctly from the exact streaming policy-trace interface.

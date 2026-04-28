@@ -1728,3 +1728,29 @@ Story implication:
   next evidence should use stronger object/target conditioning and report
   physical close-vector pass, post-close coupling, target progress, and release
   proximity together.
+
+2026-04-28 lift-transport supervision update:
+
+- A direct audit found that the first attached-positive rows taught nearly
+  zero-Z lateral transport. That explains the observed dragging behavior and is
+  a concrete implementation gap rather than a theoretical failure of the
+  DHB-XR story.
+- The offline post-contact replay exporter now supports a generic
+  lift/carry/lower transport profile. It is simulator-assisted augmentation
+  only; deployment still uses learned observations, state history, action
+  tokens, and gripper heads without object-distance gates.
+- New lift-transport manifests for `0 cm` and `+3 cm` offsets produce non-zero
+  Z supervision, but a small warm-start continuation still fails the no-gate
+  placement benchmark. The best stable checkpoint keeps `0` IK failures but
+  ends about `123 mm` from the plate; the checkpoint with better final distance
+  incurs many IK failures.
+
+Story implication:
+
+- This strengthens, rather than weakens, the paper story boundary. We can show
+  that the infrastructure is now capable of generating spatially adapted
+  grasp-attached trajectories with lift/lower structure, but the current
+  evidence does not yet validate the full low-data transport claim. The next
+  compelling experiment must scale this augmentation beyond two narrow
+  manifests and compare DHB-XR against a matched regular action head on the
+  same successful augmented trajectories.

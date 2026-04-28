@@ -293,15 +293,44 @@ def _closed_loop_action(
     max_action_step_mm: float,
     correction_gain: float,
     include_z: bool,
+    transport_profile: str = "target_vector",
+    lift_height_mm: float = 45.0,
+    place_z_mm: float = 5.0,
+    lower_xy_mm: float = 45.0,
+    lift_steps: int = 8,
 ) -> np.ndarray:
     target_vec = snapshot.get(field)
     if target_vec is None:
         raise KeyError(f"Snapshot does not contain object target field '{field}'")
-    desired = -np.asarray(target_vec, dtype=np.float32).reshape(-1)[:3]
-    if not include_z:
-        desired[2] = 0.0
-    desired = desired * max(0.0, float(correction_gain))
-    per_step = desired / float(max(1, int(remaining_steps)))
+
+    target = np.asarray(target_vec, dtype=np.float32).reshape(-1)[:3]
+    remaining = max(1, int(remaining_steps))
+    correction_gain = max(0.0, float(correction_gain))
+    transport_profile = str(transport_profile or "target_vector")
+    if transport_profile == "target_vector":
+        desired = -target
+        if not include_z:
+            desired[2] = 0.0
+        per_step = desired * correction_gain / float(remaining)
+    elif transport_profile == "lift_transport_place":
+        xy_mm = float(np.linalg.norm(target[:2]) * 1000.0)
+        z_target = (
+            float(place_z_mm) / 1000.0
+            if xy_mm <= float(lower_xy_mm)
+            else float(lift_height_mm) / 1000.0
+        )
+        per_step = np.zeros((3,), dtype=np.float32)
+        per_step[:2] = -target[:2] * correction_gain / float(remaining)
+        z_remaining = remaining
+        if target[2] < z_target:
+            z_remaining = max(1, min(remaining, int(lift_steps)))
+        per_step[2] = (z_target - float(target[2])) * correction_gain / float(z_remaining)
+    else:
+        raise ValueError(
+            "transport_profile must be 'target_vector' or 'lift_transport_place', "
+            f"got {transport_profile!r}"
+        )
+
     max_step_m = max(0.0, float(max_action_step_mm)) / 1000.0
     if max_step_m > 0.0:
         per_step = np.clip(per_step, -max_step_m, max_step_m)
@@ -327,6 +356,11 @@ def execute_plan_row(
     max_action_step_mm: float,
     correction_gain: float,
     include_z: bool,
+    transport_profile: str,
+    lift_height_mm: float,
+    place_z_mm: float,
+    lower_xy_mm: float,
+    lift_steps: int,
     attach_object_to_ee: bool,
     policy_trace_dir: Path | None = None,
     manifest_rows: list[dict[str, Any]] | None = None,
@@ -418,6 +452,11 @@ def execute_plan_row(
                 max_action_step_mm=max_action_step_mm,
                 correction_gain=correction_gain,
                 include_z=include_z,
+                transport_profile=transport_profile,
+                lift_height_mm=lift_height_mm,
+                place_z_mm=place_z_mm,
+                lower_xy_mm=lower_xy_mm,
+                lift_steps=lift_steps,
             )
         else:
             pre_snapshot = _relative_snapshot(obs["robot0_eef_pos"], scene_refs, env=env)
@@ -516,6 +555,11 @@ def execute_plan_row(
         "num_actions": int(len(raw_actions)),
         "num_executed_actions": int(len(executed_actions)),
         "closed_loop_recompute": bool(closed_loop_recompute),
+        "transport_profile": str(transport_profile),
+        "lift_height_mm": float(lift_height_mm),
+        "place_z_mm": float(place_z_mm),
+        "lower_xy_mm": float(lower_xy_mm),
+        "lift_steps": int(lift_steps),
         "attach_object_to_ee": bool(attach_object_to_ee),
         "attachment_joint_name": attach_joint_name,
         "attachment_object_minus_ee": None
@@ -577,6 +621,21 @@ def main() -> None:
     parser.add_argument("--max-action-step-mm", type=float, default=10.0)
     parser.add_argument("--correction-gain", type=float, default=1.0)
     parser.add_argument("--include-z", action="store_true")
+    parser.add_argument(
+        "--transport-profile",
+        choices=("target_vector", "lift_transport_place"),
+        default="target_vector",
+        help=(
+            "Closed-loop correction profile. 'target_vector' preserves the "
+            "legacy object-target vector servo. 'lift_transport_place' first "
+            "raises the attached object to a generic clearance height, carries "
+            "laterally, then lowers near the target."
+        ),
+    )
+    parser.add_argument("--lift-height-mm", type=float, default=45.0)
+    parser.add_argument("--place-z-mm", type=float, default=5.0)
+    parser.add_argument("--lower-xy-mm", type=float, default=45.0)
+    parser.add_argument("--lift-steps", type=int, default=8)
     parser.add_argument(
         "--attach-object-to-ee",
         action="store_true",
@@ -665,6 +724,11 @@ def main() -> None:
                         max_action_step_mm=float(args.max_action_step_mm),
                         correction_gain=max(0.0, float(args.correction_gain)),
                         include_z=bool(args.include_z),
+                        transport_profile=str(args.transport_profile),
+                        lift_height_mm=float(args.lift_height_mm),
+                        place_z_mm=float(args.place_z_mm),
+                        lower_xy_mm=float(args.lower_xy_mm),
+                        lift_steps=max(1, int(args.lift_steps)),
                         attach_object_to_ee=bool(args.attach_object_to_ee),
                         policy_trace_dir=policy_trace_dir,
                         manifest_rows=manifest_rows,

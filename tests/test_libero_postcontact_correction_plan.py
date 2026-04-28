@@ -121,3 +121,39 @@ def test_rollout_attachment_name_helpers() -> None:
     assert correction_rollout._object_token_from_target_field("object") == "object"
     assert correction_rollout._body_name_from_ref("body:akita_black_bowl_1_main") == "akita_black_bowl_1_main"
     assert correction_rollout._body_name_from_ref("geom:akita_black_bowl_1_g0") is None
+
+
+def test_rollout_lift_transport_profile_lifts_before_lowering() -> None:
+    lift_action = correction_rollout._closed_loop_action(
+        {"bowl_minus_plate": [0.10, 0.0, 0.0]},
+        "bowl_minus_plate",
+        remaining_steps=20,
+        max_action_step_mm=10.0,
+        correction_gain=1.0,
+        include_z=False,
+        transport_profile="lift_transport_place",
+        lift_height_mm=40.0,
+        place_z_mm=5.0,
+        lower_xy_mm=45.0,
+        lift_steps=4,
+    )
+
+    np.testing.assert_allclose(lift_action[:3], [-0.005, 0.0, 0.01], atol=1e-7)
+    assert lift_action[6] == 1.0
+
+    lower_action = correction_rollout._closed_loop_action(
+        {"bowl_minus_plate": [0.02, 0.0, 0.04]},
+        "bowl_minus_plate",
+        remaining_steps=10,
+        max_action_step_mm=10.0,
+        correction_gain=1.0,
+        include_z=False,
+        transport_profile="lift_transport_place",
+        lift_height_mm=40.0,
+        place_z_mm=5.0,
+        lower_xy_mm=45.0,
+        lift_steps=4,
+    )
+
+    np.testing.assert_allclose(lower_action[:3], [-0.002, 0.0, -0.0035], atol=1e-7)
+    assert lower_action[6] == 1.0
