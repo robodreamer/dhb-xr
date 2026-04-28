@@ -32,6 +32,14 @@ short-loop alternatives:
   labels that train `dhb.contact_phase`, matching the existing
   `contact_release_phase` deployment decoder without object-distance runtime
   rules.
+- The release-head implementation has now been isolated. A low-LR joint
+  continuation did not learn the sparse release labels at all, but a
+  head-only release-balanced calibration did learn them: on the original
+  manifest, step `200` reaches `81.8%` release recall at open threshold `0.9`
+  with `2.3%` non-release false-open rate. Live rollout still does not reopen
+  because the bowl remains about `10-11 cm` from the plate and release
+  probability stays low. Therefore, release learning is no longer the active
+  bottleneck; transport-to-target is.
 
 Immediate next actions:
 
@@ -39,14 +47,17 @@ Immediate next actions:
    infrastructure and does not add deployment heuristics.
 2. Stop unattended sweeps over residual scale, loss weights, or more epochs on
    the same `65`-row warm-start objective.
-3. Regenerate attached positives with release tails only after actual
-   target-reaching replay success. Train the next branch with
-   `contact_phase_dim=3`, `contact_phase_field=dhb.contact_phase`, and
-   rollout `--model-gripper-decode-source contact_release_phase` so open/release
-   is learned from exported traces rather than hardcoded distances.
-4. Build the next branch around explicit post-contact phase/action-token
+3. Preserve `scripts/starvla_contact_phase_offline_probe.py` as the gate for
+   learned release-token calibration. Do not run long live sweeps unless the
+   offline gate shows both release recall and low non-release false-open rate.
+4. Regenerate attached positives with release tails only after actual
+   target-reaching replay success. Train with `contact_phase_dim=3`,
+   `contact_phase_field=dhb.contact_phase`, and rollout
+   `--model-gripper-decode-source contact_release_phase` so open/release is
+   learned from exported traces rather than hardcoded distances.
+5. Build the next branch around explicit post-contact phase/action-token
    supervision: hold/no-event, lift, carry, lower, and release.
-5. Only after that, run the matched regular-head control on the same data to
+6. Only after that, run the matched regular-head control on the same data to
    support a clean DHB-XR transport claim.
 
 ## 2026-04-25 Current Correction: Evaluation Contract Was the Root Cause

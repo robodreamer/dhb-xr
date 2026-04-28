@@ -675,3 +675,16 @@ explicitly references them. They are kept for provenance only.
   show why the next path should be phase/action-type normalization: `0.9`
   scale causes aggressive lift and IK failures, while `0.6` loses object
   motion. Stop scalar gain tuning.
+- Release-token calibration status:
+  `scripts/starvla_contact_phase_offline_probe.py` now validates learned
+  `dhb.contact_phase` predictions on supervised policy-trace rows. The low-LR
+  release-tail continuation did not learn release at all (`~0.13%` mean open
+  probability on true release steps at step `100`). A head-only
+  release-balanced calibration run did learn the token
+  (`_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_objectpair_phasehead_releasebal8_calib_fromphase100`);
+  step `200` gives `81.8%` release recall at open threshold `0.9` with `2.3%`
+  non-release false-open rate on the original manifest. Live rollout still
+  never reopens because the object remains about `10-11 cm` from the plate and
+  release probability stays low. Treat this as evidence that release is
+  mechanically trainable, while the active blocker remains held-object
+  transport/lower to a release-ready state.

@@ -417,3 +417,56 @@ data contract with the existing `contact_release_phase` rollout decoder, where
 close still comes from learned contact readiness and release comes from a
 learned release-phase probability. This remains generic: no deployment module
 uses object-specific distance thresholds.
+
+## Release-Phase Calibration Diagnostic
+
+The first release-tail run exposed a useful implementation issue. The
+release-tail manifest was generated correctly:
+
+`_workspace/paper_eval/2026-04-28_attached_replay_lifttransport_release8_lowz25_dhbtargets_phase3_manifest.jsonl`
+
+It contains `99` rows with `769` supervised invariant/action/contact-phase
+steps, including `88` learned release-phase steps. The initial continuation
+trained at the same small LR as the other VLA heads:
+
+`_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_objectpair_phaseobj9_release_lowz25_fromphase100`
+
+Live rollout still never reopened. The new offline probe
+`scripts/starvla_contact_phase_offline_probe.py` showed why: even on
+release-labeled training rows, step `100` assigned only about `0.13%` mean
+open probability to true release steps and had `0%` release-class accuracy.
+This was not a threshold/debounce bug; the newly initialized release head
+simply did not learn under the low-LR sparse-label setup.
+
+A head-only calibration branch was then trained from the stable phase-object
+step-100 checkpoint. It freezes the transport/action path and trains only
+`contact_phase_proj` and `contact_phase_head` on a release-balanced manifest:
+
+- config:
+  `configs/libero_dhbxr_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_objectpair_phasehead_releasebal8_calib.yaml`
+- manifest:
+  `_workspace/paper_eval/2026-04-28_attached_replay_lifttransport_release8_lowz25_dhbtargets_phase3_releasebal8_manifest.jsonl`
+- run:
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_objectpair_phasehead_releasebal8_calib_fromphase100`
+
+The calibration fixed on-distribution release-token learning. On the original
+unbalanced manifest, step `200` gives `94.3%` release recall at threshold
+`0.5`; at threshold `0.9`, it gives `81.8%` release recall with only `2.3%`
+non-release false-open rate.
+
+The live rollout with step `200` and open threshold `0.9` still did not reopen:
+
+`_workspace/paper_eval/2026-04-28_phasehead_releasebal8_step200_open09_ep0_ep1_seed70_sweep.json`
+
+Both controlled cases closed near the bowl with `0` IK failures, but final
+bowl-plate XY remained about `104-112 mm` and the rollout release probability
+never became high. This is a good negative result: learned release is now
+mechanically trainable, but the current transport policy does not reach a
+release-ready state. The active blocker is held-object transport/lower
+quality, not gripper polarity, thresholding, or the release decoder.
+
+Updated conclusion: keep the release-phase target and offline probe as generic
+infrastructure, but do not spend more time calibrating release until transport
+can bring the object inside the plate target window. The next transport branch
+needs broader target-reaching positives or a stronger phase/action-token
+objective, not another release-head-only run.
