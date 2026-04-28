@@ -2371,3 +2371,37 @@ Updated immediate priority:
    transport generation: initialize or stabilize the object as actually held,
    then execute target-reaching corrections and export those successful
    trajectories as DHB-XR policy-trace positives.
+
+2026-04-28 disk cleanup and attached-positive export:
+
+- Disk cleanup removed only superseded model weight files from old exploratory
+  runs while keeping configs, logs, summaries, notes, and selected active
+  checkpoints. Free space increased from `43G` to `712G`.
+- Kept large checkpoint weights:
+  - active closed-transport `bestposv2_closedtransport_actiononly/steps_300`
+  - side-grasp contact `closecontact_sidegrasp_bestposv2/steps_200`
+  - reach baseline `actionxyz_from2000/steps_400`
+  - calibrated gripper diagnostic `gripper_heads_calibrated/steps_2000`
+  - fallback release-stable diagnostic `release_stable/steps_600`
+- `scripts/libero_postcontact_correction_rollout.py` now supports offline
+  `--attach-object-to-ee` replay and policy-trace export.
+- Attached replay from the five coupling-selected `+3 cm` reset states reaches
+  the `45 mm` target window in `5/5` rows with zero IK failures, improving
+  target XY by about `87-88 mm`.
+- Exported trainable positives:
+  `_workspace/paper_eval/2026-04-28_attached_transport_policy_manifest_ep1_offset3.jsonl`
+  with `30` NPZ-backed policy-trace rows.
+- Smoke-loaded the manifest through `PolicyTraceContactDataset`; action,
+  state, image, object-target, gripper-state, close, and mask tensors are
+  shaped correctly.
+
+Updated immediate priority:
+
+1. Train a narrow continuation from active closed-transport `steps_300` using
+   the attached transport manifest mixed with the base dataset or policy-only
+   warm start.
+2. Keep deployment object-gate-free. The simulator attachment is data
+   generation only; it should teach the policy a grasp-attached transport
+   continuation, not add runtime object-distance logic.
+3. After transport can reach the target window under no-gate rollout, rerun the
+   release miner to create honest near-target release positives.

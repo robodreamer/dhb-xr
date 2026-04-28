@@ -1669,3 +1669,29 @@ Story implication:
   should show simulator/world-model generation of those successful coupled
   trajectories, then compare DHB-XR token learning against regular action-head
   learning on the same augmented data.
+
+2026-04-28 attached-positive generation update:
+
+- Disk cleanup freed enough room for the next training runs: available space is
+  now about `712G` after deleting superseded model weights while preserving run
+  metadata and selected active checkpoints.
+- The post-contact reset/replay runner now has an offline
+  `--attach-object-to-ee` augmentation mode and can export policy-trace NPZ
+  chunks plus JSONL manifest rows.
+- The first attached `+3 cm` replay result is successful as a data-generation
+  source: five coupling-selected reset states all reach the `45 mm` target
+  window with `0` IK failures and about `87-88 mm` target XY progress.
+- The generated manifest
+  `_workspace/paper_eval/2026-04-28_attached_transport_policy_manifest_ep1_offset3.jsonl`
+  has `30` trainable rows and loads through the existing StarVLA
+  policy-trace dataset.
+
+Story implication:
+
+- This is the first concrete realization of the larger augmentation story:
+  start from minimal real/teleop-like closed-loop data, use simulator-assisted
+  spatial correction to generate successful grasp-attached post-contact
+  trajectories, and feed those trajectories back through the DHB-XR action-token
+  training path. The next evidence gap is whether a narrow no-gate policy
+  continuation trained on these positives improves closed-loop target transport
+  over the regular action-head/control baseline.

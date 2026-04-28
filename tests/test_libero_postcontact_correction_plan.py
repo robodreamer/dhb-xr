@@ -12,6 +12,15 @@ correction_plan = importlib.util.module_from_spec(SPEC)
 assert SPEC and SPEC.loader
 SPEC.loader.exec_module(correction_plan)
 
+ROLLOUT_SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "libero_postcontact_correction_rollout.py"
+ROLLOUT_SPEC = importlib.util.spec_from_file_location(
+    "libero_postcontact_correction_rollout",
+    ROLLOUT_SCRIPT_PATH,
+)
+correction_rollout = importlib.util.module_from_spec(ROLLOUT_SPEC)
+assert ROLLOUT_SPEC and ROLLOUT_SPEC.loader
+ROLLOUT_SPEC.loader.exec_module(correction_rollout)
+
 
 def test_scripted_closed_correction_actions_clip_and_hold_closed() -> None:
     actions = correction_plan.scripted_closed_correction_actions(
@@ -105,3 +114,10 @@ def test_build_plan_rows_flags_missing_sim_state_capture() -> None:
     assert rows[0]["has_step_trace_entry"] is True
     assert rows[0]["has_sim_state"] is False
     assert rows[0]["needs_sim_state_capture"] is True
+
+
+def test_rollout_attachment_name_helpers() -> None:
+    assert correction_rollout._object_token_from_target_field("bowl_minus_plate") == "bowl"
+    assert correction_rollout._object_token_from_target_field("object") == "object"
+    assert correction_rollout._body_name_from_ref("body:akita_black_bowl_1_main") == "akita_black_bowl_1_main"
+    assert correction_rollout._body_name_from_ref("geom:akita_black_bowl_1_g0") is None

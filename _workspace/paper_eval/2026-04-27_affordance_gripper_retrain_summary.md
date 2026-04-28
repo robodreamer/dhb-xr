@@ -1203,3 +1203,37 @@ Updated interpretation: coupling-aware mining is now the right default for
 post-contact diagnostics, but these are not positive placement examples. The
 next data-generation step needs simulator-assisted grasp-attached target
 transport, not further scalar gains on weak naturally mined grasps.
+
+### Attached Transport Positive Export
+
+On 2026-04-28, the reset/replay runner was extended with an offline
+`--attach-object-to-ee` mode. This mode keeps the object named by the
+object-target field rigidly attached to the end effector during simulator
+correction replay. It is data-generation infrastructure only and is not used in
+deployment.
+
+Attached replay from the five coupling-selected `+3 cm` reset states reached
+the `45 mm` target window in every row:
+
+`_workspace/paper_eval/2026-04-28_closedtransport_simstate_postcontact_replay_attached_coupledstarts_ep1_offset3_rows5_policytrace.json`
+
+- `5/5` target-window reaches.
+- Target XY improves by about `87-88 mm`.
+- Final target XY is about `42.8-43.7 mm`.
+- IK failures are `0`.
+
+The same run exported trainable policy-trace positives:
+
+`_workspace/paper_eval/2026-04-28_attached_transport_policy_manifest_ep1_offset3.jsonl`
+
+`_workspace/paper_eval/2026-04-28_attached_transport_policy_trace_ep1_offset3`
+
+The manifest has `30` NPZ-backed rows and smoke-loads through
+`PolicyTraceContactDataset` with valid action, state, image, object-target,
+gripper-state, close, and mask tensors.
+
+Updated interpretation: we now have the first successful post-contact
+target-reaching data source. It should be used for a narrow closed-transport
+continuation from the active closed-transport `steps_300` checkpoint. The
+deployment policy must remain object-gate-free; simulator attachment is only
+for generating successful grasp-attached transport supervision.

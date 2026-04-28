@@ -573,3 +573,18 @@ explicitly references them. They are kept for provenance only.
   starts, but still stall around `97-100 mm` and do not create release/placement
   positives. Use coupling-aware mining for diagnostics; the next breakthrough
   still requires simulator-assisted grasp-attached target-reaching positives.
+- Disk cleanup status:
+  On 2026-04-28, superseded model weights were removed from old exploratory
+  runs while preserving configs, logs, summaries, notes, and selected active
+  checkpoints. Free disk increased from `43G` to `712G`. Cleanup manifests are
+  local at `_workspace/disk_cleanup_2026-04-28_weights_tranche1.md` and
+  `_workspace/disk_cleanup_2026-04-28_weights_tranche2.md`.
+- Attached transport positive status:
+  `scripts/libero_postcontact_correction_rollout.py` now has an offline
+  `--attach-object-to-ee` augmentation mode and can export policy-trace NPZ
+  chunks plus manifest rows. The first attached `+3 cm` coupling-selected replay
+  reaches the `45 mm` target window in `5/5` rows with zero IK failures and
+  about `87-88 mm` target XY progress. Trainable manifest:
+  `_workspace/paper_eval/2026-04-28_attached_transport_policy_manifest_ep1_offset3.jsonl`
+  (`30` rows). Next step is a narrow closed-transport continuation from active
+  closed-transport `steps_300`; keep runtime deployment object-gate-free.
