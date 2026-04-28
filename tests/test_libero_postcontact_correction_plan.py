@@ -213,6 +213,10 @@ def test_rollout_policy_trace_export_preserves_lift_transport_targets(tmp_path: 
     assert row["target_reached"] is True
     assert row["train_mask"] == [1.0, 1.0]
     assert row["target_gripper_state"] == [[1.0], [1.0]]
+    assert np.asarray(row["target_linear_invariants"], dtype=np.float32).shape == (2, 4)
+    assert np.asarray(row["target_angular_invariants"], dtype=np.float32).shape == (2, 4)
+    assert np.isfinite(np.asarray(row["target_linear_invariants"], dtype=np.float32)).all()
+    assert float(np.abs(np.asarray(row["target_linear_invariants"], dtype=np.float32)).sum()) > 0.0
     assert row["target_transport_phase"] == ["lift", "carry"]
     assert row["action_loss_weight"] == [3.0, 1.0]
     np.testing.assert_allclose(row["target_action"][0][:3], [0.0, 0.0, 0.8], atol=1e-6)

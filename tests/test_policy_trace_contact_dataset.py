@@ -46,6 +46,18 @@ def _write_policy_trace_fixture(tmp_path: Path) -> Path:
                     [0.4, 0.5, 0.6, 0.0, 0.0, 0.0, 1.0],
                     [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
                 ],
+                "target_linear_invariants": [
+                    [0.0, 0.0, 0.0, 0.0],
+                    [0.1, 0.2, 0.3, 0.4],
+                    [0.5, 0.6, 0.7, 0.8],
+                    [0.0, 0.0, 0.0, 0.0],
+                ],
+                "target_angular_invariants": [
+                    [0.0, 0.0, 0.0, 0.0],
+                    [0.9, 1.0, 1.1, 1.2],
+                    [1.3, 1.4, 1.5, 1.6],
+                    [0.0, 0.0, 0.0, 0.0],
+                ],
                 "target_object_target": [
                     [0.0, 0.0, 0.0],
                     [0.1, 0.0, 0.0],
@@ -102,10 +114,14 @@ def test_policy_trace_contact_dataset_packs_qwendhb_sample(tmp_path):
     assert sample["dhb.object_minus_target_pos"].shape == (8, 3)
     assert sample["dhb.gripper_state"].shape == (8, 1)
     assert sample["dhb.action_loss_weight"].shape == (8,)
+    assert sample["dhb.linear_invariants"].shape == (8, 4)
+    assert sample["dhb.angular_invariants"].shape == (8, 4)
     np.testing.assert_allclose(sample["dhb.close_contact"][:4, 0], [0.0, 1.0, 0.0, 0.0])
     np.testing.assert_allclose(sample["dhb.action_valid_mask"][:4], [0.0, 1.0, 1.0, 0.0])
     np.testing.assert_allclose(sample["dhb.action_loss_weight"][:4], [0.0, 2.0, 0.5, 0.0])
     np.testing.assert_allclose(sample["action"][1, :3], [0.1, 0.2, 0.3], atol=1e-3)
+    np.testing.assert_allclose(sample["dhb.linear_invariants"][2], [0.5, 0.6, 0.7, 0.8])
+    np.testing.assert_allclose(sample["dhb.angular_invariants"][1], [0.9, 1.0, 1.1, 1.2])
     np.testing.assert_allclose(sample["dhb.object_minus_target_pos"][2], [0.0, 0.2, 0.0])
     np.testing.assert_allclose(sample["dhb.gripper_state"][:4, 0], [0.0, 1.0, 1.0, 0.0])
 
@@ -199,6 +215,7 @@ def test_policy_trace_contact_dataset_merges_base_statistics(tmp_path):
     assert payload["policy_trace_contact"]["supervised_steps"] == 2
     assert payload["policy_trace_contact"]["positive_steps"] == 1
     assert payload["policy_trace_contact"]["action_supervised_steps"] == 2
+    assert payload["policy_trace_contact"]["invariant_supervised_steps"] == 2
     assert payload["policy_trace_contact"]["weighted_action_supervised_steps"] == 2
     assert payload["policy_trace_contact"]["object_target_supervised_steps"] == 2
     assert payload["policy_trace_contact"]["gripper_state_supervised_steps"] == 2

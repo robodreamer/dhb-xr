@@ -59,6 +59,20 @@ from scripts.starvla_dhb_embodik_live_rollout import (
     _relative_snapshot,
 )
 
+try:
+    from starVLA.dataloader.gr00t_lerobot.datasets import (
+        build_chunk_local_dhb_targets_from_delta_actions,
+    )
+except ImportError:
+    import sys
+
+    _vendor_starvla = Path(__file__).resolve().parents[1] / "vendor" / "starVLA"
+    if _vendor_starvla.exists() and str(_vendor_starvla) not in sys.path:
+        sys.path.insert(0, str(_vendor_starvla))
+    from starVLA.dataloader.gr00t_lerobot.datasets import (
+        build_chunk_local_dhb_targets_from_delta_actions,
+    )
+
 
 def _seed(seed: int) -> None:
     random.seed(seed)
@@ -218,6 +232,12 @@ def _export_policy_trace_chunks(
             _normalize_raw_action(record["raw_action"], action_stats)
             for record in chunk
         ]
+        raw_action = np.asarray([record["raw_action"] for record in chunk], dtype=np.float32)
+        current_state = np.asarray(first["state_window"], dtype=np.float32)
+        current_state = current_state[-1] if current_state.ndim == 2 else current_state.reshape(-1)
+        target_linear_invariants, target_angular_invariants = (
+            build_chunk_local_dhb_targets_from_delta_actions(current_state, raw_action)
+        )
         target_object = [record["object_target"] for record in chunk]
         target_object_to_eef = [
             record.get("object_to_eef", [0.0, 0.0, 0.0])
@@ -263,6 +283,8 @@ def _export_policy_trace_chunks(
                 "npz_path": str(npz_path),
                 "target_action": target_action,
                 "target_action_normalized": True,
+                "target_linear_invariants": target_linear_invariants.astype(np.float32).tolist(),
+                "target_angular_invariants": target_angular_invariants.astype(np.float32).tolist(),
                 "target_object_target": target_object,
                 "target_object_to_eef": target_object_to_eef,
                 "target_target_to_eef": target_target_to_eef,
