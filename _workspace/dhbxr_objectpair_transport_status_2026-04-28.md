@@ -529,3 +529,56 @@ often misses the vertical/contact affordance and cannot reliably perform
 held-object lift/carry/lower to a release-ready state. The next useful work
 should improve the action objective and data generation, then reuse this
 three-class contact-phase harness as a gate.
+
+## Phase-Specific Action Channel Weight Diagnostic
+
+The scalar action-loss-weight path was too coarse for the observed failure:
+lift/lower timesteps could be emphasized, but the loss could not say that Z
+translation matters more during lift/lower while XY matters more during carry.
+The training harness now supports optional per-step, per-action-channel weights:
+
+- manifest field: `action_loss_channel_weight`
+- dataset output: `dhb.action_loss_channel_weight`
+- QwenDHB forwards it into the DHB action head
+- the backend action L1 loss multiplies static channel weights by per-step
+  dynamic channel weights before the channel reduction
+
+The channel-weighted manifest is:
+
+`_workspace/paper_eval/2026-04-28_attached_replay_lifttransport_release8_lowz25_extraep1neg3_dhbtargets_phase3_chweights_manifest.jsonl`
+
+It has `126` rows, `981` invariant/action-supervised steps, and all `981` steps
+have phase-derived action-channel weights. The phase counts remain `lift=346`,
+`carry=539`, and `lower=96`.
+
+Validation passed:
+
+`PYTHONPATH=vendor/starVLA:src:${PYTHONPATH:-} ./.pixi-home/bin/pixi run python scripts/starvla_dhb_train_step_smoke.py ...`
+
+The corrected smoke used the channel-weighted manifest and completed one train
+step with `loss_act=0.2404`, peak memory about `4770 MB`, and no shape errors.
+Focused unit tests also passed: `49 passed`.
+
+The bounded continuation run is:
+
+`_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_objectpair_phaseobj9_chweights_fromextraep1neg3_step50`
+
+Training remained stable through step `100`, but the live sweep is another
+negative result:
+
+| Checkpoint | Close rate | Avg min EE-bowl XY mm | Avg min EE-bowl XYZ mm | Avg IK fails | Verdict |
+| ---: | ---: | ---: | ---: | ---: | --- |
+| step 50 | `3/3` | `20.0` | `66.1` | `0.0` | stable but worse contact quality than extraep baseline |
+| step 100 | `3/3` | `11.5` | `53.8` | `3.7` | good planar reach, one better +3 cm close, still no success |
+
+Case-level observations for step `100`: the `+3 cm` case closes at about
+`17.7 mm` XY and `29.2 mm` Z from the bowl and moves the bowl near `92.7 mm`
+from the plate, but it adds `9` IK failures and still does not release. The
+`-3 cm` case reaches the bowl in XY (`4.9 mm`) but closes high (`69.8 mm` Z)
+and does not make target progress.
+
+Conclusion: per-channel action weighting is a useful general harness feature,
+but this particular phase-weighted warm-start does not solve the root cause.
+The next breakthrough likely needs better post-contact target-reaching data or
+a more structured action representation than weighted residual regression; do
+not keep sweeping channel-weight constants on the same manifest.

@@ -623,6 +623,40 @@ class TestDHBActionHead:
 
         assert torch.allclose(result["loss_act"], torch.tensor(5.0 / 12.0), atol=1e-5)
 
+    def test_action_loss_accepts_per_step_channel_weights(self):
+        head = DHBActionHead(
+            vlm_dim=8,
+            action_horizon=4,
+            invariant_dim=8,
+            hidden_dim=8,
+            num_heads=4,
+            num_layers=1,
+            dropout=0.0,
+            action_dim=7,
+            lambda_act=1.0,
+        )
+        with torch.no_grad():
+            head.action_head.weight.zero_()
+            head.action_head.bias.zero_()
+
+        vlm_hidden = torch.zeros(1, 1, 8)
+        target_actions = torch.zeros(1, 4, 7)
+        target_actions[0, 0, 0] = 1.0
+        target_actions[0, 1, 1] = 10.0
+        loss_mask = torch.tensor([[1.0, 1.0, 0.0, 0.0]])
+        action_loss_channel_weight = torch.zeros(1, 4, 7)
+        action_loss_channel_weight[0, 0, 0] = 1.0
+        action_loss_channel_weight[0, 1, 1] = 1.0
+
+        result = head(
+            vlm_hidden,
+            target_actions=target_actions,
+            loss_mask=loss_mask,
+            action_loss_channel_weight=action_loss_channel_weight,
+        )
+
+        assert torch.allclose(result["loss_act"], torch.tensor(5.5), atol=1e-5)
+
     def test_action_residual_adapter_zero_init_preserves_base_actions(self):
         head = DHBActionHead(
             vlm_dim=128,

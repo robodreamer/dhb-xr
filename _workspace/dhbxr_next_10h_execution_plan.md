@@ -56,6 +56,13 @@ short-loop alternatives:
   `0 cm`, `+3 cm`, and `-3 cm` cases, but did not improve vertical/contact
   quality. Step `50` is the stable diagnostic checkpoint; longer training
   regresses into IK-heavy behavior.
+- Per-step per-action-channel weights are now implemented and validated
+  end-to-end. This is the correct harness feature for testing phase-specific
+  Z-vs-XY emphasis without changing deployment logic. The first channel-weight
+  continuation is negative, though: step `100` reaches `11.5 mm` average
+  planar bowl distance but still averages `53.8 mm` XYZ distance, `3.7` IK
+  failures, and `0/3` success. Do not keep sweeping channel-weight constants
+  on the same manifest.
 
 Immediate next actions:
 
@@ -77,6 +84,10 @@ Immediate next actions:
    offline gate passes.
 6. Run the matched regular-head control on the same augmented positives before
    claiming a DHB-XR transport advantage.
+7. If continuing unattended, prioritize new data quality over scalar objective
+   tuning: generate or mine verified post-contact target-reaching positives
+   with lower close height and real lift/carry/lower, then use the existing
+   channel-weight and contact-phase harnesses as validation gates.
 
 ## 2026-04-25 Current Correction: Evaluation Contract Was the Root Cause
 

@@ -12,10 +12,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
 import numpy as np
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
 from scripts.libero_rollout_transport_miner import _extract_action_stats
 
@@ -88,6 +93,33 @@ def _transport_phase_onehot(phase: str, *, scale: float = 1.0) -> list[float]:
     return out
 
 
+def _parse_channel_weight(value: str, *, action_dim: int) -> list[float]:
+    weights = [float(part.strip()) for part in str(value).split(",") if part.strip()]
+    if len(weights) != action_dim:
+        raise ValueError(
+            f"Expected {action_dim} comma-separated action-channel weights, got {len(weights)}"
+        )
+    if any(weight < 0.0 for weight in weights):
+        raise ValueError("Action-channel weights must be non-negative")
+    if sum(weights) <= 0.0:
+        raise ValueError("At least one action-channel weight must be positive")
+    return weights
+
+
+def _phase_action_channel_weight(
+    phase: str,
+    *,
+    lift_weight: list[float],
+    carry_weight: list[float],
+    lower_weight: list[float],
+) -> list[float]:
+    if str(phase) == "lift":
+        return list(lift_weight)
+    if str(phase) == "lower":
+        return list(lower_weight)
+    return list(carry_weight)
+
+
 def _contact_release_phase_from_row(row: dict[str, Any]) -> list[int]:
     labels = list(row.get("labels", []))
     target_close = list(row.get("target_close", []))
@@ -132,6 +164,10 @@ def augment_row(
     action_stats: dict[str, Any],
     phase_z_threshold_mm: float = 1.0,
     phase_onehot_scale: float = 1.0,
+    emit_phase_action_channel_weights: bool = False,
+    lift_action_channel_weight: list[float] | None = None,
+    carry_action_channel_weight: list[float] | None = None,
+    lower_action_channel_weight: list[float] | None = None,
 ) -> dict[str, Any]:
     action = np.asarray(row.get("target_action", []), dtype=np.float32)
     if action.ndim != 2 or action.shape[0] == 0:
@@ -157,6 +193,22 @@ def augment_row(
         _transport_phase_onehot(phase, scale=phase_onehot_scale)
         for phase in phases
     ]
+    if emit_phase_action_channel_weights:
+        if (
+            lift_action_channel_weight is None
+            or carry_action_channel_weight is None
+            or lower_action_channel_weight is None
+        ):
+            raise ValueError("Phase action-channel weights must be provided when emission is enabled")
+        out["action_loss_channel_weight"] = [
+            _phase_action_channel_weight(
+                phase,
+                lift_weight=lift_action_channel_weight,
+                carry_weight=carry_action_channel_weight,
+                lower_weight=lower_action_channel_weight,
+            )
+            for phase in phases
+        ]
     if row.get("target_contact_release_phase") is None:
         release_phase = _contact_release_phase_from_row(row)
         if release_phase:
@@ -171,6 +223,10 @@ def augment_manifest(
     action_stats_json: Path,
     phase_z_threshold_mm: float = 1.0,
     phase_onehot_scale: float = 1.0,
+    emit_phase_action_channel_weights: bool = False,
+    lift_action_channel_weight: list[float] | None = None,
+    carry_action_channel_weight: list[float] | None = None,
+    lower_action_channel_weight: list[float] | None = None,
 ) -> dict[str, Any]:
     rows = _read_jsonl(manifest_jsonl)
     action_stats = _extract_action_stats(json.loads(action_stats_json.read_text(encoding="utf-8")))
@@ -180,6 +236,10 @@ def augment_manifest(
             action_stats=action_stats,
             phase_z_threshold_mm=phase_z_threshold_mm,
             phase_onehot_scale=phase_onehot_scale,
+            emit_phase_action_channel_weights=emit_phase_action_channel_weights,
+            lift_action_channel_weight=lift_action_channel_weight,
+            carry_action_channel_weight=carry_action_channel_weight,
+            lower_action_channel_weight=lower_action_channel_weight,
         )
         for row in rows
     ]
@@ -189,12 +249,17 @@ def augment_manifest(
     for row in augmented:
         for phase in row.get("target_transport_phase", []):
             phase_counts[str(phase)] = phase_counts.get(str(phase), 0) + 1
+    channel_weighted_steps = sum(
+        len(row.get("action_loss_channel_weight", []))
+        for row in augmented
+    )
     return {
         "input_jsonl": str(manifest_jsonl),
         "output_jsonl": str(output_jsonl),
         "rows": int(len(augmented)),
         "invariant_steps": int(invariant_steps),
         "phase_counts": dict(sorted(phase_counts.items())),
+        "channel_weighted_steps": int(channel_weighted_steps),
     }
 
 
@@ -205,8 +270,46 @@ def main() -> None:
     parser.add_argument("--action-stats-json", required=True)
     parser.add_argument("--phase-z-threshold-mm", type=float, default=1.0)
     parser.add_argument("--phase-onehot-scale", type=float, default=1.0)
+    parser.add_argument(
+        "--emit-phase-action-channel-weights",
+        action="store_true",
+        help=(
+            "Emit per-step per-action-channel loss weights from transport phase. "
+            "This is training-only supervision and does not affect rollout logic."
+        ),
+    )
+    parser.add_argument(
+        "--lift-action-channel-weight",
+        default="2.0,2.0,8.0,0.1,0.1,0.1,0.0",
+    )
+    parser.add_argument(
+        "--carry-action-channel-weight",
+        default="6.0,7.0,1.5,0.1,0.1,0.1,0.0",
+    )
+    parser.add_argument(
+        "--lower-action-channel-weight",
+        default="2.0,2.0,8.0,0.1,0.1,0.1,0.0",
+    )
     parser.add_argument("--save-summary-json")
     args = parser.parse_args()
+    stats_payload = json.loads(Path(args.action_stats_json).read_text(encoding="utf-8"))
+    action_dim = len(_extract_action_stats(stats_payload)["min"])
+    lift_action_channel_weight = None
+    carry_action_channel_weight = None
+    lower_action_channel_weight = None
+    if args.emit_phase_action_channel_weights:
+        lift_action_channel_weight = _parse_channel_weight(
+            args.lift_action_channel_weight,
+            action_dim=action_dim,
+        )
+        carry_action_channel_weight = _parse_channel_weight(
+            args.carry_action_channel_weight,
+            action_dim=action_dim,
+        )
+        lower_action_channel_weight = _parse_channel_weight(
+            args.lower_action_channel_weight,
+            action_dim=action_dim,
+        )
 
     summary = augment_manifest(
         Path(args.manifest_jsonl),
@@ -214,6 +317,10 @@ def main() -> None:
         action_stats_json=Path(args.action_stats_json),
         phase_z_threshold_mm=float(args.phase_z_threshold_mm),
         phase_onehot_scale=float(args.phase_onehot_scale),
+        emit_phase_action_channel_weights=bool(args.emit_phase_action_channel_weights),
+        lift_action_channel_weight=lift_action_channel_weight,
+        carry_action_channel_weight=carry_action_channel_weight,
+        lower_action_channel_weight=lower_action_channel_weight,
     )
     if args.save_summary_json:
         out = Path(args.save_summary_json)

@@ -700,3 +700,15 @@ explicitly references them. They are kept for provenance only.
   `31.3`). Do not keep tuning contact thresholds/classes now; the next
   bottleneck is action/contact quality, especially vertical contact and
   held-object lift/carry/lower.
+- Phase-specific action-channel weighting:
+  The harness now supports `action_loss_channel_weight` end-to-end from
+  manifest to `dhb.action_loss_channel_weight` to QwenDHB and the DHB action
+  head. The channel-weighted manifest
+  `_workspace/paper_eval/2026-04-28_attached_replay_lifttransport_release8_lowz25_extraep1neg3_dhbtargets_phase3_chweights_manifest.jsonl`
+  has `981` weighted steps. Unit tests passed (`49 passed`) and a train-step
+  smoke with the weighted manifest succeeded. The bounded run
+  `_workspace/starvla_runs/dhb_starvla_qwen_fresh_actionres_commanded_affordancegrasp_attached_transport_objectpair_phaseobj9_chweights_fromextraep1neg3_step50`
+  is negative live: best step `100` is `0/3` success, `3/3` close, average
+  min bowl XY `11.5 mm`, average min XYZ `53.8 mm`, and average IK `3.7`.
+  Treat the feature as useful infrastructure, but stop sweeping weight
+  constants on this data.

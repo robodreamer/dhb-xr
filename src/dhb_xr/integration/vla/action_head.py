@@ -774,7 +774,14 @@ if HAS_TORCH:
             target_actions: torch.Tensor,
             temporal_loss_mask: Optional[torch.Tensor],
             temporal_loss_weights: Optional[torch.Tensor],
-        ) -> tuple[torch.Tensor, torch.Tensor, Optional[torch.Tensor], Optional[torch.Tensor]]:
+            temporal_channel_weights: Optional[torch.Tensor],
+        ) -> tuple[
+            torch.Tensor,
+            torch.Tensor,
+            Optional[torch.Tensor],
+            Optional[torch.Tensor],
+            Optional[torch.Tensor],
+        ]:
             """Align auxiliary direct-action loss to DHB decode query slots.
 
             DHB-DR decode drops padded prefix frames, so decoded waypoint 0 is
@@ -809,7 +816,18 @@ if HAS_TORCH:
                 if temporal_loss_weights is not None
                 else None
             )
-            return pred_for_loss, target_for_loss, mask_for_loss, weights_for_loss
+            channel_weights_for_loss = (
+                temporal_channel_weights[:, :aligned_horizon, :]
+                if temporal_channel_weights is not None
+                else None
+            )
+            return (
+                pred_for_loss,
+                target_for_loss,
+                mask_for_loss,
+                weights_for_loss,
+                channel_weights_for_loss,
+            )
 
         @staticmethod
         def _apply_action_loss_step_weight(
@@ -827,6 +845,7 @@ if HAS_TORCH:
             self,
             pred_actions: torch.Tensor,
             target_actions: torch.Tensor,
+            action_loss_channel_weight: Optional[torch.Tensor] = None,
         ) -> torch.Tensor:
             """Return per-step action L1 with optional channel weighting."""
             diff = (pred_actions - target_actions).abs()
@@ -836,11 +855,37 @@ if HAS_TORCH:
                     device=diff.device,
                     dtype=diff.dtype,
                 )
+            dynamic_channel_weight = None
+            if action_loss_channel_weight is not None:
+                dynamic_channel_weight = action_loss_channel_weight.to(
+                    device=diff.device,
+                    dtype=diff.dtype,
+                )
 
             if self.action_loss_ignore_gripper and diff.shape[-1] >= 7:
                 diff = diff[..., :6]
                 if channel_weight is not None and channel_weight.shape[-1] > diff.shape[-1]:
                     channel_weight = channel_weight[..., :6]
+                if (
+                    dynamic_channel_weight is not None
+                    and dynamic_channel_weight.shape[-1] > diff.shape[-1]
+                ):
+                    dynamic_channel_weight = dynamic_channel_weight[..., :6]
+
+            if dynamic_channel_weight is not None:
+                if dynamic_channel_weight.shape[-1] != diff.shape[-1]:
+                    raise ValueError(
+                        "action_loss_channel_weight last dimension must match the action "
+                        f"dimensions used for loss; got {dynamic_channel_weight.shape[-1]} "
+                        f"weights for {diff.shape[-1]} dims"
+                    )
+                if torch.any(dynamic_channel_weight < 0):
+                    raise ValueError("action_loss_channel_weight values must be non-negative")
+                channel_weight = (
+                    dynamic_channel_weight
+                    if channel_weight is None
+                    else channel_weight * dynamic_channel_weight
+                )
 
             if channel_weight is None:
                 return diff.mean(dim=-1)
@@ -852,6 +897,37 @@ if HAS_TORCH:
                 )
             denom = channel_weight.sum(dim=-1).clamp_min(torch.finfo(diff.dtype).eps)
             return (diff * channel_weight).sum(dim=-1) / denom
+
+        def _normalize_action_loss_channel_weight(
+            self,
+            value: Optional[torch.Tensor],
+            *,
+            batch_size: int,
+            horizon: int,
+            device: torch.device,
+            dtype: torch.dtype,
+        ) -> Optional[torch.Tensor]:
+            if value is None:
+                return None
+            weight = value.to(device=device, dtype=dtype)
+            if weight.ndim != 3:
+                raise ValueError(
+                    "action_loss_channel_weight must have shape (B, T, D), "
+                    f"got {tuple(weight.shape)}"
+                )
+            if weight.shape[0] != batch_size:
+                raise ValueError(
+                    "action_loss_channel_weight batch dimension mismatch: "
+                    f"expected {batch_size}, got {weight.shape[0]}"
+                )
+            if weight.shape[1] < horizon:
+                raise ValueError(
+                    "action_loss_channel_weight horizon is shorter than action_horizon: "
+                    f"{weight.shape[1]} < {horizon}"
+                )
+            if torch.any(weight < 0):
+                raise ValueError("action_loss_channel_weight values must be non-negative")
+            return weight[:, :horizon, :]
 
         def _normalize_token_prefix_keep_k(
             self,
@@ -1070,6 +1146,7 @@ if HAS_TORCH:
             committed_prefix_mask: Optional[torch.Tensor] = None,
             loss_mask: Optional[torch.Tensor] = None,
             action_loss_weight: Optional[torch.Tensor] = None,
+            action_loss_channel_weight: Optional[torch.Tensor] = None,
             token_prefix_keep_k: Optional[int | Sequence[int]] = None,
         ) -> Dict[str, torch.Tensor]:
             """
@@ -1108,6 +1185,13 @@ if HAS_TORCH:
             )
             temporal_action_loss_weight = self._normalize_temporal_mask(
                 action_loss_weight,
+                batch_size=B,
+                horizon=self.action_horizon,
+                device=vlm_hidden.device,
+                dtype=queries.dtype,
+            )
+            temporal_action_loss_channel_weight = self._normalize_action_loss_channel_weight(
+                action_loss_channel_weight,
                 batch_size=B,
                 horizon=self.action_horizon,
                 device=vlm_hidden.device,
@@ -1438,15 +1522,18 @@ if HAS_TORCH:
                         target_actions_for_loss,
                         action_loss_mask,
                         action_loss_weights,
+                        action_loss_channel_weights,
                     ) = self._align_action_loss_inputs(
                         pred_actions,
                         target_actions,
                         temporal_loss_mask,
                         temporal_loss_weights,
+                        temporal_action_loss_channel_weight,
                     )
                     per_step_l1 = self._action_l1_per_step(
                         pred_actions_for_loss,
                         target_actions_for_loss,
+                        action_loss_channel_weights,
                     )
                     action_loss_mask = self._apply_action_loss_step_weight(
                         action_loss_mask,
@@ -1477,15 +1564,18 @@ if HAS_TORCH:
                     target_actions_for_loss,
                     action_loss_mask,
                     _,
+                    action_loss_channel_weights,
                 ) = self._align_action_loss_inputs(
                     pred_actions,
                     target_actions,
                     temporal_loss_mask,
                     None,
+                    temporal_action_loss_channel_weight,
                 )
                 per_step_l1 = self._action_l1_per_step(
                     pred_actions_for_loss,
                     target_actions_for_loss,
+                    action_loss_channel_weights,
                 )
                 action_loss_mask = self._apply_action_loss_step_weight(
                     action_loss_mask,
