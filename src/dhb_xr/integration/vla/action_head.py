@@ -811,6 +811,18 @@ if HAS_TORCH:
             )
             return pred_for_loss, target_for_loss, mask_for_loss, weights_for_loss
 
+        @staticmethod
+        def _apply_action_loss_step_weight(
+            mask_for_loss: Optional[torch.Tensor],
+            action_loss_weight: Optional[torch.Tensor],
+            aligned_horizon: int,
+        ) -> Optional[torch.Tensor]:
+            """Combine binary validity masks with per-step action loss weights."""
+            if action_loss_weight is None:
+                return mask_for_loss
+            step_weight = action_loss_weight[:, :aligned_horizon]
+            return step_weight if mask_for_loss is None else mask_for_loss * step_weight
+
         def _action_l1_per_step(
             self,
             pred_actions: torch.Tensor,
@@ -1057,6 +1069,7 @@ if HAS_TORCH:
             committed_prefix_invariants: Optional[torch.Tensor] = None,
             committed_prefix_mask: Optional[torch.Tensor] = None,
             loss_mask: Optional[torch.Tensor] = None,
+            action_loss_weight: Optional[torch.Tensor] = None,
             token_prefix_keep_k: Optional[int | Sequence[int]] = None,
         ) -> Dict[str, torch.Tensor]:
             """
@@ -1088,6 +1101,13 @@ if HAS_TORCH:
 
             temporal_loss_mask = self._normalize_temporal_mask(
                 loss_mask,
+                batch_size=B,
+                horizon=self.action_horizon,
+                device=vlm_hidden.device,
+                dtype=queries.dtype,
+            )
+            temporal_action_loss_weight = self._normalize_temporal_mask(
+                action_loss_weight,
                 batch_size=B,
                 horizon=self.action_horizon,
                 device=vlm_hidden.device,
@@ -1428,6 +1448,11 @@ if HAS_TORCH:
                         pred_actions_for_loss,
                         target_actions_for_loss,
                     )
+                    action_loss_mask = self._apply_action_loss_step_weight(
+                        action_loss_mask,
+                        temporal_action_loss_weight,
+                        target_actions_for_loss.shape[1],
+                    )
                     loss_act = self._masked_weighted_temporal_mean(
                         per_step_l1,
                         action_loss_mask,
@@ -1461,6 +1486,11 @@ if HAS_TORCH:
                 per_step_l1 = self._action_l1_per_step(
                     pred_actions_for_loss,
                     target_actions_for_loss,
+                )
+                action_loss_mask = self._apply_action_loss_step_weight(
+                    action_loss_mask,
+                    temporal_action_loss_weight,
+                    target_actions_for_loss.shape[1],
                 )
                 loss_act = self._masked_temporal_mean(per_step_l1, action_loss_mask)
                 result["loss_act"] = loss_act

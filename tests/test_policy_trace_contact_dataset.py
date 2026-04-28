@@ -65,6 +65,7 @@ def _write_policy_trace_fixture(tmp_path: Path) -> Path:
                     [0.0, 0.0, 0.0],
                 ],
                 "target_gripper_state": [[0.0], [1.0], [1.0], [0.0]],
+                "action_loss_weight": [0.0, 2.0, 0.5, 0.0],
                 "hard_negative_mask": [0.0, 0.0, 1.0, 0.0],
                 "labels": ["background", "positive", "hard_negative", "background"],
             }
@@ -100,8 +101,10 @@ def test_policy_trace_contact_dataset_packs_qwendhb_sample(tmp_path):
     assert sample["dhb.action_valid_mask"].shape == (8,)
     assert sample["dhb.object_minus_target_pos"].shape == (8, 3)
     assert sample["dhb.gripper_state"].shape == (8, 1)
+    assert sample["dhb.action_loss_weight"].shape == (8,)
     np.testing.assert_allclose(sample["dhb.close_contact"][:4, 0], [0.0, 1.0, 0.0, 0.0])
     np.testing.assert_allclose(sample["dhb.action_valid_mask"][:4], [0.0, 1.0, 1.0, 0.0])
+    np.testing.assert_allclose(sample["dhb.action_loss_weight"][:4], [0.0, 2.0, 0.5, 0.0])
     np.testing.assert_allclose(sample["action"][1, :3], [0.1, 0.2, 0.3], atol=1e-3)
     np.testing.assert_allclose(sample["dhb.object_minus_target_pos"][2], [0.0, 0.2, 0.0])
     np.testing.assert_allclose(sample["dhb.gripper_state"][:4, 0], [0.0, 1.0, 1.0, 0.0])
@@ -196,5 +199,6 @@ def test_policy_trace_contact_dataset_merges_base_statistics(tmp_path):
     assert payload["policy_trace_contact"]["supervised_steps"] == 2
     assert payload["policy_trace_contact"]["positive_steps"] == 1
     assert payload["policy_trace_contact"]["action_supervised_steps"] == 2
+    assert payload["policy_trace_contact"]["weighted_action_supervised_steps"] == 2
     assert payload["policy_trace_contact"]["object_target_supervised_steps"] == 2
     assert payload["policy_trace_contact"]["gripper_state_supervised_steps"] == 2

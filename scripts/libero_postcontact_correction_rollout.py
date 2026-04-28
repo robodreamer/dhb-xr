@@ -17,7 +17,7 @@ import argparse
 import json
 import random
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 import numpy as np
 from libero.libero import benchmark, get_libero_path
@@ -189,6 +189,10 @@ def _export_policy_trace_chunks(
     manifest_rows: list[dict[str, Any]],
     action_stats: dict[str, Any],
     action_horizon: int,
+    lift_action_loss_weight: float = 1.0,
+    carry_action_loss_weight: float = 1.0,
+    lower_action_loss_weight: float = 1.0,
+    phase_z_threshold_mm: float = 1.0,
 ) -> None:
     action_horizon = max(1, int(action_horizon))
     policy_trace_dir.mkdir(parents=True, exist_ok=True)
@@ -227,6 +231,22 @@ def _export_policy_trace_chunks(
             list(object_to_eef) + list(target_to_eef)
             for object_to_eef, target_to_eef in zip(target_object_to_eef, target_target_to_eef)
         ]
+        target_transport_phase = [
+            _transport_phase_from_action(
+                record["raw_action"],
+                z_threshold_mm=phase_z_threshold_mm,
+            )
+            for record in chunk
+        ]
+        action_loss_weight = [
+            _transport_phase_loss_weight(
+                phase,
+                lift_weight=lift_action_loss_weight,
+                carry_weight=carry_action_loss_weight,
+                lower_weight=lower_action_loss_weight,
+            )
+            for phase in target_transport_phase
+        ]
         n_use = len(chunk)
         manifest_rows.append(
             {
@@ -250,6 +270,8 @@ def _export_policy_trace_chunks(
                 "target_gripper_state": [[1.0] for _ in chunk],
                 "target_close": [1.0 for _ in chunk],
                 "train_mask": [1.0 for _ in chunk],
+                "target_transport_phase": target_transport_phase,
+                "action_loss_weight": action_loss_weight,
                 "labels": ["attached_transport_positive" for _ in chunk],
                 "object_target_xy_mm": [
                     record.get("target_xy_mm")
@@ -261,6 +283,36 @@ def _export_policy_trace_chunks(
                 "attachment_joint_name": result.get("attachment_joint_name"),
             }
         )
+
+
+def _transport_phase_from_action(
+    raw_action: Sequence[float],
+    *,
+    z_threshold_mm: float,
+) -> str:
+    action = np.asarray(raw_action, dtype=np.float32).reshape(-1)
+    z_mm = float(action[2] * 1000.0) if action.shape[0] >= 3 else 0.0
+    threshold = max(0.0, float(z_threshold_mm))
+    if z_mm > threshold:
+        return "lift"
+    if z_mm < -threshold:
+        return "lower"
+    return "carry"
+
+
+def _transport_phase_loss_weight(
+    phase: str,
+    *,
+    lift_weight: float,
+    carry_weight: float,
+    lower_weight: float,
+) -> float:
+    weights = {
+        "lift": float(lift_weight),
+        "carry": float(carry_weight),
+        "lower": float(lower_weight),
+    }
+    return max(0.0, weights.get(str(phase), 1.0))
 
 
 def _target_ready(
@@ -368,6 +420,10 @@ def execute_plan_row(
     export_only_target_reached: bool = False,
     action_horizon: int = 8,
     state_history_window: int = 4,
+    lift_action_loss_weight: float = 1.0,
+    carry_action_loss_weight: float = 1.0,
+    lower_action_loss_weight: float = 1.0,
+    phase_z_threshold_mm: float = 1.0,
 ) -> dict[str, Any]:
     sim_state = row.get("sim_state")
     if sim_state is None:
@@ -598,6 +654,10 @@ def execute_plan_row(
             manifest_rows=manifest_rows,
             action_stats=action_stats,
             action_horizon=action_horizon,
+            lift_action_loss_weight=lift_action_loss_weight,
+            carry_action_loss_weight=carry_action_loss_weight,
+            lower_action_loss_weight=lower_action_loss_weight,
+            phase_z_threshold_mm=phase_z_threshold_mm,
         )
     return result
 
@@ -648,6 +708,10 @@ def main() -> None:
     parser.add_argument("--save-policy-trace-dir")
     parser.add_argument("--save-policy-manifest-jsonl")
     parser.add_argument("--action-stats-json")
+    parser.add_argument("--policy-trace-lift-weight", type=float, default=1.0)
+    parser.add_argument("--policy-trace-carry-weight", type=float, default=1.0)
+    parser.add_argument("--policy-trace-lower-weight", type=float, default=1.0)
+    parser.add_argument("--policy-trace-phase-z-threshold-mm", type=float, default=1.0)
     parser.add_argument(
         "--export-only-target-reached",
         action="store_true",
@@ -736,6 +800,10 @@ def main() -> None:
                         export_only_target_reached=bool(args.export_only_target_reached),
                         action_horizon=max(1, int(args.action_horizon)),
                         state_history_window=max(1, int(args.state_history_window)),
+                        lift_action_loss_weight=float(args.policy_trace_lift_weight),
+                        carry_action_loss_weight=float(args.policy_trace_carry_weight),
+                        lower_action_loss_weight=float(args.policy_trace_lower_weight),
+                        phase_z_threshold_mm=float(args.policy_trace_phase_z_threshold_mm),
                     )
                 )
         finally:

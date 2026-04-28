@@ -201,6 +201,10 @@ def test_rollout_policy_trace_export_preserves_lift_transport_targets(tmp_path: 
         manifest_rows=manifest_rows,
         action_stats=action_stats,
         action_horizon=8,
+        lift_action_loss_weight=3.0,
+        carry_action_loss_weight=1.0,
+        lower_action_loss_weight=2.0,
+        phase_z_threshold_mm=5.0,
     )
 
     assert len(manifest_rows) == 1
@@ -209,6 +213,8 @@ def test_rollout_policy_trace_export_preserves_lift_transport_targets(tmp_path: 
     assert row["target_reached"] is True
     assert row["train_mask"] == [1.0, 1.0]
     assert row["target_gripper_state"] == [[1.0], [1.0]]
+    assert row["target_transport_phase"] == ["lift", "carry"]
+    assert row["action_loss_weight"] == [3.0, 1.0]
     np.testing.assert_allclose(row["target_action"][0][:3], [0.0, 0.0, 0.8], atol=1e-6)
     np.testing.assert_allclose(row["target_action"][1][:3], [-0.5, 0.2, 0.4], atol=1e-6)
     np.testing.assert_allclose(row["target_action"][1][6], 1.0, atol=1e-6)
