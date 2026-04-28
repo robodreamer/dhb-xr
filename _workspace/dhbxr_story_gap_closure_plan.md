@@ -1620,3 +1620,30 @@ Story implication:
   claim: DHB-XR is useful because it provides a compact spatially adaptable
   token for augmented trajectories, not because execution-side heuristics can
   rescue missing post-contact data.
+
+2026-04-27 sim-state reset/replay diagnostic:
+
+- Live rollouts can now optionally record flattened LIBERO simulator states per
+  step. This creates a concrete reset/replay bridge from closed-loop failures
+  to augmented post-contact data.
+- The new correction planner and correction rollout runner can restore mined
+  post-contact states and execute closed-gripper target-direction corrections.
+- The first replay attempts did not produce successful target-reaching
+  positives. Early `+3 cm` physical-close reset states produced `0.0 mm` target
+  progress; a later selected reset state produced only `2.6 mm` progress.
+- Tightening the miner to require the executed command to remain closed avoids
+  stale post-open candidates. New coupling diagnostics show the active policy
+  has weak object transport despite visible object motion: object/EE path
+  coupling is only about `0.60` in the sim-state recapture, and target XY never
+  enters the `45 mm` release window.
+
+Story implication:
+
+- The failure boundary is now more precise: the unsolved gap is not just
+  release timing and not just target-direction action labels. The policy must
+  create or be trained from grasp-attached post-contact states where the object
+  follows the end effector. This strengthens the augmentation narrative: a
+  simulator/world-model module should synthesize verified grasp-attached
+  transport trajectories, and DHB-XR should be evaluated on whether its compact
+  invariant/action token learns those spatially adapted trajectories more
+  efficiently than ordinary action heads.

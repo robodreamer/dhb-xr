@@ -555,3 +555,14 @@ explicitly references them. They are kept for provenance only.
   weakened `0 cm` close. Treat both as negative diagnostics; the non-best
   weights were deleted after evaluation. Next step is successful post-contact
   target-reaching positive generation, not another scalar warm-start sweep.
+- Post-contact reset/replay status:
+  Live rollouts and checkpoint sweeps now support `--record-sim-state-trace`.
+  `scripts/libero_postcontact_correction_plan.py` creates reset/replay plans
+  from mined correction requests, and
+  `scripts/libero_postcontact_correction_rollout.py` restores captured LIBERO
+  states and executes closed-gripper correction actions. The transport miner now
+  requires command-closed plus observed-closed candidates and reports object/EE
+  coupling. First replay attempts were negative: earliest `+3 cm` reset states
+  give `0.0 mm` target progress, and a later reset gives only `2.6 mm`. The
+  next gap is verified grasp-attached state generation/selection, not more
+  direction-label tuning.

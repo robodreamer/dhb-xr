@@ -2306,3 +2306,45 @@ Updated immediate priority:
    world-model augmentation, or scripted correction rollouts from mined
    physically closed states. The positive data must actually reduce target XY
    below the release affordance window before release retraining can be honest.
+
+Post-contact reset/replay infrastructure update:
+
+- Added opt-in `--record-sim-state-trace` support to live rollouts and the
+  checkpoint sweep wrapper. This stores flattened LIBERO simulator states in
+  step traces so mined post-contact states can be reset exactly.
+- Added `scripts/libero_postcontact_correction_plan.py` to turn mined
+  correction requests into reset/replay plans with closed-gripper delta-action
+  sequences.
+- Added `scripts/libero_postcontact_correction_rollout.py` to restore those
+  states and execute the scripted correction actions with the same embodik IK
+  control path as live rollout.
+- Tightened the transport miner so correction candidates require both observed
+  physical gripper closure and an executed closed-gripper command. This avoids
+  selecting stale post-open states whose gripper qpos has not caught up yet.
+- Added coupling diagnostics to the transport miner. The sim-state recapture
+  shows the object moves during closed transport but only with about `0.60`
+  object/EE path coupling, and it still does not move toward the target.
+
+Latest reset/replay finding:
+
+- A sim-state recapture was run for the active closed-transport `steps_300`
+  checkpoint under the calibrated no-gate protocol. Use it only as reset-state
+  infrastructure, not as a replacement baseline: the recaptured behavior is
+  worse than the earlier metric run and includes reopen/IK failures.
+- Reset/replay from the earliest `+3 cm` physically closed state produced
+  `0.0 mm` target progress, even with a shorter/faster correction plan.
+- Reset/replay from a later selected state produced only `2.6 mm` target
+  progress and did not reach the target window.
+
+Updated immediate priority:
+
+1. The remaining blocker is grasp-attached post-contact data, not merely target
+   direction labels. Physical close near the bowl is insufficient if the object
+   is not reliably carried by the gripper.
+2. Next data generation should select or create states with verified
+   object/EE coupling above a threshold, then execute target-reaching
+   corrections from those states.
+3. If reset/replay cannot find enough naturally coupled states, use simulator
+   assistance to initialize an actually grasp-attached bowl state before
+   generating transport-to-target positives. This aligns directly with the
+   manuscript's simulator/world-model augmentation story.

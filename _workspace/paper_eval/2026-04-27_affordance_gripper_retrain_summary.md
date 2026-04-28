@@ -1142,3 +1142,40 @@ closed residual and release heads on those positives.
 
 The non-best transport-correction weights were removed after evaluation;
 configs, summaries, traces, and scores remain for reproducibility.
+
+## Sim-State Reset/Replay Diagnostic
+
+The live rollout and checkpoint sweep now support `--record-sim-state-trace`,
+which stores the flattened LIBERO simulator state in every step-trace entry.
+This makes the next post-contact augmentation path concrete: restore a mined
+closed-loop state, execute a target-reaching correction, then convert the
+resulting trajectory into policy-trace positives.
+
+New tools:
+
+`scripts/libero_postcontact_correction_plan.py`
+
+`scripts/libero_postcontact_correction_rollout.py`
+
+The first reset/replay pass used the active closed-transport `steps_300`
+checkpoint recaptured with simulator states. Treat this recapture as
+infrastructure only, not as a replacement metric baseline: the recaptured
+rollout was worse than the earlier best summary and included reopen/IK
+failures.
+
+The transport miner was tightened so correction candidates require both
+observed physical closure and an executed closed command. It also now reports
+object/EE transport coupling. In the sim-state recapture, object/EE path
+coupling is only about `0.60`, and neither fixed case reaches the `45 mm`
+target window.
+
+Replay results:
+
+- Earliest `+3 cm` physical-close reset: `0.0 mm` target progress.
+- Shorter/faster earliest `+3 cm` reset: `0.0 mm` target progress.
+- Later selected `+3 cm` reset: only `2.6 mm` target progress, no target reach.
+
+Updated interpretation: physical close near the bowl is not enough. The next
+dataset gap is grasp-attached transport: states must be selected or generated
+where the object actually follows the end effector before target-reaching
+corrections can become useful training positives.

@@ -33,6 +33,27 @@ def _xy_norm(vec: list[float]) -> float:
     return math.hypot(vec[0], vec[1])
 
 
+def _path_length_mm(points: list[list[float]]) -> float:
+    if len(points) < 2:
+        return 0.0
+    arr = np.asarray(points, dtype=np.float32)
+    return float(np.linalg.norm(np.diff(arr, axis=0), axis=1).sum() * 1000.0)
+
+
+def _net_displacement_mm(points: list[list[float]]) -> float:
+    if len(points) < 2:
+        return 0.0
+    arr = np.asarray(points, dtype=np.float32)
+    return float(np.linalg.norm(arr[-1] - arr[0]) * 1000.0)
+
+
+def _object_pos_key(object_target_field: str) -> str | None:
+    if "_minus_" not in object_target_field:
+        return None
+    object_name = object_target_field.split("_minus_", 1)[0]
+    return f"{object_name}_pos"
+
+
 def _physical_close_step(
     trace: list[dict[str, Any]],
     *,
@@ -60,6 +81,18 @@ def _observed_closed(row: dict[str, Any], *, gripper_qpos_threshold: float) -> b
     value = row.get("observed_state_gripper", row.get("state_gripper"))
     try:
         return value is not None and float(value) <= gripper_qpos_threshold
+    except (TypeError, ValueError):
+        return False
+
+
+def _commanded_closed(row: dict[str, Any]) -> bool:
+    value = row.get("effective_grip")
+    if value is None:
+        value = row.get("desired_grip")
+    if value is None:
+        return True
+    try:
+        return float(value) > 0.0
     except (TypeError, ValueError):
         return False
 
@@ -109,6 +142,7 @@ def mine_transport_samples(
     target_z_max_mm: float,
     gripper_qpos_threshold: float,
     correction_top_k: int,
+    correction_sort: str = "best_target_xy",
 ) -> dict[str, Any]:
     trace = [row for row in rollout.get("step_trace", []) if isinstance(row, dict)]
     close_step = rollout.get("close_step")
@@ -132,7 +166,9 @@ def mine_transport_samples(
         if vector is None:
             continue
         after_physical_close = physical_close is not None and step >= physical_close
-        closed = _observed_closed(row, gripper_qpos_threshold=gripper_qpos_threshold)
+        commanded_closed = _commanded_closed(row)
+        observed_closed = _observed_closed(row, gripper_qpos_threshold=gripper_qpos_threshold)
+        closed = commanded_closed and observed_closed
         ready = after_physical_close and _target_ready(
             vector,
             target_xy_tolerance_mm=target_xy_tolerance_mm,
@@ -160,7 +196,9 @@ def mine_transport_samples(
                 "object_minus_target_m": vector,
                 "object_target_xy_mm": _xy_norm(vector) * 1000.0,
                 "object_target_z_mm": vector[2] * 1000.0,
-                "observed_closed": closed,
+                "observed_closed": observed_closed,
+                "commanded_closed": commanded_closed,
+                "transport_closed": closed,
                 "phase": row.get("phase"),
             }
         )
@@ -170,6 +208,31 @@ def mine_transport_samples(
         for sample in samples
         if physical_close is not None and int(sample["step"]) >= physical_close
     ]
+    transport_closed_steps = {
+        int(sample["step"])
+        for sample in samples
+        if sample.get("transport_closed")
+    }
+    object_key = _object_pos_key(object_target_field)
+    object_points: list[list[float]] = []
+    ee_points: list[list[float]] = []
+    for row in sorted(trace, key=lambda item: int(item.get("step", 10**9))):
+        step = row.get("step")
+        if not isinstance(step, int) or step not in transport_closed_steps:
+            continue
+        if object_key is None:
+            continue
+        object_pos = _vector3(row.get(object_key))
+        ee_pos = _vector3(row.get("ee_pos"))
+        if object_pos is None or ee_pos is None:
+            continue
+        object_points.append(object_pos)
+        ee_points.append(ee_pos)
+    object_path_mm = _path_length_mm(object_points)
+    ee_path_mm = _path_length_mm(ee_points)
+    object_net_mm = _net_displacement_mm(object_points)
+    ee_net_mm = _net_displacement_mm(ee_points)
+    coupling_ratio = None if ee_path_mm <= 1e-6 else object_path_mm / ee_path_mm
     close_sample = next(
         (sample for sample in samples if physical_close is not None and sample["step"] == physical_close),
         None,
@@ -184,10 +247,24 @@ def mine_transport_samples(
         for sample in post_close
         if sample["label"] == "closed_transport_candidate"
     ]
-    correction_candidates = sorted(
-        correction_candidates,
-        key=lambda item: item["object_target_xy_mm"],
-    )[: max(0, int(correction_top_k))]
+    if correction_sort == "earliest":
+        correction_candidates = sorted(correction_candidates, key=lambda item: int(item["step"]))
+    elif correction_sort == "latest":
+        correction_candidates = sorted(
+            correction_candidates,
+            key=lambda item: int(item["step"]),
+            reverse=True,
+        )
+    elif correction_sort == "best_target_xy":
+        correction_candidates = sorted(
+            correction_candidates,
+            key=lambda item: item["object_target_xy_mm"],
+        )
+    else:
+        raise ValueError(
+            "correction_sort must be one of: best_target_xy, earliest, latest"
+        )
+    correction_candidates = correction_candidates[: max(0, int(correction_top_k))]
     correction_requests = []
     for sample in correction_candidates:
         vector = sample["object_minus_target_m"]
@@ -234,11 +311,18 @@ def mine_transport_samples(
         "best_target_step": None if best is None else best["step"],
         "target_progress_mm": progress_mm,
         "target_progress_fraction": progress_fraction,
+        "transport_closed_steps": int(len(transport_closed_steps)),
+        "object_motion_path_mm": object_path_mm,
+        "object_motion_net_mm": object_net_mm,
+        "ee_motion_path_during_transport_mm": ee_path_mm,
+        "ee_motion_net_during_transport_mm": ee_net_mm,
+        "object_ee_coupling_ratio": coupling_ratio,
         "target_reached": counts.get("target_reached", 0) > 0,
         "needs_transport_correction": counts.get("target_reached", 0) == 0
         and bool(correction_requests),
         "best_target_candidate": best,
         "correction_requests": correction_requests,
+        "correction_sort": correction_sort,
         "samples": samples,
     }
 
@@ -378,6 +462,16 @@ def main() -> None:
     parser.add_argument("--target-z-max-mm", type=float, default=55.0)
     parser.add_argument("--gripper-qpos-threshold", type=float, default=0.015)
     parser.add_argument("--correction-top-k", type=int, default=3)
+    parser.add_argument(
+        "--correction-sort",
+        choices=("best_target_xy", "earliest", "latest"),
+        default="best_target_xy",
+        help=(
+            "How to choose correction requests. best_target_xy is diagnostic; "
+            "earliest is preferred for reset/replay because it starts near "
+            "physical close before grasp degradation."
+        ),
+    )
     parser.add_argument("--action-stats-json")
     parser.add_argument("--correction-steps", type=int, default=8)
     parser.add_argument("--max-action-step-mm", type=float, default=18.0)
@@ -405,6 +499,7 @@ def main() -> None:
             target_z_max_mm=float(args.target_z_max_mm),
             gripper_qpos_threshold=float(args.gripper_qpos_threshold),
             correction_top_k=max(0, int(args.correction_top_k)),
+            correction_sort=args.correction_sort,
         )
         results.append(result)
         correction_requests.extend(result["correction_requests"])
@@ -427,6 +522,7 @@ def main() -> None:
         "target_z_max_mm": float(args.target_z_max_mm),
         "gripper_qpos_threshold": float(args.gripper_qpos_threshold),
         "correction_top_k": max(0, int(args.correction_top_k)),
+        "correction_sort": args.correction_sort,
         "policy_manifest_rows": int(len(policy_rows)),
         "policy_correction_steps": max(1, int(args.correction_steps)),
         "policy_max_action_step_mm": float(args.max_action_step_mm),

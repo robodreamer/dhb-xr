@@ -408,6 +408,15 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--record-sim-state-trace",
+        action="store_true",
+        help=(
+            "Also store LIBERO flattened simulator state in each step-trace entry. "
+            "Use this only for post-contact reset/replay data generation because it "
+            "makes summaries larger."
+        ),
+    )
+    parser.add_argument(
         "--save-policy-trace-dir",
         default=None,
         help=(
@@ -442,6 +451,8 @@ def main() -> None:
     parser.add_argument("--save_video", default=None)
     parser.add_argument("--no-video", action="store_true")
     args, unknown = parser.parse_known_args()
+    if args.record_sim_state_trace:
+        args.record_step_trace = True
 
     dotlist = normalize_dotlist_args(unknown)
     cfg = OmegaConf.load(args.config_yaml)
@@ -685,6 +696,8 @@ def main() -> None:
             entry["observed_state_gripper"] = float(
                 np.asarray(observed_state_vector, dtype=np.float32)[-1]
             )
+        if args.record_sim_state_trace:
+            entry["sim_state"] = np.asarray(env.get_sim_state(), dtype=np.float32).tolist()
         step_trace.append(entry)
 
     def record_policy_trace_chunk(
@@ -1130,6 +1143,7 @@ def main() -> None:
         "reach_threshold_z_m": float(args.reach_threshold_z_m),
         "reach_stop_on_success": bool(args.reach_stop_on_success),
         "record_step_trace": bool(args.record_step_trace),
+        "record_sim_state_trace": bool(args.record_sim_state_trace),
         "policy_trace_dir": None if policy_trace_dir is None else str(policy_trace_dir),
         "policy_trace": policy_trace if policy_trace_dir is not None else None,
         "success": bool(final_success),

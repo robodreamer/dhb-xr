@@ -72,6 +72,7 @@ def _run_case(
     reach_threshold_z_m: float,
     reach_stop_on_success: bool,
     record_step_trace: bool,
+    record_sim_state_trace: bool,
     save_policy_trace: bool,
 ) -> dict:
     summary_path = output_dir / (
@@ -169,6 +170,8 @@ def _run_case(
         cmd.append("--disable-gripper-gates")
     if record_step_trace:
         cmd.append("--record-step-trace")
+    if record_sim_state_trace:
+        cmd.append("--record-sim-state-trace")
     if save_policy_trace:
         cmd.extend(["--save-policy-trace-dir", str(policy_trace_dir)])
     if reach_only:
@@ -380,6 +383,14 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--record-sim-state-trace",
+        action="store_true",
+        help=(
+            "Forward rollout-side flattened simulator-state recording. This implies "
+            "--record-step-trace and should be used only for reset/replay data generation."
+        ),
+    )
+    parser.add_argument(
         "--save-policy-trace",
         action="store_true",
         help=(
@@ -482,7 +493,8 @@ def main() -> None:
                 reach_threshold_xy_m=args.reach_threshold_xy_m,
                 reach_threshold_z_m=args.reach_threshold_z_m,
                 reach_stop_on_success=args.reach_stop_on_success,
-                record_step_trace=bool(args.record_step_trace),
+                record_step_trace=bool(args.record_step_trace or args.record_sim_state_trace),
+                record_sim_state_trace=bool(args.record_sim_state_trace),
                 save_policy_trace=bool(args.save_policy_trace),
             )
             rows.append(row)
@@ -539,6 +551,8 @@ def main() -> None:
             "reach_threshold_xy_m": float(args.reach_threshold_xy_m),
             "reach_threshold_z_m": float(args.reach_threshold_z_m),
             "reach_stop_on_success": bool(args.reach_stop_on_success),
+            "record_step_trace": bool(args.record_step_trace or args.record_sim_state_trace),
+            "record_sim_state_trace": bool(args.record_sim_state_trace),
         },
         "ranked": ranked,
     }
