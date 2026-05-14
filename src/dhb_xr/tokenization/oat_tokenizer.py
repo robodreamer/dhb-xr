@@ -24,7 +24,8 @@ References:
 """
 
 try:
-    from typing import Dict, List, Optional, Tuple
+    import math
+    from typing import Dict, List, Optional, Sequence, Tuple
 
     import torch
     import torch.nn as nn
@@ -176,6 +177,135 @@ if HAS_TORCH:
             # MSE loss (no VQ losses needed with FSQ)
             loss = F.mse_loss(recon, x)
             return loss
+
+        @staticmethod
+        def token_stats(tokens: torch.Tensor) -> Dict:
+            """Summarize discrete-token usage for collapse diagnostics.
+
+            Args:
+                tokens: Integer token IDs with shape (B, K).
+
+            Returns:
+                JSON-serializable statistics. A collapsed tokenizer has
+                ``global_unique_count == 1`` and ``collapsed_sample_fraction``
+                close to 1.0 even if reconstruction loss is low.
+            """
+            if tokens.ndim != 2:
+                raise ValueError(f"Expected tokens with shape (B, K), got {tuple(tokens.shape)}")
+            tokens_cpu = tokens.detach().to(device="cpu", dtype=torch.long)
+            B, K = tokens_cpu.shape
+            if B == 0 or K == 0:
+                return {
+                    "avg_token_unique_count": 0.0,
+                    "global_unique_count": 0,
+                    "per_position_unique_counts": [],
+                    "collapsed_sample_fraction": 0.0,
+                    "token_entropy": 0.0,
+                    "token_histogram": {},
+                }
+
+            per_sample_unique = [
+                int(torch.unique(tokens_cpu[row]).numel())
+                for row in range(B)
+            ]
+            per_position_unique = [
+                int(torch.unique(tokens_cpu[:, col]).numel())
+                for col in range(K)
+            ]
+            values, counts = torch.unique(tokens_cpu.reshape(-1), return_counts=True)
+            probs = counts.float() / counts.sum().clamp_min(1)
+            entropy = float(-(probs * probs.log()).sum().item())
+            histogram = {
+                str(int(value.item())): int(count.item())
+                for value, count in zip(values, counts)
+            }
+            return {
+                "avg_token_unique_count": float(sum(per_sample_unique) / len(per_sample_unique)),
+                "global_unique_count": int(values.numel()),
+                "per_position_unique_counts": per_position_unique,
+                "collapsed_sample_fraction": float(
+                    sum(1 for count in per_sample_unique if count <= 1) / len(per_sample_unique)
+                ),
+                "token_entropy": entropy,
+                "token_entropy_normalized": float(
+                    entropy / math.log(max(2, int(values.numel())))
+                    if values.numel() > 1
+                    else 0.0
+                ),
+                "token_histogram": histogram,
+            }
+
+        def register_diversity_loss(
+            self,
+            x: Optional[torch.Tensor] = None,
+            *,
+            latents: Optional[torch.Tensor] = None,
+        ) -> torch.Tensor:
+            """Penalize identical register latents before FSQ quantization.
+
+            This is intentionally independent from token counts so it remains
+            differentiable during standalone tokenizer pretraining.
+            """
+            if latents is None:
+                if x is None:
+                    raise ValueError("register_diversity_loss requires x or latents")
+                latents = self.encoder(x)
+            if latents.ndim != 3:
+                raise ValueError(f"Expected latents with shape (B, K, D), got {tuple(latents.shape)}")
+            if latents.shape[1] <= 1:
+                return latents.new_zeros(())
+
+            normalized = F.normalize(latents.float(), dim=-1)
+            sim = torch.matmul(normalized, normalized.transpose(1, 2))
+            K = sim.shape[-1]
+            offdiag = ~torch.eye(K, dtype=torch.bool, device=sim.device)
+            return sim[:, offdiag].pow(2).mean()
+
+        @torch.no_grad()
+        def reconstruction_metrics(
+            self,
+            x: torch.Tensor,
+            *,
+            prefix_ks: Optional[Sequence[int]] = None,
+        ) -> Dict:
+            """Measure full and prefix token reconstruction on a batch.
+
+            The model is evaluated without changing its original training mode.
+            Metrics are returned as Python floats so scripts can write JSON
+            directly.
+            """
+            was_training = self.training
+            self.eval()
+            try:
+                latents_q, tokens = self.encode(x)
+                full_recon = self.decode(latents_q)
+                full_error = (full_recon - x).abs()
+                metrics = {
+                    "full_recon_mae": float(full_error.mean().item()),
+                    "full_recon_mse": float(full_error.pow(2).mean().item()),
+                    "token_stats": self.token_stats(tokens),
+                    "prefix": {},
+                }
+
+                if prefix_ks is None:
+                    prefix_ks = [1, 2, 4, self.num_registers]
+                for keep_k in prefix_ks:
+                    keep_k_int = int(keep_k)
+                    if keep_k_int < 1 or keep_k_int > self.num_registers:
+                        continue
+                    recon = self.decode(
+                        latents_q,
+                        eval_keep_k=[keep_k_int] * x.shape[0],
+                    )
+                    error = (recon - x).abs()
+                    metrics["prefix"][str(keep_k_int)] = {
+                        "mae": float(error.mean().item()),
+                        "mse": float(error.pow(2).mean().item()),
+                    }
+                return metrics
+            finally:
+                if was_training:
+                    self.train()
 
         def encode(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
             """

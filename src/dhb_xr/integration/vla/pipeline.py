@@ -1,13 +1,24 @@
-"""Minimal VLA pipeline: dataset → DHB encode → tokenization → export."""
+"""Minimal VLA pipeline: dataset → DHB encode → tokenization → export.
+
+This module now exposes a small streaming-oriented token contract for VLA use:
+
+- encode a waypoint chunk into DHB invariants
+- tokenize the invariants with either VQ or OAT
+- detokenize either the full token sequence or a streamed prefix
+
+The streaming-prefix path is OAT-specific because OAT supports anytime prefix
+decoding. That is the token path that matches chunked VLA execution best.
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable, List, Literal, Optional, Sequence
 
 import numpy as np
 
 from dhb_xr.core.types import DHBMethod, EncodingMethod
+from dhb_xr.decoder.dhb_dr import decode_dhb_dr
 from dhb_xr.encoder.dhb_dr import encode_dhb_dr
 from dhb_xr.tokenization.vqvae import DHBTokenizer
 
@@ -23,8 +34,16 @@ class DHBVLAPipelineConfig:
     dhb_method: DHBMethod = DHBMethod.DOUBLE_REFLECTION
     method: EncodingMethod = EncodingMethod.POSITION
     use_default_initial_frames: bool = True
+    tokenizer_kind: Literal["vq", "oat"] = "vq"
     codebook_size: int = 256
     latent_dim: int = 32
+    oat_num_registers: int = 8
+    oat_fsq_levels: Optional[List[int]] = None
+    oat_emb_dim: int = 64
+    oat_num_heads: int = 4
+    oat_encoder_depth: int = 2
+    oat_decoder_depth: int = 2
+    oat_init_seed: Optional[int] = None
 
 
 class DHBVLAPipeline:
@@ -32,17 +51,45 @@ class DHBVLAPipeline:
 
     def __init__(self, config: Optional[DHBVLAPipelineConfig] = None):
         self.config = config or DHBVLAPipelineConfig()
-        self._tokenizer: Optional[DHBTokenizer] = None
+        self._tokenizer: Optional[object] = None
+        self._tokenizer_key: Optional[tuple] = None
 
-    def _get_tokenizer(self, invariant_dim: int) -> DHBTokenizer:
+    def _get_tokenizer(self, invariant_dim: int, horizon: Optional[int] = None) -> object:
         if not HAS_TORCH:
             raise ImportError("torch is required for tokenization (pip install dhb_xr[gpu]).")
-        if self._tokenizer is None:
-            self._tokenizer = DHBTokenizer(
-                invariant_dim=invariant_dim,
-                latent_dim=self.config.latent_dim,
-                codebook_size=self.config.codebook_size,
-            )
+        key = (self.config.tokenizer_kind, invariant_dim, None if self.config.tokenizer_kind == "vq" else horizon)
+        if self._tokenizer is None or self._tokenizer_key != key:
+            if self.config.tokenizer_kind == "vq":
+                self._tokenizer = DHBTokenizer(
+                    invariant_dim=invariant_dim,
+                    latent_dim=self.config.latent_dim,
+                    codebook_size=self.config.codebook_size,
+                )
+            elif self.config.tokenizer_kind == "oat":
+                if horizon is None:
+                    raise ValueError("OAT tokenization requires the invariant horizon.")
+                from dhb_xr.tokenization.oat_tokenizer import OATTokenizer
+
+                tokenizer_kwargs = {
+                    "input_dim": invariant_dim,
+                    "input_horizon": horizon,
+                    "emb_dim": self.config.oat_emb_dim,
+                    "latent_dim": 4,
+                    "num_registers": self.config.oat_num_registers,
+                    "fsq_levels": self.config.oat_fsq_levels or [8, 5, 5, 5],
+                    "encoder_depth": self.config.oat_encoder_depth,
+                    "decoder_depth": self.config.oat_decoder_depth,
+                    "num_heads": self.config.oat_num_heads,
+                }
+                if self.config.oat_init_seed is None:
+                    self._tokenizer = OATTokenizer(**tokenizer_kwargs)
+                else:
+                    with torch.random.fork_rng(devices=[]):
+                        torch.manual_seed(int(self.config.oat_init_seed))
+                        self._tokenizer = OATTokenizer(**tokenizer_kwargs)
+            else:
+                raise ValueError(f"Unsupported tokenizer_kind={self.config.tokenizer_kind!r}")
+            self._tokenizer_key = key
         return self._tokenizer
 
     def encode_trajectory(self, positions: np.ndarray, quaternions: np.ndarray) -> Dict:
@@ -54,11 +101,255 @@ class DHBVLAPipeline:
             dhb_method=self.config.dhb_method,
         )
 
+    @staticmethod
+    def _run_tokenizer_eval(tokenizer: object, fn):
+        was_training = bool(getattr(tokenizer, "training", False))
+        if hasattr(tokenizer, "eval"):
+            tokenizer.eval()
+        try:
+            return fn()
+        finally:
+            if was_training and hasattr(tokenizer, "train"):
+                tokenizer.train()
+
     def tokenize_invariants(self, invariants: np.ndarray) -> np.ndarray:
-        tokenizer = self._get_tokenizer(invariants.shape[1])
+        tokenizer = self._get_tokenizer(invariants.shape[1], horizon=invariants.shape[0])
         inv_batch = torch.from_numpy(invariants.astype(np.float32)).unsqueeze(0)
-        indices, _, _, _ = tokenizer(inv_batch)
-        return indices.squeeze(0).cpu().numpy()
+        if self.config.tokenizer_kind == "vq":
+            indices, _, _, _ = self._run_tokenizer_eval(tokenizer, lambda: tokenizer(inv_batch))
+            return indices.squeeze(0).cpu().numpy()
+        tokens = self._run_tokenizer_eval(tokenizer, lambda: tokenizer.tokenize(inv_batch))
+        return tokens.squeeze(0).cpu().numpy()
+
+    def build_oat_token_targets(
+        self,
+        invariants: np.ndarray,
+        *,
+        chunk_horizon: int,
+    ) -> Dict[str, np.ndarray]:
+        """Tokenize step-aligned future DHB chunks for LeRobot export.
+
+        Each row `i` is tokenized from `invariants[i : i + h]`, where
+        `h = min(chunk_horizon, len(invariants) - i)`. This keeps the exported
+        token targets aligned with per-step future chunks while allowing the
+        horizon to shrink near the episode tail.
+        """
+        if self.config.tokenizer_kind != "oat":
+            raise ValueError("build_oat_token_targets requires tokenizer_kind='oat'")
+
+        arr = np.asarray(invariants, dtype=np.float32)
+        if arr.ndim != 2:
+            raise ValueError(f"Expected invariants shape (T, D), got {arr.shape}")
+
+        max_chunk_horizon = int(chunk_horizon)
+        if max_chunk_horizon <= 0:
+            raise ValueError(f"chunk_horizon must be positive, got {chunk_horizon}")
+
+        total_horizon = arr.shape[0]
+        token_ids = np.zeros((total_horizon, self.config.oat_num_registers), dtype=np.int64)
+        chunk_horizons = np.zeros(total_horizon, dtype=np.int32)
+        chunk_step_mask = np.zeros((total_horizon, max_chunk_horizon), dtype=np.float32)
+        if total_horizon == 0:
+            return {
+                "token_ids": token_ids,
+                "chunk_horizon": chunk_horizons,
+                "chunk_step_mask": chunk_step_mask,
+            }
+
+        for start in range(total_horizon):
+            horizon = min(max_chunk_horizon, total_horizon - start)
+            chunk_horizons[start] = horizon
+            chunk_step_mask[start, :horizon] = 1.0
+            tokens = np.asarray(self.tokenize_invariants(arr[start : start + horizon]), dtype=np.int64).reshape(-1)
+            if tokens.shape[0] != token_ids.shape[1]:
+                raise ValueError(
+                    "Expected fixed-width OAT token targets, got "
+                    f"{tokens.shape[0]} tokens for row {start}"
+                )
+            token_ids[start] = tokens
+
+        return {
+            "token_ids": token_ids,
+            "chunk_horizon": chunk_horizons,
+            "chunk_step_mask": chunk_step_mask,
+        }
+
+    def detokenize_tokens(
+        self,
+        tokens: np.ndarray,
+        *,
+        invariant_dim: int,
+        horizon: int,
+        prefix_keep_k: Optional[int | Sequence[int]] = None,
+    ) -> np.ndarray:
+        """Decode DHB action tokens back to invariants.
+
+        For OAT this supports prefix decoding, which is the exact streaming use
+        case for chunked VLA execution. For VQ, only full-token decode is
+        supported because there is no explicit anytime-prefix contract.
+        """
+
+        tokenizer = self._get_tokenizer(invariant_dim, horizon=horizon)
+        token_arr = np.asarray(tokens)
+        if token_arr.ndim == 1:
+            token_arr = token_arr[None, :]
+        token_batch = torch.from_numpy(token_arr.astype(np.int64))
+
+        if self.config.tokenizer_kind == "vq":
+            if prefix_keep_k is not None:
+                raise ValueError("prefix_keep_k is only supported for tokenizer_kind='oat'")
+            with torch.no_grad():
+                recon = self._run_tokenizer_eval(tokenizer, lambda: tokenizer.decode_tokens(token_batch))
+            return recon.detach().cpu().numpy()
+
+        keep_k: Optional[List[int]]
+        if prefix_keep_k is None:
+            keep_k = None
+        elif isinstance(prefix_keep_k, int):
+            keep_k = [int(prefix_keep_k)] * token_batch.shape[0]
+        else:
+            keep_k = [int(v) for v in prefix_keep_k]
+            if len(keep_k) != token_batch.shape[0]:
+                raise ValueError(
+                    f"Expected {token_batch.shape[0]} prefix lengths, got {len(keep_k)}"
+                )
+
+        with torch.no_grad():
+            recon = self._run_tokenizer_eval(
+                tokenizer,
+                lambda: tokenizer.detokenize(token_batch, eval_keep_k=keep_k),
+            )
+        return recon.detach().cpu().numpy()
+
+    def decode_token_stream(
+        self,
+        tokens: np.ndarray,
+        *,
+        invariant_dim: int,
+        horizon: int,
+        prefix_lengths: Sequence[int],
+    ) -> List[Dict[str, np.ndarray | int]]:
+        """Decode successive streamed token prefixes into full invariant chunks.
+
+        This matches the VLA use case where a tokenized chunk arrives
+        incrementally during policy execution and each prefix must decode to a
+        valid coarse chunk.
+        """
+        if self.config.tokenizer_kind != "oat":
+            raise ValueError("decode_token_stream requires tokenizer_kind='oat'")
+
+        token_arr = np.asarray(tokens)
+        if token_arr.ndim == 1:
+            token_arr = token_arr[None, :]
+        full_len = token_arr.shape[1]
+        outputs: List[Dict[str, np.ndarray | int]] = []
+        for keep_k in prefix_lengths:
+            k = int(keep_k)
+            if k <= 0 or k > full_len:
+                raise ValueError(f"prefix length {k} is out of range for token length {full_len}")
+            recon = self.detokenize_tokens(
+                token_arr[:, :k],
+                invariant_dim=invariant_dim,
+                horizon=horizon,
+                prefix_keep_k=k,
+            )
+            outputs.append({"keep_k": k, "reconstruction": recon})
+        return outputs
+
+    @staticmethod
+    def _split_invariants(invariants: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        arr = np.asarray(invariants, dtype=np.float32)
+        if arr.ndim == 2:
+            if arr.shape[1] % 2 != 0:
+                raise ValueError(f"Expected even invariant dim, got {arr.shape}")
+            half = arr.shape[1] // 2
+            return arr[:, :half], arr[:, half:]
+        if arr.ndim == 3:
+            if arr.shape[2] % 2 != 0:
+                raise ValueError(f"Expected even invariant dim, got {arr.shape}")
+            half = arr.shape[2] // 2
+            return arr[:, :, :half], arr[:, :, half:]
+        raise ValueError(f"Unsupported invariant shape {arr.shape}")
+
+    def decode_invariants_to_trajectory(
+        self,
+        invariants: np.ndarray,
+        *,
+        initial_pose: Dict[str, np.ndarray],
+        robust_mode: bool = True,
+        return_diagnostics: bool = False,
+    ) -> Dict:
+        """Decode DHB invariants to a trajectory from an initial pose."""
+
+        linear_inv, angular_inv = self._split_invariants(invariants)
+        return decode_dhb_dr(
+            linear_inv,
+            angular_inv,
+            initial_pose=initial_pose,
+            method=self.config.method,
+            dhb_method=self.config.dhb_method,
+            robust_mode=robust_mode,
+            return_diagnostics=return_diagnostics,
+        )
+
+    def decode_tokens_to_trajectory(
+        self,
+        tokens: np.ndarray,
+        *,
+        invariant_dim: int,
+        horizon: int,
+        initial_pose: Dict[str, np.ndarray],
+        prefix_keep_k: Optional[int | Sequence[int]] = None,
+        robust_mode: bool = True,
+        return_diagnostics: bool = False,
+    ) -> Dict:
+        """Decode tokens directly to a DHB trajectory."""
+
+        invariants = self.detokenize_tokens(
+            tokens,
+            invariant_dim=invariant_dim,
+            horizon=horizon,
+            prefix_keep_k=prefix_keep_k,
+        )
+        if invariants.shape[0] != 1:
+            raise ValueError(
+                "decode_tokens_to_trajectory currently expects a single token sequence"
+            )
+        trajectory = self.decode_invariants_to_trajectory(
+            invariants[0],
+            initial_pose=initial_pose,
+            robust_mode=robust_mode,
+            return_diagnostics=return_diagnostics,
+        )
+        trajectory["invariants"] = invariants[0]
+        return trajectory
+
+    def decode_token_stream_to_trajectories(
+        self,
+        tokens: np.ndarray,
+        *,
+        invariant_dim: int,
+        horizon: int,
+        initial_pose: Dict[str, np.ndarray],
+        prefix_lengths: Sequence[int],
+        robust_mode: bool = True,
+        return_diagnostics: bool = False,
+    ) -> List[Dict[str, np.ndarray | int | Dict]]:
+        """Decode streamed token prefixes into executable trajectories."""
+
+        outputs: List[Dict[str, np.ndarray | int | Dict]] = []
+        for keep_k in prefix_lengths:
+            traj = self.decode_tokens_to_trajectory(
+                np.asarray(tokens)[: int(keep_k)],
+                invariant_dim=invariant_dim,
+                horizon=horizon,
+                initial_pose=initial_pose,
+                prefix_keep_k=int(keep_k),
+                robust_mode=robust_mode,
+                return_diagnostics=return_diagnostics,
+            )
+            outputs.append({"keep_k": int(keep_k), **traj})
+        return outputs
 
     def process_dataset(self, episodes: Iterable[Dict]) -> List[Dict]:
         outputs: List[Dict] = []
@@ -79,6 +370,7 @@ class DHBVLAPipeline:
                     "tokens": tokens,
                     "invariants": invariants,
                     "initial_pose": enc["initial_pose"],
+                    "tokenizer_kind": self.config.tokenizer_kind,
                     "metadata": meta,
                 }
             )

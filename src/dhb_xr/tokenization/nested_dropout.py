@@ -156,12 +156,12 @@ if HAS_TORCH:
                 # Create mask: True for positions that should be masked
                 positions = torch.arange(N, device=x.device).unsqueeze(0)  # (1, N)
                 mask = positions >= keep_ks.unsqueeze(1)  # (B, N)
-                x[mask] = self.mask_token
+                x[mask] = self.mask_token.to(device=x.device, dtype=x.dtype)
             elif eval_keep_k is not None:
                 keep_ks = torch.tensor(eval_keep_k, device=x.device)
                 positions = torch.arange(N, device=x.device).unsqueeze(0)
                 mask = positions >= keep_ks.unsqueeze(1)
-                x[mask] = self.mask_token
+                x[mask] = self.mask_token.to(device=x.device, dtype=x.dtype)
 
             return x
 

@@ -21,6 +21,8 @@ from __future__ import annotations
 from typing import Dict, Optional
 from pathlib import Path
 
+import numpy as np
+
 try:
     import torch
     import torch.nn as nn
@@ -110,6 +112,64 @@ if HAS_TORCH:
 
             return adapter
 
+        @classmethod
+        def from_dhb_head(
+            cls,
+            dhb_head: nn.Module,
+            *,
+            vlm_dim: Optional[int] = None,
+            action_horizon: Optional[int] = None,
+        ) -> "SmolVLADHBAdapter":
+            """Wrap an already-constructed DHB head in the tested adapter path."""
+            inferred_vlm_dim = vlm_dim or getattr(dhb_head, "vlm_dim", 576)
+            inferred_horizon = action_horizon or getattr(dhb_head, "action_horizon", 50)
+            adapter = cls(vlm_dim=inferred_vlm_dim, action_horizon=inferred_horizon)
+            adapter.dhb_head = dhb_head
+            return adapter
+
+        @staticmethod
+        def observation_to_state(
+            obs_dict: Dict,
+            *,
+            device: Optional[torch.device | str] = None,
+        ) -> torch.Tensor:
+            """Convert a LIBERO-style observation dict into the DHB 8D state tensor.
+
+            Raw LIBERO observations use wxyz quaternions. The returned state
+            stores orientation as an axis-angle vector for the action head.
+            """
+            from scipy.spatial.transform import Rotation
+
+            eef_pos = np.asarray(obs_dict.get("robot0_eef_pos", np.zeros(3)), dtype=np.float32)
+            eef_quat_wxyz = np.asarray(
+                obs_dict.get("robot0_eef_quat", np.array([1.0, 0.0, 0.0, 0.0])),
+                dtype=np.float32,
+            )
+            eef_quat_xyzw = eef_quat_wxyz[[1, 2, 3, 0]]
+            aa = Rotation.from_quat(eef_quat_xyzw).as_rotvec().astype(np.float32)
+            gripper = np.asarray(obs_dict.get("robot0_gripper_qpos", np.zeros(2)), dtype=np.float32)
+            state = np.concatenate([eef_pos, aa, gripper], dtype=np.float32)
+            return torch.from_numpy(state).unsqueeze(0).to(device=device)
+
+        @staticmethod
+        def observation_to_initial_pose(
+            obs_dict: Dict,
+            *,
+            device: Optional[torch.device | str] = None,
+        ) -> Dict[str, torch.Tensor]:
+            """Convert a LIBERO-style observation dict into DHB decode initial pose tensors."""
+            eef_pos = np.asarray(obs_dict.get("robot0_eef_pos", np.zeros(3)), dtype=np.float32)
+            eef_quat_wxyz = np.asarray(
+                obs_dict.get("robot0_eef_quat", np.array([1.0, 0.0, 0.0, 0.0])),
+                dtype=np.float32,
+            )
+            norm = np.linalg.norm(eef_quat_wxyz)
+            q_wxyz = eef_quat_wxyz / norm if norm > 1e-8 else np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float32)
+            return {
+                "position": torch.from_numpy(eef_pos).unsqueeze(0).to(device=device),
+                "quaternion": torch.from_numpy(q_wxyz.astype(np.float32)).unsqueeze(0).to(device=device),
+            }
+
         def predict_invariants(
             self,
             vlm_features: torch.Tensor,
@@ -127,6 +187,15 @@ if HAS_TORCH:
             """
             result = self.dhb_head.predict(vlm_features, state=state)
             return result["pred_invariants"]
+
+        def predict_invariants_from_observation(
+            self,
+            vlm_features: torch.Tensor,
+            obs_dict: Dict,
+        ) -> torch.Tensor:
+            """Predict invariants from VLM features using state extracted from observation."""
+            state = self.observation_to_state(obs_dict, device=vlm_features.device)
+            return self.predict_invariants(vlm_features, state=state)
 
         def predict_trajectory(
             self,
@@ -153,6 +222,16 @@ if HAS_TORCH:
                 "quaternions": result["quaternions"],
                 "pred_invariants": result["pred_invariants"],
             }
+
+        def predict_trajectory_from_observation(
+            self,
+            vlm_features: torch.Tensor,
+            obs_dict: Dict,
+        ) -> Dict[str, torch.Tensor]:
+            """Predict trajectory using both state and initial pose from observation."""
+            state = self.observation_to_state(obs_dict, device=vlm_features.device)
+            initial_pose = self.observation_to_initial_pose(obs_dict, device=vlm_features.device)
+            return self.predict_trajectory(vlm_features, initial_pose=initial_pose, state=state)
 
         def save_dhb_head(self, path: str):
             """Save only the DHB action head weights."""

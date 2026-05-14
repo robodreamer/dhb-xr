@@ -4,18 +4,18 @@ This document walks through each example script and notebook in `dhb_xr`, what i
 
 ## Test results (summary)
 
-All seven example scripts were run from the repo root with `PYTHONPATH=src python3 examples/<script>.py`. Results:
+Core example scripts were run from the repo root with `PYTHONPATH=src python3 examples/<script>.py`. Results:
 
 | Example | Output |
 |--------|--------|
-| `01_basic_encoding.py` | Encoded invariants `(52, 4)`, decoded positions `(50, 3)`, quaternions `(50, 4)` |
-| `02_trajectory_adaptation.py` | Adapted positions `(28, 3)`, first/last pose printed |
-| `03_dhb_qr_comparison.py` | DHB-DR linear `(42, 4)`, DHB-QR linear `(42, 5)` |
-| `04_gpu_batch_optimization.py` | Adapted positions `(2, 30, 3)`, last poses per trajectory |
-| `05_vla_tokenization.py` | Invariants `(1, 42, 8)`, token indices `(1, 42)`, reconstruction MSE printed |
-| `06_motion_database.py` | Added 4 trajectories; top-3 retrieval with L2 distances and metadata |
-| `07_imitation_learning.py` | Invariant matching loss, SE(3) geodesic loss, hybrid loss printed |
-| `08_dhb_ti_time_invariant.py` | Progress totals (trans/angular/hybrid), resampled shapes, DHB-TI (DR/QR) invariant shapes |
+| `basic_encoding.py` | Encoded invariants `(52, 4)`, decoded positions `(50, 3)`, quaternions `(50, 4)` |
+| `trajectory_adaptation.py` | Adapted positions `(28, 3)`, first/last pose printed |
+| `dhb_qr_comparison.py` | DHB-DR linear `(42, 4)`, DHB-QR linear `(42, 5)` |
+| `gpu_batch_optimization.py` | Adapted positions `(2, 30, 3)`, last poses per trajectory |
+| `vla_tokenization.py` | Invariants `(1, 42, 8)`, token indices `(1, 42)`, reconstruction MSE printed |
+| `motion_database.py` | Added 4 trajectories; top-3 retrieval with L2 distances and metadata |
+| `imitation_learning.py` | Invariant matching loss, SE(3) geodesic loss, hybrid loss printed |
+| `dhb_ti_time_invariant.py` | Progress totals (trans/angular/hybrid), resampled shapes, DHB-TI (DR/QR) invariant shapes |
 
 ## Prerequisites
 
@@ -30,12 +30,12 @@ To run examples without installing (development):
 
 ```bash
 export PYTHONPATH=src
-python3 examples/01_basic_encoding.py
+python3 examples/basic_encoding.py
 ```
 
 ---
 
-## 01_basic_encoding.py — Encode and decode a trajectory
+## basic_encoding.py — Encode and decode a trajectory
 
 **What it does:** Builds a short SE(3) trajectory (50 poses: positions + identity quaternions), encodes it to DHB-DR invariants, then decodes back to poses.
 
@@ -46,13 +46,13 @@ python3 examples/01_basic_encoding.py
 
 **Run:**
 ```bash
-python3 examples/01_basic_encoding.py
+python3 examples/basic_encoding.py
 ```
 **Expected output:** Encoded invariants shape `(52, 4)` (for N=50 with padding), decoded positions/quaternions shapes `(50, 3)` and `(50, 4)`.
 
 ---
 
-## 02_trajectory_adaptation.py — Resample and retarget
+## trajectory_adaptation.py — Resample and retarget
 
 **What it does:** Takes a demo trajectory, resamples it to a target length, and produces an “adapted” trajectory that starts at `pose_target_init` and is decoded from the demo’s invariants (no full CasADi optimization; retargeting is by resample + decode with new initial pose).
 
@@ -62,13 +62,13 @@ python3 examples/01_basic_encoding.py
 
 **Run:**
 ```bash
-python3 examples/02_trajectory_adaptation.py
+python3 examples/trajectory_adaptation.py
 ```
 **Expected output:** Adapted positions shape e.g. `(28, 3)` and printed first/last pose.
 
 ---
 
-## 03_dhb_qr_comparison.py — DHB-DR vs DHB-QR
+## dhb_qr_comparison.py — DHB-DR vs DHB-QR
 
 **What it does:** Encodes the same trajectory with DHB-DR (Euler) and DHB-QR (quaternion) and compares output shapes.
 
@@ -78,13 +78,13 @@ python3 examples/02_trajectory_adaptation.py
 
 **Run:**
 ```bash
-python3 examples/03_dhb_qr_comparison.py
+python3 examples/dhb_qr_comparison.py
 ```
 **Expected output:** Linear invariants shapes `(42, 4)` (DR) and `(42, 5)` (QR).
 
 ---
 
-## 04_gpu_batch_optimization.py — Batched trajectory optimization
+## gpu_batch_optimization.py — Batched trajectory optimization
 
 **What it does:** Uses `BatchedTrajectoryOptimizer` to optimize invariants for two different start/goal pose pairs so that decoding matches the goal pose (scipy L-BFGS over invariant sequence).
 
@@ -95,13 +95,13 @@ python3 examples/03_dhb_qr_comparison.py
 
 **Run:**
 ```bash
-python3 examples/04_gpu_batch_optimization.py
+python3 examples/gpu_batch_optimization.py
 ```
 **Expected output:** Adapted positions shape `(2, 30, 3)` and last poses for each trajectory.
 
 ---
 
-## 05_vla_tokenization.py — VQ-VAE tokenization (DHB-Token)
+## vla_tokenization.py — VQ-VAE tokenization (DHB-Token)
 
 **What it does:** Encodes a trajectory to invariants, then runs it through the causal VQ-VAE tokenizer (`DHBTokenizer`) to get discrete token indices and a reconstruction.
 
@@ -112,13 +112,13 @@ python3 examples/04_gpu_batch_optimization.py
 
 **Run:** Requires `torch`.
 ```bash
-python3 examples/05_vla_tokenization.py
+python3 examples/vla_tokenization.py
 ```
 **Expected output:** Invariants shape, token indices shape, reconstructed shape, and reconstruction MSE.
 
 ---
 
-## 06_motion_database.py — Motion DB add and retrieve
+## motion_database.py — Motion DB add and retrieve
 
 **What it does:** Builds a small motion database by adding four trajectories (as positions + quaternions), then retrieves the top-3 closest trajectories to a query trajectory by L2 distance in invariant space.
 
@@ -128,13 +128,13 @@ python3 examples/05_vla_tokenization.py
 
 **Run:**
 ```bash
-python3 examples/06_motion_database.py
+python3 examples/motion_database.py
 ```
 **Expected output:** “Added 4 trajectories” and top-3 retrieval with distances and metadata.
 
 ---
 
-## 07_imitation_learning.py — Invariant and geodesic losses
+## imitation_learning.py — Invariant and geodesic losses
 
 **What it does:** Compares a “predicted” trajectory to a “demo” trajectory using:
 1. **Invariant matching loss:** L2 (or quaternion-aware) between predicted and demo invariant sequences.
@@ -148,13 +148,13 @@ python3 examples/06_motion_database.py
 
 **Run:**
 ```bash
-python3 examples/07_imitation_learning.py
+python3 examples/imitation_learning.py
 ```
 **Expected output:** Invariant matching loss, SE(3) geodesic loss (final pose), and hybrid loss values.
 
 ---
 
-## 08_dhb_ti_time_invariant.py — DHB-TI (time-invariant reparameterization)
+## dhb_ti_time_invariant.py — DHB-TI (time-invariant reparameterization)
 
 **What it does:** Reparameterizes a trajectory by a geometric progress variable (translational arc-length, angular, or hybrid) and resamples at uniform progress knots so that invariants are approximately independent of execution speed and sampling rate. Then encodes with DHB-DR or DHB-QR.
 
@@ -165,7 +165,7 @@ python3 examples/07_imitation_learning.py
 
 **Run:**
 ```bash
-python3 examples/08_dhb_ti_time_invariant.py
+python3 examples/dhb_ti_time_invariant.py
 ```
 **Expected output:** Progress totals for translation, angular, hybrid; resampled positions (M, 3); DHB-TI (DR) and (QR) linear invariant shapes.
 
@@ -208,7 +208,7 @@ jupyter notebook notebooks/
 ## Notebooks
 
 - **demo_dhb_features_and_use_cases.ipynb:** **Comprehensive demo** (inspired by MATLAB Live Scripts): 6-DOF trajectory construction, encode/decode, SE(3) invariance, DHB-DR vs DHB-QR, DHB-TI (time-invariant), trajectory adaptation, and optional VLA tokenization — with **elaborate markdown descriptions and plots** (3D trajectories, invariant time series). Best starting point for understanding features and use-cases.
-- **tutorial_dhb_basics.ipynb:** Encode → decode and print shapes (same idea as `01_basic_encoding.py`).
+- **tutorial_dhb_basics.ipynb:** Encode → decode and print shapes (same idea as `basic_encoding.py`).
 - **tutorial_invariance_demo.ipynb:** Apply a random SE(3) to a trajectory, encode both; shows that invariant magnitudes (first column) match.
 - **tutorial_vla_integration.ipynb:** Encode trajectory to invariants, run through `DHBTokenizer`, show token indices and reconstructed shape.
 
@@ -374,7 +374,7 @@ pixi run python examples/integration/libero_pro_dhb_demo.py --batch
 
 **Why this matters for VLA:** Current VLA policies (vision + language → actions) fail under spatial perturbations because actions are tied to absolute positions. DHB-XR decouples motion shape from spatial context, enabling adaptation to new object positions without retraining:
 
-- 1 demo → encode invariants → adapt to any spatial configuration (Fatrop solver, ~7ms)
+- 1 demo → encode invariants → adapt to any spatial configuration (SE(3) decode, ~5-10ms)
 - Data augmentation for spatial variations becomes unnecessary
 - The same invariants work regardless of where objects are placed
 
@@ -401,5 +401,5 @@ pixi run python examples/integration/libero_pro_dhb_demo.py --batch
 ```bash
 cd /path/to/dhb_xr
 export PYTHONPATH=src
-for f in examples/0*.py examples/07_imitation_learning.py examples/08_dhb_ti_time_invariant.py; do echo "=== $f ==="; python3 "$f"; done
+for f in examples/basic_encoding.py examples/trajectory_adaptation.py examples/dhb_qr_comparison.py examples/gpu_batch_optimization.py examples/vla_tokenization.py examples/motion_database.py examples/imitation_learning.py examples/dhb_ti_time_invariant.py; do echo "=== $f ==="; python3 "$f"; done
 ```

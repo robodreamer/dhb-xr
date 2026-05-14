@@ -125,8 +125,7 @@ def load_demo(task_id: int = 0, demo_id: int = 0) -> Dict:
         actions = np.array(demo["actions"])
         robot_states = np.array(demo["robot_states"])
         ee_pos = robot_states[:, 2:5].astype(np.float64)
-        ee_quat_wxyz = robot_states[:, 5:9].astype(np.float64)
-        ee_quat = ee_quat_wxyz[:, [1, 2, 3, 0]]  # → xyzw
+        ee_quat = robot_states[:, 5:9].astype(np.float64)
         ee_quat /= np.linalg.norm(ee_quat, axis=1, keepdims=True)
     return {"actions": actions, "positions": ee_pos, "quaternions": ee_quat,
             "num_frames": len(actions)}

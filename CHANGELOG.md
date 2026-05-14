@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-05-14
+
+### Added
+- Torch DHB-QR decoder path.
+- VLA action-head, chunk rollout, SmolVLA adapter, and waypoint controller utilities.
+- Focused tests for action-head behavior, chunk rollout continuity, VLA pipeline stages, LIBERO orientation handling, Torch DHB-QR decoding, OAT tokenizer diagnostics, waypoint control, and solver retargeting.
+
+### Changed
+- Improved VLA pipeline token streaming and OAT prefix decoding behavior.
+- Updated CasADi/Fatrop retargeting paths and timing documentation.
+- Standardized VLA dataset adapter outputs on DHB-XR's public `wxyz` quaternion convention.
+- Removed unused `dtaidistance` from database extras and included `einops` in the `all` extra.
+
+### Fixed
+- LIBERO quaternion/action semantics and rollout orientation handling.
+- Fatrop boundary handling and trajectory-derived initial frame usage in retargeting.
+
 ## [0.3.0] - 2026-01-30
 
 ### Added
@@ -30,7 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **VLA Integration**: Comprehensive LIBERO and RoboCASA support for Vision-Language-Action benchmarks
 - **LIBERO-PRO Support**: Full integration with LIBERO-PRO perturbation robustness testing
-- **Trajectory Adaptation**: Fatrop and CasADi solvers for real-time trajectory retargeting (~7ms)
+- **Trajectory Adaptation**: Fatrop and CasADi solvers for trajectory retargeting (decode ~5-10ms, Fatrop NLP <1s)
 - **Swap Demo**: Compelling demonstration showing DHB-XR vs naive replay under spatial perturbations (6.5cm improvement)
 - **Simulation Integration**: Real-time LIBERO environment execution with OpenCV visualization and video recording
 - **VLA Documentation**: Extensive documentation explaining how DHB-XR addresses VLA spatial generalization challenges

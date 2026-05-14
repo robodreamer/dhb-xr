@@ -60,10 +60,9 @@ def run_example():
     pos_error = np.mean(np.abs(positions - decoded["positions"]))
     quat_error = np.mean(np.abs(quaternions - decoded["quaternions"]))
 
-    print("
-Reconstruction errors:")
-    print(".2e")
-    print(".2e")
+    print("\nReconstruction errors:")
+    print(f"Position MAE: {pos_error:.2e}")
+    print(f"Quaternion MAE: {quat_error:.2e}")
 
     if pos_error < 1e-10 and quat_error < 1e-10:
         print("✅ Perfect reconstruction (errors within numerical precision)")
