@@ -28,16 +28,16 @@ Tutorial Notebooks:
 - tutorial_vla_integration.ipynb: VLA integration with LIBERO/RoboCASA
 
 Usage:
-    from dhb_xr_examples import *
+    from examples import *
     # or import specific examples:
-    from dhb_xr_examples.basic_encoding import run_example
+    from examples.basic_encoding import run_example
 
     # Run notebooks with:
     # jupyter notebook
     # pixi run notebook
 """
 
-__version__ = "0.2.0"
+__version__ = "0.4.0"
 
 _EXAMPLE_EXPORTS = {
     "run_basic_encoding": (".basic_encoding", "run_example"),

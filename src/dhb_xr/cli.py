@@ -161,10 +161,10 @@ def examples_cmd(argv: Optional[list[str]] = None) -> int:
             pyc_file.unlink()
 
         print(f"✓ Copied examples to {dest}")
-        print(f"\nTo run an example:")
+        print("\nTo run an example:")
         print(f"  cd {dest}")
-        print("  pip install dhb_xr  # Install core library"
-        print("  python basic_encoding.py  # Run an example"
+        print("  pip install dhb_xr  # Install core library")
+        print("  python basic_encoding.py  # Run an example")
         # If the user is in a Pixi project, also show the pixi-friendly form.
         if os.environ.get("PIXI_PROJECT_ROOT") or os.environ.get("PIXI_ENVIRONMENT_NAME"):
             print("  # or")

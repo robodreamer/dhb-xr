@@ -30,22 +30,36 @@ def get_version():
 
 
 def set_version(new_version: str):
-    """Set version in pyproject.toml."""
+    """Set version in pyproject.toml and the package __version__."""
     pyproject_path = Path(__file__).parent.parent / "pyproject.toml"
+    init_path = Path(__file__).parent.parent / "src" / "dhb_xr" / "__init__.py"
 
     with open(pyproject_path, "r") as f:
         content = f.read()
 
-    # Replace version line
+    # Replace only the project metadata version, not similarly named tool tasks.
     content = re.sub(
-        r'^version\s*=\s*["\'][^"\']+["\']',
-        f'version = "{new_version}"',
+        r'(\[project\]\s*\nname\s*=\s*["\']dhb_xr["\']\s*\n)version\s*=\s*["\'][^"\']+["\']',
+        rf'\1version = "{new_version}"',
         content,
-        flags=re.MULTILINE
+        count=1,
+        flags=re.MULTILINE,
     )
 
     with open(pyproject_path, "w") as f:
         f.write(content)
+
+    with open(init_path, "r") as f:
+        init_content = f.read()
+    init_content = re.sub(
+        r'^__version__\s*=\s*["\'][^"\']+["\']',
+        f'__version__ = "{new_version}"',
+        init_content,
+        count=1,
+        flags=re.MULTILINE,
+    )
+    with open(init_path, "w") as f:
+        f.write(init_content)
 
     print(f"✓ Version updated to {new_version}")
 

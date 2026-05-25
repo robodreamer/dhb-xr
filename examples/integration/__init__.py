@@ -16,4 +16,4 @@ Data Processing:
 - test_libero_retrieval: Motion retrieval across LIBERO tasks
 """
 
-__version__ = "0.2.0"
+__version__ = "0.4.0"

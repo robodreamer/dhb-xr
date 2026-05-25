@@ -134,24 +134,25 @@ def decode_dhb_qr_torch(
 
     for i in range(T):
         positions.append(frame_pos.clone())
+        quaternions.append(rot_to_quat_torch(ang_rot))
 
         # Linear frame update
         R_lin = quat_to_rot_torch(lin_quat[:, i])  # (B, 3, 3)
         direction = torch.zeros(B, 3, device=device, dtype=linear_inv.dtype)
         direction[:, 0] = lin_mag[:, i]
-        trans = torch.bmm(R_lin, direction.unsqueeze(-1)).squeeze(-1)  # (B, 3)
+        trans_local = torch.bmm(R_lin, direction.unsqueeze(-1)).squeeze(-1)  # (B, 3)
 
-        # Update position
-        frame_pos = frame_pos + trans
+        # Update position and accumulated linear frame, matching the numpy QR decoder.
+        frame_pos = frame_pos + torch.bmm(frame_R, trans_local.unsqueeze(-1)).squeeze(-1)
+        frame_R = torch.bmm(frame_R, R_lin)
 
         # Angular frame update
-        ang_dir = torch.zeros(B, 3, device=device, dtype=angular_inv.dtype)
-        ang_dir[:, 0] = ang_mag[:, i]
-        rvec = torch.bmm(quat_to_rot_torch(ang_quat[:, i]), ang_dir.unsqueeze(-1)).squeeze(-1)
-        R_ang = axis_angle_to_rot_torch(rvec)
-        ang_rot = torch.bmm(ang_rot, R_ang.transpose(-1, -2))
-
-        quaternions.append(rot_to_quat_torch(ang_rot))
+        if i < T - 1:
+            ang_dir = torch.zeros(B, 3, device=device, dtype=angular_inv.dtype)
+            ang_dir[:, 0] = ang_mag[:, i]
+            rvec = torch.bmm(quat_to_rot_torch(ang_quat[:, i]), ang_dir.unsqueeze(-1)).squeeze(-1)
+            R_ang = axis_angle_to_rot_torch(rvec)
+            ang_rot = torch.bmm(ang_rot, R_ang.transpose(-1, -2))
 
     positions = torch.stack(positions, dim=1)      # (B, T, 3)
     quaternions = torch.stack(quaternions, dim=1)   # (B, T, 4)

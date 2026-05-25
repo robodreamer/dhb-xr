@@ -1,0 +1,27 @@
+include README.md
+include CHANGELOG.md
+include pyproject.toml
+
+recursive-include src/dhb_xr *.py
+recursive-include examples *.py
+
+recursive-exclude docs *
+recursive-exclude notebooks *
+recursive-exclude tests *
+recursive-exclude _workspace *
+recursive-exclude manuscript *
+recursive-exclude vendor *
+recursive-exclude results *
+recursive-exclude agent_plans_docs *
+recursive-exclude .github *
+recursive-exclude .claude *
+recursive-exclude .codex *
+recursive-exclude .pixi-home *
+recursive-exclude .remember *
+recursive-exclude build *
+recursive-exclude dist *
+recursive-exclude site *
+recursive-exclude src/dhb_xr/graphify-out *
+
+recursive-exclude * __pycache__ *.py[cod]
+global-exclude *.pt *.pth *.ckpt *.mp4 *.png *.jpg *.jpeg *.gif *.pdf *.aux *.bbl *.blg *.log *.out

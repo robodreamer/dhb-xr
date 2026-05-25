@@ -120,10 +120,7 @@ def load_demo_from_hdf5(dataset_path: str, demo_id: int = 0):
         # Extract end-effector pose from robot_states
         robot_states = np.array(demo["robot_states"])
         ee_pos = robot_states[:, 2:5].astype(np.float64)
-        ee_quat_wxyz = robot_states[:, 5:9].astype(np.float64)
-
-        # Convert from (w, x, y, z) to (x, y, z, w) format
-        ee_quat = ee_quat_wxyz[:, [1, 2, 3, 0]]
+        ee_quat = robot_states[:, 5:9].astype(np.float64)
 
         # Normalize quaternions
         ee_quat = ee_quat / np.linalg.norm(ee_quat, axis=1, keepdims=True)
@@ -448,7 +445,7 @@ def run_simulation_demo(task_id: int = 0, demo_id: int = 0, render: bool = False
 
     # Get initial end-effector pose from observation
     initial_ee_pos = obs["robot0_eef_pos"]
-    initial_ee_quat = obs["robot0_eef_quat"]  # (x, y, z, w) format in robosuite
+    initial_ee_quat = obs["robot0_eef_quat"]  # LIBERO/DHB-XR wxyz convention
     print(f"Initial EE position: {initial_ee_pos}")
     print(f"Initial EE quaternion: {initial_ee_quat}")
 

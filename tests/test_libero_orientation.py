@@ -58,6 +58,8 @@ def test_libero_adapter_loads_binary_gripper_from_small_qpos_values(tmp_path):
     sample = next(LiberoAdapter().load_dataset(str(h5_path)))
     np.testing.assert_allclose(sample["gripper_qpos"], [0.0, 0.02, 0.01], atol=1e-6)
     np.testing.assert_allclose(sample["gripper"], [0.0, 1.0, 0.0], atol=1e-6)
+    expected_wxyz = np.tile(quat_xyzw[[3, 0, 1, 2]], (3, 1))
+    np.testing.assert_allclose(sample["quaternions"], expected_wxyz, atol=1e-6)
 
 
 def test_decode_contact_probs_to_gripper_cmds_tracks_event_state():

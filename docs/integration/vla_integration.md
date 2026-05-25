@@ -88,13 +88,13 @@ adapter = LiberoAdapter()
 # Load episodes from HDF5 file
 for episode in adapter.load_dataset("/path/to/libero_task.hdf5"):
     positions = episode["positions"]      # (N, 3) end-effector positions
-    quaternions = episode["quaternions"]  # (N, 4) quaternions (x, y, z, w)
+    quaternions = episode["quaternions"]  # (N, 4) quaternions (w, x, y, z)
     metadata = episode["metadata"]        # demo_id, task info, etc.
 
     print(f"Episode {metadata['demo_id']}: {len(positions)} frames")
 ```
 
-**Note:** LIBERO stores quaternions in `robot_states[:, 5:9]` as (w,x,y,z). The adapter automatically extracts and converts to (x,y,z,w) format.
+**Quaternion convention:** DHB-XR public encoders/decoders use scalar-first `wxyz` quaternions. LIBERO stores `robot_states[:, 5:9]` and direct `robot0_eef_quat` observations in `wxyz` on the tested setup, so `LiberoAdapter` returns `episode["quaternions"]` in `wxyz`. Convert to scipy `xyzw` only at scipy/robosuite boundaries.
 
 ### DHB Encoding
 
@@ -376,7 +376,7 @@ for episode in adapter.load_dataset("/path/to/robocasa.hdf5"):
     quaternions = episode["quaternions"]
 ```
 
-## VQ-VAE Tokenization
+## VLA Tokenization And Streaming Utilities
 
 For VLA training, tokenize invariants to discrete action tokens:
 
@@ -384,6 +384,7 @@ For VLA training, tokenize invariants to discrete action tokens:
 from dhb_xr.integration.vla.pipeline import DHBVLAPipeline, DHBVLAPipelineConfig
 
 config = DHBVLAPipelineConfig(
+    tokenizer_kind="oat",
     codebook_size=256,
     latent_dim=32,
 )
@@ -396,7 +397,21 @@ for out in outputs:
     invariants = out["invariants"] # Raw invariants
 ```
 
-**Note:** Tokenization requires PyTorch: `pip install dhb_xr[gpu]`
+For learned invariant heads, chunk streaming, SmolVLA wrapping, and waypoint execution:
+
+```python
+from dhb_xr.integration.vla.action_head import DHBActionHead
+from dhb_xr.integration.vla.chunk_rollout import ChunkRolloutConfig, TrajectoryChunkRunner
+from dhb_xr.integration.vla.smolvla_adapter import SmolVLADHBAdapter
+from dhb_xr.integration.vla.waypoint_controller import WaypointPDController
+
+head = DHBActionHead(vlm_dim=576, action_horizon=16)
+adapter = SmolVLADHBAdapter.from_dhb_head(head)
+runner = TrajectoryChunkRunner(ChunkRolloutConfig(chunk_horizon=16, stride=4))
+controller = WaypointPDController()
+```
+
+**Note:** OAT tokenization requires PyTorch and einops: `pip install "dhb_xr[tokenization]"`. Use `dhb_xr[gpu]` when you only need torch-backed heads without the tokenizer extras.
 
 ## Data Format Reference
 
@@ -440,7 +455,7 @@ pixi add h5py
 
 ### Quaternion format mismatch
 
-LIBERO uses (w,x,y,z) format internally. The adapter converts to (x,y,z,w) for compatibility with scipy and transforms3d.
+DHB-XR APIs use `wxyz`. `LiberoAdapter` returns `wxyz`. Scipy and robosuite APIs use `xyzw`, so convert with `quat_xyzw = quat_wxyz[[1, 2, 3, 0]]` only when calling those libraries.
 
 ### Variable-length trajectories
 

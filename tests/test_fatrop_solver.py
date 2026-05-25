@@ -156,6 +156,8 @@ class TestGenerateTrajectoryFatrop:
             return {
                 "linear_motion_invariants": np.tile(np.array([[0.01, 0.0, 0.0, 0.0]]), (n, 1)),
                 "angular_motion_invariants": np.tile(np.array([[0.0, 0.0, 0.0, 0.0]]), (n, 1)),
+                "linear_frame_initial": np.eye(4),
+                "angular_frame_initial": np.eye(4),
                 "initial_pose": kwargs["init_pose"],
             }
 

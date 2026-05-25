@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-05-14
+
+### Added
+- Torch DHB-QR decoder path.
+- VLA action-head, chunk rollout, SmolVLA adapter, and waypoint controller utilities.
+- Focused tests for action-head behavior, chunk rollout continuity, VLA pipeline stages, LIBERO orientation handling, Torch DHB-QR decoding, OAT tokenizer diagnostics, waypoint control, and solver retargeting.
+
+### Changed
+- Improved VLA pipeline token streaming and OAT prefix decoding behavior.
+- Updated CasADi/Fatrop retargeting paths and timing documentation.
+- Standardized VLA dataset adapter outputs on DHB-XR's public `wxyz` quaternion convention.
+- Removed unused `dtaidistance` from database extras and included `einops` in the `all` extra.
+
+### Fixed
+- LIBERO quaternion/action semantics and rollout orientation handling.
+- Fatrop boundary handling and trajectory-derived initial frame usage in retargeting.
+
 ## [0.3.0] - 2026-01-30
 
 ### Added

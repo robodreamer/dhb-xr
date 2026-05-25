@@ -58,7 +58,7 @@ pixi run notebook
 pixi run dhb_xr-examples --copy ./local_examples
 
 # Run examples programmatically
-pixi run python -c "import dhb_xr_examples; dhb_xr_examples.run_basic_encoding()"
+pixi run python -c "import examples; examples.run_basic_encoding()"
 
 # Build for PyPI
 pixi run build-dist
@@ -81,10 +81,10 @@ pixi run version --bump patch       # Bump patch version
 
 #### Automated (GitHub Actions)
 
-1. Update version: `pixi run version --bump patch`
+1. Update version: `pixi run version --bump patch` or `pixi run version 0.4.0`
 2. Commit and push changes
-3. Create and push a git tag: `git tag v0.2.1 && git push origin v0.2.1`
-4. The `release.yml` workflow will automatically build and publish to PyPI
+3. Create and push a matching git tag, for example `git tag v0.4.0 && git push origin v0.4.0`
+4. The tag-triggered Release workflow will automatically build and publish to PyPI
 
 #### Manual Publishing
 
@@ -196,9 +196,10 @@ pixi run -e cuda python -c "import torch; print(torch.version.cuda)"
 
 ## Examples Package
 
-DHB-XR includes a comprehensive examples package that can be installed separately **or cloned locally**.
+DHB-XR includes a comprehensive examples package in the PyPI distribution, plus notebooks in
+the source repository.
 
-### Option 1: Install Examples Package
+### Option 1: Install With Example Dependencies
 
 ```bash
 pip install dhb_xr[examples]
@@ -207,13 +208,13 @@ pip install dhb_xr[examples]
 Then run examples programmatically:
 
 ```python
-import dhb_xr_examples as examples
+import examples
 
 # Run basic encoding example
 examples.run_basic_encoding()
 
 # Or run individual examples
-from dhb_xr_examples.basic_encoding import run_example
+from examples.basic_encoding import run_example
 run_example()
 ```
 
@@ -242,7 +243,7 @@ The examples package includes:
 - **Advanced examples**: GPU batch optimization, VLA tokenization, motion databases
 - **VLA integration**: Full LIBERO simulation, perturbation robustness demos
 - **Research examples**: Imitation learning losses, time-invariant reparameterization
-- **Tutorial notebooks**: Interactive Jupyter notebooks for learning DHB-XR concepts
+- **Tutorial notebooks**: Interactive Jupyter notebooks in the source repository
 
 ## Quick start
 
@@ -291,11 +292,11 @@ pos_m, quat_m = resample_by_progress(positions, quaternions, M=30, progress_kind
 out = encode_dhb_dr_ti(positions, quaternions, M=30, progress_kind="hybrid", alpha=0.5, ...)
 ```
 
-See `examples/08_dhb_ti_time_invariant.py`.
+See `examples/dhb_ti_time_invariant.py`.
 
 ## Documentation
 
-📚 **[Read the Docs](https://dhb-xr.readthedocs.io/)** - Complete API documentation with examples
+📚 **[GitHub Pages](https://robodreamer.github.io/dhb-xr/)** - Complete API documentation with examples
 
 The documentation is built with MkDocs and can be deployed to GitHub Pages on pushes to `main`
 when Pages is enabled and set to build using GitHub Actions.
@@ -343,8 +344,8 @@ cd dhb_xr
 # 1. Install pixi environment
 pixi install
 
-# 2. Install PyTorch with CUDA (one-time)
-pixi run install-cuda
+# 2. Use the CUDA pixi environment for CUDA-enabled PyTorch
+pixi run -e cuda check-cuda
 
 # 3. Clone cusadi (if not already)
 git clone https://github.com/se-hwan/cusadi /path/to/cusadi
@@ -516,7 +517,7 @@ from dhb_xr.core.types import EncodingMethod, DHBMethod
 adapter = LiberoAdapter()
 for episode in adapter.load_dataset("/path/to/libero_task.hdf5"):
     positions = episode["positions"]      # (N, 3) end-effector positions
-    quaternions = episode["quaternions"]  # (N, 4) quaternions (x, y, z, w)
+    quaternions = episode["quaternions"]  # (N, 4) quaternions (w, x, y, z)
 
     # Encode to SE(3)-invariant representation
     result = encode_dhb_dr(

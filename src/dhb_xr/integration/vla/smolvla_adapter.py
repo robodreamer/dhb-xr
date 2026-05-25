@@ -133,15 +133,20 @@ if HAS_TORCH:
             *,
             device: Optional[torch.device | str] = None,
         ) -> torch.Tensor:
-            """Convert a LIBERO-style observation dict into the DHB 8D state tensor."""
+            """Convert a LIBERO-style observation dict into the DHB 8D state tensor.
+
+            Raw LIBERO observations use wxyz quaternions. The returned state
+            stores orientation as an axis-angle vector for the action head.
+            """
             from scipy.spatial.transform import Rotation
 
             eef_pos = np.asarray(obs_dict.get("robot0_eef_pos", np.zeros(3)), dtype=np.float32)
-            eef_quat = np.asarray(
-                obs_dict.get("robot0_eef_quat", np.array([0.0, 0.0, 0.0, 1.0])),
+            eef_quat_wxyz = np.asarray(
+                obs_dict.get("robot0_eef_quat", np.array([1.0, 0.0, 0.0, 0.0])),
                 dtype=np.float32,
             )
-            aa = Rotation.from_quat(eef_quat).as_rotvec().astype(np.float32)
+            eef_quat_xyzw = eef_quat_wxyz[[1, 2, 3, 0]]
+            aa = Rotation.from_quat(eef_quat_xyzw).as_rotvec().astype(np.float32)
             gripper = np.asarray(obs_dict.get("robot0_gripper_qpos", np.zeros(2)), dtype=np.float32)
             state = np.concatenate([eef_pos, aa, gripper], dtype=np.float32)
             return torch.from_numpy(state).unsqueeze(0).to(device=device)
@@ -154,17 +159,15 @@ if HAS_TORCH:
         ) -> Dict[str, torch.Tensor]:
             """Convert a LIBERO-style observation dict into DHB decode initial pose tensors."""
             eef_pos = np.asarray(obs_dict.get("robot0_eef_pos", np.zeros(3)), dtype=np.float32)
-            eef_quat_xyzw = np.asarray(
-                obs_dict.get("robot0_eef_quat", np.array([0.0, 0.0, 0.0, 1.0])),
+            eef_quat_wxyz = np.asarray(
+                obs_dict.get("robot0_eef_quat", np.array([1.0, 0.0, 0.0, 0.0])),
                 dtype=np.float32,
             )
-            q_wxyz = np.array(
-                [eef_quat_xyzw[3], eef_quat_xyzw[0], eef_quat_xyzw[1], eef_quat_xyzw[2]],
-                dtype=np.float32,
-            )
+            norm = np.linalg.norm(eef_quat_wxyz)
+            q_wxyz = eef_quat_wxyz / norm if norm > 1e-8 else np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float32)
             return {
                 "position": torch.from_numpy(eef_pos).unsqueeze(0).to(device=device),
-                "quaternion": torch.from_numpy(q_wxyz).unsqueeze(0).to(device=device),
+                "quaternion": torch.from_numpy(q_wxyz.astype(np.float32)).unsqueeze(0).to(device=device),
             }
 
         def predict_invariants(

@@ -74,9 +74,10 @@ def test_observation_helpers_build_state_and_initial_pose():
     """Observation conversion must preserve EE state and quaternion ordering."""
     angle = np.deg2rad(30.0)
     quat_xyzw = Rotation.from_rotvec([0.0, 0.0, angle]).as_quat().astype(np.float32)
+    quat_wxyz = quat_xyzw[[3, 0, 1, 2]]
     obs = {
         "robot0_eef_pos": np.array([0.1, 0.2, 0.3], dtype=np.float32),
-        "robot0_eef_quat": quat_xyzw,
+        "robot0_eef_quat": quat_wxyz,
         "robot0_gripper_qpos": np.array([0.04, 0.05], dtype=np.float32),
     }
 
@@ -90,6 +91,5 @@ def test_observation_helpers_build_state_and_initial_pose():
     )
     assert torch.allclose(state[0, 6:], torch.tensor([0.04, 0.05], dtype=torch.float32))
 
-    expected_wxyz = torch.tensor([quat_xyzw[3], quat_xyzw[0], quat_xyzw[1], quat_xyzw[2]])
     assert torch.allclose(init_pose["position"][0], torch.tensor([0.1, 0.2, 0.3], dtype=torch.float32))
-    assert torch.allclose(init_pose["quaternion"][0], expected_wxyz)
+    assert torch.allclose(init_pose["quaternion"][0], torch.from_numpy(quat_wxyz))

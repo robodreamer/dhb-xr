@@ -791,7 +791,9 @@ class LiberoAdapter:
     Libero datasets are typically robomimic-style HDF5 files.
 
     LIBERO stores quaternions in robot_states[:, 5:9] as (w, x, y, z),
-    not in the obs group. This adapter handles both cases.
+    not in the obs group. This adapter returns quaternions in that same
+    scalar-first wxyz order because DHB-XR encoders and decoders use wxyz at
+    public API boundaries.
     """
 
     pos_keys: Tuple[str, ...] = DEFAULT_POS_KEYS
@@ -817,7 +819,8 @@ class LiberoAdapter:
         Returns:
             (quaternions, source_key) where source_key describes where data came from.
         """
-        # First try obs group
+        # First try obs group. Direct LIBERO observations on the tested setup
+        # use scalar-first wxyz, matching robot_states.
         quat_key = self._find_key(obs, self.quat_keys)
         if quat_key is not None:
             quats = np.asarray(obs[quat_key], dtype=np.float64)
@@ -829,9 +832,8 @@ class LiberoAdapter:
             start, end = self.robot_states_quat_slice
             quats = robot_states[:, start:end]
 
-            # Convert from wxyz to xyzw format (standard for scipy/transforms3d)
-            if self.robot_states_quat_format == "wxyz":
-                quats = quats[:, [1, 2, 3, 0]]  # w,x,y,z -> x,y,z,w
+            if self.robot_states_quat_format == "xyzw":
+                quats = quats[:, [3, 0, 1, 2]]  # x,y,z,w -> w,x,y,z
 
             return quats, f"{self.robot_states_key}[{start}:{end}]"
 
