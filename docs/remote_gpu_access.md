@@ -130,9 +130,9 @@ sudo reboot
 GRUB is configured to boot the stable kernel by default:
 
 ```bash
-grep -E '^(GRUB_DEFAULT|GRUB_TIMEOUT|GRUB_TIMEOUT_STYLE)' /etc/default/grub
+grep -R '^(GRUB_DEFAULT|GRUB_TIMEOUT|GRUB_TIMEOUT_STYLE)' /etc/default/grub /etc/default/grub.d/*.cfg
 # Expected:
-# GRUB_DEFAULT="Advanced options for Ubuntu>Ubuntu, with Linux 6.8.0-111-generic"
+# /etc/default/grub.d/99-dhbxr-stable-kernel.cfg:GRUB_DEFAULT="gnulinux-advanced-...>gnulinux-6.8.0-111-generic-advanced-..."
 # GRUB_TIMEOUT_STYLE=menu
 # GRUB_TIMEOUT=5
 ```
@@ -147,12 +147,16 @@ scripts/remote_gpu_preflight.sh
 ```
 
 If future package updates change the default kernel, restore the `111` boot
-default with:
+default with a late GRUB override file:
 
 ```bash
-sudo sed -i 's/^GRUB_DEFAULT=.*/GRUB_DEFAULT="Advanced options for Ubuntu>Ubuntu, with Linux 6.8.0-111-generic"/' /etc/default/grub
-sudo sed -i 's/^GRUB_TIMEOUT_STYLE=.*/GRUB_TIMEOUT_STYLE=menu/' /etc/default/grub
-sudo sed -i 's/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=5/' /etc/default/grub
+sudo tee /etc/default/grub.d/99-dhbxr-stable-kernel.cfg >/dev/null <<'EOF'
+# DHB-XR GPU host: keep the stable ThinkPad kernel as the default boot target.
+# 6.8.0-117 caused local input/network issues on this machine.
+GRUB_DEFAULT="gnulinux-advanced-79e66a41-15d1-4b4e-ac76-55661655ac2e>gnulinux-6.8.0-111-generic-advanced-79e66a41-15d1-4b4e-ac76-55661655ac2e"
+GRUB_TIMEOUT_STYLE=menu
+GRUB_TIMEOUT=5
+EOF
 sudo update-grub
 ```
 
