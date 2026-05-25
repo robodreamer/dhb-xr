@@ -211,7 +211,7 @@ Two independent critic agents reviewed the current SmolVLA + DHB-XR pipeline and
 
 ## Branch status (2026-04-14)
 
-Working branch: `dev/harness-and-rotation-fix`
+Working branch: `dev/vla-paper-experiments`
 - Ready to merge: Fatrop fix, harness fixes, unit tests, narrative updates
 - Future work: DHBActionHead position conditioning, more P2 training data
 - See `project_dev_branch_state.md` memory for full details

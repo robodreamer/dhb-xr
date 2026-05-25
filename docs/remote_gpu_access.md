@@ -10,7 +10,7 @@ other machines for DHB-XR development and unattended runs.
 - LAN address observed during setup: `192.168.4.26`
 - SSH daemon: installed and active on port `22`
 - Repo path: `/home/andypark/Projects/repos/dhb-xr`
-- Working branch: `dev/harness-and-rotation-fix`
+- Working branch: `dev/vla-paper-experiments`
 
 The LAN address can change after reboot or network changes. Re-check it on the
 host with:
@@ -200,7 +200,7 @@ On the GPU host:
 ```bash
 cd /home/andypark/Projects/repos/dhb-xr
 git fetch origin
-git switch dev/harness-and-rotation-fix
+git switch dev/vla-paper-experiments
 git status --short --branch
 pixi install
 scripts/remote_gpu_preflight.sh
@@ -209,13 +209,13 @@ scripts/remote_gpu_preflight.sh
 If continuing from another machine, push the branch first:
 
 ```bash
-git push origin dev/harness-and-rotation-fix
+git push origin dev/vla-paper-experiments
 ```
 
 Then on the GPU host:
 
 ```bash
-git pull --ff-only origin dev/harness-and-rotation-fix
+git pull --ff-only origin dev/vla-paper-experiments
 ```
 
 Keep large local artifacts out of Git. The repository already ignores common
