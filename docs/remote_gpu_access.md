@@ -105,7 +105,9 @@ Minimum expected result:
 During setup on this host, the NVIDIA PCI device was visible but `nvidia-smi`
 could not communicate with the NVIDIA driver. The observed cause was a kernel
 module mismatch: the machine was booted into `6.8.0-111-generic`, but the
-matching NVIDIA 580 module packages were not installed for that kernel.
+matching NVIDIA 580 module packages were not installed for that kernel. A later
+attempt to boot `6.8.0-117-generic` caused local input/network issues, so this
+host is intentionally pinned back to `6.8.0-111-generic`.
 
 ```bash
 uname -r
@@ -113,32 +115,45 @@ lspci | grep -i nvidia
 lsmod | grep -E 'nvidia|nouveau'
 modinfo nvidia
 nvidia-smi
-apt-cache policy linux-modules-nvidia-580-$(uname -r)
+apt-cache policy nvidia-dkms-580 linux-modules-nvidia-580-$(uname -r)
 ```
 
-The matching module packages were installed with:
+The current repair path is to build the `580.159.03` NVIDIA kernel modules for
+`6.8.0-111-generic` using DKMS:
 
 ```bash
 sudo apt update
-sudo apt install linux-modules-nvidia-580-$(uname -r) linux-objects-nvidia-580-$(uname -r) linux-signatures-nvidia-$(uname -r)
+sudo apt install nvidia-dkms-580
 sudo reboot
 ```
 
-APT may also install a newer kernel and matching NVIDIA module packages. In that
-case, reboot into the new default kernel and re-run:
+GRUB is configured to boot the stable kernel by default:
+
+```bash
+grep -E '^(GRUB_DEFAULT|GRUB_TIMEOUT|GRUB_TIMEOUT_STYLE)' /etc/default/grub
+# Expected:
+# GRUB_DEFAULT="Advanced options for Ubuntu>Ubuntu, with Linux 6.8.0-111-generic"
+# GRUB_TIMEOUT_STYLE=menu
+# GRUB_TIMEOUT=5
+```
+
+After reboot, verify that the running kernel and NVIDIA module line up:
 
 ```bash
 cd /home/andypark/Projects/repos/dhb-xr
+uname -r
+modinfo nvidia | head
 scripts/remote_gpu_preflight.sh
 ```
 
-If the matching module packages are unavailable, use Ubuntu's recommended driver
-path:
+If future package updates change the default kernel, restore the `111` boot
+default with:
 
 ```bash
-ubuntu-drivers devices
-sudo ubuntu-drivers autoinstall
-sudo reboot
+sudo sed -i 's/^GRUB_DEFAULT=.*/GRUB_DEFAULT="Advanced options for Ubuntu>Ubuntu, with Linux 6.8.0-111-generic"/' /etc/default/grub
+sudo sed -i 's/^GRUB_TIMEOUT_STYLE=.*/GRUB_TIMEOUT_STYLE=menu/' /etc/default/grub
+sudo sed -i 's/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=5/' /etc/default/grub
+sudo update-grub
 ```
 
 If Secure Boot is enabled, Ubuntu may require module signing or Secure Boot
