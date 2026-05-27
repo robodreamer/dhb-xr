@@ -9,7 +9,6 @@ on:
       - 'README.md'
       - 'CHANGELOG.md'
       - 'pyproject.toml'
-      - 'pixi.lock'
       - '.github/workflows/docs.yml'
   workflow_dispatch:
 
@@ -29,17 +28,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Pixi
-        uses: prefix-dev/setup-pixi@v0.9.3
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          environments: docs
-          frozen: true
-          cache: true
-          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
+          python-version: '3.10'
+          cache: pip
+
+      - name: Install documentation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install mkdocs mkdocs-material mkdocs-material-extensions pymdown-extensions
 
       - name: Build documentation
         run: |
-          pixi run -e docs docs
+          cp CHANGELOG.md docs/changelog.md
+          mkdocs build
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
