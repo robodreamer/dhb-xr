@@ -8,19 +8,65 @@ other machines for DHB-XR development and unattended runs.
 - Hostname: `andyparkp16`
 - User: `andypark`
 - LAN address observed during setup: `192.168.4.26`
+- Tailscale address observed during setup: `100.77.26.96`
 - SSH daemon: installed and active on port `22`
 - Repo path: `/home/andypark/Projects/repos/dhb-xr`
 - Working branch: `dev/vla-paper-experiments`
 
-The LAN address can change after reboot or network changes. Re-check it on the
-host with:
+The LAN and Tailscale addresses can change after network changes or tailnet
+re-authentication. Re-check them on the host with:
 
 ```bash
 hostname -I
 ip -brief addr
+tailscale ip -4
 ```
 
 ## Connect From Another Machine
+
+Preferred path: connect over Tailscale from any signed-in client in the same
+tailnet:
+
+```bash
+tailscale status
+tailscale ping andyparkp16
+ssh andypark@100.77.26.96
+```
+
+If MagicDNS is enabled for the tailnet, the hostname should also work:
+
+```bash
+ssh andypark@andyparkp16
+```
+
+If the first `tailscale ping` times out, retry once; the first attempt may need
+a few seconds to establish a direct or DERP path. A working path should show
+`pong from andyparkp16`.
+
+Useful SSH alias for the client machine:
+
+```sshconfig
+Host dhbxr-gpu-ts
+    HostName 100.77.26.96
+    User andypark
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+```
+
+Then connect with:
+
+```bash
+ssh dhbxr-gpu-ts
+```
+
+After connecting:
+
+```bash
+cd /home/andypark/Projects/repos/dhb-xr
+git status --short --branch
+```
+
+LAN-only fallback:
 
 From another machine on the same LAN:
 
@@ -30,7 +76,7 @@ cd /home/andypark/Projects/repos/dhb-xr
 git status --short --branch
 ```
 
-For a stable local alias, add this to the client machine's `~/.ssh/config`:
+For a stable LAN alias, add this to the client machine's `~/.ssh/config`:
 
 ```sshconfig
 Host dhbxr-gpu
