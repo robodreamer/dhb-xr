@@ -30,6 +30,23 @@ pytest tests/ --cov=src/dhb_xr --cov-report=html
 pixi run test-casadi  # CasADi optimization tests
 ```
 
+## Optional CusADi Decode Libraries
+
+The repository includes fixed-horizon `.casadi` artifacts and generated CUDA
+source for CusADi decode. Normal installs use compiled binaries from the dhb_xr
+cache when they exist and fall back to CPU decode otherwise.
+
+```bash
+# Build all supported fixed-horizon libraries into the default cache
+pixi run python -m dhb_xr.optimization.build_cusadi_decode --horizons 50 80 100 150 200
+
+# Inspect paths without writing files
+pixi run python -m dhb_xr.optimization.build_cusadi_decode --horizons 100 --dry-run
+```
+
+Set `DHB_XR_CUSADI_CACHE` to use a project-local cache during development or
+deployment testing.
+
 ## Code Quality
 
 ```bash
@@ -83,8 +100,22 @@ dhb_xr/
 
 ## Release Process
 
-1. Update version in `pyproject.toml`
-2. Update CHANGELOG.md
-3. Create git tag
-4. Push to main branch
-5. GitHub Actions will build and publish to PyPI
+### Automated PyPI Publishing
+
+1. Update version: `pixi run version --bump patch` or `pixi run version 0.4.0`
+2. Update `CHANGELOG.md`
+3. Commit and push changes
+4. Create and push a matching git tag, for example `git tag v0.4.0 && git push origin v0.4.0`
+5. The tag-triggered release workflow builds and publishes to PyPI
+
+### Manual Publishing
+
+```bash
+pixi run setup-pypirc
+pixi run build-dist
+pixi run upload-testpypi
+python -m pip install -i https://test.pypi.org/simple/ dhb_xr
+pixi run upload-pypi
+```
+
+PyPI and TestPyPI API tokens are stored in `~/.pypirc` or environment variables.

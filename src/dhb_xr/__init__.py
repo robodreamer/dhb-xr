@@ -2,7 +2,7 @@
 dhb_xr: DHB Extended Representations for SE(3) invariant trajectory encoding.
 """
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 
 from dhb_xr.encoder.dhb_dr import encode_dhb_dr
 from dhb_xr.decoder.dhb_dr import decode_dhb_dr

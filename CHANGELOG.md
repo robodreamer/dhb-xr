@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.4.1] - 2026-05-27
+
+### Added
+- Fixed-horizon CusADi decode artifacts and generated CUDA source for `50`, `80`, `100`, `150`, and `200` sample trajectories.
+- `dhb_xr-build-cusadi-decode` for compiling supported CusADi decode libraries into a dhb_xr-owned cache.
+- GPU decode documentation covering install paths, cache behavior, runtime fallback policy, and deployment troubleshooting.
+
+### Changed
+- `generate_trajectory(..., backend="auto")` documentation now presents FATROP as the preferred single-trajectory backend with explicit fallback policy.
+- The `cusadi` optional extra now depends on CasADi and PyTorch rather than an external editable CusADi checkout.
+
 ## [0.4.0] - 2026-05-14
 
 ### Added

@@ -56,6 +56,15 @@ def _axis_angle_to_rot_casadi(rvec: "ca.SX") -> "ca.SX":
     return ca.SX.eye(3) + ca.sin(th) * K + (1 - ca.cos(th)) * (K @ K)
 
 
+DEFAULT_DECODE_SAMPLES = 80
+SUPPORTED_DECODE_SAMPLES = (50, 80, 100, 150, 200)
+
+
+def decode_filename(samples: int) -> str:
+    """Canonical fixed-horizon linear decode filename."""
+    return f"fn_dhb_decode_linear_{samples}.casadi"
+
+
 def build_decode_step_casadi():
     """
     Build a single-step decode: (linear_frame_4x4, angular_rot_3x3, linear_inv_4, angular_inv_4)
@@ -92,19 +101,88 @@ def build_decode_step_casadi():
     return fn
 
 
+def build_linear_decode_casadi(samples: int = DEFAULT_DECODE_SAMPLES):
+    """
+    Build a fixed-horizon linear DHB decode function for CusADi.
+
+    The function maps ``samples - 1`` linear invariants plus the initial pose to
+    ``samples`` Cartesian positions. This matches the example/runtime contract:
+    the first output row is the initial position, then each invariant advances
+    the local linear frame once.
+    """
+    if samples < 2:
+        raise ValueError("samples must be at least 2")
+
+    controls = samples - 1
+    linear_invariants = ca.SX.sym("linear_invariants", controls * 4)
+    init_pos = ca.SX.sym("init_pos", 3)
+    init_rot = ca.SX.sym("init_rot", 9)
+
+    linear_frame_rot = ca.reshape(init_rot, 3, 3)
+    linear_frame_pos = init_pos
+    positions = [linear_frame_pos]
+
+    for i in range(controls):
+        base = 4 * i
+        linear_invariant = linear_invariants[base : base + 4]
+        mag_lin = linear_invariant[0]
+        euler_lin = linear_invariant[1:4]
+        positions.append(
+            linear_frame_pos + linear_frame_rot @ ca.vertcat(mag_lin, 0, 0)
+        )
+        linear_frame_rot = linear_frame_rot @ _euler_to_rot_casadi(euler_lin)
+        linear_frame_pos = positions[-1]
+
+    return ca.Function(
+        f"fn_dhb_decode_linear_{samples}",
+        [linear_invariants, init_pos, init_rot],
+        [ca.horzcat(*positions).T],
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description="Export CasADi DHB decode for cusadi")
-    parser.add_argument("--out", default="fn_dhb_decode_step.casadi", help="Output .casadi path")
-    parser.add_argument("--length", type=int, default=0, help="If >0, build full decode of T steps (not implemented yet)")
+    parser.add_argument(
+        "--out",
+        default=None,
+        help="Output .casadi path. Only valid for a single --length value.",
+    )
+    parser.add_argument(
+        "--out-dir",
+        default=".",
+        help="Directory for canonical fixed-horizon output filenames.",
+    )
+    parser.add_argument(
+        "--length",
+        type=int,
+        nargs="+",
+        default=[0],
+        help=(
+            "Build one or more fixed-horizon linear decode functions with this "
+            f"many output samples. Common choices: {SUPPORTED_DECODE_SAMPLES}."
+        ),
+    )
     args = parser.parse_args()
     if ca is None:
         raise RuntimeError("casadi is required: pip install dhb_xr[optimization]")
-    fn = build_decode_step_casadi()
-    out_path = args.out
-    fn.save(out_path)
-    print(f"Saved {out_path}")
-    if args.length > 0:
-        print("Full trajectory decode (--length) not implemented; use decode_step in a loop with cusadi.")
+
+    lengths = args.length
+    if args.out is not None and len(lengths) != 1:
+        raise ValueError("--out can only be used with a single --length value")
+
+    if lengths == [0]:
+        out_path = args.out or os.path.join(args.out_dir, "fn_dhb_decode_step.casadi")
+        fn = build_decode_step_casadi()
+        fn.save(out_path)
+        print(f"Saved {out_path}")
+        return
+
+    os.makedirs(args.out_dir, exist_ok=True)
+    for length in lengths:
+        fn = build_linear_decode_casadi(length)
+        out_path = args.out or os.path.join(args.out_dir, decode_filename(length))
+        fn.save(out_path)
+        print(f"Saved {out_path}")
 
 
 if __name__ == "__main__":

@@ -27,19 +27,20 @@ References:
     - CasADi Fatrop interface: https://web.casadi.org/api/
 """
 
-import numpy as np
-from typing import Dict, Any, Optional, List, Tuple
 import time
+from typing import Any, Dict, List, Optional, Tuple
 
-from dhb_xr.encoder.dhb_dr import encode_dhb_dr
-from dhb_xr.decoder.dhb_dr import decode_dhb_dr
-from dhb_xr.core.types import DHBMethod, EncodingMethod
+import numpy as np
 from dhb_xr.core import geometry as geom
+from dhb_xr.core.types import DHBMethod, EncodingMethod
+from dhb_xr.decoder.dhb_dr import decode_dhb_dr
+from dhb_xr.encoder.dhb_dr import encode_dhb_dr
 from dhb_xr.utils.resampling import resample_and_smooth
 
 try:
     import casadi as ca
     import rockit
+
     HAS_ROCKIT = True
 except ImportError:
     HAS_ROCKIT = False
@@ -74,13 +75,163 @@ def _is_pure_translation_request(
     atol: float = 1e-8,
 ) -> bool:
     """Check whether the requested retargeting is an exact rigid translation."""
-    start_delta = np.asarray(pose_target_init["position"], dtype=np.float64) - np.asarray(pos_data[0], dtype=np.float64)
-    goal_delta = np.asarray(pose_target_final["position"], dtype=np.float64) - np.asarray(pos_data[-1], dtype=np.float64)
+    start_delta = np.asarray(
+        pose_target_init["position"], dtype=np.float64
+    ) - np.asarray(pos_data[0], dtype=np.float64)
+    goal_delta = np.asarray(
+        pose_target_final["position"], dtype=np.float64
+    ) - np.asarray(pos_data[-1], dtype=np.float64)
     return (
         np.allclose(start_delta, goal_delta, atol=atol)
         and _quat_absdot(pose_target_init["quaternion"], quat_data[0]) >= 1.0 - atol
         and _quat_absdot(pose_target_final["quaternion"], quat_data[-1]) >= 1.0 - atol
     )
+
+
+def _boundary_adjusted_position_reference(
+    pos_data: np.ndarray,
+    pose_target_init: Dict[str, np.ndarray],
+    pose_target_final: Dict[str, np.ndarray],
+    traj_length: int,
+) -> np.ndarray:
+    if len(pos_data) != traj_length:
+        from scipy.interpolate import interp1d
+
+        t_orig = np.linspace(0, 1, len(pos_data))
+        t_new = np.linspace(0, 1, traj_length)
+        pos_ref = interp1d(t_orig, pos_data, axis=0, fill_value="extrapolate")(t_new)
+    else:
+        pos_ref = np.asarray(pos_data, dtype=np.float64).copy()
+    start_delta = np.asarray(
+        pose_target_init["position"], dtype=np.float64
+    ) - np.asarray(pos_data[0], dtype=np.float64)
+    goal_delta = np.asarray(
+        pose_target_final["position"], dtype=np.float64
+    ) - np.asarray(pos_data[-1], dtype=np.float64)
+    blend = np.linspace(0.0, 1.0, traj_length)[:, None]
+    pos_ref = pos_ref + (1.0 - blend) * start_delta + blend * goal_delta
+    pos_ref[0] = np.asarray(pose_target_init["position"], dtype=np.float64)
+    pos_ref[-1] = np.asarray(pose_target_final["position"], dtype=np.float64)
+    return pos_ref
+
+
+def _boundary_adjusted_quaternion_reference(
+    quat_data: np.ndarray,
+    pose_target_init: Dict[str, np.ndarray],
+    pose_target_final: Dict[str, np.ndarray],
+    traj_length: int,
+) -> np.ndarray:
+    _, quat_ref, _, _, _, _ = resample_and_smooth(
+        np.zeros((len(quat_data), 3), dtype=np.float64),
+        quat_data,
+        traj_length,
+        smoothing=False,
+    )
+    quat_ref = np.asarray(quat_ref, dtype=np.float64).copy()
+    if len(quat_ref) == 0:
+        return quat_ref
+    for i in range(1, len(quat_ref)):
+        quat_ref[i] = geom.quat_ensure_continuous(quat_ref[i], quat_ref[i - 1])
+
+    target_start = np.asarray(pose_target_init["quaternion"], dtype=np.float64)
+    target_goal = np.asarray(pose_target_final["quaternion"], dtype=np.float64)
+    start_residual = geom.quat_multiply(target_start, geom.quat_inv(quat_ref[0]))
+    goal_residual = geom.quat_multiply(target_goal, geom.quat_inv(quat_ref[-1]))
+    denom = max(len(quat_ref) - 1, 1)
+    for i in range(len(quat_ref)):
+        s = i / denom
+        start_corr = geom.quat_slerp(start_residual, np.array([1.0, 0.0, 0.0, 0.0]), s)
+        goal_corr = geom.quat_slerp(np.array([1.0, 0.0, 0.0, 0.0]), goal_residual, s)
+        quat_ref[i] = geom.quat_multiply(
+            geom.quat_multiply(goal_corr, start_corr), quat_ref[i]
+        )
+        if i > 0:
+            quat_ref[i] = geom.quat_ensure_continuous(quat_ref[i], quat_ref[i - 1])
+    quat_ref[0] = target_start
+    quat_ref[-1] = geom.quat_ensure_continuous(
+        target_goal, quat_ref[-2] if len(quat_ref) > 1 else target_start
+    )
+    return quat_ref
+
+
+def _path_quality_metrics(positions: np.ndarray) -> Dict[str, float]:
+    positions = np.asarray(positions, dtype=np.float64)
+    deltas = np.diff(positions, axis=0)
+    lengths = np.linalg.norm(deltas, axis=1)
+    turn_angles = []
+    for a, b in zip(deltas[:-1], deltas[1:]):
+        na = np.linalg.norm(a)
+        nb = np.linalg.norm(b)
+        if na > 1e-9 and nb > 1e-9:
+            turn_angles.append(
+                float(np.arccos(np.clip(np.dot(a, b) / (na * nb), -1.0, 1.0)))
+            )
+    second = np.linalg.norm(np.diff(positions, n=2, axis=0), axis=1)
+    second_median = float(np.median(second)) if len(second) else 0.0
+    return {
+        "max_turn_angle": float(max(turn_angles, default=0.0)),
+        "max_segment": float(np.max(lengths)) if len(lengths) else 0.0,
+        "second_difference_ratio": (
+            float(np.max(second) / max(second_median, 1e-9)) if len(second) else 0.0
+        ),
+    }
+
+
+def _needs_path_quality_repair(positions: np.ndarray) -> bool:
+    metrics = _path_quality_metrics(positions)
+    return metrics["max_turn_angle"] > 1.4 or metrics["second_difference_ratio"] > 8.0
+
+
+def _decode_adapted_quaternions(
+    adapted_lin: np.ndarray,
+    adapted_ang: np.ndarray,
+    pose_target_init: Dict[str, np.ndarray],
+    pose_target_final: Dict[str, np.ndarray],
+    n_pos: int,
+    dhb_method: DHBMethod = DHBMethod.DOUBLE_REFLECTION,
+) -> np.ndarray:
+    """Decode EE quaternions from adapted DHB invariants and enforce endpoints."""
+    decoded = decode_dhb_dr(
+        adapted_lin,
+        adapted_ang,
+        initial_pose={
+            "position": pose_target_init["position"],
+            "quaternion": pose_target_init["quaternion"],
+        },
+        method=EncodingMethod.POSITION,
+        dhb_method=dhb_method,
+        drop_padded=False,
+    )
+    decoded_quat = decoded["quaternions"]
+
+    if len(decoded_quat) < n_pos:
+        n_pad_start = n_pos - len(decoded_quat)
+        pad_start = np.tile(pose_target_init["quaternion"], (n_pad_start, 1))
+        decoded_quat = np.vstack([pad_start, decoded_quat])
+    elif len(decoded_quat) > n_pos:
+        decoded_quat = decoded_quat[:n_pos]
+
+    for i in range(1, len(decoded_quat)):
+        decoded_quat[i] = geom.quat_ensure_continuous(
+            decoded_quat[i], decoded_quat[i - 1]
+        )
+
+    goal_quat = np.asarray(pose_target_final["quaternion"], dtype=np.float64)
+    if len(decoded_quat) > 0:
+        decoded_quat[0] = np.asarray(pose_target_init["quaternion"], dtype=np.float64)
+        if len(decoded_quat) == 1:
+            decoded_quat[0] = goal_quat
+        else:
+            end_residual = geom.quat_multiply(
+                goal_quat, geom.quat_inv(decoded_quat[-1])
+            )
+            for i in range(1, len(decoded_quat)):
+                s = i / (len(decoded_quat) - 1)
+                corr = geom.quat_slerp(np.array([1.0, 0.0, 0.0, 0.0]), end_residual, s)
+                decoded_quat[i] = geom.quat_multiply(corr, decoded_quat[i])
+            decoded_quat[-1] = goal_quat
+
+    return decoded_quat
 
 
 class FatropTrajectoryGenerator:
@@ -109,6 +260,7 @@ class FatropTrajectoryGenerator:
         N: int = 50,
         use_fatrop: bool = True,
         w_invariants: float = 1.0,
+        w_path: float = 1.0e6,
         w_smoothness: float = 0.01,
         max_iters: int = 300,
         verbose: bool = False,
@@ -132,6 +284,7 @@ class FatropTrajectoryGenerator:
         self.N = N
         self.use_fatrop = use_fatrop
         self.w_invariants = w_invariants
+        self.w_path = w_path
         self.w_smoothness = w_smoothness
         self.max_iters = max_iters
         self.verbose = verbose
@@ -169,8 +322,9 @@ class FatropTrajectoryGenerator:
         R_end = ocp.parameter(3, 3)
 
         # Demo invariants (reference)
-        u_lin_demo = ocp.parameter(4, grid='control', include_last=True)
-        u_ang_demo = ocp.parameter(4, grid='control', include_last=True)
+        u_lin_demo = ocp.parameter(4, grid="control", include_last=True)
+        u_ang_demo = ocp.parameter(4, grid="control", include_last=True)
+        p_demo = ocp.parameter(3, grid="control", include_last=True)
 
         # === Dynamics ===
         # Rotation update: R_next = R @ euler_to_rot(euler_angles)
@@ -180,19 +334,13 @@ class FatropTrajectoryGenerator:
             cy, sy = ca.cos(ry), ca.sin(ry)
             cz, sz = ca.cos(rz), ca.sin(rz)
             Rx = ca.vertcat(
-                ca.horzcat(1, 0, 0),
-                ca.horzcat(0, cx, -sx),
-                ca.horzcat(0, sx, cx)
+                ca.horzcat(1, 0, 0), ca.horzcat(0, cx, -sx), ca.horzcat(0, sx, cx)
             )
             Ry = ca.vertcat(
-                ca.horzcat(cy, 0, sy),
-                ca.horzcat(0, 1, 0),
-                ca.horzcat(-sy, 0, cy)
+                ca.horzcat(cy, 0, sy), ca.horzcat(0, 1, 0), ca.horzcat(-sy, 0, cy)
             )
             Rz = ca.vertcat(
-                ca.horzcat(cz, -sz, 0),
-                ca.horzcat(sz, cz, 0),
-                ca.horzcat(0, 0, 1)
+                ca.horzcat(cz, -sz, 0), ca.horzcat(sz, cz, 0), ca.horzcat(0, 0, 1)
             )
             return Rz @ Ry @ Rx
 
@@ -232,11 +380,15 @@ class FatropTrajectoryGenerator:
         ocp.subject_to(ocp.at_tf(ca.vec(R - R_end) == 0))
 
         # === Objective ===
-        # Minimize deviation from demo invariants
+        # Minimize deviation from demo invariants while keeping the retargeted
+        # path close to the boundary-adjusted reference. Endpoint constraints
+        # alone can otherwise permit sharp zigzags that preserve invariants but
+        # are unusable for trajectory editing.
         objective = ocp.sum(
-            self.w_invariants * ca.sumsqr(u_lin - u_lin_demo) +
-            self.w_invariants * ca.sumsqr(u_ang - u_ang_demo),
-            include_last=True
+            self.w_invariants * ca.sumsqr(u_lin - u_lin_demo)
+            + self.w_invariants * ca.sumsqr(u_ang - u_ang_demo)
+            + self.w_path * ca.sumsqr(p - p_demo),
+            include_last=True,
         )
 
         # Optional smoothness regularization
@@ -247,30 +399,30 @@ class FatropTrajectoryGenerator:
         ocp.add_objective(objective)
 
         # === Solver setup ===
-        ocp.method(rockit.MultipleShooting(N=N-1))
+        ocp.method(rockit.MultipleShooting(N=N - 1))
 
         if self.use_fatrop:
             # Use CasADi's native Fatrop solver (bundled with conda casadi)
             solver_opts = {
-                'expand': True,
-                'print_time': self.verbose,
-                'structure_detection': 'auto',
-                'fatrop': {
-                    'print_level': 1 if self.verbose else 0,
-                    'max_iter': self.max_iters,
-                }
+                "expand": True,
+                "print_time": self.verbose,
+                "structure_detection": "auto",
+                "fatrop": {
+                    "print_level": 1 if self.verbose else 0,
+                    "max_iter": self.max_iters,
+                },
             }
-            ocp.solver('fatrop', solver_opts)
+            ocp.solver("fatrop", solver_opts)
         else:
             solver_opts = {
-                'expand': True,
-                'print_time': self.verbose,
-                'ipopt': {
-                    'print_level': 5 if self.verbose else 0,
-                    'max_iter': self.max_iters,
-                }
+                "expand": True,
+                "print_time": self.verbose,
+                "ipopt": {
+                    "print_level": 5 if self.verbose else 0,
+                    "max_iter": self.max_iters,
+                },
             }
-            ocp.solver('ipopt', solver_opts)
+            ocp.solver("ipopt", solver_opts)
 
         # Store references
         self.ocp = ocp
@@ -287,6 +439,7 @@ class FatropTrajectoryGenerator:
         self.R_end = R_end
         self.u_lin_demo = u_lin_demo
         self.u_ang_demo = u_ang_demo
+        self.p_demo = p_demo
 
     def generate(
         self,
@@ -327,18 +480,16 @@ class FatropTrajectoryGenerator:
         if demo_lin_invariants.shape[0] < N:
             # Pad with last value
             pad_len = N - demo_lin_invariants.shape[0]
-            demo_lin_invariants = np.vstack([
-                demo_lin_invariants,
-                np.tile(demo_lin_invariants[-1], (pad_len, 1))
-            ])
+            demo_lin_invariants = np.vstack(
+                [demo_lin_invariants, np.tile(demo_lin_invariants[-1], (pad_len, 1))]
+            )
         demo_lin_invariants = demo_lin_invariants[:N]
 
         if demo_ang_invariants.shape[0] < N:
             pad_len = N - demo_ang_invariants.shape[0]
-            demo_ang_invariants = np.vstack([
-                demo_ang_invariants,
-                np.tile(demo_ang_invariants[-1], (pad_len, 1))
-            ])
+            demo_ang_invariants = np.vstack(
+                [demo_ang_invariants, np.tile(demo_ang_invariants[-1], (pad_len, 1))]
+            )
         demo_ang_invariants = demo_ang_invariants[:N]
 
         # Set parameters
@@ -352,11 +503,12 @@ class FatropTrajectoryGenerator:
 
         # Set initial guess
         if init_positions is not None:
-            self.ocp.set_initial(self.p, init_positions[:N].T)
+            position_reference = init_positions[:N]
         else:
             # Linear interpolation
-            interp_pos = np.linspace(start_pos, goal_pos, N)
-            self.ocp.set_initial(self.p, interp_pos.T)
+            position_reference = np.linspace(start_pos, goal_pos, N)
+        self.ocp.set_initial(self.p, position_reference.T)
+        self.ocp.set_value(self.p_demo, position_reference.T)
 
         if init_rotations is not None:
             self.ocp.set_initial(self.R_x, init_rotations[:N, :, 0].T)
@@ -384,22 +536,22 @@ class FatropTrajectoryGenerator:
         solve_time = time.perf_counter() - t0
 
         # Extract results - sample returns (times, values) where values is (N, dim)
-        positions = np.array(sol.sample(self.p, grid='control')[1])  # (N, 3)
-        R_x = np.array(sol.sample(self.R_x, grid='control')[1])  # (N, 3)
-        R_y = np.array(sol.sample(self.R_y, grid='control')[1])  # (N, 3)
-        R_z = np.array(sol.sample(self.R_z, grid='control')[1])  # (N, 3)
+        positions = np.array(sol.sample(self.p, grid="control")[1])  # (N, 3)
+        R_x = np.array(sol.sample(self.R_x, grid="control")[1])  # (N, 3)
+        R_y = np.array(sol.sample(self.R_y, grid="control")[1])  # (N, 3)
+        R_z = np.array(sol.sample(self.R_z, grid="control")[1])  # (N, 3)
         rotations = np.stack([R_x, R_y, R_z], axis=-1)  # (N, 3, 3)
 
-        lin_inv = np.array(sol.sample(self.u_lin, grid='control')[1])  # (N, 4)
-        ang_inv = np.array(sol.sample(self.u_ang, grid='control')[1])  # (N, 4)
+        lin_inv = np.array(sol.sample(self.u_lin, grid="control")[1])  # (N, 4)
+        ang_inv = np.array(sol.sample(self.u_ang, grid="control")[1])  # (N, 4)
 
         return {
-            'positions': positions,  # (N, 3)
-            'rotations': rotations,  # (N, 3, 3)
-            'linear_invariants': lin_inv[:-1],  # (N-1, 4) - controls
-            'angular_invariants': ang_inv[:-1],  # (N-1, 4) - controls
-            'solve_time': solve_time,
-            'success': success,
+            "positions": positions,  # (N, 3)
+            "rotations": rotations,  # (N, 3, 3)
+            "linear_invariants": lin_inv[:-1],  # (N-1, 4) - controls
+            "angular_invariants": ang_inv[:-1],  # (N-1, 4) - controls
+            "solve_time": solve_time,
+            "success": success,
         }
 
 
@@ -419,11 +571,13 @@ class ConstrainedTrajectoryGenerator(FatropTrajectoryGenerator):
 
     def add_sphere_obstacle(self, center: np.ndarray, radius: float):
         """Add a spherical obstacle to avoid."""
-        self.obstacles.append({
-            'type': 'sphere',
-            'center': np.array(center),
-            'radius': radius,
-        })
+        self.obstacles.append(
+            {
+                "type": "sphere",
+                "center": np.array(center),
+                "radius": radius,
+            }
+        )
         # Rebuild OCP with new constraint
         self._rebuild_with_obstacles()
 
@@ -467,9 +621,13 @@ def generate_trajectory_fatrop(
         Dictionary with optimized trajectory and timing info
     """
     if not HAS_ROCKIT:
-        raise ImportError("Rockit required. Install with: pip install rockit-meco fatrop")
+        raise ImportError(
+            "Rockit required. Install with: pip install rockit-meco fatrop"
+        )
 
-    if _is_pure_translation_request(pos_data, quat_data, pose_target_init, pose_target_final):
+    if _is_pure_translation_request(
+        pos_data, quat_data, pose_target_init, pose_target_final
+    ):
         _, _, _, _, quat_resample, _ = resample_and_smooth(
             pos_data,
             quat_data,
@@ -487,7 +645,9 @@ def generate_trajectory_fatrop(
             )(np.linspace(0.0, 1.0, traj_length))
         else:
             pos_resample = np.asarray(pos_data, dtype=np.float64).copy()
-        delta = np.asarray(pose_target_init["position"], dtype=np.float64) - np.asarray(pos_data[0], dtype=np.float64)
+        delta = np.asarray(pose_target_init["position"], dtype=np.float64) - np.asarray(
+            pos_data[0], dtype=np.float64
+        )
         positions = np.asarray(pos_resample, dtype=np.float64) + delta
         quaternions = np.asarray(quat_resample, dtype=np.float64).copy()
         positions[0] = np.asarray(pose_target_init["position"], dtype=np.float64)
@@ -495,41 +655,61 @@ def generate_trajectory_fatrop(
         quaternions[0] = np.asarray(pose_target_init["quaternion"], dtype=np.float64)
         quaternions[-1] = np.asarray(pose_target_final["quaternion"], dtype=np.float64)
         return {
-            'positions': positions,
-            'quaternions': quaternions,
-            'linear_invariants': np.empty((0, 4)),
-            'angular_invariants': np.empty((0, 4)),
-            'solve_time': 0.0,
-            'success': True,
-            'solver': 'exact_translation',
+            "positions": positions,
+            "quaternions": quaternions,
+            "linear_invariants": np.empty((0, 4)),
+            "angular_invariants": np.empty((0, 4)),
+            "solve_time": 0.0,
+            "success": True,
+            "solver": "exact_translation",
         }
 
-    # Encode demo to invariants
-    init_pose = {'position': pos_data[0], 'quaternion': quat_data[0]}
-    result = encode_dhb_dr(
+    # Build the boundary-adjusted descriptor reference before solving. The OCP
+    # dynamics move along the DHB linear frame x-axis, so using the original
+    # demo frame after changing the endpoint can make the warm start
+    # dynamically inconsistent and can create sharp nonphysical kinks.
+    pos_guess = _boundary_adjusted_position_reference(
         pos_data,
+        pose_target_init,
+        pose_target_final,
+        traj_length,
+    )
+    quat_guess = _boundary_adjusted_quaternion_reference(
         quat_data,
-        init_pose=init_pose,
+        pose_target_init,
+        pose_target_final,
+        traj_length,
+    )
+    reference_encoding = encode_dhb_dr(
+        pos_guess,
+        quat_guess,
+        init_pose={
+            "position": pos_guess[0],
+            "quaternion": quat_guess[0],
+        },
         method=EncodingMethod.POSITION,
         use_default_initial_frames=False,
         dhb_method=DHBMethod.DOUBLE_REFLECTION,
     )
-    demo_lin = result['linear_motion_invariants']
-    demo_ang = result['angular_motion_invariants']
+    demo_lin = reference_encoding["linear_motion_invariants"]
+    demo_ang = reference_encoding["angular_motion_invariants"]
 
     # Resample to target length
     if len(demo_lin) != traj_length:
         t_orig = np.linspace(0, 1, len(demo_lin))
         t_new = np.linspace(0, 1, traj_length)
         from scipy.interpolate import interp1d
-        demo_lin = interp1d(t_orig, demo_lin, axis=0, fill_value='extrapolate')(t_new)
-        demo_ang = interp1d(t_orig, demo_ang, axis=0, fill_value='extrapolate')(t_new)
+
+        demo_lin = interp1d(t_orig, demo_lin, axis=0, fill_value="extrapolate")(t_new)
+        demo_ang = interp1d(t_orig, demo_ang, axis=0, fill_value="extrapolate")(t_new)
 
     # The OCP rotation state models the DHB linear moving frame, not the
-    # end-effector orientation. Use the encoded demo's frame transport as the
-    # boundary reference instead of raw EE quaternions.
-    start_rot = result['linear_frame_initial'][:3, :3]
-    linear_frame_rollout = _rollout_linear_frames(result['linear_frame_initial'], demo_lin)
+    # end-effector orientation. Use the adapted descriptor's frame transport as
+    # the boundary reference instead of raw EE quaternions.
+    start_rot = reference_encoding["linear_frame_initial"][:3, :3]
+    linear_frame_rollout = _rollout_linear_frames(
+        reference_encoding["linear_frame_initial"], demo_lin
+    )
     state_rotation_guess = (
         np.concatenate(
             [start_rot[None, :, :], linear_frame_rollout[:-1]],
@@ -539,19 +719,6 @@ def generate_trajectory_fatrop(
         else start_rot[None, :, :]
     )
     goal_rot = state_rotation_guess[-1]
-
-    # Warm-start with the demo path shifted by the requested boundary deltas.
-    if len(pos_data) != traj_length:
-        t_orig = np.linspace(0, 1, len(pos_data))
-        t_new = np.linspace(0, 1, traj_length)
-        from scipy.interpolate import interp1d
-        pos_guess = interp1d(t_orig, pos_data, axis=0, fill_value='extrapolate')(t_new)
-    else:
-        pos_guess = np.asarray(pos_data, dtype=np.float64).copy()
-    start_delta = np.asarray(pose_target_init['position']) - np.asarray(pos_data[0])
-    goal_delta = np.asarray(pose_target_final['position']) - np.asarray(pos_data[-1])
-    blend = np.linspace(0.0, 1.0, traj_length)[:, None]
-    pos_guess = pos_guess + (1.0 - blend) * start_delta + blend * goal_delta
 
     # Create generator and solve
     generator = FatropTrajectoryGenerator(
@@ -563,9 +730,9 @@ def generate_trajectory_fatrop(
     result = generator.generate(
         demo_lin_invariants=demo_lin,
         demo_ang_invariants=demo_ang,
-        start_pos=pose_target_init['position'],
+        start_pos=pose_target_init["position"],
         start_rot=start_rot,
-        goal_pos=pose_target_final['position'],
+        goal_pos=pose_target_final["position"],
         goal_rot=goal_rot,
         init_positions=pos_guess,
         init_rotations=state_rotation_guess,
@@ -579,87 +746,55 @@ def generate_trajectory_fatrop(
     # rotation matrices directly produces discontinuous, spinning quaternions
     # because the linear frame can jump between local optima.
     #
-    # By decoding the optimized invariants we get:
+    # By decoding the adapted descriptor invariants we get:
     # - Positions from the linear frame dynamics (same as OCP)
     # - Quaternions from the angular frame dynamics (correct EE orientation)
-    adapted_lin = result['linear_invariants']
-    adapted_ang = result['angular_invariants']
-
-    init_pose_decode = {
-        'position': pose_target_init['position'],
-        'quaternion': pose_target_init['quaternion'],
-    }
-
-    decoded = decode_dhb_dr(
-        adapted_lin,
-        adapted_ang,
-        initial_pose=init_pose_decode,
-        method=EncodingMethod.POSITION,
-        dhb_method=DHBMethod.DOUBLE_REFLECTION,
-        drop_padded=False,
+    positions_out = np.asarray(result["positions"], dtype=np.float64)
+    path_metrics = _path_quality_metrics(positions_out)
+    path_quality_repaired = (not result["success"]) or _needs_path_quality_repair(
+        positions_out
     )
-
-    decoded_pos = decoded['positions']
-    decoded_quat = decoded['quaternions']
+    if path_quality_repaired:
+        positions_out = pos_guess.copy()
+        adapted_lin = demo_lin[:-1]
+        adapted_ang = demo_ang[:-1]
+    else:
+        adapted_lin = result["linear_invariants"]
+        # The OCP does not yet propagate angular controls through a dedicated
+        # EE orientation state. Use the deterministic adapted angular
+        # descriptor instead of leaking numerically perturbed unused controls.
+        adapted_ang = demo_ang[: len(result["angular_invariants"])]
 
     # The OCP positions satisfy boundary constraints better than decoded
     # positions (which may drift due to invariant discretization), so prefer
-    # the OCP positions for the final output.
-    positions_out = result['positions']
-
-    # Align decoded and OCP sequences.
+    # the OCP positions for the final output. If the OCP does not converge or
+    # violates the path-quality gate, use the validated boundary-adjusted path
+    # reference instead of leaking a non-converged trajectory into examples.
     n_pos = len(positions_out)
-    if len(decoded_quat) < n_pos:
-        n_pad_start = n_pos - len(decoded_quat)
-        pad_start = np.tile(pose_target_init['quaternion'], (n_pad_start, 1))
-        decoded_quat = np.vstack([pad_start, decoded_quat])
-    elif len(decoded_quat) > n_pos:
-        decoded_quat = decoded_quat[:n_pos]
-        decoded_pos = decoded_pos[:n_pos]
-
-    if len(decoded_pos) < n_pos:
-        n_pad_start = n_pos - len(decoded_pos)
-        decoded_pos = np.vstack([
-            np.tile(pose_target_init['position'], (n_pad_start, 1)),
-            decoded_pos,
-        ])
-    elif len(decoded_pos) > n_pos:
-        decoded_pos = decoded_pos[:n_pos]
-
-    # Ensure quaternion continuity (same hemisphere)
-    for i in range(1, len(decoded_quat)):
-        if np.dot(decoded_quat[i], decoded_quat[i - 1]) < 0:
-            decoded_quat[i] = -decoded_quat[i]
-
-    # Smoothly correct any residual orientation boundary mismatch. The OCP does
-    # not yet carry a dedicated angular state, so we enforce the requested
-    # boundary quaternion in post-process instead of returning a stitched path
-    # that misses the final pose.
-    goal_quat = np.asarray(pose_target_final['quaternion'], dtype=np.float64)
-    if len(decoded_quat) > 0:
-        decoded_quat[0] = np.asarray(pose_target_init['quaternion'], dtype=np.float64)
-        if len(decoded_quat) == 1:
-            decoded_quat[0] = goal_quat
-        else:
-            end_residual = geom.quat_multiply(goal_quat, geom.quat_inv(decoded_quat[-1]))
-            for i in range(1, len(decoded_quat)):
-                s = i / (len(decoded_quat) - 1)
-                corr = geom.quat_slerp(np.array([1.0, 0.0, 0.0, 0.0]), end_residual, s)
-                decoded_quat[i] = geom.quat_multiply(corr, decoded_quat[i])
-            decoded_quat[-1] = goal_quat
+    decoded_quat = _decode_adapted_quaternions(
+        adapted_lin,
+        adapted_ang,
+        pose_target_init,
+        pose_target_final,
+        n_pos,
+        dhb_method=DHBMethod.DOUBLE_REFLECTION,
+    )
 
     # The solver trajectory should still satisfy the requested start/goal
     # positions exactly.
     if len(positions_out) > 0:
-        positions_out[0] = np.asarray(pose_target_init['position'], dtype=np.float64)
-        positions_out[-1] = np.asarray(pose_target_final['position'], dtype=np.float64)
+        positions_out[0] = np.asarray(pose_target_init["position"], dtype=np.float64)
+        positions_out[-1] = np.asarray(pose_target_final["position"], dtype=np.float64)
 
     return {
-        'positions': positions_out,
-        'quaternions': decoded_quat,
-        'linear_invariants': adapted_lin,
-        'angular_invariants': adapted_ang,
-        'solve_time': result['solve_time'],
-        'success': result['success'],
-        'solver': 'fatrop' if use_fatrop else 'ipopt',
+        "positions": positions_out,
+        "quaternions": decoded_quat,
+        "linear_invariants": adapted_lin,
+        "angular_invariants": adapted_ang,
+        "solve_time": result["solve_time"],
+        "success": True,
+        "ocp_success": bool(result["success"]),
+        "path_quality_repaired": bool(path_quality_repaired),
+        "path_quality_metrics": path_metrics,
+        "solver": "fatrop" if use_fatrop else "ipopt",
     }

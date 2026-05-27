@@ -1,12 +1,24 @@
 # DHB-XR
 
-**SE(3) invariant trajectory encoding for robotics and VLA applications**
+**SE(3)-invariant trajectory representation, adaptation, and decode tooling for robotics and VLA applications**
 
-DHB-XR (DHB Extended Representations) provides SE(3) invariant trajectory encoding for robotics and VLA (Vision-Language-Action) applications. The library implements various DHB (Double-Helix Based) methods for encoding trajectories into invariant representations that are independent of global position and orientation changes.
+DHB-XR turns pose trajectories into motion invariants that preserve the shape of a
+demonstration while removing dependence on the global frame. Use it to encode
+robot motions, retarget demonstrations to new start and goal poses, compare or
+retrieve motions in invariant space, and feed compact trajectory representations
+into VLA action pipelines.
+
+The core NumPy path handles DHB-DR/DHB-QR encode and decode. Optional solver
+paths add FATROP-first boundary adaptation for single trajectories and
+fixed-horizon CusADi GPU decode for high-throughput deployments that can compile
+local CUDA libraries ahead of time.
 
 ## Research Background
 
-This library implements the double-reflection (DHB-DR) and quaternion-relative (DHB-QR) invariant representations for rigid-body motion trajectories on SE(3), as described in the manuscript **"Double-Reflection DHB Invariant Representation on SE(3)"**.
+This library implements double-reflection (DHB-DR) and quaternion-relative
+(DHB-QR) invariant representations for rigid-body motion trajectories on SE(3),
+as described in the manuscript **"Double-Reflection DHB Invariant Representation
+on SE(3)"**.
 
 **Author:** Andy Park (andypark.purdue@gmail.com)
 
@@ -15,7 +27,8 @@ This library implements the double-reflection (DHB-DR) and quaternion-relative (
 - **DHB-DR** (Double-Reflection): Euler-based invariants (4 values per component)
 - **DHB-QR** (Quaternion-Relative): Quaternion-based invariants (5 values per component), no gimbal lock
 - **DHB-TI** (Time-Invariant): Speed-independent representations via arc-length reparameterization
-- **Trajectory adaptation**: Resample and decode with new initial pose; optional batched optimization
+- **Trajectory generation**: FATROP-first boundary adaptation with explicit fallback policy
+- **CusADi GPU decode**: Optional fixed-horizon decode libraries for `50`, `80`, `100`, `150`, and `200` samples
 - **Tokenization**: VQ-VAE / RVQ for DHB-Token (VLA action representation)
 - **Motion database**: Storage, similarity (L2, DTW), and retrieval
 - **Imitation learning**: Invariant matching, SE(3) geodesic, and hybrid losses
@@ -25,7 +38,7 @@ This library implements the double-reflection (DHB-DR) and quaternion-relative (
 
 ```bash
 pip install dhb_xr
-# or with extras: pip install dhb_xr[gpu,database,optimization]
+# or with extras: pip install "dhb_xr[fatrop,cusadi,tokenization,database]"
 ```
 
 ```python
@@ -75,7 +88,8 @@ See [VLA Integration Guide](integration/vla_integration.md) for setup and usage.
 
 ## API Reference
 
-::: dhb_xr
+See the [API reference](api/index.md) for core encoding, decoding, optimization,
+database, tokenization, losses, and visualization modules.
 
 ## License
 

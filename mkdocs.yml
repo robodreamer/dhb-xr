@@ -1,13 +1,13 @@
 site_name: DHB-XR Documentation
-site_description: SE(3) invariant trajectory encoding for robotics and VLA applications (v0.2.1)
+site_description: SE(3) invariant trajectory encoding for robotics and VLA applications (v0.4.1)
 site_author: Andy Park
-site_url: https://robodreamer.github.io/dhb_xr/
+site_url: https://robodreamer.github.io/dhb-xr/
 repo_url: https://github.com/robodreamer/dhb-xr
 repo_name: robodreamer/dhb_xr
 edit_uri: edit/main/docs/
 copyright: Copyright &copy; 2026 Andy Park
 extra:
-  version: "0.2.1"
+  version: "0.4.1"
   author_email: "andypark.purdue@gmail.com"
 
 # Ensure proper URL handling - use directory URLs (transforms/ instead of transforms.html)
@@ -39,24 +39,8 @@ theme:
 
 plugins:
   - search
-  - mkdocstrings:
-      handlers:
-        python:
-          paths: [src]
-          options:
-            show_source: true
-            show_root_heading: true
-            show_root_toc_entry: true
-            show_root_full_path: false
-            show_object_full_path: false
-            show_category_heading: true
-            show_if_no_docstring: false
-            separate_signature: true
-            line_length: 100
 
 markdown_extensions:
-  - pymdownx.highlight:
-      anchor_linenums: true
   - pymdownx.inlinehilite
   - pymdownx.snippets:
       base_path: "."
@@ -74,9 +58,14 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - Changelog: changelog.md
-  - Installation: installation.md
-  - Quickstart: quickstart.md
+  - Get Started:
+    - Installation: installation.md
+    - Quickstart: quickstart.md
+  - Guides:
+    - GPU Decode: gpu_decode.md
+    - VLA Integration: integration/vla_integration.md
+  - Examples:
+    - Overview: examples_walkthrough.md
   - API Reference:
     - Overview: api/index.md
     - Core Types: api/core.md
@@ -88,8 +77,5 @@ nav:
     - Tokenization: api/tokenization.md
     - Losses: api/losses.md
     - Visualization: api/visualization.md
-  - Examples:
-    - Overview: examples_walkthrough.md
-  - Integration:
-    - VLA Integration: integration/vla_integration.md
   - Development: development.md
+  - Changelog: changelog.md

@@ -1,6 +1,7 @@
 # DHB-DR Encoding
 
-::: dhb_xr.encoder.dhb_dr
+Encoding functions live in `dhb_xr.encoder.dhb_dr` and are also re-exported
+from the top-level `dhb_xr` package.
 
 ## Main Functions
 

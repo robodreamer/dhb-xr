@@ -1,6 +1,6 @@
 # Visualization
 
-::: dhb_xr.visualization
+Visualization utilities live under `dhb_xr.visualization`.
 
 ## Overview
 
@@ -10,7 +10,7 @@ Utilities for plotting and visualizing DHB trajectories and invariants.
 
 ### plot_se3_trajectory
 
-::: dhb_xr.visualization.plot
+Plotting helpers live in `dhb_xr.visualization.plot`.
 
 ## Usage Example
 

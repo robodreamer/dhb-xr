@@ -1,6 +1,6 @@
 [project]
 name = "dhb_xr"
-version = "0.4.0"
+version = "0.4.1"
 description = "DHB Extended Representations - SE(3) invariant trajectory encoding for robotics and VLA"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -35,7 +35,7 @@ dependencies = [
 optimization = ["casadi>=3.5", "spatial-casadi>=1.0"]
 fatrop = ["casadi>=3.5", "rockit-meco>=0.1"]
 gpu = ["torch>=2.0"]
-cusadi = ["cusadi>=1.0", "torch>=2.0"]
+cusadi = ["casadi>=3.5", "torch>=2.0"]
 tokenization = ["torch>=2.0", "einops>=0.6"]
 database = ["faiss-cpu>=1.7"]
 examples = ["jupyter>=1.0", "ipykernel>=6.0", "notebook>=6.0"]
@@ -60,6 +60,7 @@ dev = [
 
 [project.scripts]
 dhb_xr-examples = "dhb_xr.cli:examples_cmd"
+dhb_xr-build-cusadi-decode = "dhb_xr.optimization.build_cusadi_decode:main"
 
 [project.urls]
 Homepage = "https://github.com/robodreamer/dhb-xr"
@@ -73,6 +74,13 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["src", "."]
 include = ["dhb_xr*", "examples*"]
+
+[tool.setuptools.package-data]
+dhb_xr = [
+    "optimization/cusadi_functions/*.casadi",
+    "optimization/cusadi_codegen/*.cu",
+    "optimization/cusadi_functions/README.md",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -127,6 +135,12 @@ pytorch = ">=2.0"
 casadi = ">=3.5"
 pip = ">=23.0"
 
+[tool.pixi.feature.docs.dependencies]
+mkdocs = ">=1.5"
+mkdocs-material = ">=9.0"
+mkdocs-material-extensions = ">=1.3"
+pymdown-extensions = ">=10.0"
+
 [tool.pixi.feature.gpu.dependencies]
 # PyTorch CPU for basic GPU feature (use cuda feature for actual GPU)
 pytorch = ">=2.0"
@@ -146,6 +160,7 @@ casadi = ">=3.5"
 
 [tool.pixi.environments]
 default = { features = ["dev"], solve-group = "default" }
+docs = { features = ["docs"], solve-group = "docs" }
 gpu = { features = ["dev", "gpu"], solve-group = "gpu" }
 cuda = { features = ["dev", "cuda", "optimization"], solve-group = "cuda" }
 full = { features = ["dev", "gpu", "optimization"], solve-group = "full" }
@@ -170,12 +185,12 @@ publish-testpypi = "python -m build && bash scripts/upload_testpypi.sh"
 publish-pypi = "python -m build && bash scripts/upload_pypi.sh"
 version = "python scripts/version.py"
 benchmark = "python examples/benchmark_backends.py"
-docs = "cp CHANGELOG.md docs/ && mkdocs build"
-build-docs = "cp CHANGELOG.md docs/ && mkdocs build"
+docs = "cp CHANGELOG.md docs/changelog.md && mkdocs build"
+build-docs = "cp CHANGELOG.md docs/changelog.md && mkdocs build"
 serve-docs = "mkdocs serve"
 build-cpp = "cmake -B build -S . -DCMAKE_BUILD_TYPE=Release && cmake --build build && (cp build/src/dhb_xr/_cpp/_dhb_xr_cpp*.so src/dhb_xr/ 2>/dev/null || true)"
 notebook = "pip install -e . && jupyter notebook notebooks/"
-notebook-cuda = "pip install -e . && pip install -e /home/andypark/Projects/repos/cusadi && jupyter notebook notebooks/"
+notebook-cuda = "pip install -e . && jupyter notebook notebooks/"
 download-xdof = "python scripts/download_xdof_samples.py"
 install-rockit = "python3 -m pip install rockit-meco"
 clone-examples = "dhb_xr-examples --copy"

@@ -1,6 +1,7 @@
 # DHB Decoding
 
-::: dhb_xr.decoder.dhb_dr
+Decoding functions live in `dhb_xr.decoder.dhb_dr` and are also re-exported
+from the top-level `dhb_xr` package.
 
 ## Main Functions
 

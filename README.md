@@ -16,26 +16,25 @@ This library implements the double-reflection (DHB-DR) and quaternion-relative (
 
 ## Installation
 
-### End users (pip)
+### End users
 
 ```bash
-# Basic installation
 pip install dhb_xr
 
-# With optimization (CasADi)
-pip install dhb_xr[optimization]
+# Solver-backed trajectory generation
+pip install "dhb_xr[fatrop]"
 
-# With GPU (PyTorch)
-pip install dhb_xr[gpu]
+# Fixed-horizon CusADi GPU decode support
+pip install "dhb_xr[cusadi]"
 
-# With examples and notebooks
-pip install dhb_xr[examples]
-
-# Full installation
-pip install dhb_xr[all]
+# Examples, notebooks, and optional features
+pip install "dhb_xr[examples,tokenization,database]"
 ```
 
-### Developers (pixi)
+See the [installation guide](https://robodreamer.github.io/dhb-xr/installation/)
+for the full extras matrix, CUDA decode build steps, and troubleshooting.
+
+### Developers
 
 ```bash
 # Install pixi: https://pixi.sh
@@ -60,73 +59,15 @@ pixi run dhb_xr-examples --copy ./local_examples
 # Run examples programmatically
 pixi run python -c "import examples; examples.run_basic_encoding()"
 
-# Build for PyPI
+# Build docs and distributions
+pixi run docs
 pixi run build-dist
-
-# Setup PyPI credentials
-pixi run setup-pypirc
-
-# Publish to TestPyPI
-pixi run upload-testpypi
-
-# Publish to PyPI (production)
-pixi run upload-pypi
-
-# Version management
-pixi run version                    # Show current version
-pixi run version --bump patch       # Bump patch version
 ```
 
-### Publishing to PyPI
+Publishing and version-management commands live in
+[docs/development.md](docs/development.md).
 
-#### Automated (GitHub Actions)
-
-1. Update version: `pixi run version --bump patch` or `pixi run version 0.4.0`
-2. Commit and push changes
-3. Create and push a matching git tag, for example `git tag v0.4.0 && git push origin v0.4.0`
-4. The tag-triggered Release workflow will automatically build and publish to PyPI
-
-#### Manual Publishing
-
-```bash
-# Set up PyPI credentials (run once)
-pixi run setup-pypirc
-# Edit ~/.pypirc with your API tokens
-
-# Build distributions
-pixi run build-dist
-
-# Test on TestPyPI first
-pixi run upload-testpypi
-
-# Test installation from TestPyPI
-pip install -i https://test.pypi.org/simple/ dhb_xr
-
-# Publish to production PyPI
-pixi run upload-pypi
-```
-
-#### Version Management
-
-```bash
-# Show current version
-pixi run version
-
-# Set specific version
-pixi run version 0.2.1
-
-# Bump version components
-pixi run version --bump patch  # 0.2.0 -> 0.2.1
-pixi run version --bump minor  # 0.2.0 -> 0.3.0
-pixi run version --bump major  # 0.2.0 -> 1.0.0
-```
-
-**API Token Setup:**
-- **TestPyPI**: https://test.pypi.org/manage/account/#api-tokens
-- **PyPI**: https://pypi.org/manage/account/#api-tokens
-- Credentials stored in `~/.pypirc` or environment variables
-
-### CUDA Environment (GPU acceleration)
+## CUDA Environment
 
 For GPU features (CusADi, VLA tokenization, faster PyTorch):
 
@@ -324,99 +265,59 @@ mkdocs serve  # opens http://127.0.0.1:8000/
 
 ### CusADi GPU Acceleration (optional)
 
-For batch processing thousands of trajectories, CusADi provides **up to 387x speedup** on GPU:
+For fixed-horizon decode workloads, DHB-XR ships CusADi artifacts and generated
+CUDA source for sample horizons `50`, `80`, `100`, `150`, and `200`. You no
+longer need to clone an external CusADi checkout for those supported horizons.
 
-| Batch Size | CPU (ms) | GPU (ms) | Speedup |
-|------------|----------|----------|---------|
-| 100 | 34 | 0.8 | 43x |
-| 1000 | 342 | 1.7 | **199x** |
-| 2000 | 685 | 1.8 | **387x** |
+CPU decode remains the default fallback. Build CUDA libraries explicitly on the
+machines that need GPU decode.
 
-**Requirements:**
+**Requirements**
+
 - NVIDIA GPU with CUDA toolkit (nvcc)
-- PyTorch with CUDA support
+- CUDA-enabled PyTorch for GPU execution
+- `dhb_xr[cusadi]` for CasADi and PyTorch dependencies
 
-**Setup with pixi:**
+**Build the fixed-horizon libraries**
 
 ```bash
-cd dhb_xr
+pip install "dhb_xr[cusadi]"
+dhb_xr-build-cusadi-decode --horizons 50 80 100 150 200
 
-# 1. Install pixi environment
-pixi install
-
-# 2. Use the CUDA pixi environment for CUDA-enabled PyTorch
-pixi run -e cuda check-cuda
-
-# 3. Clone cusadi (if not already)
-git clone https://github.com/se-hwan/cusadi /path/to/cusadi
-cd /path/to/cusadi && pip install -e .
-
-# 4. Build CasADi functions (use pixi python for version compatibility)
-cd dhb_xr
-pixi run python3 << 'EOF'
-import casadi as ca
-import numpy as np
-
-def euler_to_rot(rx, ry, rz):
-    cx, sx = ca.cos(rx), ca.sin(rx)
-    cy, sy = ca.cos(ry), ca.sin(ry)
-    cz, sz = ca.cos(rz), ca.sin(rz)
-    return ca.vertcat(
-        ca.horzcat(cy*cz, -cy*sz, sy),
-        ca.horzcat(cx*sz + cz*sx*sy, cx*cz - sx*sy*sz, -cy*sx),
-        ca.horzcat(sx*sz - cx*cz*sy, cz*sx + cx*sy*sz, cx*cy))
-
-T = 50
-lin_inv = ca.SX.sym("lin_inv", T * 4)
-init_pos = ca.SX.sym("init_pos", 3)
-init_rot = ca.SX.sym("init_rot", 9)
-
-rotm = ca.reshape(init_rot, 3, 3)
-pos = init_pos
-out = [init_pos]
-for k in range(T):
-    mag, rx, ry, rz = lin_inv[k*4], lin_inv[k*4+1], lin_inv[k*4+2], lin_inv[k*4+3]
-    rotm = rotm @ euler_to_rot(rx, ry, rz)
-    pos = pos + rotm @ ca.vertcat(mag, 0, 0)
-    out.append(pos)
-
-fn = ca.Function("fn_dhb_decode_linear", [lin_inv, init_pos, init_rot], [ca.horzcat(*out).T])
-fn.save("/path/to/cusadi/src/casadi_functions/fn_dhb_decode_linear.casadi")
-print(f"Saved: {fn}")
-EOF
-
-# 5. Compile CUDA kernel (use pixi python for same CasADi version)
-cd /path/to/cusadi
-/path/to/dhb_xr/.pixi/envs/default/bin/python3 run_codegen.py --fn=fn_dhb_decode_linear
+# No-write path check
+dhb_xr-build-cusadi-decode --horizons 100 --dry-run
 ```
 
-**Usage:**
+The default output is `$DHB_XR_CUSADI_CACHE/build` when `DHB_XR_CUSADI_CACHE` is
+set, otherwise `~/.cache/dhb_xr/cusadi/build`.
+
+**Usage through the public API**
 
 ```python
-import sys
-sys.path.insert(0, "/path/to/cusadi")
-sys.path.insert(0, "/path/to/cusadi/src")
-sys.path.insert(0, "/path/to/cusadi/build")
+from dhb_xr.optimization import generate_trajectory
 
-import torch
-import casadi as ca
-from src.CusadiFunction import CusadiFunction
+result = generate_trajectory(
+    demo_positions,
+    demo_quaternions,
+    pose_target_init={"position": start_pos, "quaternion": start_quat},
+    pose_target_final={"position": goal_pos, "quaternion": goal_quat},
+    traj_length=100,
+    backend="cusadi",
+    cusadi_decode="auto",
+    cusadi_decode_horizon=100,
+)
 
-fn = ca.Function.load("/path/to/cusadi/src/casadi_functions/fn_dhb_decode_linear.casadi")
-cusadi_fn = CusadiFunction(fn, batch_size=1000)
-
-# GPU tensors (batch_size, features)
-lin_inv_gpu = torch.from_numpy(invariants).cuda().contiguous()
-init_pos_gpu = torch.from_numpy(positions).cuda().contiguous()
-init_rot_gpu = torch.from_numpy(rotations).cuda().contiguous()
-
-cusadi_fn.evaluate([lin_inv_gpu, init_pos_gpu, init_rot_gpu])
-positions = cusadi_fn.getDenseOutput(0).cpu().numpy()  # (batch, T+1, 3)
+print(result["cusadi_decode"])
+print(result.get("cusadi_decode_fallback_reason"))
 ```
 
-**Important:** The CasADi `.casadi` files must be saved with the same CasADi version that loads them. Use pixi python for both building and running to ensure version compatibility.
+Use `cusadi_decode="gpu_required"` or `cusadi_decode_fallback="error"` when
+missing CUDA assets should fail instead of falling back to CPU. Use
+`cusadi_decode_library_dir=...` to point at prebuilt libraries outside the
+default cache.
 
-See the [CusADi paper](https://arxiv.org/abs/2408.09662) for details on the parallelization framework.
+See the [GPU Decode guide](docs/gpu_decode.md) and the
+[CusADi paper](https://arxiv.org/abs/2408.09662) for details.
 
 ### Fatrop Fast Optimization (optional)
 
@@ -694,24 +595,24 @@ Or without pixi: `PYTHONPATH=src pytest tests/ -v`.
    "
    ```
 
-### Cusadi implementation
+### CusADi implementation
 
-Cusadi tests cover **batched_decode_dhb_dr** and **CusadiTrajectoryOptimizer** (NumPy fallback; no cusadi package required):
+CusADi tests cover **batched_decode_dhb_dr**, **CusadiTrajectoryOptimizer**, exact
+fixed-horizon artifact selection, CPU fallback, and the dhb_xr-owned library
+builder:
 
 ```bash
 pixi run test -- tests/test_cusadi.py -v
 ```
 
 - **batched_decode_dhb_dr**: batch decode; test compares with single `decode_dhb_dr` for consistency.
-- **CusadiTrajectoryOptimizer.forward**: same batch decode via the optimizer interface.
-- **export_casadi_decode** (optional): if `casadi` is installed (`pip install dhb_xr[optimization]`), one test exports a `.casadi` decode step.
+- **CusadiTrajectoryOptimizer.forward**: same batch decode via the optimizer interface, with decode metadata.
+- **build_cusadi_decode**: compiles supported fixed horizons into `$DHB_XR_CUSADI_CACHE` or `~/.cache/dhb_xr/cusadi`.
 
-To test the CasADi export script explicitly:
+To test the build command explicitly without writing libraries:
 
 ```bash
-pip install dhb_xr[optimization]
-python -m dhb_xr.optimization.export_casadi_decode --out /tmp/fn_dhb_decode_step.casadi
-# Check: ls /tmp/fn_dhb_decode_step.casadi
+python -m dhb_xr.optimization.build_cusadi_decode --horizons 50 100 --dry-run
 ```
 
 ## References

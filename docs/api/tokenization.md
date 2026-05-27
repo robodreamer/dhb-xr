@@ -1,6 +1,6 @@
 # Tokenization
 
-::: dhb_xr.tokenization
+Tokenization utilities live under `dhb_xr.tokenization`.
 
 ## Overview
 
@@ -10,7 +10,7 @@ VQ-VAE-based tokenization for discrete DHB invariant representations.
 
 ### DHBTokenizer
 
-::: dhb_xr.tokenization.vqvae.DHBTokenizer
+`DHBTokenizer` is provided by `dhb_xr.tokenization.vqvae`.
 
 ## Usage Example
 

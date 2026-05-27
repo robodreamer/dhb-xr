@@ -1,6 +1,6 @@
 # DHB-TI: Time-Invariant Encoding
 
-::: dhb_xr.encoder.dhb_ti
+DHB-TI utilities live in `dhb_xr.encoder.dhb_ti`.
 
 ## Overview
 
@@ -90,12 +90,14 @@ for M in speeds:
 
 # Compare invariants (should be similar despite different speeds)
 for i, (M, result) in enumerate(zip(speeds, results)):
-    print(f"Speed {i+1} (M={M}): linear shape {result['linear_motion_invariants'].shape}")
+    linear = result.get("linear_motion_invariants")
+    print(f"Speed {i+1} (M={M}): linear shape {linear.shape}")
 
 # Invariants should be very similar
+linear_a = results[0].get("linear_motion_invariants")
+linear_b = results[1].get("linear_motion_invariants")
 diff_01 = np.linalg.norm(
-    results[0]['linear_motion_invariants'][:50] -
-    results[1]['linear_motion_invariants']
+    linear_a[:50] - linear_b
 )
 print(f"Difference between speed 1 and 2: {diff_01:.6f}")
 ```

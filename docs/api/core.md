@@ -1,6 +1,6 @@
 # Core Types
 
-::: dhb_xr.core.types
+Core type definitions live in `dhb_xr.core.types`.
 
 ## Key Classes and Enums
 

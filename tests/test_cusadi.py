@@ -1,5 +1,7 @@
 """Tests for Cusadi implementation: batched_decode_dhb_dr and CusadiTrajectoryOptimizer."""
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -92,6 +94,106 @@ def test_cusadi_trajectory_optimizer_accepts_string_method():
     assert pos.shape[0] == 1 and quat.shape[0] == 1
 
 
+@pytest.mark.parametrize("samples", [50, 100, 150, 200])
+def test_cusadi_optimizer_cpu_decode_large_fixed_horizons(samples):
+    from dhb_xr.optimization.cusadi_solver import (
+        CusadiDecodeSpec,
+        CusadiTrajectoryOptimizer,
+        batched_decode_dhb_dr,
+    )
+
+    rng = np.random.default_rng(samples)
+    batch_size = 3
+    controls = samples - 1
+    linear = rng.normal(scale=0.01, size=(batch_size, controls, 4)).astype(np.float64)
+    angular = rng.normal(scale=0.01, size=(batch_size, controls, 4)).astype(np.float64)
+    initial_poses = [
+        {
+            "position": np.array([0.05 * i, -0.02 * i, 0.01 * i], dtype=np.float64),
+            "quaternion": np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float64),
+        }
+        for i in range(batch_size)
+    ]
+
+    optimizer = CusadiTrajectoryOptimizer(
+        batch_size=batch_size,
+        decode_spec=CusadiDecodeSpec(mode="cpu", horizon=samples),
+    )
+
+    positions, quaternions = optimizer.forward(
+        linear,
+        angular,
+        initial_poses,
+        drop_padded=False,
+    )
+    expected_positions, expected_quaternions = batched_decode_dhb_dr(
+        linear,
+        angular,
+        initial_poses,
+        drop_padded=False,
+    )
+
+    assert optimizer.last_decode_backend == "cpu"
+    assert optimizer.last_decode_metadata["cusadi_decode"] == "cpu"
+    assert optimizer.last_decode_metadata["cusadi_decode_requested_horizon"] == samples
+    assert optimizer.last_decode_metadata["cusadi_decode_fallback_reason"] == "cpu_requested"
+    np.testing.assert_allclose(positions, expected_positions, atol=1e-12)
+    np.testing.assert_allclose(quaternions, expected_quaternions, atol=1e-12)
+    assert np.isfinite(positions).all()
+    assert np.isfinite(quaternions).all()
+
+
+@pytest.mark.parametrize("samples", [50, 100, 150, 200])
+def test_cusadi_optimizer_gpu_decode_large_fixed_horizons(samples):
+    cusadi_solver = pytest.importorskip("dhb_xr.optimization.cusadi_solver")
+    if not cusadi_solver.HAS_TORCH_CUDA or not cusadi_solver.HAS_CUSADI:
+        pytest.skip("CusADi CUDA decode requires CUDA plus local CusADi")
+
+    artifact = (
+        Path(cusadi_solver.DEFAULT_CUSADI_FUNCTION_DIR)
+        / cusadi_solver.cusadi_decode_filename(samples)
+    )
+    if not artifact.exists():
+        pytest.skip(f"compiled CusADi decode function not found: {artifact}")
+
+    batch_size = 2
+    controls = samples - 1
+    linear = np.zeros((batch_size, controls, 4), dtype=np.float64)
+    linear[:, :, 0] = 0.005
+    angular = np.zeros((batch_size, controls, 4), dtype=np.float64)
+    initial_poses = [
+        {
+            "position": np.array([0.1 * i, 0.0, 0.0], dtype=np.float64),
+            "quaternion": np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float64),
+        }
+        for i in range(batch_size)
+    ]
+    optimizer = cusadi_solver.CusadiTrajectoryOptimizer(
+        batch_size=batch_size,
+        decode_spec=cusadi_solver.CusadiDecodeSpec(
+            mode="gpu_required",
+            horizon=samples,
+            fallback="error",
+        ),
+    )
+
+    positions, quaternions = optimizer.forward(
+        linear,
+        angular,
+        initial_poses,
+        drop_padded=False,
+    )
+
+    assert optimizer.last_decode_backend == "gpu"
+    assert optimizer.last_decode_metadata["cusadi_decode"] == "gpu"
+    assert optimizer.last_decode_metadata["cusadi_decode_requested_horizon"] == samples
+    assert optimizer.last_decode_metadata["cusadi_decode_artifact_horizon"] == samples
+    assert positions.shape == (batch_size, samples, 3)
+    assert quaternions.shape == (batch_size, samples, 4)
+    assert np.isfinite(positions).all()
+    assert np.isfinite(quaternions).all()
+
+
 @pytest.mark.skipif(
     __import__("importlib.util").util.find_spec("casadi") is None,
     reason="casadi not installed (pip install dhb_xr[optimization])",
@@ -112,3 +214,53 @@ def test_export_casadi_decode_step():
     finally:
         if os.path.isfile(out_path):
             os.unlink(out_path)
+
+
+@pytest.mark.skipif(
+    __import__("importlib.util").util.find_spec("casadi") is None,
+    reason="casadi not installed (pip install dhb_xr[optimization])",
+)
+def test_export_casadi_linear_decode_matches_fixed_horizon_contract():
+    from dhb_xr.optimization.export_casadi_decode import build_linear_decode_casadi
+
+    samples = 80
+    fn = build_linear_decode_casadi(samples=samples)
+    assert fn.name() == "fn_dhb_decode_linear_80"
+    assert fn.nnz_in(0) == (samples - 1) * 4
+    assert fn.size_out(0) == (samples, 3)
+
+    controls = np.zeros((samples - 1, 4), dtype=np.float64)
+    controls[:, 0] = 0.01
+    positions = np.asarray(
+        fn(controls.reshape(-1), np.zeros(3), np.eye(3).reshape(-1)),
+        dtype=np.float64,
+    )
+
+    assert positions.shape == (samples, 3)
+    np.testing.assert_allclose(positions[0], np.zeros(3), atol=1e-12)
+    np.testing.assert_allclose(positions[-1], [0.79, 0.0, 0.0], atol=1e-12)
+
+
+@pytest.mark.skipif(
+    __import__("importlib.util").util.find_spec("casadi") is None,
+    reason="casadi not installed (pip install dhb_xr[optimization])",
+)
+def test_export_casadi_decode_cli_writes_multiple_canonical_lengths(tmp_path, monkeypatch):
+    from dhb_xr.optimization.export_casadi_decode import main
+
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "export_casadi_decode",
+            "--length",
+            "50",
+            "100",
+            "--out-dir",
+            str(tmp_path),
+        ],
+    )
+
+    main()
+
+    assert (tmp_path / "fn_dhb_decode_linear_50.casadi").is_file()
+    assert (tmp_path / "fn_dhb_decode_linear_100.casadi").is_file()

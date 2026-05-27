@@ -3,6 +3,8 @@ include CHANGELOG.md
 include pyproject.toml
 
 recursive-include src/dhb_xr *.py
+recursive-include src/dhb_xr/optimization/cusadi_functions *.casadi *.md
+recursive-include src/dhb_xr/optimization/cusadi_codegen *.cu
 recursive-include examples *.py
 
 recursive-exclude docs *

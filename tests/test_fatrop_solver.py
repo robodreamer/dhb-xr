@@ -6,6 +6,7 @@ import pytest
 # Check if rockit is available
 try:
     import rockit
+
     HAS_ROCKIT = True
 except ImportError:
     HAS_ROCKIT = False
@@ -18,11 +19,13 @@ def demo_trajectory():
     """Generate a simple helix demo trajectory."""
     n = 100
     t = np.linspace(0, 2 * np.pi, n)
-    positions = np.column_stack([
-        0.3 * np.cos(t),
-        0.3 * np.sin(t),
-        0.1 * t / (2 * np.pi),
-    ])
+    positions = np.column_stack(
+        [
+            0.3 * np.cos(t),
+            0.3 * np.sin(t),
+            0.1 * t / (2 * np.pi),
+        ]
+    )
     quaternions = np.tile(np.array([1.0, 0.0, 0.0, 0.0]), (n, 1))
     return positions, quaternions
 
@@ -31,12 +34,12 @@ def demo_trajectory():
 def boundary_poses():
     """Define new start/goal poses for adaptation."""
     start_pose = {
-        'position': np.array([0.1, 0.1, 0.0]),
-        'quaternion': np.array([1.0, 0.0, 0.0, 0.0]),
+        "position": np.array([0.1, 0.1, 0.0]),
+        "quaternion": np.array([1.0, 0.0, 0.0, 0.0]),
     }
     goal_pose = {
-        'position': np.array([0.4, -0.2, 0.15]),
-        'quaternion': np.array([1.0, 0.0, 0.0, 0.0]),
+        "position": np.array([0.4, -0.2, 0.15]),
+        "quaternion": np.array([1.0, 0.0, 0.0, 0.0]),
     }
     return start_pose, goal_pose
 
@@ -51,6 +54,7 @@ class TestFatropTrajectoryGenerator:
             ConstrainedTrajectoryGenerator,
             generate_trajectory_fatrop,
         )
+
         assert FatropTrajectoryGenerator is not None
         assert ConstrainedTrajectoryGenerator is not None
         assert generate_trajectory_fatrop is not None
@@ -83,11 +87,14 @@ class TestFatropTrajectoryGenerator:
         start_pose, goal_pose = boundary_poses
 
         # Encode demo
-        init_pose = {'position': positions[0], 'quaternion': quaternions[0]}
+        init_pose = {"position": positions[0], "quaternion": quaternions[0]}
         from dhb_xr.core.types import EncodingMethod
-        result = encode_dhb_dr(positions, quaternions, init_pose=init_pose, method=EncodingMethod.POSITION)
-        demo_lin = result['linear_motion_invariants']
-        demo_ang = result['angular_motion_invariants']
+
+        result = encode_dhb_dr(
+            positions, quaternions, init_pose=init_pose, method=EncodingMethod.POSITION
+        )
+        demo_lin = result["linear_motion_invariants"]
+        demo_ang = result["angular_motion_invariants"]
 
         # Create generator with IPOPT
         N = 30
@@ -95,40 +102,41 @@ class TestFatropTrajectoryGenerator:
 
         # Resample invariants to match N
         from scipy.interpolate import interp1d
+
         t_orig = np.linspace(0, 1, len(demo_lin))
         t_new = np.linspace(0, 1, N)
-        demo_lin_resampled = interp1d(t_orig, demo_lin, axis=0, fill_value='extrapolate')(t_new)
-        demo_ang_resampled = interp1d(t_orig, demo_ang, axis=0, fill_value='extrapolate')(t_new)
+        demo_lin_resampled = interp1d(t_orig, demo_lin, axis=0, fill_value="extrapolate")(t_new)
+        demo_ang_resampled = interp1d(t_orig, demo_ang, axis=0, fill_value="extrapolate")(t_new)
 
         # Generate
         result = gen.generate(
             demo_lin_invariants=demo_lin_resampled,
             demo_ang_invariants=demo_ang_resampled,
-            start_pos=start_pose['position'],
-            start_rot=geom.quat_to_rot(start_pose['quaternion']),
-            goal_pos=goal_pose['position'],
-            goal_rot=geom.quat_to_rot(goal_pose['quaternion']),
+            start_pos=start_pose["position"],
+            start_rot=geom.quat_to_rot(start_pose["quaternion"]),
+            goal_pos=goal_pose["position"],
+            goal_rot=geom.quat_to_rot(goal_pose["quaternion"]),
         )
 
         # Check result structure
-        assert 'positions' in result
-        assert 'rotations' in result
-        assert 'linear_invariants' in result
-        assert 'solve_time' in result
-        assert 'success' in result
+        assert "positions" in result
+        assert "rotations" in result
+        assert "linear_invariants" in result
+        assert "solve_time" in result
+        assert "success" in result
 
         # Check shapes
-        assert result['positions'].shape[0] == N  # N+1 states but rockit returns N control samples
-        assert result['positions'].shape[1] == 3
+        assert result["positions"].shape[0] == N  # N+1 states but rockit returns N control samples
+        assert result["positions"].shape[1] == 3
 
         # Check boundary conditions are approximately satisfied
         # Note: May not be exact due to discretization
-        pos_start_error = np.linalg.norm(result['positions'][0] - start_pose['position'])
-        pos_end_error = np.linalg.norm(result['positions'][-1] - goal_pose['position'])
+        pos_start_error = np.linalg.norm(result["positions"][0] - start_pose["position"])
+        pos_end_error = np.linalg.norm(result["positions"][-1] - goal_pose["position"])
 
         print(f"Start position error: {pos_start_error:.6f}")
         print(f"End position error: {pos_end_error:.6f}")
-        print(f"Solve time: {result['solve_time']*1000:.1f} ms")
+        print(f"Solve time: {result['solve_time'] * 1000:.1f} ms")
         print(f"Success: {result['success']}")
 
         # Relaxed tolerance for optimization
@@ -138,7 +146,9 @@ class TestFatropTrajectoryGenerator:
 class TestGenerateTrajectoryFatrop:
     """Tests for the high-level generate_trajectory_fatrop function."""
 
-    def test_uses_trajectory_derived_initial_frames_for_encoding(self, demo_trajectory, boundary_poses, monkeypatch):
+    def test_uses_trajectory_derived_initial_frames_for_encoding(
+        self, demo_trajectory, boundary_poses, monkeypatch
+    ):
         """High-level Fatrop path should encode with trajectory-derived initial frames.
 
         The CasADi path already relies on `use_default_initial_frames=False` for
@@ -207,24 +217,26 @@ class TestGenerateTrajectoryFatrop:
         start_pose, goal_pose = boundary_poses
 
         result = generate_trajectory_fatrop(
-            positions, quaternions,
-            start_pose, goal_pose,
+            positions,
+            quaternions,
+            start_pose,
+            goal_pose,
             traj_length=30,
             use_fatrop=False,  # Use IPOPT for reliable testing
             verbose=False,
         )
 
         # Check result structure
-        assert 'positions' in result
-        assert 'quaternions' in result
-        assert 'linear_invariants' in result
-        assert 'angular_invariants' in result
-        assert 'solve_time' in result
-        assert 'success' in result
-        assert 'solver' in result
+        assert "positions" in result
+        assert "quaternions" in result
+        assert "linear_invariants" in result
+        assert "angular_invariants" in result
+        assert "solve_time" in result
+        assert "success" in result
+        assert "solver" in result
 
-        assert result['solver'] == 'ipopt'
-        print(f"Solve time: {result['solve_time']*1000:.1f} ms")
+        assert result["solver"] == "ipopt"
+        print(f"Solve time: {result['solve_time'] * 1000:.1f} ms")
 
     def test_fatrop_vs_ipopt_speed(self, demo_trajectory, boundary_poses):
         """Compare Fatrop vs IPOPT solve times (if Fatrop available)."""
@@ -239,14 +251,16 @@ class TestGenerateTrajectoryFatrop:
         for _ in range(3):
             t0 = time.perf_counter()
             result = generate_trajectory_fatrop(
-                positions, quaternions,
-                start_pose, goal_pose,
+                positions,
+                quaternions,
+                start_pose,
+                goal_pose,
                 traj_length=30,
                 use_fatrop=False,
             )
             times_ipopt.append(time.perf_counter() - t0)
 
-        print(f"IPOPT: {np.mean(times_ipopt)*1000:.1f} ms (avg of {len(times_ipopt)} runs)")
+        print(f"IPOPT: {np.mean(times_ipopt) * 1000:.1f} ms (avg of {len(times_ipopt)} runs)")
 
         # Try Fatrop
         try:
@@ -254,15 +268,19 @@ class TestGenerateTrajectoryFatrop:
             for _ in range(3):
                 t0 = time.perf_counter()
                 result = generate_trajectory_fatrop(
-                    positions, quaternions,
-                    start_pose, goal_pose,
+                    positions,
+                    quaternions,
+                    start_pose,
+                    goal_pose,
                     traj_length=30,
                     use_fatrop=True,
                 )
                 times_fatrop.append(time.perf_counter() - t0)
 
-            print(f"Fatrop: {np.mean(times_fatrop)*1000:.1f} ms (avg of {len(times_fatrop)} runs)")
-            print(f"Speedup: {np.mean(times_ipopt)/np.mean(times_fatrop):.1f}x")
+            print(
+                f"Fatrop: {np.mean(times_fatrop) * 1000:.1f} ms (avg of {len(times_fatrop)} runs)"
+            )
+            print(f"Speedup: {np.mean(times_ipopt) / np.mean(times_fatrop):.1f}x")
         except Exception as e:
             print(f"Fatrop not available: {e}")
             pytest.skip("Fatrop binary not available")
@@ -277,7 +295,7 @@ class TestGetOptimizer:
 
         opt = get_optimizer(backend="fatrop", N=30)
         if opt is not None:
-            assert hasattr(opt, 'generate')
+            assert hasattr(opt, "generate")
         else:
             pytest.skip("Fatrop not available")
 
@@ -287,7 +305,7 @@ class TestGetOptimizer:
 
         opt = get_optimizer(backend="ipopt", N=30)
         assert opt is not None
-        assert hasattr(opt, 'generate')
+        assert hasattr(opt, "generate")
 
 
 class TestFatropOrientationSmooth:
@@ -302,6 +320,7 @@ class TestFatropOrientationSmooth:
     def _angular_step_degrees(quats_wxyz: np.ndarray) -> np.ndarray:
         """Angular change in degrees between consecutive timesteps."""
         from scipy.spatial.transform import Rotation
+
         rots = Rotation.from_quat(quats_wxyz[:, [1, 2, 3, 0]])  # wxyz->xyzw
         angles = []
         for t in range(1, len(rots)):
@@ -321,11 +340,13 @@ class TestFatropOrientationSmooth:
         # Create a trajectory with non-trivial orientation (30 deg rotation around Z)
         n = 40
         t = np.linspace(0, 1, n)
-        positions = np.column_stack([
-            0.1 + 0.3 * t,
-            0.5 - 0.1 * t,
-            0.9 + 0.1 * np.sin(np.pi * t),
-        ])
+        positions = np.column_stack(
+            [
+                0.1 + 0.3 * t,
+                0.5 - 0.1 * t,
+                0.9 + 0.1 * np.sin(np.pi * t),
+            ]
+        )
         angles = np.radians(30) * t
         quaternions = np.zeros((n, 4))
         quaternions[:, 0] = np.cos(angles / 2)
@@ -333,18 +354,19 @@ class TestFatropOrientationSmooth:
 
         # Identity adaptation: start/goal = demo start/goal
         result = generate_trajectory_fatrop(
-            positions, quaternions,
-            pose_target_init={'position': positions[0], 'quaternion': quaternions[0]},
-            pose_target_final={'position': positions[-1], 'quaternion': quaternions[-1]},
+            positions,
+            quaternions,
+            pose_target_init={"position": positions[0], "quaternion": quaternions[0]},
+            pose_target_final={"position": positions[-1], "quaternion": quaternions[-1]},
             traj_length=30,
             use_fatrop=False,  # IPOPT for reliability
         )
 
-        adapted_quat = result['quaternions']
+        adapted_quat = result["quaternions"]
         steps = self._angular_step_degrees(adapted_quat)
         max_step = steps.max()
 
-        assert result['success'], "Solver failed to converge"
+        assert result["success"], "Solver failed to converge"
         assert max_step < 5.0, (
             f"Identity adaptation has {max_step:.1f} deg/step max angular change — "
             f"orientations are spinning. Must be < 5 deg/step."
@@ -360,11 +382,13 @@ class TestFatropOrientationSmooth:
 
         n = 40
         t = np.linspace(0, 1, n)
-        positions = np.column_stack([
-            0.1 + 0.3 * t,
-            0.5 - 0.1 * t,
-            0.9 + 0.1 * np.sin(np.pi * t),
-        ])
+        positions = np.column_stack(
+            [
+                0.1 + 0.3 * t,
+                0.5 - 0.1 * t,
+                0.9 + 0.1 * np.sin(np.pi * t),
+            ]
+        )
         angles = np.radians(20) * t
         quaternions = np.zeros((n, 4))
         quaternions[:, 0] = np.cos(angles / 2)
@@ -375,14 +399,15 @@ class TestFatropOrientationSmooth:
         shifted_goal[1] += 0.10
 
         result = generate_trajectory_fatrop(
-            positions, quaternions,
-            pose_target_init={'position': positions[0], 'quaternion': quaternions[0]},
-            pose_target_final={'position': shifted_goal, 'quaternion': quaternions[-1]},
+            positions,
+            quaternions,
+            pose_target_init={"position": positions[0], "quaternion": quaternions[0]},
+            pose_target_final={"position": shifted_goal, "quaternion": quaternions[-1]},
             traj_length=30,
             use_fatrop=False,
         )
 
-        adapted_quat = result['quaternions']
+        adapted_quat = result["quaternions"]
         steps = self._angular_step_degrees(adapted_quat)
         max_step = steps.max()
 
@@ -401,14 +426,15 @@ class TestFatropOrientationSmooth:
         quaternions = np.tile(np.array([1.0, 0.0, 0.0, 0.0]), (n, 1))
 
         result = generate_trajectory_fatrop(
-            positions, quaternions,
-            pose_target_init={'position': positions[0], 'quaternion': quaternions[0]},
-            pose_target_final={'position': positions[-1], 'quaternion': quaternions[-1]},
+            positions,
+            quaternions,
+            pose_target_init={"position": positions[0], "quaternion": quaternions[0]},
+            pose_target_final={"position": positions[-1], "quaternion": quaternions[-1]},
             traj_length=20,
             use_fatrop=False,
         )
 
-        norms = np.linalg.norm(result['quaternions'], axis=1)
+        norms = np.linalg.norm(result["quaternions"], axis=1)
         max_deviation = np.max(np.abs(norms - 1.0))
         assert max_deviation < 1e-4, (
             f"Quaternion norm deviation {max_deviation:.2e} — quaternions are not unit."
@@ -430,11 +456,13 @@ class TestFatropTranslationRegression:
 
         n_demo = 100
         t = np.linspace(0.0, 2.0 * np.pi, n_demo)
-        positions = np.column_stack([
-            0.30 * np.cos(t),
-            0.30 * np.sin(t),
-            0.10 * t / (2.0 * np.pi),
-        ])
+        positions = np.column_stack(
+            [
+                0.30 * np.cos(t),
+                0.30 * np.sin(t),
+                0.10 * t / (2.0 * np.pi),
+            ]
+        )
         quaternions = np.tile(np.array([1.0, 0.0, 0.0, 0.0]), (n_demo, 1))
 
         offset = np.array([0.12, -0.08, 0.05])

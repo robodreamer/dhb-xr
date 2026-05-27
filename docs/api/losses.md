@@ -1,6 +1,6 @@
 # Loss Functions
 
-::: dhb_xr.losses
+Loss utilities live under `dhb_xr.losses`.
 
 ## Overview
 
@@ -10,15 +10,15 @@ Loss functions for imitation learning with DHB invariants.
 
 ### invariant_matching_loss
 
-::: dhb_xr.losses.invariant_loss
+Invariant matching losses live in `dhb_xr.losses.invariant_loss`.
 
 ### se3_geodesic_loss
 
-::: dhb_xr.losses.geodesic_loss
+SE(3) geodesic losses live in `dhb_xr.losses.geodesic_loss`.
 
 ### hybrid_invariant_pose_loss
 
-::: dhb_xr.losses.hybrid_loss
+Hybrid losses live in `dhb_xr.losses.hybrid_loss`.
 
 ## Usage Example
 

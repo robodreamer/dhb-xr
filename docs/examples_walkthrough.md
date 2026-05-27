@@ -52,13 +52,40 @@ python3 examples/basic_encoding.py
 
 ---
 
-## trajectory_adaptation.py — Resample and retarget
+## trajectory_adaptation.py — Generate a boundary-adapted trajectory
 
-**What it does:** Takes a demo trajectory, resamples it to a target length, and produces an “adapted” trajectory that starts at `pose_target_init` and is decoded from the demo’s invariants (no full CasADi optimization; retargeting is by resample + decode with new initial pose).
+**What it does:** Takes a demo trajectory, resamples it to a target length, and produces an adapted trajectory that starts at `pose_target_init` and ends near the requested final pose. The high-level `generate_trajectory(...)` API now prefers the FATROP backend when optional solver dependencies are installed.
 
 **Concepts:**
-- **generate_trajectory(...)** resamples the demo to `traj_length`, encodes, then decodes using `pose_target_init`, so the new trajectory starts at the desired pose.
+- **generate_trajectory(...)** resamples the demo to `traj_length`, encodes the DHB invariants, and adapts the trajectory to the requested boundary poses.
+- Use `backend="auto"` for the FATROP-first path, `backend="fatrop"` to require FATROP, `backend="cusadi"` for CusADi adaptation plus optional fixed-horizon decode, and `backend="interpolation"` for the deterministic resample/decode baseline.
+- Fallback to slower IPOPT or interpolation is disabled by default. Set `allow_fallback=True` only for exploratory runs where continuing is more important than requiring the requested backend.
 - Returns `adapted_pos_data`, `adapted_quat_data`, and resampled demo data.
+
+**Backend selection example:**
+
+```python
+from dhb_xr.optimization import generate_trajectory
+
+result = generate_trajectory(
+    pos_data,
+    quat_data,
+    pose_target_init=pose_target_init,
+    pose_target_final=pose_target_final,
+    traj_length=50,
+    backend="auto",
+)
+
+cusadi_result = generate_trajectory(
+    pos_data,
+    quat_data,
+    pose_target_init=pose_target_init,
+    pose_target_final=pose_target_final,
+    traj_length=50,
+    backend="cusadi",
+    cusadi_decode_horizon=50,
+)
+```
 
 **Run:**
 ```bash

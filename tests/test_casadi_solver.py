@@ -18,11 +18,9 @@ def sample_trajectory():
     t = np.linspace(0, 2 * np.pi, n)
 
     # Spiral trajectory
-    positions = np.column_stack([
-        0.1 + 0.2 * t / (2 * np.pi),
-        0.5 + 0.3 * np.sin(t),
-        0.2 * np.cos(t)
-    ])
+    positions = np.column_stack(
+        [0.1 + 0.2 * t / (2 * np.pi), 0.5 + 0.3 * np.sin(t), 0.2 * np.cos(t)]
+    )
 
     # Simple quaternions (identity with small rotations)
     quaternions = np.zeros((n, 4))
@@ -45,6 +43,7 @@ class TestCasadiSolver:
     def test_has_casadi_flag(self):
         """Test that HAS_CASADI flag is correctly set."""
         from dhb_xr.optimization.casadi_solver import HAS_CASADI as solver_has_casadi
+
         assert solver_has_casadi is True
 
     def test_generate_trajectory_uses_casadi(self, sample_trajectory):
@@ -53,19 +52,18 @@ class TestCasadiSolver:
 
         positions, quaternions = sample_trajectory
 
-        pose_init = {
-            "position": positions[0].copy(),
-            "quaternion": quaternions[0].copy()
-        }
+        pose_init = {"position": positions[0].copy(), "quaternion": quaternions[0].copy()}
         # Use same goal quaternion to avoid rotation issues
         pose_goal = {
             "position": positions[-1].copy() + np.array([0.1, 0.05, 0.0]),
-            "quaternion": quaternions[-1].copy()
+            "quaternion": quaternions[-1].copy(),
         }
 
         result = generate_trajectory(
-            positions, quaternions,
-            pose_init, pose_goal,
+            positions,
+            quaternions,
+            pose_init,
+            pose_goal,
             traj_length=20,
             smoothing=False,
             dhb_method=DHBMethod.DOUBLE_REFLECTION,
@@ -91,18 +89,20 @@ class TestCasadiSolver:
 
         pose_init = {
             "position": np.array([0.0, 0.5, 0.1]),
-            "quaternion": np.array([1.0, 0.0, 0.0, 0.0])
+            "quaternion": np.array([1.0, 0.0, 0.0, 0.0]),
         }
         pose_goal = {
             "position": np.array([0.5, 0.8, 0.2]),
-            "quaternion": np.array([0.9239, 0.0, 0.0, 0.3827])  # 45 deg around z
+            "quaternion": np.array([0.9239, 0.0, 0.0, 0.3827]),  # 45 deg around z
         }
         # Normalize goal quaternion
         pose_goal["quaternion"] /= np.linalg.norm(pose_goal["quaternion"])
 
         result = generate_trajectory(
-            positions, quaternions,
-            pose_init, pose_goal,
+            positions,
+            quaternions,
+            pose_init,
+            pose_goal,
             traj_length=25,
             smoothing=False,
             dhb_method=DHBMethod.DOUBLE_REFLECTION,
@@ -115,20 +115,24 @@ class TestCasadiSolver:
 
         # Check start pose
         np.testing.assert_allclose(
-            adapted_pos[0], pose_init["position"], atol=1e-4,
-            err_msg="Start position constraint not satisfied"
+            adapted_pos[0],
+            pose_init["position"],
+            atol=1e-4,
+            err_msg="Start position constraint not satisfied",
         )
 
         # Check end pose
         np.testing.assert_allclose(
-            adapted_pos[-1], pose_goal["position"], atol=1e-4,
-            err_msg="Goal position constraint not satisfied"
+            adapted_pos[-1],
+            pose_goal["position"],
+            atol=1e-4,
+            err_msg="Goal position constraint not satisfied",
         )
 
         # Check quaternion at start (allow sign flip)
         quat_diff = min(
             np.linalg.norm(adapted_quat[0] - pose_init["quaternion"]),
-            np.linalg.norm(adapted_quat[0] + pose_init["quaternion"])
+            np.linalg.norm(adapted_quat[0] + pose_init["quaternion"]),
         )
         assert quat_diff < 0.1, f"Start quaternion mismatch: {quat_diff}"
 
@@ -138,18 +142,17 @@ class TestCasadiSolver:
 
         positions, quaternions = sample_trajectory
 
-        pose_init = {
-            "position": positions[0].copy(),
-            "quaternion": quaternions[0].copy()
-        }
+        pose_init = {"position": positions[0].copy(), "quaternion": quaternions[0].copy()}
         pose_goal = {
             "position": positions[-1].copy() + np.array([0.15, 0.1, 0.05]),
-            "quaternion": quaternions[-1].copy()
+            "quaternion": quaternions[-1].copy(),
         }
 
         result = generate_trajectory(
-            positions, quaternions,
-            pose_init, pose_goal,
+            positions,
+            quaternions,
+            pose_init,
+            pose_goal,
             traj_length=40,
             smoothing=False,
             dhb_method=DHBMethod.DOUBLE_REFLECTION,
@@ -165,7 +168,9 @@ class TestCasadiSolver:
         mean_diff = pos_diffs.mean()
 
         # Check no large jumps (max should be within reasonable ratio of mean)
-        assert max_diff < 5 * mean_diff, f"Large position jump detected: max={max_diff}, mean={mean_diff}"
+        assert max_diff < 5 * mean_diff, (
+            f"Large position jump detected: max={max_diff}, mean={mean_diff}"
+        )
 
         # Check second differences (acceleration-like) for smoothness
         pos_accel = np.diff(pos_diffs)
@@ -182,19 +187,18 @@ class TestCasadiSolver:
 
         positions, quaternions = sample_trajectory
 
-        pose_init = {
-            "position": positions[0].copy(),
-            "quaternion": quaternions[0].copy()
-        }
+        pose_init = {"position": positions[0].copy(), "quaternion": quaternions[0].copy()}
         # Small goal offset to not require large invariant changes
         pose_goal = {
             "position": positions[-1].copy() + np.array([0.02, 0.01, 0.0]),
-            "quaternion": quaternions[-1].copy()
+            "quaternion": quaternions[-1].copy(),
         }
 
         result = generate_trajectory(
-            positions, quaternions,
-            pose_init, pose_goal,
+            positions,
+            quaternions,
+            pose_init,
+            pose_goal,
             traj_length=20,
             smoothing=False,
             dhb_method=DHBMethod.DOUBLE_REFLECTION,
@@ -208,7 +212,8 @@ class TestCasadiSolver:
 
         # Encode original trajectory
         orig_inv = encode_dhb_dr(
-            positions, quaternions,
+            positions,
+            quaternions,
             init_pose=pose_init,
             method=EncodingMethod.POSITION,
             use_default_initial_frames=False,
@@ -216,7 +221,9 @@ class TestCasadiSolver:
         )
 
         # For small goal offsets, invariants should be close (normalized comparison)
-        lin_range = orig_inv["linear_motion_invariants"].max(axis=0) - orig_inv["linear_motion_invariants"].min(axis=0)
+        lin_range = orig_inv["linear_motion_invariants"].max(axis=0) - orig_inv[
+            "linear_motion_invariants"
+        ].min(axis=0)
         lin_range[lin_range < 1e-6] = 1.0
 
         # Check magnitudes are approximately preserved
@@ -229,18 +236,17 @@ class TestCasadiSolver:
 
         positions, quaternions = sample_trajectory
 
-        pose_init = {
-            "position": positions[0].copy(),
-            "quaternion": quaternions[0].copy()
-        }
+        pose_init = {"position": positions[0].copy(), "quaternion": quaternions[0].copy()}
         pose_goal = {
             "position": positions[-1].copy() + np.array([0.1, 0.1, 0.1]),
-            "quaternion": quaternions[-1].copy()
+            "quaternion": quaternions[-1].copy(),
         }
 
         result = generate_trajectory(
-            positions, quaternions,
-            pose_init, pose_goal,
+            positions,
+            quaternions,
+            pose_init,
+            pose_goal,
             traj_length=30,
             smoothing=False,
             dhb_method=DHBMethod.DOUBLE_REFLECTION,
@@ -291,16 +297,18 @@ class TestFallbackInterpolation:
 
         pose_init = {
             "position": np.array([0.0, 0.5, 0.1]),
-            "quaternion": np.array([1.0, 0.0, 0.0, 0.0])
+            "quaternion": np.array([1.0, 0.0, 0.0, 0.0]),
         }
         pose_goal = {
             "position": np.array([0.5, 0.8, 0.2]),
-            "quaternion": np.array([1.0, 0.0, 0.0, 0.0])
+            "quaternion": np.array([1.0, 0.0, 0.0, 0.0]),
         }
 
         result = generate_trajectory(
-            positions, quaternions,
-            pose_init, pose_goal,
+            positions,
+            quaternions,
+            pose_init,
+            pose_goal,
             traj_length=25,
             use_casadi=False,  # Force fallback
         )
@@ -317,18 +325,17 @@ class TestFallbackInterpolation:
 
         positions, quaternions = sample_trajectory
 
-        pose_init = {
-            "position": positions[0].copy(),
-            "quaternion": quaternions[0].copy()
-        }
+        pose_init = {"position": positions[0].copy(), "quaternion": quaternions[0].copy()}
         pose_goal = {
             "position": positions[-1].copy() + np.array([0.2, 0.1, 0.15]),
-            "quaternion": quaternions[-1].copy()
+            "quaternion": quaternions[-1].copy(),
         }
 
         result = generate_trajectory(
-            positions, quaternions,
-            pose_init, pose_goal,
+            positions,
+            quaternions,
+            pose_init,
+            pose_goal,
             traj_length=50,
             use_casadi=False,
         )
@@ -344,9 +351,11 @@ class TestFallbackInterpolation:
         # This is approximate because we're checking discrete samples
         start_accel_norm = np.linalg.norm(accel[0])
         end_accel_norm = np.linalg.norm(accel[-1])
-        mid_accel_norm = np.linalg.norm(accel[len(accel)//2])
+        mid_accel_norm = np.linalg.norm(accel[len(accel) // 2])
 
-        print(f"Accel norms - start: {start_accel_norm:.6f}, mid: {mid_accel_norm:.6f}, end: {end_accel_norm:.6f}")
+        print(
+            f"Accel norms - start: {start_accel_norm:.6f}, mid: {mid_accel_norm:.6f}, end: {end_accel_norm:.6f}"
+        )
 
 
 @pytest.mark.skipif(not HAS_CASADI, reason="CasADi not installed")
@@ -359,19 +368,18 @@ class TestCasadiNLPDetails:
 
         positions, quaternions = sample_trajectory
 
-        pose_init = {
-            "position": positions[0].copy(),
-            "quaternion": quaternions[0].copy()
-        }
+        pose_init = {"position": positions[0].copy(), "quaternion": quaternions[0].copy()}
         pose_goal = {
             "position": positions[-1].copy() + np.array([0.1, 0.1, 0.0]),
-            "quaternion": quaternions[-1].copy()
+            "quaternion": quaternions[-1].copy(),
         }
 
         # Run with default weights
         result1 = generate_trajectory(
-            positions, quaternions,
-            pose_init, pose_goal,
+            positions,
+            quaternions,
+            pose_init,
+            pose_goal,
             traj_length=20,
             weights=None,
             use_casadi=True,
@@ -380,8 +388,10 @@ class TestCasadiNLPDetails:
 
         # Run with custom weights (emphasize position more)
         result2 = generate_trajectory(
-            positions, quaternions,
-            pose_init, pose_goal,
+            positions,
+            quaternions,
+            pose_init,
+            pose_goal,
             traj_length=20,
             weights=np.array([10.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
             use_casadi=True,
@@ -389,8 +399,12 @@ class TestCasadiNLPDetails:
         )
 
         # Both should still satisfy constraints
-        np.testing.assert_allclose(result1["adapted_pos_data"][-1], pose_goal["position"], atol=1e-3)
-        np.testing.assert_allclose(result2["adapted_pos_data"][-1], pose_goal["position"], atol=1e-3)
+        np.testing.assert_allclose(
+            result1["adapted_pos_data"][-1], pose_goal["position"], atol=1e-3
+        )
+        np.testing.assert_allclose(
+            result2["adapted_pos_data"][-1], pose_goal["position"], atol=1e-3
+        )
 
     def test_verbose_output(self, sample_trajectory, capsys):
         """Test that verbose mode produces output."""
@@ -398,18 +412,14 @@ class TestCasadiNLPDetails:
 
         positions, quaternions = sample_trajectory
 
-        pose_init = {
-            "position": positions[0].copy(),
-            "quaternion": quaternions[0].copy()
-        }
-        pose_goal = {
-            "position": positions[-1].copy(),
-            "quaternion": quaternions[-1].copy()
-        }
+        pose_init = {"position": positions[0].copy(), "quaternion": quaternions[0].copy()}
+        pose_goal = {"position": positions[-1].copy(), "quaternion": quaternions[-1].copy()}
 
         result = generate_trajectory(
-            positions, quaternions,
-            pose_init, pose_goal,
+            positions,
+            quaternions,
+            pose_init,
+            pose_goal,
             traj_length=15,
             use_casadi=True,
             verbose=True,
@@ -450,7 +460,7 @@ def test_casadi_opti_simple():
     x = opti.variable(2)
 
     # Objective: minimize (x[0]-1)^2 + (x[1]-2)^2
-    opti.minimize((x[0] - 1)**2 + (x[1] - 2)**2)
+    opti.minimize((x[0] - 1) ** 2 + (x[1] - 2) ** 2)
 
     # Constraints
     opti.subject_to(x[0] + x[1] == 3)  # Sum constraint
@@ -476,27 +486,31 @@ def test_casadi_nlp_with_simple_trajectory():
     # Create a simple straight-line trajectory (easier for NLP)
     n = 20
     t = np.linspace(0, 1, n)
-    positions = np.column_stack([
-        t * 0.3,  # x: 0 to 0.3
-        0.5 * np.ones(n),  # y: constant
-        0.2 * np.ones(n),  # z: constant
-    ])
+    positions = np.column_stack(
+        [
+            t * 0.3,  # x: 0 to 0.3
+            0.5 * np.ones(n),  # y: constant
+            0.2 * np.ones(n),  # z: constant
+        ]
+    )
     # Identity quaternions (no rotation)
     quaternions = np.zeros((n, 4))
     quaternions[:, 0] = 1.0
 
     pose_init = {
         "position": np.array([0.0, 0.5, 0.2]),
-        "quaternion": np.array([1.0, 0.0, 0.0, 0.0])
+        "quaternion": np.array([1.0, 0.0, 0.0, 0.0]),
     }
     pose_goal = {
         "position": np.array([0.3, 0.5, 0.2]),  # Same as trajectory end
-        "quaternion": np.array([1.0, 0.0, 0.0, 0.0])  # Same orientation
+        "quaternion": np.array([1.0, 0.0, 0.0, 0.0]),  # Same orientation
     }
 
     result = generate_trajectory(
-        positions, quaternions,
-        pose_init, pose_goal,
+        positions,
+        quaternions,
+        pose_init,
+        pose_goal,
         traj_length=15,
         smoothing=False,
         dhb_method=DHBMethod.DOUBLE_REFLECTION,
@@ -506,9 +520,89 @@ def test_casadi_nlp_with_simple_trajectory():
 
     # For this simple case, solver should work
     # Check boundary constraints
-    np.testing.assert_allclose(
-        result["adapted_pos_data"][0], pose_init["position"], atol=1e-3
+    np.testing.assert_allclose(result["adapted_pos_data"][0], pose_init["position"], atol=1e-3)
+    np.testing.assert_allclose(result["adapted_pos_data"][-1], pose_goal["position"], atol=1e-3)
+
+
+def test_public_generate_trajectory_prefers_fatrop_backend(monkeypatch):
+    """The public single-trajectory API should route auto mode through FATROP."""
+
+    from dhb_xr import optimization
+
+    calls = {}
+
+    def fake_fatrop(**kwargs):
+        calls.update(kwargs)
+        n = int(kwargs["traj_length"])
+        start = np.asarray(kwargs["pose_target_init"]["position"], dtype=float)
+        goal = np.asarray(kwargs["pose_target_final"]["position"], dtype=float)
+        quat = np.asarray(kwargs["pose_target_init"]["quaternion"], dtype=float)
+        return {
+            "positions": np.linspace(start, goal, n),
+            "quaternions": np.tile(quat, (n, 1)),
+            "linear_invariants": np.zeros((n, 4)),
+            "angular_invariants": np.zeros((n, 4)),
+            "solve_time": 0.0,
+            "success": True,
+            "solver": "fatrop",
+        }
+
+    monkeypatch.setattr(optimization, "generate_trajectory_fatrop", fake_fatrop)
+
+    positions = np.column_stack([np.linspace(0.0, 0.3, 8), np.zeros(8), np.full(8, 0.2)])
+    quaternions = np.tile(np.array([1.0, 0.0, 0.0, 0.0]), (8, 1))
+    start_pose = {"position": positions[0], "quaternion": quaternions[0]}
+    goal_pose = {
+        "position": positions[-1] + np.array([0.1, 0.0, 0.0]),
+        "quaternion": quaternions[-1],
+    }
+
+    result = optimization.generate_trajectory(
+        positions,
+        quaternions,
+        start_pose,
+        goal_pose,
+        traj_length=8,
+        use_casadi=True,
     )
-    np.testing.assert_allclose(
-        result["adapted_pos_data"][-1], pose_goal["position"], atol=1e-3
+
+    assert calls["use_fatrop"] is True
+    assert result["solver"] == "fatrop"
+    assert result["requested_backend"] == "fatrop"
+    assert "adapted_pos_data" in result
+    assert "adapted_quat_data" in result
+
+
+def test_public_generate_trajectory_requires_explicit_fallback(monkeypatch):
+    """Auto mode should not silently downgrade from FATROP to interpolation."""
+
+    from dhb_xr import optimization
+
+    monkeypatch.setattr(optimization, "generate_trajectory_fatrop", None)
+
+    positions = np.column_stack([np.linspace(0.0, 0.3, 8), np.zeros(8), np.full(8, 0.2)])
+    quaternions = np.tile(np.array([1.0, 0.0, 0.0, 0.0]), (8, 1))
+    start_pose = {"position": positions[0], "quaternion": quaternions[0]}
+    goal_pose = {"position": positions[-1], "quaternion": quaternions[-1]}
+
+    with pytest.raises(ImportError, match="FATROP backend is unavailable"):
+        optimization.generate_trajectory(
+            positions,
+            quaternions,
+            start_pose,
+            goal_pose,
+            traj_length=8,
+            use_casadi=True,
+        )
+
+    result = optimization.generate_trajectory(
+        positions,
+        quaternions,
+        start_pose,
+        goal_pose,
+        traj_length=8,
+        use_casadi=False,
+        backend="interpolation",
     )
+
+    assert result["solver"] == "interpolation"

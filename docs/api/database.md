@@ -1,6 +1,6 @@
 # Motion Database
 
-::: dhb_xr.database
+Database utilities live under `dhb_xr.database`.
 
 ## Overview
 
@@ -10,7 +10,7 @@ Store and retrieve trajectories using invariant-based similarity search.
 
 ### MotionDatabase
 
-::: dhb_xr.database.motion_db.MotionDatabase
+`MotionDatabase` is provided by `dhb_xr.database.motion_db`.
 
 ## Usage Example
 
