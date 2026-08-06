@@ -131,7 +131,6 @@ pymdown-extensions = ">=10.0"
 nanobind = ">=2.0"
 jupyter = ">=1.0"
 ipykernel = ">=6.0"
-pytorch = ">=2.0"
 casadi = ">=3.5"
 pip = ">=23.0"
 
@@ -151,19 +150,37 @@ channels = ["pytorch", "nvidia", "conda-forge"]
 channel-priority = "strict"
 
 [tool.pixi.feature.cuda.target.linux-64.dependencies]
-# CUDA-enabled PyTorch from pytorch channel (linux only)
-pytorch = { version = ">=2.0", channel = "pytorch" }
-pytorch-cuda = { version = ">=12.1", channel = "pytorch" }
+# Build the bundled fixed-horizon kernels locally. CUDA 12.8 is the first
+# toolkit release with Blackwell (sm_120) compiler support.
+cuda-nvcc = { version = ">=12.8,<13", channel = "conda-forge" }
+# CUDA 12.8/12.9 does not parse the newest GCC 14 libstdc++ builtins used by
+# conda-forge. Keep nvcc's host toolchain on the supported GCC 13 series.
+gcc_linux-64 = ">=13,<14"
+gxx_linux-64 = ">=13,<14"
+
+[tool.pixi.feature.cuda.target.linux-64.pypi-dependencies]
+# The final official Conda PyTorch build (2.5.1/cu124) cannot execute kernels
+# on Blackwell. Use the maintained cu128 wheel index for CUDA-capable installs.
+torch = { version = ">=2.7", index = "https://download.pytorch.org/whl/cu128" }
 
 [tool.pixi.feature.optimization.dependencies]
 casadi = ">=3.5"
 
+[tool.pixi.feature.fatrop.dependencies]
+casadi = ">=3.5"
+
+[tool.pixi.feature.fatrop.pypi-dependencies]
+# Rockit formulates the structured OCP; CasADi provides the native FATROP
+# plugin and libfatrop through the conda-forge CasADi package.
+rockit-meco = ">=0.1"
+
 [tool.pixi.environments]
-default = { features = ["dev"], solve-group = "default" }
+default = { features = ["dev", "gpu"], solve-group = "default" }
 docs = { features = ["docs"], solve-group = "docs" }
 gpu = { features = ["dev", "gpu"], solve-group = "gpu" }
-cuda = { features = ["dev", "cuda", "optimization"], solve-group = "cuda" }
-full = { features = ["dev", "gpu", "optimization"], solve-group = "full" }
+fatrop = { features = ["dev", "fatrop"], solve-group = "fatrop" }
+cuda = { features = ["dev", "cuda", "optimization", "fatrop"], solve-group = "cuda" }
+full = { features = ["dev", "gpu", "optimization", "fatrop"], solve-group = "full" }
 
 [tool.pixi.tasks]
 test = "pytest tests/ -v"
@@ -195,3 +212,4 @@ download-xdof = "python scripts/download_xdof_samples.py"
 install-rockit = "python3 -m pip install rockit-meco"
 clone-examples = "dhb_xr-examples --copy"
 check-cuda = "python -c \"import torch; print(f'PyTorch {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}'); print(f'CUDA version: {torch.version.cuda}' if torch.cuda.is_available() else 'No CUDA')\""
+setup-accelerated = "bash scripts/setup_accelerated_backends.sh"

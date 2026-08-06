@@ -20,15 +20,20 @@ falls back to NumPy batched decode.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import os
 import re
 import time
 import warnings
+from dataclasses import dataclass
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
 import numpy as np
 
+from dhb_xr.core.geometry_torch import (
+    axis_angle_to_quat_torch,
+    euler_xyz_to_rot_torch,
+    quat_multiply_torch,
+)
 from dhb_xr.core.types import DHBMethod, EncodingMethod
 from dhb_xr.decoder.dhb_dr import decode_dhb_dr
 from dhb_xr.encoder.dhb_dr import encode_dhb_dr
@@ -214,17 +219,15 @@ def generate_trajectory_cusadi_adapt(
         },
         traj_length,
     )
-    start_delta = np.asarray(
-        pose_target_init["position"], dtype=np.float64
-    ) - np.asarray(pos_reference[0], dtype=np.float64)
-    goal_delta = np.asarray(
-        pose_target_final["position"], dtype=np.float64
-    ) - np.asarray(pos_reference[-1], dtype=np.float64)
+    start_delta = np.asarray(pose_target_init["position"], dtype=np.float64) - np.asarray(
+        pos_reference[0], dtype=np.float64
+    )
+    goal_delta = np.asarray(pose_target_final["position"], dtype=np.float64) - np.asarray(
+        pos_reference[-1], dtype=np.float64
+    )
     fn = build_boundary_adaptation_function(traj_length)
     solve_start = time.perf_counter()
-    positions = np.asarray(
-        fn(pos_reference.reshape(-1), start_delta, goal_delta), dtype=np.float64
-    )
+    positions = np.asarray(fn(pos_reference.reshape(-1), start_delta, goal_delta), dtype=np.float64)
     solve_time = time.perf_counter() - solve_start
     if positions.shape != (traj_length, 3):
         positions = positions.reshape((traj_length, 3), order="F")
@@ -337,15 +340,12 @@ def batched_decode_dhb_dr_gpu(
     if not HAS_TORCH_CUDA:
         raise RuntimeError("CUDA not available. Install PyTorch with CUDA support.")
     if not HAS_CUSADI:
-        raise RuntimeError(
-            "CusADi not installed. Clone and install from github.com/se-hwan/cusadi"
-        )
+        raise RuntimeError("CusADi not installed. Clone and install from github.com/se-hwan/cusadi")
 
-    B = linear_invariants_batch.shape[0]
-    T = linear_invariants_batch.shape[1]
+    batch_size = linear_invariants_batch.shape[0]
 
     # Get or create CusADi function
-    cusadi_fn = get_cusadi_function(casadi_path, B, library_path=library_path)
+    cusadi_fn = get_cusadi_function(casadi_path, batch_size, library_path=library_path)
     if cusadi_fn is None:
         raise RuntimeError(
             f"Could not load CusADi function from {casadi_path} with library {library_path}"
@@ -373,7 +373,7 @@ def batched_decode_dhb_dr_gpu(
     n_in = cusadi_fn.fn_casadi.n_in()
     nnz_in = [cusadi_fn.fn_casadi.nnz_in(i) for i in range(n_in)]
     required_controls = nnz_in[0] // 4
-    provided_controls = linear_invariants_batch.reshape(B, -1).shape[1] // 4
+    provided_controls = linear_invariants_batch.reshape(batch_size, -1).shape[1] // 4
     if provided_controls < required_controls:
         raise RuntimeError(
             "Compiled CusADi decode requires "
@@ -382,7 +382,7 @@ def batched_decode_dhb_dr_gpu(
         )
 
     # Flatten linear invariants to match expected input size
-    lin_flat = linear_invariants_batch.reshape(B, -1)[:, : nnz_in[0]]  # (B, nnz)
+    lin_flat = linear_invariants_batch.reshape(batch_size, -1)[:, : nnz_in[0]]
 
     # Convert to torch tensors on GPU (must be contiguous and double)
     lin_t = torch.from_numpy(lin_flat.astype(np.float64)).cuda().contiguous()
@@ -397,29 +397,104 @@ def batched_decode_dhb_dr_gpu(
 
     # Reshape if needed (output might be (B, N*3) or (B, N, 3))
     if positions.ndim == 2:
-        N = positions.shape[1] // 3
-        positions = positions.reshape(B, N, 3)
+        num_samples = positions.shape[1] // 3
+        positions = positions.reshape(batch_size, num_samples, 3)
     if drop_padded:
         positions = positions[:, 2:]
 
-    # Reuse the CPU DHB decoder for quaternion reconstruction. The compiled
-    # linear decode returns the initial sample plus one output per control, so a
-    # zero terminal invariant lets the existing decoder emit the same horizon.
-    quat_linear = linear_invariants_batch[:, :required_controls]
+    # The compiled linear decode returns the initial sample plus one output per
+    # control, so a zero terminal invariant lets the angular decoder emit the
+    # same horizon.
     quat_angular = angular_invariants_batch[:, :required_controls]
     if positions.shape[1] == required_controls + 1 - (2 if drop_padded else 0):
-        terminal_linear = np.zeros((B, 1, quat_linear.shape[2]), dtype=np.float64)
-        terminal_angular = np.zeros((B, 1, quat_angular.shape[2]), dtype=np.float64)
-        quat_linear = np.concatenate([quat_linear, terminal_linear], axis=1)
+        terminal_angular = np.zeros((batch_size, 1, quat_angular.shape[2]), dtype=np.float64)
         quat_angular = np.concatenate([quat_angular, terminal_angular], axis=1)
-    _, quat_batch = batched_decode_dhb_dr(
-        quat_linear,
+    quat_batch = batched_decode_dhb_dr_quaternions_gpu(
         quat_angular,
         initial_poses,
         drop_padded=drop_padded,
     )
 
     return positions, quat_batch
+
+
+def batched_decode_dhb_dr_quaternions_gpu(
+    angular_invariants_batch: np.ndarray,
+    initial_poses: List[Dict[str, np.ndarray]],
+    *,
+    drop_padded: bool = True,
+) -> np.ndarray:
+    """Decode DHB-DR quaternion trajectories in parallel across a CUDA batch.
+
+    Time integration remains sequential, but every step is vectorized across
+    the candidate batch. This removes the previous Python/NumPy loop over
+    trajectories that dominated the otherwise-fast linear CusADi kernel.
+    """
+    if not HAS_TORCH_CUDA or torch is None:
+        raise RuntimeError("CUDA PyTorch is required for GPU quaternion decode")
+    if (
+        axis_angle_to_quat_torch is None
+        or euler_xyz_to_rot_torch is None
+        or quat_multiply_torch is None
+    ):
+        raise RuntimeError("PyTorch geometry helpers are unavailable")
+
+    angular = torch.as_tensor(
+        angular_invariants_batch,
+        dtype=torch.float64,
+        device="cuda",
+    )
+    if angular.ndim != 3 or angular.shape[-1] != 4:
+        raise ValueError("DHB-DR angular invariants must have shape (B, T, 4)")
+    batch_size, num_samples, _ = angular.shape
+    if len(initial_poses) != batch_size:
+        raise ValueError("initial_poses length must match the invariant batch")
+    if num_samples == 0:
+        return np.empty((batch_size, 0, 4), dtype=np.float64)
+
+    initial_quaternions = torch.as_tensor(
+        np.asarray([pose["quaternion"] for pose in initial_poses]),
+        dtype=torch.float64,
+        device="cuda",
+    )
+    quaternion = initial_quaternions / torch.linalg.vector_norm(
+        initial_quaternions, dim=-1, keepdim=True
+    ).clamp_min(1e-12)
+    trajectory = torch.empty(
+        (batch_size, num_samples, 4),
+        dtype=torch.float64,
+        device="cuda",
+    )
+    trajectory[:, 0] = quaternion
+    angular_frame = (
+        torch.eye(3, dtype=torch.float64, device="cuda")
+        .unsqueeze(0)
+        .expand(batch_size, -1, -1)
+        .clone()
+    )
+    frame_updates = euler_xyz_to_rot_torch(angular[:, :, 1:4])
+
+    for sample_index in range(num_samples):
+        rotation_vector = angular_frame[:, :, 0] * angular[:, sample_index, 0:1]
+        delta = axis_angle_to_quat_torch(-rotation_vector)
+        quaternion = quat_multiply_torch(quaternion, delta)
+        quaternion = quaternion / torch.linalg.vector_norm(
+            quaternion, dim=-1, keepdim=True
+        ).clamp_min(1e-12)
+        if sample_index < num_samples - 1:
+            previous = trajectory[:, sample_index]
+            sign = torch.where(
+                torch.sum(quaternion * previous, dim=-1, keepdim=True) < 0.0,
+                -torch.ones_like(quaternion[:, :1]),
+                torch.ones_like(quaternion[:, :1]),
+            )
+            quaternion = quaternion * sign
+            trajectory[:, sample_index + 1] = quaternion
+        angular_frame = angular_frame @ frame_updates[:, sample_index]
+
+    if drop_padded:
+        trajectory = trajectory[:, 2:]
+    return trajectory.cpu().numpy()
 
 
 def batched_decode_dhb_dr(
@@ -449,7 +524,7 @@ def batched_decode_dhb_dr(
         (positions_batch, quaternions_batch): (B, N, 3), (B, N, 4).
     """
     # Try GPU decode if requested
-    if use_gpu:
+    if use_gpu and dhb_method == DHBMethod.DOUBLE_REFLECTION:
         if HAS_TORCH_CUDA and HAS_CUSADI:
             try:
                 return batched_decode_dhb_dr_gpu(
@@ -458,8 +533,7 @@ def batched_decode_dhb_dr(
                     initial_poses,
                     casadi_path,
                     library_path=resolve_cusadi_decode_library(
-                        infer_cusadi_decode_horizon(casadi_path)
-                        or DEFAULT_DECODE_SAMPLES,
+                        infer_cusadi_decode_horizon(casadi_path) or DEFAULT_DECODE_SAMPLES,
                         extra_search_dirs=(EXTERNAL_CUSADI_LIBRARY_DIR,),
                     ),
                     drop_padded=drop_padded,
@@ -473,23 +547,22 @@ def batched_decode_dhb_dr(
             if not HAS_CUSADI:
                 missing.append("CusADi")
             print(f"GPU decode unavailable (missing: {', '.join(missing)}), using CPU")
+    elif use_gpu:
+        print("GPU decode supports DHB double-reflection invariants only, using CPU")
 
     # CPU decode (NumPy loop)
-    if (
-        isinstance(linear_invariants_batch, np.ndarray)
-        and linear_invariants_batch.ndim == 3
-    ):
-        B = linear_invariants_batch.shape[0]
-        lin_list = [linear_invariants_batch[b] for b in range(B)]
-        ang_list = [angular_invariants_batch[b] for b in range(B)]
+    if isinstance(linear_invariants_batch, np.ndarray) and linear_invariants_batch.ndim == 3:
+        batch_size = linear_invariants_batch.shape[0]
+        lin_list = [linear_invariants_batch[b] for b in range(batch_size)]
+        ang_list = [angular_invariants_batch[b] for b in range(batch_size)]
     else:
         lin_list = list(linear_invariants_batch)
         ang_list = list(angular_invariants_batch)
-        B = len(lin_list)
-    assert len(initial_poses) == B and len(ang_list) == B
+        batch_size = len(lin_list)
+    assert len(initial_poses) == batch_size and len(ang_list) == batch_size
     pos_list = []
     quat_list = []
-    for b in range(B):
+    for b in range(batch_size):
         decoded = decode_dhb_dr(
             lin_list[b],
             ang_list[b],
@@ -530,14 +603,13 @@ class CusadiTrajectoryOptimizer:
             )
         )
         self.decode_casadi_path = decode_casadi_path
-        self.decode_spec = decode_spec or CusadiDecodeSpec(
-            artifact_path=decode_casadi_path
-        )
+        self.decode_spec = decode_spec or CusadiDecodeSpec(artifact_path=decode_casadi_path)
         self._cusadi_fn: Any = None
         self.last_decode_backend = "unavailable"
         self.last_decode_metadata: Dict[str, Any] = {
             "cusadi_decode": "unavailable",
             "cusadi_gpu": False,
+            "cusadi_quaternion_decode": "unavailable",
             "cusadi_decode_requested_horizon": None,
             "cusadi_decode_artifact_horizon": None,
             "cusadi_decode_artifact_path": None,
@@ -563,13 +635,12 @@ class CusadiTrajectoryOptimizer:
         """
         sample_horizon = linear_invariants.shape[1] + 1
         requested_horizon = (
-            sample_horizon
-            if self.decode_spec.horizon == "auto"
-            else int(self.decode_spec.horizon)
+            sample_horizon if self.decode_spec.horizon == "auto" else int(self.decode_spec.horizon)
         )
         self.last_decode_metadata = {
             "cusadi_decode": "unavailable",
             "cusadi_gpu": False,
+            "cusadi_quaternion_decode": "unavailable",
             "cusadi_decode_requested_horizon": requested_horizon,
             "cusadi_decode_artifact_horizon": None,
             "cusadi_decode_artifact_path": None,
@@ -581,6 +652,8 @@ class CusadiTrajectoryOptimizer:
         artifact = None
         if self.decode_spec.mode == "cpu":
             fallback_reason = "cpu_requested"
+        elif self.dhb_method != DHBMethod.DOUBLE_REFLECTION:
+            fallback_reason = "unsupported_dhb_method"
         elif not HAS_TORCH_CUDA:
             fallback_reason = "cuda_unavailable"
         elif not HAS_CUSADI:
@@ -593,10 +666,7 @@ class CusadiTrajectoryOptimizer:
                 )
             except Exception as exc:
                 fallback_reason = "artifact_resolution_failed"
-                if (
-                    self.decode_spec.mode == "gpu_required"
-                    or self.decode_spec.fallback == "error"
-                ):
+                if self.decode_spec.mode == "gpu_required" or self.decode_spec.fallback == "error":
                     raise RuntimeError("Failed to resolve CusADi decode artifact") from exc
             if artifact is None and fallback_reason is None:
                 fallback_reason = "artifact_not_found"
@@ -611,10 +681,7 @@ class CusadiTrajectoryOptimizer:
                         "cusadi_decode_library_path": None,
                     }
                 )
-                if (
-                    self.decode_spec.mode == "gpu_required"
-                    or self.decode_spec.fallback == "error"
-                ):
+                if self.decode_spec.mode == "gpu_required" or self.decode_spec.fallback == "error":
                     raise RuntimeError(
                         "CusADi GPU decode unavailable: library_not_found. Run "
                         "python -m dhb_xr.optimization.build_cusadi_decode "
@@ -643,6 +710,7 @@ class CusadiTrajectoryOptimizer:
                         {
                             "cusadi_decode": "gpu",
                             "cusadi_gpu": True,
+                            "cusadi_quaternion_decode": "gpu",
                             "cusadi_decode_fallback_reason": None,
                         }
                     )
@@ -656,19 +724,15 @@ class CusadiTrajectoryOptimizer:
                         raise RuntimeError("CusADi GPU decode failed") from exc
                     self.last_decode_backend = "cpu"
 
-        if (
-            self.decode_spec.mode == "gpu_required"
-            or self.decode_spec.fallback == "error"
-        ):
-            raise RuntimeError(
-                f"CusADi GPU decode unavailable: {fallback_reason or 'unknown'}"
-            )
+        if self.decode_spec.mode == "gpu_required" or self.decode_spec.fallback == "error":
+            raise RuntimeError(f"CusADi GPU decode unavailable: {fallback_reason or 'unknown'}")
 
         self.last_decode_backend = "cpu"
         self.last_decode_metadata.update(
             {
                 "cusadi_decode": "cpu",
                 "cusadi_gpu": False,
+                "cusadi_quaternion_decode": "cpu",
                 "cusadi_decode_fallback_reason": fallback_reason,
             }
         )

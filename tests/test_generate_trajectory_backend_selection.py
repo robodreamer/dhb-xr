@@ -40,9 +40,7 @@ def test_generate_trajectory_accepts_cusadi_backend_without_interpolation(monkey
                 "cusadi_decode_fallback_reason": None,
             }
 
-        def forward(
-            self, linear_invariants, angular_invariants, initial_poses, drop_padded
-        ):
+        def forward(self, linear_invariants, angular_invariants, initial_poses, drop_padded):
             assert linear_invariants.shape == (1, 4, 4)
             assert angular_invariants.shape == (1, 4, 4)
             assert len(initial_poses) == 1
@@ -61,9 +59,7 @@ def test_generate_trajectory_accepts_cusadi_backend_without_interpolation(monkey
         fake_generate_trajectory_cusadi_adapt,
     )
     monkeypatch.setattr(optimization, "generate_trajectory_ipopt", fail_ipopt)
-    monkeypatch.setattr(
-        optimization, "CusadiTrajectoryOptimizer", FakeCusadiTrajectoryOptimizer
-    )
+    monkeypatch.setattr(optimization, "CusadiTrajectoryOptimizer", FakeCusadiTrajectoryOptimizer)
     monkeypatch.setattr(optimization, "HAS_CUSADI", True)
     monkeypatch.setattr(optimization, "HAS_TORCH_CUDA", True)
 
@@ -128,9 +124,7 @@ def test_generate_trajectory_reports_cusadi_cpu_decode_without_cuda(monkeypatch)
                 "cusadi_decode_fallback_reason": "cuda_unavailable",
             }
 
-        def forward(
-            self, linear_invariants, angular_invariants, initial_poses, drop_padded
-        ):
+        def forward(self, linear_invariants, angular_invariants, initial_poses, drop_padded):
             return (
                 np.zeros((1, 4, 3)),
                 np.tile(np.array([[[1.0, 0.0, 0.0, 0.0]]]), (1, 4, 1)),
@@ -141,9 +135,7 @@ def test_generate_trajectory_reports_cusadi_cpu_decode_without_cuda(monkeypatch)
         "generate_trajectory_cusadi_adapt",
         fake_generate_trajectory_cusadi_adapt,
     )
-    monkeypatch.setattr(
-        optimization, "CusadiTrajectoryOptimizer", FakeCusadiTrajectoryOptimizer
-    )
+    monkeypatch.setattr(optimization, "CusadiTrajectoryOptimizer", FakeCusadiTrajectoryOptimizer)
     monkeypatch.setattr(optimization, "HAS_CUSADI", True)
     monkeypatch.setattr(optimization, "HAS_TORCH_CUDA", False)
 
@@ -175,9 +167,7 @@ def test_generate_trajectory_cusadi_requires_adaptation_surface_without_fallback
 
     monkeypatch.setattr(optimization, "generate_trajectory_cusadi_adapt", None)
 
-    with pytest.raises(
-        ImportError, match="CusADi backend requires the CusADi adaptation"
-    ):
+    with pytest.raises(ImportError, match="CusADi backend requires the CusADi adaptation"):
         optimization.generate_trajectory(
             pos_data=np.zeros((4, 3)),
             quat_data=np.tile(np.array([1.0, 0.0, 0.0, 0.0]), (4, 1)),
@@ -256,8 +246,8 @@ def test_cusadi_decode_artifact_resolution_is_exact(tmp_path):
 
 def test_cusadi_optimizer_legacy_decode_path_becomes_decode_spec():
     from dhb_xr.optimization.cusadi_solver import (
-        CusadiTrajectoryOptimizer,
         DEFAULT_FN_PATH,
+        CusadiTrajectoryOptimizer,
     )
 
     optimizer = CusadiTrajectoryOptimizer(
@@ -272,9 +262,9 @@ def test_cusadi_optimizer_legacy_decode_path_becomes_decode_spec():
 
 def test_cusadi_decode_artifacts_are_bundled_in_dhb_xr_repo():
     from dhb_xr.optimization.cusadi_solver import (
-        PACKAGE_CUSADI_CODEGEN_DIR,
         DEFAULT_CUSADI_FUNCTION_DIR,
         DEFAULT_FN_PATH,
+        PACKAGE_CUSADI_CODEGEN_DIR,
         PACKAGE_CUSADI_FUNCTION_DIR,
         SUPPORTED_CUSADI_DECODE_SAMPLES,
         CusadiDecodeSpec,
@@ -330,6 +320,34 @@ def test_cusadi_decode_build_dry_run_prepares_local_project(tmp_path):
     assert (tmp_path / "CMakeLists.txt").is_file()
     assert (tmp_path / "codegen" / "fn_dhb_decode_linear_50.cu").is_file()
     assert (tmp_path / "codegen" / "fn_dhb_decode_linear_100.cu").is_file()
+
+
+def test_cusadi_decode_build_forwards_cuda_toolchain_options(tmp_path, monkeypatch):
+    from dhb_xr.optimization.build_cusadi_decode import build_cusadi_decode_libraries
+    from dhb_xr.optimization.cusadi_runtime import cusadi_decode_library_filename
+
+    commands = []
+
+    def fake_run(command, check):
+        commands.append(command)
+        if "--build" in command:
+            for horizon in (50,):
+                output = tmp_path / "build" / cusadi_decode_library_filename(horizon)
+                output.touch()
+
+    monkeypatch.setattr("subprocess.run", fake_run)
+    build_cusadi_decode_libraries(
+        horizons=[50],
+        output_dir=str(tmp_path),
+        cuda_architectures="120",
+        cuda_host_compiler="/usr/bin/g++-13",
+        fresh=True,
+    )
+
+    configure = commands[0]
+    assert "--fresh" in configure
+    assert "-DCMAKE_CUDA_ARCHITECTURES=120" in configure
+    assert "-DCMAKE_CUDA_HOST_COMPILER=/usr/bin/g++-13" in configure
 
 
 def test_cusadi_optimizer_cpu_fallback_reports_missing_artifact(tmp_path):

@@ -1,7 +1,8 @@
 # GPU Decode
 
 DHB-XR can use CusADi-generated CUDA libraries for fixed-horizon DHB-DR linear
-decode. This is an optional acceleration path for large batches and for
+decode plus a batch-vectorized CUDA quaternion recurrence. This is an optional
+full-SE(3) acceleration path for large batches and for
 `generate_trajectory(..., backend="cusadi")` when exact GPU decode is required.
 
 ## What Ships With dhb_xr
@@ -19,12 +20,39 @@ use horizon `100`.
 
 ## Build Libraries
 
+For the repository's Pixi workflow, the one-command setup installs a
+Blackwell-capable CUDA PyTorch environment, Rockit/FATROP, detects the active
+GPU architecture, builds every bundled horizon, and runs strict preflight
+checks:
+
+```bash
+./scripts/setup_accelerated_backends.sh
+```
+
+Set `DHB_XR_CUDA_ARCHITECTURES` to override detection for a deployment build
+(for example `DHB_XR_CUDA_ARCHITECTURES='89;120'`).
+
 Install the optional dependencies, then compile only the horizons you need:
 
 ```bash
 python -m pip install "dhb_xr[cusadi]"
 dhb_xr-build-cusadi-decode --horizons 50 80 100 150 200
 ```
+
+Build for the GPU that will execute the kernels. For example, Blackwell uses
+compute capability 12.0 (`sm_120`):
+
+```bash
+dhb_xr-build-cusadi-decode \
+  --horizons 50 80 100 150 200 \
+  --cuda-architectures 120 \
+  --fresh
+```
+
+CUDA 12.8 or newer is required to compile `sm_120`. If the environment's host
+compiler is newer than the CUDA toolkit supports, select a compatible compiler
+with `--cuda-host-compiler /usr/bin/g++-13` or use the pinned Pixi `cuda`
+environment.
 
 The builder writes into `$DHB_XR_CUSADI_CACHE/build` when
 `DHB_XR_CUSADI_CACHE` is set. Otherwise it uses
@@ -86,7 +114,14 @@ If libraries live outside the default cache, pass
 Use FATROP first for single constrained trajectory generation. Use CusADi GPU
 decode when decode throughput matters, when many fixed-horizon trajectories are
 evaluated together, or when a deployment wants explicit CUDA artifacts built
-ahead of time.
+ahead of time. The quaternion integration remains sequential in horizon length
+but is vectorized over the candidate batch, so it removes the earlier CPU loop
+without changing the DHB-DR recurrence.
+
+GPU is not automatically faster for a single short trajectory: launch,
+synchronization, and host/device transfer costs can dominate. Measure the
+deployment's batch and horizon; retain CPU decode for batch-one live retargeting
+unless the measured crossover says otherwise.
 
 For unsupported horizons, either choose one of the shipped fixed sizes or use CPU
 decode. Regenerating arbitrary CusADi kernels remains a developer task and is

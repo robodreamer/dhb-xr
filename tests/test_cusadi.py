@@ -12,17 +12,22 @@ def test_batched_decode_dhb_dr_single_batch():
     from dhb_xr.optimization.cusadi_solver import batched_decode_dhb_dr
 
     np.random.seed(42)
-    T = 12
-    lin = np.random.randn(1, T, 4).astype(np.float64)
-    ang = np.random.randn(1, T, 4).astype(np.float64)
+    num_samples = 12
+    lin = np.random.randn(1, num_samples, 4).astype(np.float64)
+    ang = np.random.randn(1, num_samples, 4).astype(np.float64)
     inits = [{"position": np.zeros(3), "quaternion": np.array([1.0, 0, 0, 0])}]
     pos, quat = batched_decode_dhb_dr(
-        lin, ang, inits, method=EncodingMethod.POSITION, dhb_method=DHBMethod.DOUBLE_REFLECTION, drop_padded=True
+        lin,
+        ang,
+        inits,
+        method=EncodingMethod.POSITION,
+        dhb_method=DHBMethod.DOUBLE_REFLECTION,
+        drop_padded=True,
     )
     assert pos.shape[0] == 1
     assert quat.shape[0] == 1
-    assert pos.shape[1] == T - 2
-    assert quat.shape[1] == T - 2
+    assert pos.shape[1] == num_samples - 2
+    assert quat.shape[1] == num_samples - 2
     assert pos.shape[2] == 3
     assert quat.shape[2] == 4
 
@@ -31,35 +36,49 @@ def test_batched_decode_dhb_dr_multiple_batches():
     from dhb_xr.optimization.cusadi_solver import batched_decode_dhb_dr
 
     np.random.seed(43)
-    B, T = 3, 10
-    lin = np.random.randn(B, T, 4).astype(np.float64)
-    ang = np.random.randn(B, T, 4).astype(np.float64)
+    batch_size, num_samples = 3, 10
+    lin = np.random.randn(batch_size, num_samples, 4).astype(np.float64)
+    ang = np.random.randn(batch_size, num_samples, 4).astype(np.float64)
     inits = [
         {"position": np.array([i * 0.1, 0, 0]), "quaternion": np.array([1.0, 0, 0, 0])}
-        for i in range(B)
+        for i in range(batch_size)
     ]
     pos, quat = batched_decode_dhb_dr(
-        lin, ang, inits, method=EncodingMethod.POSITION, dhb_method=DHBMethod.DOUBLE_REFLECTION, drop_padded=True
+        lin,
+        ang,
+        inits,
+        method=EncodingMethod.POSITION,
+        dhb_method=DHBMethod.DOUBLE_REFLECTION,
+        drop_padded=True,
     )
-    assert pos.shape == (B, T - 2, 3)
-    assert quat.shape == (B, T - 2, 4)
+    assert pos.shape == (batch_size, num_samples - 2, 3)
+    assert quat.shape == (batch_size, num_samples - 2, 4)
 
 
 def test_batched_decode_matches_single_decode():
-    from dhb_xr.optimization.cusadi_solver import batched_decode_dhb_dr
     from dhb_xr.decoder.dhb_dr import decode_dhb_dr
+    from dhb_xr.optimization.cusadi_solver import batched_decode_dhb_dr
 
     np.random.seed(44)
-    T = 14
-    lin = np.random.randn(T, 4).astype(np.float64)
-    ang = np.random.randn(T, 4).astype(np.float64)
+    num_samples = 14
+    lin = np.random.randn(num_samples, 4).astype(np.float64)
+    ang = np.random.randn(num_samples, 4).astype(np.float64)
     init = {"position": np.array([0.1, 0, 0]), "quaternion": np.array([1.0, 0, 0, 0])}
     single = decode_dhb_dr(
-        lin, ang, init, method=EncodingMethod.POSITION, dhb_method=DHBMethod.DOUBLE_REFLECTION, drop_padded=True
+        lin,
+        ang,
+        init,
+        method=EncodingMethod.POSITION,
+        dhb_method=DHBMethod.DOUBLE_REFLECTION,
+        drop_padded=True,
     )
     batched_pos, batched_quat = batched_decode_dhb_dr(
-        lin[np.newaxis], ang[np.newaxis], [init],
-        method=EncodingMethod.POSITION, dhb_method=DHBMethod.DOUBLE_REFLECTION, drop_padded=True
+        lin[np.newaxis],
+        ang[np.newaxis],
+        [init],
+        method=EncodingMethod.POSITION,
+        dhb_method=DHBMethod.DOUBLE_REFLECTION,
+        drop_padded=True,
     )
     np.testing.assert_allclose(single["positions"], batched_pos[0], atol=1e-12)
     np.testing.assert_allclose(single["quaternions"], batched_quat[0], atol=1e-12)
@@ -69,17 +88,17 @@ def test_cusadi_trajectory_optimizer_forward():
     from dhb_xr.optimization.cusadi_solver import CusadiTrajectoryOptimizer
 
     np.random.seed(45)
-    B, T = 2, 8
-    lin = np.random.randn(B, T, 4).astype(np.float64)
-    ang = np.random.randn(B, T, 4).astype(np.float64)
+    batch_size, num_samples = 2, 8
+    lin = np.random.randn(batch_size, num_samples, 4).astype(np.float64)
+    ang = np.random.randn(batch_size, num_samples, 4).astype(np.float64)
     inits = [
         {"position": np.zeros(3), "quaternion": np.array([1.0, 0, 0, 0])},
         {"position": np.ones(3) * 0.05, "quaternion": np.array([1.0, 0, 0, 0])},
     ]
-    opt = CusadiTrajectoryOptimizer(batch_size=B, dhb_method=DHBMethod.DOUBLE_REFLECTION)
+    opt = CusadiTrajectoryOptimizer(batch_size=batch_size, dhb_method=DHBMethod.DOUBLE_REFLECTION)
     pos, quat = opt.forward(lin, ang, inits, method=EncodingMethod.POSITION, drop_padded=True)
-    assert pos.shape == (B, T - 2, 3)
-    assert quat.shape == (B, T - 2, 4)
+    assert pos.shape == (batch_size, num_samples - 2, 3)
+    assert quat.shape == (batch_size, num_samples - 2, 4)
 
 
 def test_cusadi_trajectory_optimizer_accepts_string_method():
@@ -92,6 +111,27 @@ def test_cusadi_trajectory_optimizer_accepts_string_method():
     inits = [{"position": np.zeros(3), "quaternion": np.array([1.0, 0, 0, 0])}]
     pos, quat = opt.forward(lin, ang, inits)
     assert pos.shape[0] == 1 and quat.shape[0] == 1
+
+
+def test_cusadi_gpu_rejects_original_three_channel_invariants():
+    from dhb_xr.optimization.cusadi_solver import CusadiDecodeSpec, CusadiTrajectoryOptimizer
+
+    optimizer = CusadiTrajectoryOptimizer(
+        batch_size=1,
+        dhb_method=DHBMethod.ORIGINAL,
+        decode_spec=CusadiDecodeSpec(mode="gpu_required", horizon=50, fallback="error"),
+    )
+    linear = np.zeros((1, 49, 3), dtype=np.float64)
+    angular = np.zeros_like(linear)
+    initial_poses = [
+        {
+            "position": np.zeros(3),
+            "quaternion": np.array([1.0, 0.0, 0.0, 0.0]),
+        }
+    ]
+
+    with pytest.raises(RuntimeError, match="unsupported_dhb_method"):
+        optimizer.forward(linear, angular, initial_poses, drop_padded=False)
 
 
 @pytest.mark.parametrize("samples", [50, 100, 150, 200])
@@ -149,10 +189,9 @@ def test_cusadi_optimizer_gpu_decode_large_fixed_horizons(samples):
     if not cusadi_solver.HAS_TORCH_CUDA or not cusadi_solver.HAS_CUSADI:
         pytest.skip("CusADi CUDA decode requires CUDA plus local CusADi")
 
-    artifact = (
-        Path(cusadi_solver.DEFAULT_CUSADI_FUNCTION_DIR)
-        / cusadi_solver.cusadi_decode_filename(samples)
-    )
+    artifact = Path(
+        cusadi_solver.DEFAULT_CUSADI_FUNCTION_DIR
+    ) / cusadi_solver.cusadi_decode_filename(samples)
     if not artifact.exists():
         pytest.skip(f"compiled CusADi decode function not found: {artifact}")
 
@@ -161,6 +200,9 @@ def test_cusadi_optimizer_gpu_decode_large_fixed_horizons(samples):
     linear = np.zeros((batch_size, controls, 4), dtype=np.float64)
     linear[:, :, 0] = 0.005
     angular = np.zeros((batch_size, controls, 4), dtype=np.float64)
+    angular[:, :, 0] = np.linspace(0.0, 0.04, controls)
+    angular[:, :, 1] = np.linspace(0.0, 0.02, controls)
+    angular[:, :, 2] = np.linspace(0.01, -0.01, controls)
     initial_poses = [
         {
             "position": np.array([0.1 * i, 0.0, 0.0], dtype=np.float64),
@@ -188,10 +230,22 @@ def test_cusadi_optimizer_gpu_decode_large_fixed_horizons(samples):
     assert optimizer.last_decode_metadata["cusadi_decode"] == "gpu"
     assert optimizer.last_decode_metadata["cusadi_decode_requested_horizon"] == samples
     assert optimizer.last_decode_metadata["cusadi_decode_artifact_horizon"] == samples
+    assert optimizer.last_decode_metadata["cusadi_quaternion_decode"] == "gpu"
     assert positions.shape == (batch_size, samples, 3)
     assert quaternions.shape == (batch_size, samples, 4)
     assert np.isfinite(positions).all()
     assert np.isfinite(quaternions).all()
+
+    terminal = np.zeros((batch_size, 1, 4), dtype=np.float64)
+    expected_positions, expected_quaternions = cusadi_solver.batched_decode_dhb_dr(
+        np.concatenate([linear, terminal], axis=1),
+        np.concatenate([angular, terminal], axis=1),
+        initial_poses,
+        drop_padded=False,
+    )
+    np.testing.assert_allclose(positions, expected_positions, atol=1e-12)
+    alignment = np.abs(np.sum(quaternions * expected_quaternions, axis=-1))
+    np.testing.assert_allclose(alignment, np.ones_like(alignment), atol=1e-12)
 
 
 @pytest.mark.skipif(
@@ -200,8 +254,9 @@ def test_cusadi_optimizer_gpu_decode_large_fixed_horizons(samples):
 )
 def test_export_casadi_decode_step():
     """Export CasADi decode step to a .casadi file (requires casadi)."""
-    import tempfile
     import os
+    import tempfile
+
     from dhb_xr.optimization.export_casadi_decode import build_decode_step_casadi
 
     fn = build_decode_step_casadi()
