@@ -206,7 +206,10 @@ def test_cusadi_optimizer_gpu_decode_large_fixed_horizons(samples):
     initial_poses = [
         {
             "position": np.array([0.1 * i, 0.0, 0.0], dtype=np.float64),
-            "quaternion": np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float64),
+            "quaternion": np.array(
+                [np.cos(0.15 * (i + 1)), 0.0, 0.0, np.sin(0.15 * (i + 1))],
+                dtype=np.float64,
+            ),
         }
         for i in range(batch_size)
     ]
@@ -218,12 +221,26 @@ def test_cusadi_optimizer_gpu_decode_large_fixed_horizons(samples):
             fallback="error",
         ),
     )
+    frame_angles = np.linspace(-0.25, 0.25, batch_size)
+    initial_linear_frames = np.stack(
+        [
+            np.array(
+                [
+                    [np.cos(angle), -np.sin(angle), 0.0],
+                    [np.sin(angle), np.cos(angle), 0.0],
+                    [0.0, 0.0, 1.0],
+                ]
+            )
+            for angle in frame_angles
+        ]
+    )
 
     positions, quaternions = optimizer.forward(
         linear,
         angular,
         initial_poses,
         drop_padded=False,
+        initial_linear_frames=initial_linear_frames,
     )
 
     assert optimizer.last_decode_backend == "gpu"
@@ -242,10 +259,47 @@ def test_cusadi_optimizer_gpu_decode_large_fixed_horizons(samples):
         np.concatenate([angular, terminal], axis=1),
         initial_poses,
         drop_padded=False,
+        initial_linear_frames=initial_linear_frames,
     )
     np.testing.assert_allclose(positions, expected_positions, atol=1e-12)
     alignment = np.abs(np.sum(quaternions * expected_quaternions, axis=-1))
     np.testing.assert_allclose(alignment, np.ones_like(alignment), atol=1e-12)
+
+
+def test_initial_linear_frames_are_independent_from_tool_quaternions():
+    from dhb_xr.optimization.cusadi_solver import batched_decode_dhb_dr
+
+    samples = 8
+    linear = np.zeros((1, samples, 4), dtype=np.float64)
+    linear[:, :, 0] = 0.01
+    angular = np.zeros_like(linear)
+    tool_quaternion = np.array([np.sqrt(0.5), 0.0, 0.0, np.sqrt(0.5)])
+    initial_poses = [
+        {
+            "position": np.zeros(3),
+            "quaternion": tool_quaternion,
+        }
+    ]
+
+    default_positions, default_quaternions = batched_decode_dhb_dr(
+        linear,
+        angular,
+        initial_poses,
+        drop_padded=False,
+    )
+    frame = np.array([[[0.0, -1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]]])
+    rotated_positions, rotated_quaternions = batched_decode_dhb_dr(
+        linear,
+        angular,
+        initial_poses,
+        drop_padded=False,
+        initial_linear_frames=frame,
+    )
+
+    np.testing.assert_allclose(default_positions[0, :, 1:], 0.0, atol=1e-12)
+    np.testing.assert_allclose(rotated_positions[0, :, 0], 0.0, atol=1e-12)
+    np.testing.assert_allclose(rotated_positions[0, :, 1], default_positions[0, :, 0], atol=1e-12)
+    np.testing.assert_allclose(default_quaternions, rotated_quaternions, atol=1e-12)
 
 
 @pytest.mark.skipif(

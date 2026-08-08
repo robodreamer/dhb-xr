@@ -312,6 +312,7 @@ def batched_decode_dhb_dr_gpu(
     casadi_path: str = DEFAULT_FN_PATH,
     library_path: Optional[str] = None,
     drop_padded: bool = True,
+    initial_linear_frames: Optional[np.ndarray] = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     GPU-accelerated batch decode using CusADi.
@@ -330,6 +331,9 @@ def batched_decode_dhb_dr_gpu(
         initial_poses: List of B dicts with 'position' (3,) and 'quaternion' (4,) wxyz
         casadi_path: Path to compiled CasADi function
         drop_padded: Whether to drop padded frames, matching CPU decode
+        initial_linear_frames: Optional (B, 3, 3) rotation matrices for the
+            translational DHB frame. Defaults to identity, matching the NumPy
+            decoder. This is deliberately independent of tool orientation.
 
     Returns:
         Tuple of (positions (B, N, 3), quaternions (B, N, 4))
@@ -359,12 +363,15 @@ def batched_decode_dhb_dr_gpu(
 
     # Stack initial poses
     init_pos = np.array([p["position"] for p in initial_poses])  # (B, 3)
-    init_quat = np.array([p["quaternion"] for p in initial_poses])  # (B, 4) wxyz
 
-    # Convert quaternions to rotation matrices
-    from dhb_xr.core.geometry import quat_to_rot
-
-    init_rot = np.array([quat_to_rot(q).flatten() for q in init_quat])  # (B, 9)
+    if initial_linear_frames is None:
+        init_rot = np.tile(np.eye(3, dtype=np.float64), (batch_size, 1, 1))
+    else:
+        init_rot = np.asarray(initial_linear_frames, dtype=np.float64)
+        if init_rot.shape != (batch_size, 3, 3):
+            raise ValueError(
+                f"initial_linear_frames must have shape ({batch_size}, 3, 3), got {init_rot.shape}"
+            )
 
     # Check function signature - fn_dhb_decode_linear expects:
     # i0: linear invariants flattened (nnz_in for first input)
@@ -387,7 +394,11 @@ def batched_decode_dhb_dr_gpu(
     # Convert to torch tensors on GPU (must be contiguous and double)
     lin_t = torch.from_numpy(lin_flat.astype(np.float64)).cuda().contiguous()
     pos_t = torch.from_numpy(init_pos.astype(np.float64)).cuda().contiguous()
-    rot_t = torch.from_numpy(init_rot.astype(np.float64)).cuda().contiguous()
+    # CasADi vectorizes matrices in column-major order while contiguous PyTorch
+    # tensors are row-major. Transpose the final two axes so the flat device
+    # buffer represents the requested rotation under CasADi's reshape.
+    init_rot_casadi = np.swapaxes(init_rot, -1, -2).copy()
+    rot_t = torch.from_numpy(init_rot_casadi).cuda().contiguous()
 
     # Run CusADi function - evaluate takes a LIST of input tensors
     cusadi_fn.evaluate([lin_t, pos_t, rot_t])
@@ -506,6 +517,7 @@ def batched_decode_dhb_dr(
     drop_padded: bool = True,
     use_gpu: bool = False,
     casadi_path: str = DEFAULT_FN_PATH,
+    initial_linear_frames: Optional[np.ndarray] = None,
 ) -> tuple:
     """
     Decode multiple trajectories in batch.
@@ -519,6 +531,8 @@ def batched_decode_dhb_dr(
         drop_padded: Whether to drop padded frames
         use_gpu: If True and CUDA available, use CusADi GPU acceleration
         casadi_path: Path to compiled CasADi function for GPU decode
+        initial_linear_frames: Optional translational DHB frame rotations for
+            GPU decode. The CPU decoder currently uses identity frames.
 
     Returns:
         (positions_batch, quaternions_batch): (B, N, 3), (B, N, 4).
@@ -537,6 +551,7 @@ def batched_decode_dhb_dr(
                         extra_search_dirs=(EXTERNAL_CUSADI_LIBRARY_DIR,),
                     ),
                     drop_padded=drop_padded,
+                    initial_linear_frames=initial_linear_frames,
                 )
             except Exception as e:
                 print(f"GPU decode failed, falling back to CPU: {e}")
@@ -560,6 +575,14 @@ def batched_decode_dhb_dr(
         ang_list = list(angular_invariants_batch)
         batch_size = len(lin_list)
     assert len(initial_poses) == batch_size and len(ang_list) == batch_size
+    linear_frames = None
+    if initial_linear_frames is not None:
+        linear_frames = np.asarray(initial_linear_frames, dtype=np.float64)
+        if linear_frames.shape != (batch_size, 3, 3):
+            raise ValueError(
+                "initial_linear_frames must have shape "
+                f"({batch_size}, 3, 3), got {linear_frames.shape}"
+            )
     pos_list = []
     quat_list = []
     for b in range(batch_size):
@@ -571,7 +594,11 @@ def batched_decode_dhb_dr(
             dhb_method=dhb_method,
             drop_padded=drop_padded,
         )
-        pos_list.append(decoded["positions"])
+        positions = decoded["positions"]
+        if linear_frames is not None:
+            initial_position = np.asarray(initial_poses[b]["position"], dtype=np.float64)
+            positions = initial_position + (positions - initial_position) @ linear_frames[b].T
+        pos_list.append(positions)
         quat_list.append(decoded["quaternions"])
     return np.stack(pos_list), np.stack(quat_list)
 
@@ -624,6 +651,7 @@ class CusadiTrajectoryOptimizer:
         initial_poses: List[Dict[str, np.ndarray]],
         method: EncodingMethod = EncodingMethod.POSITION,
         drop_padded: bool = True,
+        initial_linear_frames: Optional[np.ndarray] = None,
     ) -> tuple:
         """
         Batched decode: (linear_inv, angular_inv, initial_poses) -> (positions, quaternions).
@@ -704,6 +732,7 @@ class CusadiTrajectoryOptimizer:
                         casadi_path=artifact.path,
                         library_path=artifact.library_path,
                         drop_padded=drop_padded,
+                        initial_linear_frames=initial_linear_frames,
                     )
                     self.last_decode_backend = "gpu"
                     self.last_decode_metadata.update(
@@ -743,4 +772,5 @@ class CusadiTrajectoryOptimizer:
             method=method,
             dhb_method=self.dhb_method,
             drop_padded=drop_padded,
+            initial_linear_frames=initial_linear_frames,
         )

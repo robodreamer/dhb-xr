@@ -123,6 +123,14 @@ synchronization, and host/device transfer costs can dominate. Measure the
 deployment's batch and horizon; retain CPU decode for batch-one live retargeting
 unless the measured crossover says otherwise.
 
+Tool orientation and the translational DHB frame are independent. The batched
+decoder therefore defaults the initial linear frame to identity, matching the
+NumPy reference, even when the initial tool quaternion is not identity. Advanced
+callers can pass `initial_linear_frames` explicitly when a skill library stores
+its own translational frame; this rotates positions without changing the tool's
+orientation recurrence. The CUDA runtime converts those matrices to CasADi's
+column-major vectorization before device evaluation.
+
 For unsupported horizons, either choose one of the shipped fixed sizes or use CPU
 decode. Regenerating arbitrary CusADi kernels remains a developer task and is
 not required for normal dhb_xr usage.
