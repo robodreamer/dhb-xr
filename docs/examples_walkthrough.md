@@ -16,6 +16,8 @@ Core example scripts were run from the repo root with `PYTHONPATH=src python3 ex
 | `motion_database.py` | Added 4 trajectories; top-3 retrieval with L2 distances and metadata |
 | `imitation_learning.py` | Invariant matching loss, SE(3) geodesic loss, hybrid loss printed |
 | `dhb_ti_time_invariant.py` | Progress totals (trans/angular/hybrid), resampled shapes, DHB-TI (DR/QR) invariant shapes |
+| `primitive_program.py` | Guarded approach, grasp, lift, release, and retreat architecture trace |
+| `benchmark_primitive_portfolio.py` | 20-trial matched direct-versus-detour sampled-TCP gate benchmark |
 
 ## Prerequisites
 
@@ -49,6 +51,46 @@ python3 examples/basic_encoding.py
 python3 examples/basic_encoding.py
 ```
 **Expected output:** Encoded invariants shape `(52, 4)` (for N=50 with padding), decoded positions/quaternions shapes `(50, 3)` and `(50, 4)`.
+
+---
+
+## primitive_program.py — Guarded manipulation sequence
+
+**What it does:** Builds a typed approach → grasp → lift → release → retreat
+program. Minimum-jerk paths are synchronized with measured preshape,
+close-until-contact, hold, and supported-release conditions. Synthetic feedback
+drives the deterministic executive to a terminal success state.
+
+**Evidence boundary:** This validates contract and control-flow composition. It
+does not run a simulator or robot and does not establish physical task success.
+
+**Run:**
+```bash
+python3 examples/primitive_program.py
+```
+
+**Expected output:** A trace of active nodes and typed motion/gripper commands,
+ending with `status=succeeded`.
+
+---
+
+## benchmark_primitive_portfolio.py — Matched source and gate accounting
+
+**What it does:** Runs 20 repeated requests through direct minimum jerk and a
+shared-waypoint detour. Both sources face the same epoch, endpoint, and
+sampled-TCP sphere gates.
+
+**Evidence boundary:** The benchmark validates candidate generation and common
+gate behavior. Sampled TCP spheres are not link-level or swept-volume collision
+certification, and no manipulation task is executed.
+
+**Run:**
+```bash
+python3 examples/benchmark_primitive_portfolio.py
+```
+
+**Expected output:** Direct minimum jerk is rejected on all 20 trials and the
+detour is accepted on all 20, with machine-dependent generation latency.
 
 ---
 

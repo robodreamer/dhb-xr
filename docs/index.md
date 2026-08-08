@@ -31,6 +31,9 @@ on SE(3)"**.
 - **CusADi GPU decode**: Optional fixed-horizon decode libraries for `50`, `80`, `100`, `150`, and `200` samples
 - **Tokenization**: VQ-VAE / RVQ for DHB-Token (VLA action representation)
 - **Motion database**: Storage, similarity (L2, DTW), and retrieval
+- **Primitive programs**: Analytic, DHB-memory, OCP, and learned motion proposals
+  with official gripper actions, evidence, guarded sequencing, and stale-epoch
+  cancellation
 - **Imitation learning**: Invariant matching, SE(3) geodesic, and hybrid losses
 - **Robust encoding**: Handles reversals, zero-motion segments, and frame alignment issues
 
@@ -88,8 +91,9 @@ See [VLA Integration Guide](integration/vla_integration.md) for setup and usage.
 
 ## API Reference
 
-See the [API reference](api/index.md) for core encoding, decoding, optimization,
-database, tokenization, losses, and visualization modules.
+See the [primitive-program guide](primitive_programs.md) and [API
+reference](api/index.md) for core encoding, decoding, optimization, database,
+typed manipulation primitives, tokenization, losses, and visualization modules.
 
 ## License
 

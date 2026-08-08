@@ -17,6 +17,7 @@ This section provides comprehensive documentation for all DHB-XR modules and fun
 ### Advanced Features
 - [Optimization](optimization.md) - Trajectory adaptation and optimization
 - [Motion Database](database.md) - Storage and similarity search
+- [Primitive Programs](primitives.md) - Motion, gripper, evidence, guarded execution, and memory
 - [Tokenization](tokenization.md) - VQ-VAE for discrete representations
 - [Loss Functions](losses.md) - Imitation learning losses
 - [Visualization](visualization.md) - Plotting and visualization utilities
@@ -44,6 +45,7 @@ DHB-XR is organized into the following main modules:
 - `dhb_xr.decoder` - Decoding functions
 - `dhb_xr.optimization` - Trajectory optimization and adaptation
 - `dhb_xr.database` - Motion storage and retrieval
+- `dhb_xr.primitives` - Typed manipulation primitives, sources, execution, and memory
 - `dhb_xr.tokenization` - VQ-VAE tokenization
 - `dhb_xr.losses` - Loss functions for imitation learning
 - `dhb_xr.visualization` - Plotting utilities

@@ -12,6 +12,9 @@ This library implements the double-reflection (DHB-DR) and quaternion-relative (
 - **GPU acceleration**: PyTorch batched operations and optional Cusadi for large-scale optimization
 - **VLA support**: VQ-VAE/RVQ tokenization for streaming action representation
 - **Motion database**: Similarity search, DTW alignment, and retrieval
+- **Primitive programs**: Analytic, OCP, DHB-memory, and learned candidates with
+  first-class gripper actions, evidence, guarded sequencing, and stale-epoch
+  cancellation
 - **Imitation learning**: Invariant-space and geodesic losses
 
 ## Installation
@@ -184,6 +187,8 @@ The examples package includes:
 - **Advanced examples**: GPU batch optimization, VLA tokenization, motion databases
 - **VLA integration**: Full LIBERO simulation, perturbation robustness demos
 - **Research examples**: Imitation learning losses, time-invariant reparameterization
+- **Primitive example**: Guarded approach, grasp, lift, release, and retreat
+- **Portfolio benchmark**: Matched analytic candidates under identical gates
 - **Tutorial notebooks**: Interactive Jupyter notebooks in the source repository
 
 ## Quick start
@@ -234,6 +239,17 @@ out = encode_dhb_dr_ti(positions, quaternions, M=30, progress_kind="hybrid", alp
 ```
 
 See `examples/dhb_ti_time_invariant.py`.
+
+### Guarded manipulation primitives
+
+Use `dhb_xr.primitives` to bind SE(3) paths to official end-effector actions,
+observation guards, evidence, and bounded transitions. See the [primitive
+program guide](docs/primitive_programs.md) and run:
+
+```bash
+pixi run python examples/primitive_program.py
+pixi run python examples/benchmark_primitive_portfolio.py
+```
 
 ## Documentation
 

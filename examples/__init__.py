@@ -13,6 +13,8 @@ Quick Start Examples:
 - motion_database: Similarity search and trajectory retrieval
 - imitation_learning: Invariant-based imitation learning losses
 - dhb_ti_time_invariant: Time-invariant reparameterization
+- primitive_program: Guarded motion and end-effector sequencing
+- benchmark_primitive_portfolio: Matched candidate-source gate benchmark
 
 VLA Integration Examples:
 - libero_full_demo: Complete LIBERO simulation with DHB adaptation
@@ -43,6 +45,11 @@ _EXAMPLE_EXPORTS = {
     "run_basic_encoding": (".basic_encoding", "run_example"),
     "run_trajectory_adaptation": (".trajectory_adaptation", "run_example"),
     "run_dhb_comparison": (".dhb_qr_comparison", "run_example"),
+    "run_primitive_program": (".primitive_program", "run_example"),
+    "run_primitive_portfolio_benchmark": (
+        ".benchmark_primitive_portfolio",
+        "run_benchmark",
+    ),
 }
 
 

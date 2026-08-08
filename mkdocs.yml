@@ -63,6 +63,7 @@ nav:
     - Quickstart: quickstart.md
   - Guides:
     - GPU Decode: gpu_decode.md
+    - Primitive Programs: primitive_programs.md
     - VLA Integration: integration/vla_integration.md
   - Examples:
     - Overview: examples_walkthrough.md
@@ -74,6 +75,7 @@ nav:
     - Time-Invariant: api/time_invariant.md
     - Optimization: api/optimization.md
     - Database: api/database.md
+    - Primitives: api/primitives.md
     - Tokenization: api/tokenization.md
     - Losses: api/losses.md
     - Visualization: api/visualization.md

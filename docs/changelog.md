@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Typed manipulation primitive contracts spanning SE(3) motion, portable
+  end-effector commands, observation guards, evidence, and guarded program graphs.
+- Minimum-jerk, affordance-normal, arc, screw, and shared-waypoint analytic paths.
+- Deterministic primitive-program execution with bounded retries, reobservation,
+  stale-epoch cancellation, and concise typed commands.
+- Evidence-preserving primitive memory, p5570-compatible and hysteretic gripper
+  segmentation, shared transition-waypoint utilities, and adapters for DHB/OCP
+  and learned candidate sources.
+- Canonical demonstration-trace ingestion that preserves dataset, license,
+  action convention, raw signal provenance, and requires explicit semantics
+  before candidate promotion.
+- A matched primitive portfolio with common epoch, endpoint, and sampled-TCP
+  clearance gates plus a reproducible 20-trial component benchmark.
+- A runnable architecture example and primitive-program/API documentation.
+
+### Changed
+- CuSADi batch decoding now keeps the translational DHB frame independent from
+  tool orientation and accepts explicit per-trajectory initial linear frames.
+
 ## [0.4.1] - 2026-05-27
 
 ### Added
