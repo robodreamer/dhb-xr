@@ -7,6 +7,7 @@ from dhb_xr.primitives import (
     EndpointGate,
     EvidenceLevel,
     ObservationEpochGate,
+    OrientedPayloadAabbClearanceGate,
     PrimitiveEvidence,
     PrimitiveFamily,
     PrimitivePortfolio,
@@ -85,3 +86,47 @@ def test_source_failure_is_recorded_without_blocking_other_sources():
     assert result.sources[0].error == "RuntimeError: expected proposal failure"
     assert result.sources[1].error is None
     assert len(result.accepted) == 1
+
+
+def test_oriented_payload_gate_detects_rotation_dependent_fixture_collision():
+    direct = AnalyticPrimitiveSource(PrimitiveFamily.MINIMUM_JERK, EVIDENCE)
+    request = PrimitiveRequest(
+        "carry",
+        np.array([0.0, 0.0, 0.0]),
+        IDENTITY,
+        np.array([1.0, 0.0, 0.0]),
+        np.array([np.sqrt(0.5), 0.0, 0.0, np.sqrt(0.5)]),
+        samples=11,
+        duration_s=1.0,
+        observation_epoch=3,
+    )
+    gate = OrientedPayloadAabbClearanceGate(
+        payload_half_extents_m=np.array([0.18, 0.025, 0.025]),
+        obstacle_centers=np.array([[0.5, 0.16, 0.0]]),
+        obstacle_half_extents_m=np.array([[0.03, 0.08, 0.10]]),
+        margin_m=0.005,
+        temporal_substeps=8,
+    )
+
+    result = PrimitivePortfolio((direct,), (gate,)).evaluate(request)
+
+    assert not result.candidates[0].accepted
+    metrics = result.candidates[0].gates[0].metrics
+    assert metrics["minimum_sat_separation_m"] < 0.0
+    assert metrics["dense_pose_samples"] == 81
+
+
+def test_oriented_payload_gate_accepts_fixture_with_lateral_clearance():
+    direct = AnalyticPrimitiveSource(PrimitiveFamily.MINIMUM_JERK, EVIDENCE)
+    gate = OrientedPayloadAabbClearanceGate(
+        payload_half_extents_m=np.array([0.12, 0.02, 0.02]),
+        obstacle_centers=np.array([[0.5, 0.35, 0.0]]),
+        obstacle_half_extents_m=np.array([[0.03, 0.05, 0.10]]),
+        margin_m=0.005,
+        temporal_substeps=4,
+    )
+
+    result = PrimitivePortfolio((direct,), (gate,)).evaluate(_request())
+
+    assert result.candidates[0].accepted
+    assert result.candidates[0].gates[0].metrics["minimum_sat_separation_m"] > 0.0

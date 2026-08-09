@@ -6,6 +6,7 @@ import pytest
 from dhb_xr.primitives import (
     BackendPrimitiveSource,
     DHBRetargetSource,
+    EndpointCorrectedReferenceSource,
     EvidenceLevel,
     PrimitiveContractError,
     PrimitiveEvidence,
@@ -84,6 +85,40 @@ def test_dhb_retarget_source_calls_existing_optimizer_contract():
     assert calls["allow_fallback"] is False
     assert calls["traj_length"] == 6
     np.testing.assert_allclose(calls["pose_target_final"]["position"], np.ones(3))
+
+
+def test_endpoint_corrected_reference_preserves_shape_and_exact_boundaries():
+    phase = np.linspace(0.0, 1.0, 31)
+    positions = np.column_stack(
+        [phase, 0.2 * np.sin(np.pi * phase), 0.1 * np.sin(2.0 * np.pi * phase)]
+    )
+    angles = 0.75 * np.pi * phase
+    quaternions = np.column_stack([np.cos(angles / 2.0), np.zeros((31, 2)), np.sin(angles / 2.0)])
+    request = PrimitiveRequest(
+        "retarget",
+        np.array([-0.1, 0.05, 0.02]),
+        np.array([1.0, 0.0, 0.0, 0.0]),
+        np.array([1.15, -0.04, 0.08]),
+        np.array([0.0, 0.0, 0.0, 1.0]),
+        samples=41,
+    )
+    source = EndpointCorrectedReferenceSource(positions, quaternions, EVIDENCE)
+
+    (candidate,) = source.propose(request)
+
+    assert source.source_id == "reference:endpoint_corrected_se3"
+    assert candidate.family == PrimitiveFamily.CUSTOM
+    np.testing.assert_allclose(candidate.motion.positions[0], request.start_position)
+    np.testing.assert_allclose(candidate.motion.positions[-1], request.goal_position)
+    assert abs(
+        float(
+            np.dot(
+                candidate.motion.quaternions_wxyz[-1],
+                request.goal_quaternion_wxyz,
+            )
+        )
+    ) == pytest.approx(1.0)
+    assert float(np.ptp(candidate.motion.positions[:, 1])) > 0.1
 
 
 def test_ocp_source_uses_same_candidate_contract():

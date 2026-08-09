@@ -29,9 +29,7 @@ class CandidateGate(Protocol):
     def gate_id(self) -> str:
         """Stable gate identifier."""
 
-    def evaluate(
-        self, candidate: PrimitiveCandidate, request: PrimitiveRequest
-    ) -> GateResult:
+    def evaluate(self, candidate: PrimitiveCandidate, request: PrimitiveRequest) -> GateResult:
         """Evaluate a candidate without modifying it."""
 
 
@@ -41,9 +39,7 @@ class ObservationEpochGate:
 
     gate_id: str = "observation_epoch"
 
-    def evaluate(
-        self, candidate: PrimitiveCandidate, request: PrimitiveRequest
-    ) -> GateResult:
+    def evaluate(self, candidate: PrimitiveCandidate, request: PrimitiveRequest) -> GateResult:
         accepted = candidate.observation_epoch == request.observation_epoch
         return GateResult(
             self.gate_id,
@@ -68,9 +64,7 @@ class EndpointGate:
         if self.position_tolerance_m <= 0.0 or self.orientation_tolerance_rad <= 0.0:
             raise PrimitiveContractError("endpoint tolerances must be positive")
 
-    def evaluate(
-        self, candidate: PrimitiveCandidate, request: PrimitiveRequest
-    ) -> GateResult:
+    def evaluate(self, candidate: PrimitiveCandidate, request: PrimitiveRequest) -> GateResult:
         if candidate.motion is None:
             return GateResult(self.gate_id, False, "candidate has no Cartesian motion")
         start_position_error = float(
@@ -130,9 +124,7 @@ class SphereClearanceGate:
         object.__setattr__(self, "radii_m", radii)
         object.__setattr__(self, "margin_m", margin)
 
-    def evaluate(
-        self, candidate: PrimitiveCandidate, request: PrimitiveRequest
-    ) -> GateResult:
+    def evaluate(self, candidate: PrimitiveCandidate, request: PrimitiveRequest) -> GateResult:
         del request
         if candidate.motion is None:
             return GateResult(self.gate_id, False, "candidate has no Cartesian motion")
@@ -150,6 +142,118 @@ class SphereClearanceGate:
             {
                 "minimum_tcp_clearance_m": minimum,
                 "scope": "sampled_tcp_points_only",
+            },
+        )
+
+
+@dataclass(frozen=True)
+class OrientedPayloadAabbClearanceGate:
+    """Check a carried oriented box against fixture AABBs at dense path samples.
+
+    The test uses the separating-axis theorem for the full payload volume at
+    interpolated poses.  It remains a dense discrete geometric gate: it does
+    not include robot links, contact dynamics, or continuous-time certification.
+    """
+
+    payload_half_extents_m: np.ndarray
+    obstacle_centers: np.ndarray
+    obstacle_half_extents_m: np.ndarray
+    payload_center_offset_m: np.ndarray = field(default_factory=lambda: np.zeros(3))
+    margin_m: float = 0.0
+    temporal_substeps: int = 4
+    gate_id: str = "oriented_payload_aabb_clearance"
+
+    def __post_init__(self) -> None:
+        payload_half_extents = np.array(self.payload_half_extents_m, dtype=np.float64, copy=True)
+        payload_offset = np.array(self.payload_center_offset_m, dtype=np.float64, copy=True)
+        centers = np.array(self.obstacle_centers, dtype=np.float64, copy=True)
+        obstacle_half_extents = np.array(self.obstacle_half_extents_m, dtype=np.float64, copy=True)
+        margin = float(self.margin_m)
+        temporal_substeps = int(self.temporal_substeps)
+        if payload_half_extents.shape != (3,) or np.any(payload_half_extents <= 0.0):
+            raise PrimitiveContractError("payload_half_extents_m must be positive with shape (3,)")
+        if payload_offset.shape != (3,):
+            raise PrimitiveContractError("payload_center_offset_m must have shape (3,)")
+        if centers.ndim != 2 or centers.shape[1:] != (3,) or not len(centers):
+            raise PrimitiveContractError("obstacle_centers must have shape (M, 3), M >= 1")
+        if obstacle_half_extents.shape != centers.shape or np.any(obstacle_half_extents <= 0.0):
+            raise PrimitiveContractError(
+                "obstacle_half_extents_m must be positive and match obstacle_centers"
+            )
+        if not all(
+            np.all(np.isfinite(value))
+            for value in (
+                payload_half_extents,
+                payload_offset,
+                centers,
+                obstacle_half_extents,
+            )
+        ):
+            raise PrimitiveContractError("payload and obstacle geometry must be finite")
+        if not np.isfinite(margin) or margin < 0.0:
+            raise PrimitiveContractError("margin_m must be finite and non-negative")
+        if temporal_substeps < 1:
+            raise PrimitiveContractError("temporal_substeps must be at least one")
+        for value in (
+            payload_half_extents,
+            payload_offset,
+            centers,
+            obstacle_half_extents,
+        ):
+            value.setflags(write=False)
+        object.__setattr__(self, "payload_half_extents_m", payload_half_extents)
+        object.__setattr__(self, "payload_center_offset_m", payload_offset)
+        object.__setattr__(self, "obstacle_centers", centers)
+        object.__setattr__(self, "obstacle_half_extents_m", obstacle_half_extents)
+        object.__setattr__(self, "margin_m", margin)
+        object.__setattr__(self, "temporal_substeps", temporal_substeps)
+
+    def evaluate(self, candidate: PrimitiveCandidate, request: PrimitiveRequest) -> GateResult:
+        del request
+        if candidate.motion is None:
+            return GateResult(self.gate_id, False, "candidate has no Cartesian motion")
+        positions, quaternions = _densify_motion(
+            candidate.motion.positions,
+            candidate.motion.quaternions_wxyz,
+            self.temporal_substeps,
+        )
+        minimum_signed_separation = np.inf
+        closest_sample = -1
+        closest_obstacle = -1
+        for sample_index, (position, quaternion) in enumerate(zip(positions, quaternions)):
+            rotation = _quaternion_rotation_matrix(quaternion)
+            payload_center = position + rotation @ self.payload_center_offset_m
+            for obstacle_index, (center, half_extents) in enumerate(
+                zip(self.obstacle_centers, self.obstacle_half_extents_m)
+            ):
+                separation = _obb_aabb_signed_separation(
+                    payload_center,
+                    rotation,
+                    self.payload_half_extents_m,
+                    center,
+                    half_extents,
+                    self.margin_m,
+                )
+                if separation < minimum_signed_separation:
+                    minimum_signed_separation = separation
+                    closest_sample = sample_index
+                    closest_obstacle = obstacle_index
+        accepted = bool(minimum_signed_separation >= 0.0)
+        return GateResult(
+            self.gate_id,
+            accepted,
+            (
+                "oriented payload clears fixture boxes"
+                if accepted
+                else "oriented payload intersects a fixture box"
+            ),
+            {
+                "minimum_sat_separation_m": float(minimum_signed_separation),
+                "closest_dense_sample": closest_sample,
+                "closest_obstacle": closest_obstacle,
+                "dense_pose_samples": len(positions),
+                "temporal_substeps": self.temporal_substeps,
+                "scope": "dense_discrete_payload_obb_vs_fixture_aabb",
             },
         )
 
@@ -228,9 +332,7 @@ class PrimitivePortfolio:
                 )
                 continue
             elapsed_ms = (perf_counter() - started) * 1_000.0
-            source_rows.append(
-                SourceEvaluation(source.source_id, elapsed_ms, len(candidates))
-            )
+            source_rows.append(SourceEvaluation(source.source_id, elapsed_ms, len(candidates)))
             for candidate in candidates:
                 gate_results = []
                 for gate in self.gates:
@@ -258,3 +360,83 @@ class PrimitivePortfolio:
 def _quaternion_distance(first: np.ndarray, second: np.ndarray) -> float:
     alignment = abs(float(np.dot(first, second)))
     return float(2.0 * np.arccos(np.clip(alignment, 0.0, 1.0)))
+
+
+def _densify_motion(
+    positions: np.ndarray,
+    quaternions: np.ndarray,
+    substeps: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    dense_positions = []
+    dense_quaternions = []
+    for index in range(len(positions) - 1):
+        for substep in range(substeps):
+            phase = substep / substeps
+            dense_positions.append((1.0 - phase) * positions[index] + phase * positions[index + 1])
+            dense_quaternions.append(
+                _quaternion_slerp(quaternions[index], quaternions[index + 1], phase)
+            )
+    dense_positions.append(positions[-1])
+    dense_quaternions.append(quaternions[-1])
+    return np.asarray(dense_positions), np.asarray(dense_quaternions)
+
+
+def _quaternion_slerp(first: np.ndarray, second: np.ndarray, phase: float) -> np.ndarray:
+    first = np.asarray(first, dtype=np.float64)
+    second = np.asarray(second, dtype=np.float64)
+    alignment = float(np.dot(first, second))
+    if alignment < 0.0:
+        second = -second
+        alignment = -alignment
+    alignment = float(np.clip(alignment, -1.0, 1.0))
+    if alignment > 0.9995:
+        value = (1.0 - phase) * first + phase * second
+        return value / np.linalg.norm(value)
+    angle = np.arccos(alignment)
+    return (np.sin((1.0 - phase) * angle) * first + np.sin(phase * angle) * second) / np.sin(angle)
+
+
+def _quaternion_rotation_matrix(quaternion: np.ndarray) -> np.ndarray:
+    w, x, y, z = np.asarray(quaternion, dtype=np.float64)
+    return np.array(
+        [
+            [1.0 - 2.0 * (y * y + z * z), 2.0 * (x * y - z * w), 2.0 * (x * z + y * w)],
+            [2.0 * (x * y + z * w), 1.0 - 2.0 * (x * x + z * z), 2.0 * (y * z - x * w)],
+            [2.0 * (x * z - y * w), 2.0 * (y * z + x * w), 1.0 - 2.0 * (x * x + y * y)],
+        ],
+        dtype=np.float64,
+    )
+
+
+def _obb_aabb_signed_separation(
+    payload_center: np.ndarray,
+    payload_rotation: np.ndarray,
+    payload_half_extents: np.ndarray,
+    obstacle_center: np.ndarray,
+    obstacle_half_extents: np.ndarray,
+    margin_m: float,
+) -> float:
+    """Return a separating-axis clearance proxy; negative means intersection."""
+
+    axes = [payload_rotation[:, index] for index in range(3)]
+    axes.extend(np.eye(3)[index] for index in range(3))
+    axes.extend(
+        np.cross(payload_rotation[:, payload_axis], np.eye(3)[world_axis])
+        for payload_axis in range(3)
+        for world_axis in range(3)
+    )
+    delta = np.asarray(obstacle_center) - np.asarray(payload_center)
+    gaps = []
+    for axis in axes:
+        norm = float(np.linalg.norm(axis))
+        if norm <= 1.0e-10:
+            continue
+        direction = axis / norm
+        payload_radius = float(
+            np.sum(payload_half_extents * np.abs(payload_rotation.T @ direction))
+        )
+        obstacle_radius = float(np.sum(obstacle_half_extents * np.abs(direction)))
+        gaps.append(
+            abs(float(np.dot(delta, direction))) - payload_radius - obstacle_radius - margin_m
+        )
+    return float(max(gaps))

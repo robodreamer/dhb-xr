@@ -183,9 +183,11 @@ an executable skill name from change points alone.
 ## Matched portfolio gates
 
 `PrimitivePortfolio` runs every declared source through the same ordered gate
-set. The included gates check observation epoch, Cartesian endpoints, and dense
-sampled-TCP sphere clearance. The sphere gate explicitly does not certify robot
-links, contacts, or swept volume.
+set. The included gates check observation epoch, Cartesian endpoints, dense
+sampled-TCP sphere clearance, and an oriented payload box against fixture
+axis-aligned boxes at interpolated poses. The payload gate covers the carried
+volume and orientation, but it remains a dense discrete geometric check: it
+does not certify continuous time, robot links, or contact dynamics.
 
 Run the 20-trial component benchmark:
 
@@ -196,6 +198,22 @@ pixi run primitive-benchmark
 The deterministic setup places a sphere on the direct route. Minimum jerk is a
 negative control and is rejected; a shared-waypoint detour is accepted. This
 checks common proposal/gate accounting, not manipulation-task success.
+
+The exploratory retarget-isolation screen adds a strong non-DHB reuse control:
+`EndpointCorrectedReferenceSource` applies smooth Cartesian and quaternion
+endpoint residuals to the same raw SE(3) reference. It then compares that
+control, direct minimum jerk, and DHB retargeting on an asymmetric payload
+passing through wide-short and narrow-tall apertures:
+
+```bash
+pixi run -e cuda retarget-isolation --trials 20
+```
+
+The reference is oracle-selected and synthetic. This screen is designed to
+reject an uninteresting DHB claim early; it is not robot-feasibility or task
+success evidence. A confirmatory experiment must be frozen separately and add
+task-frame rigid replay, raw-Cartesian constrained OCP, fresh planning, EmbodiK,
+and physical simulation under matched information and compute accounting.
 
 ## Evidence-preserving memory
 

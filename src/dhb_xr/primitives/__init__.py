@@ -60,6 +60,7 @@ _EXPORT_GROUPS = {
     "dhb_xr.primitives.adapters": (
         "BackendPrimitiveSource",
         "DHBRetargetSource",
+        "EndpointCorrectedReferenceSource",
         "candidate_from_backend_result",
         "motion_path_from_backend_result",
     ),
@@ -90,6 +91,7 @@ _EXPORT_GROUPS = {
         "EndpointGate",
         "GateResult",
         "ObservationEpochGate",
+        "OrientedPayloadAabbClearanceGate",
         "PortfolioEvaluation",
         "PrimitivePortfolio",
         "SourceEvaluation",

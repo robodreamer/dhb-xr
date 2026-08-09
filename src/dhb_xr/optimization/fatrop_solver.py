@@ -28,9 +28,10 @@ References:
 """
 
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional
 
 import numpy as np
+
 from dhb_xr.core import geometry as geom
 from dhb_xr.core.types import DHBMethod, EncodingMethod
 from dhb_xr.decoder.dhb_dr import decode_dhb_dr
@@ -188,6 +189,7 @@ def _decode_adapted_quaternions(
     pose_target_init: Dict[str, np.ndarray],
     pose_target_final: Dict[str, np.ndarray],
     n_pos: int,
+    angular_frame_initial: Optional[np.ndarray] = None,
     dhb_method: DHBMethod = DHBMethod.DOUBLE_REFLECTION,
 ) -> np.ndarray:
     """Decode EE quaternions from adapted DHB invariants and enforce endpoints."""
@@ -201,6 +203,7 @@ def _decode_adapted_quaternions(
         method=EncodingMethod.POSITION,
         dhb_method=dhb_method,
         drop_padded=False,
+        initial_angular_frame=angular_frame_initial,
     )
     decoded_quat = decoded["quaternions"]
 
@@ -777,6 +780,7 @@ def generate_trajectory_fatrop(
         pose_target_init,
         pose_target_final,
         n_pos,
+        angular_frame_initial=reference_encoding["angular_frame_initial"],
         dhb_method=DHBMethod.DOUBLE_REFLECTION,
     )
 

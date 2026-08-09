@@ -8,13 +8,14 @@ Robustness features:
 - NaN/Inf handling for degenerate invariants
 """
 
-import numpy as np
 import warnings
-from typing import Dict, Any, Optional
 from dataclasses import dataclass
+from typing import Any, Dict, Optional
 
-from dhb_xr.core.types import DHBMethod, EncodingMethod
+import numpy as np
+
 from dhb_xr.core import geometry as geom
+from dhb_xr.core.types import DHBMethod, EncodingMethod
 
 EPSILON = 1e-10
 
@@ -22,6 +23,7 @@ EPSILON = 1e-10
 @dataclass
 class DecodingDiagnostics:
     """Diagnostics from decoding."""
+
     initial_pose_valid: bool = True
     num_nan_positions: int = 0
     num_nan_quaternions: int = 0
@@ -69,6 +71,8 @@ def decode_dhb_dr(
     robust_mode: bool = False,
     validate_initial_pose: bool = False,
     return_diagnostics: bool = False,
+    initial_linear_frame: Optional[np.ndarray] = None,
+    initial_angular_frame: Optional[np.ndarray] = None,
 ) -> Dict[str, Any]:
     """
     Reconstruct poses from DHB invariants.
@@ -83,6 +87,8 @@ def decode_dhb_dr(
         robust_mode: Enable robustness features (NaN handling, normalization)
         validate_initial_pose: Check initial pose validity before decoding
         return_diagnostics: Include decoding diagnostics in output
+        initial_linear_frame: Optional encoder-provided natural linear frame.
+        initial_angular_frame: Optional encoder-provided natural angular frame.
 
     Returns:
         dict with 'positions' (N,3), 'quaternions' (N,4) wxyz,
@@ -99,10 +105,12 @@ def decode_dhb_dr(
                 warnings.warn("Invalid initial pose detected. Using identity pose.")
                 initial_pose = {
                     "position": np.zeros(3),
-                    "quaternion": np.array([1.0, 0.0, 0.0, 0.0])
+                    "quaternion": np.array([1.0, 0.0, 0.0, 0.0]),
                 }
             else:
-                raise ValueError("Invalid initial pose: position or quaternion is malformed or contains NaN/Inf")
+                raise ValueError(
+                    "Invalid initial pose: position or quaternion is malformed or contains NaN/Inf"
+                )
     linear_inv = np.asarray(linear_motion_invariants, dtype=np.float64)
     angular_inv = np.asarray(angular_motion_invariants, dtype=np.float64)
     num_samples = linear_inv.shape[0]
@@ -130,10 +138,18 @@ def decode_dhb_dr(
     trajectory_quaternions[0] = init_quat
 
     linear_frame = np.eye(4)
+    if initial_linear_frame is not None:
+        linear_frame[:3, :3] = _validated_frame_rotation(
+            initial_linear_frame, "initial_linear_frame"
+        )
     linear_frame[:3, 3] = init_pos
     linear_frame[3, 3] = float(position_mode)
 
     angular_frame = np.eye(4)
+    if initial_angular_frame is not None:
+        angular_frame[:3, :3] = _validated_frame_rotation(
+            initial_angular_frame, "initial_angular_frame"
+        )
     angular_rot_temp = geom.quat_to_rot(init_quat)
 
     prev_pos = init_pos.copy()
@@ -204,6 +220,23 @@ def decode_dhb_dr(
         result["diagnostics"] = diagnostics
 
     return result
+
+
+def _validated_frame_rotation(frame: np.ndarray, field_name: str) -> np.ndarray:
+    frame = np.asarray(frame, dtype=np.float64)
+    if frame.shape == (4, 4):
+        rotation = frame[:3, :3]
+    elif frame.shape == (3, 3):
+        rotation = frame
+    else:
+        raise ValueError(f"{field_name} must have shape (3, 3) or (4, 4)")
+    if not np.all(np.isfinite(rotation)):
+        raise ValueError(f"{field_name} must be finite")
+    if not np.allclose(rotation.T @ rotation, np.eye(3), atol=1.0e-6):
+        raise ValueError(f"{field_name} rotation must be orthonormal")
+    if not np.isclose(np.linalg.det(rotation), 1.0, atol=1.0e-6):
+        raise ValueError(f"{field_name} rotation must have determinant +1")
+    return rotation
 
 
 def reconstruct_trajectory_single_step(

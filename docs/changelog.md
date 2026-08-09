@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- A strong endpoint-corrected raw-SE(3) reuse control, an orientation-aware
+  payload/fixture clearance gate, and an exploratory matched retarget-isolation
+  benchmark for identifying where DHB-XR geometry is actually distinctive.
 - Typed manipulation primitive contracts spanning SE(3) motion, portable
   end-effector commands, observation guards, evidence, and guarded program graphs.
 - Minimum-jerk, affordance-normal, arc, screw, and shared-waypoint analytic paths.
