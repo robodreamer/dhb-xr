@@ -216,3 +216,32 @@ def test_raw_relational_anchor_control_hits_intermediate_pose():
 
     np.testing.assert_allclose(candidate.motion.positions[5], anchor.position)
     assert candidate.metadata["candidate_source"] == "reference:relational_anchor_se3"
+
+
+def test_raw_relational_anchor_control_snaps_non_grid_phases_at_short_horizon():
+    phase = np.linspace(0.0, 1.0, 16)
+    reference = np.column_stack([phase, np.zeros((16, 2))])
+    anchors = (
+        RelationalPoseAnchor(0.50, [0.50, 0.10, 0.0], IDENTITY, "early"),
+        RelationalPoseAnchor(0.68, [0.68, 0.12, 0.0], IDENTITY, "middle"),
+        RelationalPoseAnchor(0.86, [0.86, 0.08, 0.0], IDENTITY, "late"),
+    )
+    request = PrimitiveRequest(
+        primitive_id="short-raw-anchor",
+        start_position=reference[0],
+        start_quaternion_wxyz=IDENTITY,
+        goal_position=reference[-1],
+        goal_quaternion_wxyz=IDENTITY,
+        samples=16,
+        relational_anchors=anchors,
+    )
+
+    (candidate,) = RelationalAnchorReferenceSource(
+        reference,
+        np.tile(IDENTITY, (16, 1)),
+        EVIDENCE,
+    ).propose(request)
+
+    indices = [round(anchor.phase * 15) for anchor in anchors]
+    for index, anchor in zip(indices, anchors):
+        np.testing.assert_allclose(candidate.motion.positions[index], anchor.position)

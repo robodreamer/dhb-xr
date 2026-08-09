@@ -244,6 +244,9 @@ def _anchored_position_guess(
             segment + 1
         ]
         output[selected] = reference[selected] + correction
+    _, _, anchor_indices = _anchor_grid(reference, anchors)
+    for index, anchor in zip(anchor_indices, anchors):
+        output[index] = anchor.position
     return output
 
 
