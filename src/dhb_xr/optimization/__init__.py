@@ -12,6 +12,15 @@ from dhb_xr.optimization.casadi_solver import (
 __all__ = ["generate_trajectory", "generate_trajectory_ipopt", "get_optimizer"]
 
 try:
+    from dhb_xr.optimization.relational_fatrop import (
+        PersistentRelationalFatropRetargeter,
+    )
+
+    __all__.append("PersistentRelationalFatropRetargeter")
+except ImportError:
+    PersistentRelationalFatropRetargeter = None
+
+try:
     from dhb_xr.optimization.cusadi_solver import (
         HAS_CUSADI,
         HAS_TORCH_CUDA,
@@ -146,9 +155,7 @@ def generate_trajectory(
 
     backend = backend.lower()
     if backend not in {"auto", "fatrop", "ipopt", "casadi", "cusadi", "interpolation"}:
-        raise ValueError(
-            "backend must be auto, fatrop, ipopt, casadi, cusadi, or interpolation"
-        )
+        raise ValueError("backend must be auto, fatrop, ipopt, casadi, cusadi, or interpolation")
 
     if backend == "cusadi":
         if generate_trajectory_cusadi_adapt is None:
@@ -209,11 +216,23 @@ def generate_trajectory(
                 dhb_method=dhb_method,
                 decode_spec=decode_spec,
             )
+            decode_kwargs = {"drop_padded": False}
+            if "linear_frame_initial" in normalized and "angular_frame_initial" in normalized:
+                decode_kwargs.update(
+                    {
+                        "initial_linear_frames": np.asarray(
+                            normalized["linear_frame_initial"][:3, :3]
+                        )[None, ...],
+                        "initial_angular_frames": np.asarray(
+                            normalized["angular_frame_initial"][:3, :3]
+                        )[None, ...],
+                    }
+                )
             decoded_positions, decoded_quats = optimizer.forward(
                 np.asarray(normalized["linear_motion_invariant"])[None, ...],
                 np.asarray(normalized["angular_motion_invariant"])[None, ...],
                 [pose_target_init],
-                drop_padded=False,
+                **decode_kwargs,
             )
             normalized["cusadi_decoded_pos_data"] = decoded_positions[0]
             normalized["cusadi_decoded_quat_data"] = decoded_quats[0]
@@ -221,11 +240,7 @@ def generate_trajectory(
         normalized["solver"] = "cusadi"
         return normalized
 
-    if (
-        backend in {"auto", "fatrop"}
-        and use_casadi
-        and generate_trajectory_fatrop is not None
-    ):
+    if backend in {"auto", "fatrop"} and use_casadi and generate_trajectory_fatrop is not None:
         try:
             result = generate_trajectory_fatrop(
                 pos_data=pos_data,
@@ -266,23 +281,15 @@ def generate_trajectory(
     )
 
 
-def _normalize_trajectory_result(
-    result: Dict[str, Any], requested_backend: str
-) -> Dict[str, Any]:
+def _normalize_trajectory_result(result: Dict[str, Any], requested_backend: str) -> Dict[str, Any]:
     normalized = dict(result)
     if "positions" in normalized and "adapted_pos_data" not in normalized:
         normalized["adapted_pos_data"] = normalized["positions"]
     if "quaternions" in normalized and "adapted_quat_data" not in normalized:
         normalized["adapted_quat_data"] = normalized["quaternions"]
-    if (
-        "linear_invariants" in normalized
-        and "linear_motion_invariant" not in normalized
-    ):
+    if "linear_invariants" in normalized and "linear_motion_invariant" not in normalized:
         normalized["linear_motion_invariant"] = normalized["linear_invariants"]
-    if (
-        "angular_invariants" in normalized
-        and "angular_motion_invariant" not in normalized
-    ):
+    if "angular_invariants" in normalized and "angular_motion_invariant" not in normalized:
         normalized["angular_motion_invariant"] = normalized["angular_invariants"]
     normalized["requested_backend"] = requested_backend
     return normalized

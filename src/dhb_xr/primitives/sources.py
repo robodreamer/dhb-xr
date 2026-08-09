@@ -26,6 +26,38 @@ from dhb_xr.primitives.contracts import (
 
 
 @dataclass(frozen=True)
+class RelationalPoseAnchor:
+    """One scene-grounded intermediate pose constraint.
+
+    ``phase`` is normalized path progress, not wall-clock time.  Endpoints are
+    carried by :class:`PrimitiveRequest`; anchors therefore live strictly
+    inside ``(0, 1)`` and must name the relation that grounded them.
+    """
+
+    phase: float
+    position: np.ndarray
+    quaternion_wxyz: np.ndarray
+    relation_id: str
+
+    def __post_init__(self) -> None:
+        phase = float(self.phase)
+        relation_id = str(self.relation_id).strip()
+        if not np.isfinite(phase) or not 0.0 < phase < 1.0:
+            raise PrimitiveContractError("anchor phase must be finite and strictly inside (0, 1)")
+        if not relation_id:
+            raise PrimitiveContractError("anchor relation_id must be non-empty")
+        pose = MotionPath(
+            np.stack([self.position, self.position]),
+            np.stack([self.quaternion_wxyz, self.quaternion_wxyz]),
+            np.array([0.0, 1.0]),
+        )
+        object.__setattr__(self, "phase", phase)
+        object.__setattr__(self, "position", pose.positions[0])
+        object.__setattr__(self, "quaternion_wxyz", pose.quaternions_wxyz[0])
+        object.__setattr__(self, "relation_id", relation_id)
+
+
+@dataclass(frozen=True)
 class PrimitiveRequest:
     """A grounded request shared by interchangeable candidate sources."""
 
@@ -39,6 +71,7 @@ class PrimitiveRequest:
     frame_id: str = "world"
     observation_epoch: int = 0
     reference_frames: Mapping[str, str] = field(default_factory=dict)
+    relational_anchors: tuple[RelationalPoseAnchor, ...] = ()
     end_effector_actions: tuple[ScheduledEndEffectorAction, ...] = ()
     contact_mode: ContactMode = ContactMode.FREE_SPACE
     start_guard: Optional[GuardExpression] = None
@@ -81,33 +114,36 @@ class PrimitiveRequest:
             role_value = str(role).strip()
             frame_value = str(frame).strip()
             if not role_value or not frame_value:
-                raise PrimitiveContractError(
-                    "reference frame roles and ids must be non-empty"
-                )
+                raise PrimitiveContractError("reference frame roles and ids must be non-empty")
             frames[role_value] = frame_value
+        anchors = tuple(self.relational_anchors)
+        if not all(isinstance(anchor, RelationalPoseAnchor) for anchor in anchors):
+            raise PrimitiveContractError(
+                "relational_anchors must contain RelationalPoseAnchor values"
+            )
+        phases = [anchor.phase for anchor in anchors]
+        if phases != sorted(phases) or len(phases) != len(set(phases)):
+            raise PrimitiveContractError(
+                "relational anchor phases must be unique and strictly increasing"
+            )
         for field_name in ("start_guard", "completion_guard", "postcondition"):
             guard = getattr(self, field_name)
             if guard is not None and not isinstance(guard, GuardExpression):
                 raise PrimitiveContractError(f"{field_name} must be GuardExpression")
         timeout_s = None if self.timeout_s is None else float(self.timeout_s)
-        if timeout_s is not None and (
-            not np.isfinite(timeout_s) or timeout_s <= 0.0
-        ):
+        if timeout_s is not None and (not np.isfinite(timeout_s) or timeout_s <= 0.0):
             raise PrimitiveContractError("timeout_s must be finite and positive")
         object.__setattr__(self, "primitive_id", primitive_id)
         object.__setattr__(self, "start_position", boundary.positions[0])
-        object.__setattr__(
-            self, "start_quaternion_wxyz", boundary.quaternions_wxyz[0]
-        )
+        object.__setattr__(self, "start_quaternion_wxyz", boundary.quaternions_wxyz[0])
         object.__setattr__(self, "goal_position", boundary.positions[1])
-        object.__setattr__(
-            self, "goal_quaternion_wxyz", boundary.quaternions_wxyz[1]
-        )
+        object.__setattr__(self, "goal_quaternion_wxyz", boundary.quaternions_wxyz[1])
         object.__setattr__(self, "samples", samples)
         object.__setattr__(self, "duration_s", duration_s)
         object.__setattr__(self, "frame_id", boundary.frame_id)
         object.__setattr__(self, "observation_epoch", observation_epoch)
         object.__setattr__(self, "reference_frames", frames)
+        object.__setattr__(self, "relational_anchors", anchors)
         object.__setattr__(self, "end_effector_actions", actions)
         object.__setattr__(self, "contact_mode", contact_mode)
         object.__setattr__(self, "timeout_s", timeout_s)

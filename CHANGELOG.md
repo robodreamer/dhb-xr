@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Typed intermediate relational-pose anchors, a common anchor gate, persistent
+  matched FATROP regularizers, and a strong piecewise raw-SE(3) anchor control
+  for representation-isolation experiments.
 - A strong endpoint-corrected raw-SE(3) reuse control, an orientation-aware
   payload/fixture clearance gate, and an exploratory matched retarget-isolation
   benchmark for identifying where DHB-XR geometry is actually distinctive.

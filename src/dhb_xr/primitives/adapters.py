@@ -238,6 +238,83 @@ class EndpointCorrectedReferenceSource:
 
 
 @dataclass(frozen=True)
+class RelationalAnchorReferenceSource:
+    """Strong raw-SE(3) control using smooth piecewise anchor residuals."""
+
+    reference_positions: np.ndarray
+    reference_quaternions_wxyz: np.ndarray
+    evidence: PrimitiveEvidence
+
+    def __post_init__(self) -> None:
+        endpoint_source = EndpointCorrectedReferenceSource(
+            self.reference_positions,
+            self.reference_quaternions_wxyz,
+            self.evidence,
+        )
+        object.__setattr__(self, "reference_positions", endpoint_source.reference_positions)
+        object.__setattr__(
+            self,
+            "reference_quaternions_wxyz",
+            endpoint_source.reference_quaternions_wxyz,
+        )
+
+    @property
+    def source_id(self) -> str:
+        return "reference:relational_anchor_se3"
+
+    def propose(self, request: PrimitiveRequest) -> tuple[PrimitiveCandidate, ...]:
+        endpoint_source = EndpointCorrectedReferenceSource(
+            self.reference_positions,
+            self.reference_quaternions_wxyz,
+            self.evidence,
+        )
+        (base,) = endpoint_source.propose(request)
+        from dhb_xr.optimization.relational_fatrop import (
+            _anchored_position_guess,
+            _anchored_quaternion_reference,
+        )
+
+        positions = _anchored_position_guess(
+            base.motion.positions,
+            request.relational_anchors,
+        )
+        quaternions = _anchored_quaternion_reference(
+            base.motion.quaternions_wxyz,
+            request.relational_anchors,
+        )
+        positions[0] = request.start_position
+        positions[-1] = request.goal_position
+        quaternions[0] = request.start_quaternion_wxyz
+        quaternions[-1] = request.goal_quaternion_wxyz
+        return (
+            PrimitiveCandidate(
+                primitive_id=request.primitive_id,
+                family=PrimitiveFamily.CUSTOM,
+                evidence=self.evidence,
+                motion=MotionPath(
+                    positions,
+                    quaternions,
+                    np.linspace(0.0, request.duration_s, request.samples),
+                    frame_id=request.frame_id,
+                ),
+                end_effector_actions=request.end_effector_actions,
+                contact_mode=request.contact_mode,
+                reference_frames=request.reference_frames,
+                start_guard=request.start_guard,
+                completion_guard=request.completion_guard,
+                postcondition=request.postcondition,
+                timeout_s=request.timeout_s,
+                observation_epoch=request.observation_epoch,
+                metadata={
+                    **request.metadata,
+                    "candidate_source": self.source_id,
+                    "retargeting": "raw_se3_piecewise_minimum_jerk_anchor_residual",
+                },
+            ),
+        )
+
+
+@dataclass(frozen=True)
 class DHBRetargetSource:
     """Adapt one stored full-SE(3) reference through DHB-XR's public optimizer."""
 
@@ -303,6 +380,49 @@ class DHBRetargetSource:
                 request,
                 result,
                 family=PrimitiveFamily.DHB_MEMORY,
+                evidence=self.evidence,
+                source_id=self.source_id,
+            ),
+        )
+
+
+class PersistentRelationalFatropSource:
+    """Expose one persistent matched FATROP retargeter as a primitive source."""
+
+    def __init__(self, retargeter: Any, evidence: PrimitiveEvidence) -> None:
+        if not hasattr(retargeter, "generate") or not hasattr(retargeter, "source_id"):
+            raise PrimitiveContractError("retargeter must provide source_id and generate(...)")
+        if not isinstance(evidence, PrimitiveEvidence):
+            raise PrimitiveContractError("evidence must be PrimitiveEvidence")
+        self.retargeter = retargeter
+        self.evidence = evidence
+
+    @property
+    def source_id(self) -> str:
+        return str(self.retargeter.source_id)
+
+    def propose(self, request: PrimitiveRequest) -> tuple[PrimitiveCandidate, ...]:
+        if request.samples != self.retargeter.samples:
+            raise PrimitiveContractError(
+                "request samples must match the persistent FATROP graph horizon"
+            )
+        result = self.retargeter.generate(
+            start_position=request.start_position,
+            start_quaternion_wxyz=request.start_quaternion_wxyz,
+            goal_position=request.goal_position,
+            goal_quaternion_wxyz=request.goal_quaternion_wxyz,
+            relational_anchors=request.relational_anchors,
+        )
+        family = (
+            PrimitiveFamily.DHB_MEMORY
+            if getattr(self.retargeter, "regularization", None) == "dhb"
+            else PrimitiveFamily.CONSTRAINED_OCP
+        )
+        return (
+            candidate_from_backend_result(
+                request,
+                result,
+                family=family,
                 evidence=self.evidence,
                 source_id=self.source_id,
             ),

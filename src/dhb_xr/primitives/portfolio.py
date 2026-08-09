@@ -98,6 +98,56 @@ class EndpointGate:
 
 
 @dataclass(frozen=True)
+class RelationalAnchorGate:
+    """Check every scene-grounded intermediate pose at its declared phase."""
+
+    position_tolerance_m: float = 0.008
+    orientation_tolerance_rad: float = 0.03
+    gate_id: str = "relational_pose_anchors"
+
+    def __post_init__(self) -> None:
+        if self.position_tolerance_m <= 0.0 or self.orientation_tolerance_rad <= 0.0:
+            raise PrimitiveContractError("anchor tolerances must be positive")
+
+    def evaluate(self, candidate: PrimitiveCandidate, request: PrimitiveRequest) -> GateResult:
+        if candidate.motion is None:
+            return GateResult(self.gate_id, False, "candidate has no Cartesian motion")
+        position_errors = []
+        orientation_errors = []
+        relation_ids = []
+        for anchor in request.relational_anchors:
+            index = int(round(anchor.phase * (candidate.motion.samples - 1)))
+            position_errors.append(
+                float(np.linalg.norm(candidate.motion.positions[index] - anchor.position))
+            )
+            orientation_errors.append(
+                _quaternion_distance(
+                    candidate.motion.quaternions_wxyz[index],
+                    anchor.quaternion_wxyz,
+                )
+            )
+            relation_ids.append(anchor.relation_id)
+        max_position = max(position_errors, default=0.0)
+        max_orientation = max(orientation_errors, default=0.0)
+        accepted = (
+            max_position <= self.position_tolerance_m
+            and max_orientation <= self.orientation_tolerance_rad
+        )
+        return GateResult(
+            self.gate_id,
+            accepted,
+            "relational anchors pass" if accepted else "relational anchor tolerance exceeded",
+            {
+                "relation_ids": relation_ids,
+                "position_errors_m": position_errors,
+                "orientation_errors_rad": orientation_errors,
+                "max_position_error_m": max_position,
+                "max_orientation_error_rad": max_orientation,
+            },
+        )
+
+
+@dataclass(frozen=True)
 class SphereClearanceGate:
     """Dense TCP-point sphere clearance check, not link or swept-volume safety."""
 

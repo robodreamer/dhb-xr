@@ -256,6 +256,7 @@ def generate_trajectory_cusadi_adapt(
         pose_target_init,
         pose_target_final,
         len(positions),
+        angular_frame_initial=encoded["angular_frame_initial"],
         dhb_method=dhb_method,
     )
 
@@ -268,6 +269,8 @@ def generate_trajectory_cusadi_adapt(
         "angular_invariants": adapted_ang,
         "linear_motion_invariant": adapted_lin,
         "angular_motion_invariant": adapted_ang,
+        "linear_frame_initial": encoded["linear_frame_initial"],
+        "angular_frame_initial": encoded["angular_frame_initial"],
         "solve_time": solve_time,
         "success": True,
         "ocp_success": None,
@@ -313,6 +316,7 @@ def batched_decode_dhb_dr_gpu(
     library_path: Optional[str] = None,
     drop_padded: bool = True,
     initial_linear_frames: Optional[np.ndarray] = None,
+    initial_angular_frames: Optional[np.ndarray] = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     GPU-accelerated batch decode using CusADi.
@@ -334,6 +338,8 @@ def batched_decode_dhb_dr_gpu(
         initial_linear_frames: Optional (B, 3, 3) rotation matrices for the
             translational DHB frame. Defaults to identity, matching the NumPy
             decoder. This is deliberately independent of tool orientation.
+        initial_angular_frames: Optional (B, 3, 3) natural angular frames for
+            quaternion reconstruction. Defaults to identity.
 
     Returns:
         Tuple of (positions (B, N, 3), quaternions (B, N, 4))
@@ -424,6 +430,7 @@ def batched_decode_dhb_dr_gpu(
         quat_angular,
         initial_poses,
         drop_padded=drop_padded,
+        initial_angular_frames=initial_angular_frames,
     )
 
     return positions, quat_batch
@@ -434,6 +441,7 @@ def batched_decode_dhb_dr_quaternions_gpu(
     initial_poses: List[Dict[str, np.ndarray]],
     *,
     drop_padded: bool = True,
+    initial_angular_frames: Optional[np.ndarray] = None,
 ) -> np.ndarray:
     """Decode DHB-DR quaternion trajectories in parallel across a CUDA batch.
 
@@ -477,12 +485,25 @@ def batched_decode_dhb_dr_quaternions_gpu(
         device="cuda",
     )
     trajectory[:, 0] = quaternion
-    angular_frame = (
-        torch.eye(3, dtype=torch.float64, device="cuda")
-        .unsqueeze(0)
-        .expand(batch_size, -1, -1)
-        .clone()
-    )
+    if initial_angular_frames is None:
+        angular_frame = (
+            torch.eye(3, dtype=torch.float64, device="cuda")
+            .unsqueeze(0)
+            .expand(batch_size, -1, -1)
+            .clone()
+        )
+    else:
+        initial_angular_frames = np.asarray(initial_angular_frames, dtype=np.float64)
+        if initial_angular_frames.shape != (batch_size, 3, 3):
+            raise ValueError(
+                "initial_angular_frames must have shape "
+                f"({batch_size}, 3, 3), got {initial_angular_frames.shape}"
+            )
+        angular_frame = torch.as_tensor(
+            initial_angular_frames,
+            dtype=torch.float64,
+            device="cuda",
+        )
     frame_updates = euler_xyz_to_rot_torch(angular[:, :, 1:4])
 
     for sample_index in range(num_samples):
@@ -518,6 +539,7 @@ def batched_decode_dhb_dr(
     use_gpu: bool = False,
     casadi_path: str = DEFAULT_FN_PATH,
     initial_linear_frames: Optional[np.ndarray] = None,
+    initial_angular_frames: Optional[np.ndarray] = None,
 ) -> tuple:
     """
     Decode multiple trajectories in batch.
@@ -532,7 +554,9 @@ def batched_decode_dhb_dr(
         use_gpu: If True and CUDA available, use CusADi GPU acceleration
         casadi_path: Path to compiled CasADi function for GPU decode
         initial_linear_frames: Optional translational DHB frame rotations for
-            GPU decode. The CPU decoder currently uses identity frames.
+            GPU and CPU decode. Defaults to identity.
+        initial_angular_frames: Optional natural angular frame rotations for
+            GPU and CPU quaternion reconstruction. Defaults to identity.
 
     Returns:
         (positions_batch, quaternions_batch): (B, N, 3), (B, N, 4).
@@ -552,6 +576,7 @@ def batched_decode_dhb_dr(
                     ),
                     drop_padded=drop_padded,
                     initial_linear_frames=initial_linear_frames,
+                    initial_angular_frames=initial_angular_frames,
                 )
             except Exception as e:
                 print(f"GPU decode failed, falling back to CPU: {e}")
@@ -583,6 +608,14 @@ def batched_decode_dhb_dr(
                 "initial_linear_frames must have shape "
                 f"({batch_size}, 3, 3), got {linear_frames.shape}"
             )
+    angular_frames = None
+    if initial_angular_frames is not None:
+        angular_frames = np.asarray(initial_angular_frames, dtype=np.float64)
+        if angular_frames.shape != (batch_size, 3, 3):
+            raise ValueError(
+                "initial_angular_frames must have shape "
+                f"({batch_size}, 3, 3), got {angular_frames.shape}"
+            )
     pos_list = []
     quat_list = []
     for b in range(batch_size):
@@ -593,11 +626,10 @@ def batched_decode_dhb_dr(
             method=method,
             dhb_method=dhb_method,
             drop_padded=drop_padded,
+            initial_linear_frame=(linear_frames[b] if linear_frames is not None else None),
+            initial_angular_frame=(angular_frames[b] if angular_frames is not None else None),
         )
         positions = decoded["positions"]
-        if linear_frames is not None:
-            initial_position = np.asarray(initial_poses[b]["position"], dtype=np.float64)
-            positions = initial_position + (positions - initial_position) @ linear_frames[b].T
         pos_list.append(positions)
         quat_list.append(decoded["quaternions"])
     return np.stack(pos_list), np.stack(quat_list)
@@ -652,6 +684,7 @@ class CusadiTrajectoryOptimizer:
         method: EncodingMethod = EncodingMethod.POSITION,
         drop_padded: bool = True,
         initial_linear_frames: Optional[np.ndarray] = None,
+        initial_angular_frames: Optional[np.ndarray] = None,
     ) -> tuple:
         """
         Batched decode: (linear_inv, angular_inv, initial_poses) -> (positions, quaternions).
@@ -733,6 +766,7 @@ class CusadiTrajectoryOptimizer:
                         library_path=artifact.library_path,
                         drop_padded=drop_padded,
                         initial_linear_frames=initial_linear_frames,
+                        initial_angular_frames=initial_angular_frames,
                     )
                     self.last_decode_backend = "gpu"
                     self.last_decode_metadata.update(
@@ -773,4 +807,5 @@ class CusadiTrajectoryOptimizer:
             dhb_method=self.dhb_method,
             drop_padded=drop_padded,
             initial_linear_frames=initial_linear_frames,
+            initial_angular_frames=initial_angular_frames,
         )

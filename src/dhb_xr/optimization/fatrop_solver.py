@@ -76,12 +76,12 @@ def _is_pure_translation_request(
     atol: float = 1e-8,
 ) -> bool:
     """Check whether the requested retargeting is an exact rigid translation."""
-    start_delta = np.asarray(
-        pose_target_init["position"], dtype=np.float64
-    ) - np.asarray(pos_data[0], dtype=np.float64)
-    goal_delta = np.asarray(
-        pose_target_final["position"], dtype=np.float64
-    ) - np.asarray(pos_data[-1], dtype=np.float64)
+    start_delta = np.asarray(pose_target_init["position"], dtype=np.float64) - np.asarray(
+        pos_data[0], dtype=np.float64
+    )
+    goal_delta = np.asarray(pose_target_final["position"], dtype=np.float64) - np.asarray(
+        pos_data[-1], dtype=np.float64
+    )
     return (
         np.allclose(start_delta, goal_delta, atol=atol)
         and _quat_absdot(pose_target_init["quaternion"], quat_data[0]) >= 1.0 - atol
@@ -103,12 +103,12 @@ def _boundary_adjusted_position_reference(
         pos_ref = interp1d(t_orig, pos_data, axis=0, fill_value="extrapolate")(t_new)
     else:
         pos_ref = np.asarray(pos_data, dtype=np.float64).copy()
-    start_delta = np.asarray(
-        pose_target_init["position"], dtype=np.float64
-    ) - np.asarray(pos_data[0], dtype=np.float64)
-    goal_delta = np.asarray(
-        pose_target_final["position"], dtype=np.float64
-    ) - np.asarray(pos_data[-1], dtype=np.float64)
+    start_delta = np.asarray(pose_target_init["position"], dtype=np.float64) - np.asarray(
+        pos_data[0], dtype=np.float64
+    )
+    goal_delta = np.asarray(pose_target_final["position"], dtype=np.float64) - np.asarray(
+        pos_data[-1], dtype=np.float64
+    )
     blend = np.linspace(0.0, 1.0, traj_length)[:, None]
     pos_ref = pos_ref + (1.0 - blend) * start_delta + blend * goal_delta
     pos_ref[0] = np.asarray(pose_target_init["position"], dtype=np.float64)
@@ -143,9 +143,7 @@ def _boundary_adjusted_quaternion_reference(
         s = i / denom
         start_corr = geom.quat_slerp(start_residual, np.array([1.0, 0.0, 0.0, 0.0]), s)
         goal_corr = geom.quat_slerp(np.array([1.0, 0.0, 0.0, 0.0]), goal_residual, s)
-        quat_ref[i] = geom.quat_multiply(
-            geom.quat_multiply(goal_corr, start_corr), quat_ref[i]
-        )
+        quat_ref[i] = geom.quat_multiply(geom.quat_multiply(goal_corr, start_corr), quat_ref[i])
         if i > 0:
             quat_ref[i] = geom.quat_ensure_continuous(quat_ref[i], quat_ref[i - 1])
     quat_ref[0] = target_start
@@ -164,9 +162,7 @@ def _path_quality_metrics(positions: np.ndarray) -> Dict[str, float]:
         na = np.linalg.norm(a)
         nb = np.linalg.norm(b)
         if na > 1e-9 and nb > 1e-9:
-            turn_angles.append(
-                float(np.arccos(np.clip(np.dot(a, b) / (na * nb), -1.0, 1.0)))
-            )
+            turn_angles.append(float(np.arccos(np.clip(np.dot(a, b) / (na * nb), -1.0, 1.0))))
     second = np.linalg.norm(np.diff(positions, n=2, axis=0), axis=1)
     second_median = float(np.median(second)) if len(second) else 0.0
     return {
@@ -215,9 +211,7 @@ def _decode_adapted_quaternions(
         decoded_quat = decoded_quat[:n_pos]
 
     for i in range(1, len(decoded_quat)):
-        decoded_quat[i] = geom.quat_ensure_continuous(
-            decoded_quat[i], decoded_quat[i - 1]
-        )
+        decoded_quat[i] = geom.quat_ensure_continuous(decoded_quat[i], decoded_quat[i - 1])
 
     goal_quat = np.asarray(pose_target_final["quaternion"], dtype=np.float64)
     if len(decoded_quat) > 0:
@@ -225,9 +219,7 @@ def _decode_adapted_quaternions(
         if len(decoded_quat) == 1:
             decoded_quat[0] = goal_quat
         else:
-            end_residual = geom.quat_multiply(
-                goal_quat, geom.quat_inv(decoded_quat[-1])
-            )
+            end_residual = geom.quat_multiply(goal_quat, geom.quat_inv(decoded_quat[-1]))
             for i in range(1, len(decoded_quat)):
                 s = i / (len(decoded_quat) - 1)
                 corr = geom.quat_slerp(np.array([1.0, 0.0, 0.0, 0.0]), end_residual, s)
@@ -264,6 +256,8 @@ class FatropTrajectoryGenerator:
         use_fatrop: bool = True,
         w_invariants: float = 1.0,
         w_path: float = 1.0e6,
+        w_anchor_position: float = 1.0e8,
+        enable_relational_anchors: bool = False,
         w_smoothness: float = 0.01,
         max_iters: int = 300,
         verbose: bool = False,
@@ -288,6 +282,8 @@ class FatropTrajectoryGenerator:
         self.use_fatrop = use_fatrop
         self.w_invariants = w_invariants
         self.w_path = w_path
+        self.w_anchor_position = w_anchor_position
+        self.enable_relational_anchors = bool(enable_relational_anchors)
         self.w_smoothness = w_smoothness
         self.max_iters = max_iters
         self.verbose = verbose
@@ -328,6 +324,11 @@ class FatropTrajectoryGenerator:
         u_lin_demo = ocp.parameter(4, grid="control", include_last=True)
         u_ang_demo = ocp.parameter(4, grid="control", include_last=True)
         p_demo = ocp.parameter(3, grid="control", include_last=True)
+        p_anchor = None
+        p_anchor_mask = None
+        if self.enable_relational_anchors:
+            p_anchor = ocp.parameter(3, grid="control", include_last=True)
+            p_anchor_mask = ocp.parameter(1, grid="control", include_last=True)
 
         # === Dynamics ===
         # Rotation update: R_next = R @ euler_to_rot(euler_angles)
@@ -336,15 +337,9 @@ class FatropTrajectoryGenerator:
             cx, sx = ca.cos(rx), ca.sin(rx)
             cy, sy = ca.cos(ry), ca.sin(ry)
             cz, sz = ca.cos(rz), ca.sin(rz)
-            Rx = ca.vertcat(
-                ca.horzcat(1, 0, 0), ca.horzcat(0, cx, -sx), ca.horzcat(0, sx, cx)
-            )
-            Ry = ca.vertcat(
-                ca.horzcat(cy, 0, sy), ca.horzcat(0, 1, 0), ca.horzcat(-sy, 0, cy)
-            )
-            Rz = ca.vertcat(
-                ca.horzcat(cz, -sz, 0), ca.horzcat(sz, cz, 0), ca.horzcat(0, 0, 1)
-            )
+            Rx = ca.vertcat(ca.horzcat(1, 0, 0), ca.horzcat(0, cx, -sx), ca.horzcat(0, sx, cx))
+            Ry = ca.vertcat(ca.horzcat(cy, 0, sy), ca.horzcat(0, 1, 0), ca.horzcat(-sy, 0, cy))
+            Rz = ca.vertcat(ca.horzcat(cz, -sz, 0), ca.horzcat(sz, cz, 0), ca.horzcat(0, 0, 1))
             return Rz @ Ry @ Rx
 
         # Current rotation matrix
@@ -387,12 +382,14 @@ class FatropTrajectoryGenerator:
         # path close to the boundary-adjusted reference. Endpoint constraints
         # alone can otherwise permit sharp zigzags that preserve invariants but
         # are unusable for trajectory editing.
-        objective = ocp.sum(
+        stage_objective = (
             self.w_invariants * ca.sumsqr(u_lin - u_lin_demo)
             + self.w_invariants * ca.sumsqr(u_ang - u_ang_demo)
-            + self.w_path * ca.sumsqr(p - p_demo),
-            include_last=True,
+            + self.w_path * ca.sumsqr(p - p_demo)
         )
+        if self.enable_relational_anchors:
+            stage_objective += self.w_anchor_position * p_anchor_mask * ca.sumsqr(p - p_anchor)
+        objective = ocp.sum(stage_objective, include_last=True)
 
         # Optional smoothness regularization
         if self.w_smoothness > 0:
@@ -443,6 +440,8 @@ class FatropTrajectoryGenerator:
         self.u_lin_demo = u_lin_demo
         self.u_ang_demo = u_ang_demo
         self.p_demo = p_demo
+        self.p_anchor = p_anchor
+        self.p_anchor_mask = p_anchor_mask
 
     def generate(
         self,
@@ -454,6 +453,9 @@ class FatropTrajectoryGenerator:
         goal_rot: np.ndarray,
         init_positions: Optional[np.ndarray] = None,
         init_rotations: Optional[np.ndarray] = None,
+        position_reference: Optional[np.ndarray] = None,
+        anchor_positions: Optional[np.ndarray] = None,
+        anchor_mask: Optional[np.ndarray] = None,
     ) -> Dict[str, Any]:
         """
         Generate trajectory by solving OCP with Fatrop.
@@ -505,13 +507,38 @@ class FatropTrajectoryGenerator:
         self.ocp.set_value(self.u_ang_demo, demo_ang_invariants.T)
 
         # Set initial guess
-        if init_positions is not None:
-            position_reference = init_positions[:N]
-        else:
-            # Linear interpolation
-            position_reference = np.linspace(start_pos, goal_pos, N)
-        self.ocp.set_initial(self.p, position_reference.T)
+        if position_reference is None:
+            if init_positions is not None:
+                position_reference = init_positions[:N]
+            else:
+                position_reference = np.linspace(start_pos, goal_pos, N)
+        position_reference = np.asarray(position_reference, dtype=np.float64)
+        if position_reference.shape != (N, 3):
+            raise ValueError(f"position_reference must have shape ({N}, 3)")
+        position_initial = (
+            position_reference
+            if init_positions is None
+            else np.asarray(init_positions, dtype=np.float64)[:N]
+        )
+        if position_initial.shape != (N, 3):
+            raise ValueError(f"init_positions must provide shape ({N}, 3)")
+        self.ocp.set_initial(self.p, position_initial.T)
         self.ocp.set_value(self.p_demo, position_reference.T)
+        if self.enable_relational_anchors:
+            if anchor_positions is None:
+                anchor_positions = position_reference
+            anchor_positions = np.asarray(anchor_positions, dtype=np.float64)
+            if anchor_positions.shape != (N, 3):
+                raise ValueError(f"anchor_positions must have shape ({N}, 3)")
+            if anchor_mask is None:
+                anchor_mask = np.zeros(N, dtype=np.float64)
+            anchor_mask = np.asarray(anchor_mask, dtype=np.float64).reshape(-1)
+            if anchor_mask.shape != (N,) or np.any(anchor_mask < 0.0):
+                raise ValueError(f"anchor_mask must be non-negative with shape ({N},)")
+            self.ocp.set_value(self.p_anchor, anchor_positions.T)
+            self.ocp.set_value(self.p_anchor_mask, anchor_mask[None, :])
+        elif anchor_positions is not None or anchor_mask is not None:
+            raise ValueError("anchor parameters require enable_relational_anchors=True")
 
         if init_rotations is not None:
             self.ocp.set_initial(self.R_x, init_rotations[:N, :, 0].T)
@@ -624,13 +651,9 @@ def generate_trajectory_fatrop(
         Dictionary with optimized trajectory and timing info
     """
     if not HAS_ROCKIT:
-        raise ImportError(
-            "Rockit required. Install with: pip install rockit-meco fatrop"
-        )
+        raise ImportError("Rockit required. Install with: pip install rockit-meco fatrop")
 
-    if _is_pure_translation_request(
-        pos_data, quat_data, pose_target_init, pose_target_final
-    ):
+    if _is_pure_translation_request(pos_data, quat_data, pose_target_init, pose_target_final):
         _, _, _, _, quat_resample, _ = resample_and_smooth(
             pos_data,
             quat_data,
@@ -754,9 +777,7 @@ def generate_trajectory_fatrop(
     # - Quaternions from the angular frame dynamics (correct EE orientation)
     positions_out = np.asarray(result["positions"], dtype=np.float64)
     path_metrics = _path_quality_metrics(positions_out)
-    path_quality_repaired = (not result["success"]) or _needs_path_quality_repair(
-        positions_out
-    )
+    path_quality_repaired = (not result["success"]) or _needs_path_quality_repair(positions_out)
     if path_quality_repaired:
         positions_out = pos_guess.copy()
         adapted_lin = demo_lin[:-1]

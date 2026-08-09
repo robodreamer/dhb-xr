@@ -302,6 +302,35 @@ def test_initial_linear_frames_are_independent_from_tool_quaternions():
     np.testing.assert_allclose(default_quaternions, rotated_quaternions, atol=1e-12)
 
 
+def test_initial_angular_frames_affect_orientation_without_rotating_positions():
+    from dhb_xr.optimization.cusadi_solver import batched_decode_dhb_dr
+
+    samples = 8
+    linear = np.zeros((1, samples, 4), dtype=np.float64)
+    linear[:, :, 0] = 0.01
+    angular = np.zeros_like(linear)
+    angular[:, :, 0] = 0.03
+    initial_poses = [{"position": np.zeros(3), "quaternion": np.array([1, 0, 0, 0])}]
+
+    default_positions, default_quaternions = batched_decode_dhb_dr(
+        linear,
+        angular,
+        initial_poses,
+        drop_padded=False,
+    )
+    frame = np.array([[[0.0, -1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]]])
+    framed_positions, framed_quaternions = batched_decode_dhb_dr(
+        linear,
+        angular,
+        initial_poses,
+        drop_padded=False,
+        initial_angular_frames=frame,
+    )
+
+    np.testing.assert_allclose(default_positions, framed_positions, atol=1e-12)
+    assert not np.allclose(default_quaternions, framed_quaternions)
+
+
 @pytest.mark.skipif(
     __import__("importlib.util").util.find_spec("casadi") is None,
     reason="casadi not installed (pip install dhb_xr[optimization])",

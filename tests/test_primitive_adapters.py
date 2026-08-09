@@ -12,6 +12,9 @@ from dhb_xr.primitives import (
     PrimitiveEvidence,
     PrimitiveFamily,
     PrimitiveRequest,
+    RelationalAnchorGate,
+    RelationalAnchorReferenceSource,
+    RelationalPoseAnchor,
 )
 
 IDENTITY = np.array([1.0, 0.0, 0.0, 0.0])
@@ -143,3 +146,73 @@ def test_dhb_retarget_source_rejects_malformed_reference_before_backend_call():
             reference_quaternions_wxyz=np.zeros((5, 4)),
             evidence=EVIDENCE,
         )
+
+
+def test_relational_anchor_contract_and_gate_are_phase_aligned():
+    anchor = RelationalPoseAnchor(
+        phase=0.4,
+        position=np.array([0.4, 0.1, 0.0]),
+        quaternion_wxyz=IDENTITY,
+        relation_id="aperture-a",
+    )
+    request = PrimitiveRequest(
+        primitive_id="anchored",
+        start_position=np.zeros(3),
+        start_quaternion_wxyz=IDENTITY,
+        goal_position=np.array([1.0, 0.0, 0.0]),
+        goal_quaternion_wxyz=IDENTITY,
+        samples=6,
+        relational_anchors=(anchor,),
+    )
+    result = _result()
+    result["positions"][2] = anchor.position
+    source = BackendPrimitiveSource(
+        "ocp:anchored",
+        PrimitiveFamily.CONSTRAINED_OCP,
+        EVIDENCE,
+        backend=lambda ignored: result,
+    )
+
+    (candidate,) = source.propose(request)
+    decision = RelationalAnchorGate(position_tolerance_m=1.0e-6).evaluate(candidate, request)
+
+    assert decision.accepted
+    assert decision.metrics["relation_ids"] == ["aperture-a"]
+
+
+def test_relational_anchor_phases_must_be_unique_and_increasing():
+    first = RelationalPoseAnchor(0.6, np.zeros(3), IDENTITY, "late")
+    second = RelationalPoseAnchor(0.4, np.zeros(3), IDENTITY, "early")
+    with pytest.raises(PrimitiveContractError, match="strictly increasing"):
+        PrimitiveRequest(
+            primitive_id="bad-anchors",
+            start_position=np.zeros(3),
+            start_quaternion_wxyz=IDENTITY,
+            goal_position=np.ones(3),
+            goal_quaternion_wxyz=IDENTITY,
+            relational_anchors=(first, second),
+        )
+
+
+def test_raw_relational_anchor_control_hits_intermediate_pose():
+    phase = np.linspace(0.0, 1.0, 11)
+    reference = np.column_stack([phase, np.zeros((11, 2))])
+    anchor = RelationalPoseAnchor(0.5, [0.5, 0.2, 0.0], IDENTITY, "fixture")
+    request = PrimitiveRequest(
+        primitive_id="raw-anchor",
+        start_position=reference[0],
+        start_quaternion_wxyz=IDENTITY,
+        goal_position=reference[-1],
+        goal_quaternion_wxyz=IDENTITY,
+        samples=11,
+        relational_anchors=(anchor,),
+    )
+
+    (candidate,) = RelationalAnchorReferenceSource(
+        reference,
+        np.tile(IDENTITY, (11, 1)),
+        EVIDENCE,
+    ).propose(request)
+
+    np.testing.assert_allclose(candidate.motion.positions[5], anchor.position)
+    assert candidate.metadata["candidate_source"] == "reference:relational_anchor_se3"

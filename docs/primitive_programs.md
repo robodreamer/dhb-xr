@@ -183,7 +183,8 @@ an executable skill name from change points alone.
 ## Matched portfolio gates
 
 `PrimitivePortfolio` runs every declared source through the same ordered gate
-set. The included gates check observation epoch, Cartesian endpoints, dense
+set. The included gates check observation epoch, Cartesian endpoints,
+intermediate relational poses, dense
 sampled-TCP sphere clearance, and an oriented payload box against fixture
 axis-aligned boxes at interpolated poses. The payload gate covers the carried
 volume and orientation, but it remains a dense discrete geometric check: it
@@ -214,6 +215,32 @@ reject an uninteresting DHB claim early; it is not robot-feasibility or task
 success evidence. A confirmatory experiment must be frozen separately and add
 task-frame rigid replay, raw-Cartesian constrained OCP, fresh planning, EmbodiK,
 and physical simulation under matched information and compute accounting.
+
+### Relational-anchor representation screen
+
+`RelationalPoseAnchor` makes intermediate scene relations part of the grounded
+request rather than hiding them in source-specific metadata. The persistent
+FATROP surface builds its OCP graph once and accepts new endpoints and anchor
+targets as parameters. Its `dhb` and `cartesian` variants share graph
+structure, dynamics, anchor penalties, initialization, solver, and gates; only
+the representation regularizer changes.
+
+The strongest raw control is `RelationalAnchorReferenceSource`, which applies
+piecewise minimum-jerk SE(3) residuals directly to the same reference. It must
+be included in any distinctive-DHB comparison; beating endpoint-only replay or
+direct minimum jerk is insufficient.
+
+```bash
+pixi run -e fatrop relational-retarget \
+  --hard-trials 60 --easy-trials 20 --output result.json
+```
+
+The current FATROP graph optimizes the linear DHB state. Intermediate
+orientation anchors use the same deterministic quaternion correction for both
+regularizers, so this benchmark can support only a linear-representation
+claim. Payload geometry remains a discrete proposal gate. Robot links,
+continuous collision, perception, retrieval, and physical task success belong
+to downstream validation.
 
 ## Evidence-preserving memory
 
