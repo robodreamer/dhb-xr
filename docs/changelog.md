@@ -30,6 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A runnable architecture example and primitive-program/API documentation.
 
 ### Changed
+- Persistent relational FATROP now transcribes a reusable CasADi solve
+  function once, so steady-state requests avoid repeated Rockit value,
+  initialization, and solve-surface setup. The dense oriented-payload SAT gate
+  is vectorized across path samples and fixtures with scalar parity coverage.
 - CuSADi batch decoding now keeps the translational DHB frame independent from
   tool orientation and accepts explicit per-trajectory initial linear frames.
 - Package and primitive exports are lazy, so contract/executor integrations do

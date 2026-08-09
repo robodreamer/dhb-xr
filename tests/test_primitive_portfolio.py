@@ -130,3 +130,48 @@ def test_oriented_payload_gate_accepts_fixture_with_lateral_clearance():
 
     assert result.candidates[0].accepted
     assert result.candidates[0].gates[0].metrics["minimum_sat_separation_m"] > 0.0
+
+
+def test_vectorized_payload_sat_matches_scalar_reference():
+    from dhb_xr.primitives.portfolio import (
+        _obb_aabb_signed_separation,
+        _obb_aabb_signed_separations,
+        _quaternion_rotation_matrices,
+    )
+
+    rng = np.random.default_rng(20260809)
+    quaternions = rng.normal(size=(8, 4))
+    quaternions /= np.linalg.norm(quaternions, axis=1, keepdims=True)
+    rotations = _quaternion_rotation_matrices(quaternions)
+    payload_centers = rng.uniform(-0.5, 0.5, size=(8, 3))
+    payload_extents = np.array([0.12, 0.03, 0.05])
+    obstacle_centers = rng.uniform(-0.5, 0.5, size=(5, 3))
+    obstacle_extents = rng.uniform(0.01, 0.15, size=(5, 3))
+    margin = 0.007
+
+    vectorized = _obb_aabb_signed_separations(
+        payload_centers,
+        rotations,
+        payload_extents,
+        obstacle_centers,
+        obstacle_extents,
+        margin,
+    )
+    scalar = np.array(
+        [
+            [
+                _obb_aabb_signed_separation(
+                    center,
+                    rotation,
+                    payload_extents,
+                    obstacle_center,
+                    obstacle_extent,
+                    margin,
+                )
+                for obstacle_center, obstacle_extent in zip(obstacle_centers, obstacle_extents)
+            ]
+            for center, rotation in zip(payload_centers, rotations)
+        ]
+    )
+
+    np.testing.assert_allclose(vectorized, scalar, atol=1.0e-12)

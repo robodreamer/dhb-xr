@@ -221,7 +221,10 @@ and physical simulation under matched information and compute accounting.
 `RelationalPoseAnchor` makes intermediate scene relations part of the grounded
 request rather than hiding them in source-specific metadata. The persistent
 FATROP surface builds its OCP graph once and accepts new endpoints and anchor
-targets as parameters. Its `dhb` and `cartesian` variants share graph
+targets as parameters. It also compiles that parameterized problem to a
+reusable CasADi function: graph construction remains a startup cost, while
+steady-state request timing covers only invariant encoding and the compiled
+solve. Its `dhb` and `cartesian` variants share graph
 structure, dynamics, anchor penalties, initialization, solver, and gates; only
 the representation regularizer changes.
 
@@ -240,7 +243,9 @@ orientation anchors use the same deterministic quaternion correction for both
 regularizers, so this benchmark can support only a linear-representation
 claim. Payload geometry remains a discrete proposal gate. Robot links,
 continuous collision, perception, retrieval, and physical task success belong
-to downstream validation.
+to downstream validation. Report startup/build latency separately from
+steady-state generation latency; combining them obscures the deployment
+tradeoff.
 
 ## Evidence-preserving memory
 

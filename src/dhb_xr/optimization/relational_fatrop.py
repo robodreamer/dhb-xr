@@ -70,6 +70,7 @@ class PersistentRelationalFatropRetargeter:
             w_path=cartesian_weight if regularization == "cartesian" else 0.0,
             w_anchor_position=anchor_weight,
             enable_relational_anchors=True,
+            compile_repeated_solve=True,
             max_iters=max_iters,
             verbose=verbose,
         )

@@ -267,27 +267,22 @@ class OrientedPayloadAabbClearanceGate:
             candidate.motion.quaternions_wxyz,
             self.temporal_substeps,
         )
-        minimum_signed_separation = np.inf
-        closest_sample = -1
-        closest_obstacle = -1
-        for sample_index, (position, quaternion) in enumerate(zip(positions, quaternions)):
-            rotation = _quaternion_rotation_matrix(quaternion)
-            payload_center = position + rotation @ self.payload_center_offset_m
-            for obstacle_index, (center, half_extents) in enumerate(
-                zip(self.obstacle_centers, self.obstacle_half_extents_m)
-            ):
-                separation = _obb_aabb_signed_separation(
-                    payload_center,
-                    rotation,
-                    self.payload_half_extents_m,
-                    center,
-                    half_extents,
-                    self.margin_m,
-                )
-                if separation < minimum_signed_separation:
-                    minimum_signed_separation = separation
-                    closest_sample = sample_index
-                    closest_obstacle = obstacle_index
+        rotations = _quaternion_rotation_matrices(quaternions)
+        payload_centers = positions + np.einsum(
+            "sij,j->si", rotations, self.payload_center_offset_m
+        )
+        separations = _obb_aabb_signed_separations(
+            payload_centers,
+            rotations,
+            self.payload_half_extents_m,
+            self.obstacle_centers,
+            self.obstacle_half_extents_m,
+            self.margin_m,
+        )
+        closest_sample, closest_obstacle = np.unravel_index(
+            int(np.argmin(separations)), separations.shape
+        )
+        minimum_signed_separation = float(separations[closest_sample, closest_obstacle])
         accepted = bool(minimum_signed_separation >= 0.0)
         return GateResult(
             self.gate_id,
@@ -456,6 +451,63 @@ def _quaternion_rotation_matrix(quaternion: np.ndarray) -> np.ndarray:
         ],
         dtype=np.float64,
     )
+
+
+def _quaternion_rotation_matrices(quaternions: np.ndarray) -> np.ndarray:
+    """Vectorized counterpart of :func:`_quaternion_rotation_matrix`."""
+
+    values = np.asarray(quaternions, dtype=np.float64)
+    if values.ndim != 2 or values.shape[1] != 4:
+        raise ValueError("quaternions must have shape (N, 4)")
+    w, x, y, z = values.T
+    rotations = np.empty((len(values), 3, 3), dtype=np.float64)
+    rotations[:, 0, 0] = 1.0 - 2.0 * (y * y + z * z)
+    rotations[:, 0, 1] = 2.0 * (x * y - z * w)
+    rotations[:, 0, 2] = 2.0 * (x * z + y * w)
+    rotations[:, 1, 0] = 2.0 * (x * y + z * w)
+    rotations[:, 1, 1] = 1.0 - 2.0 * (x * x + z * z)
+    rotations[:, 1, 2] = 2.0 * (y * z - x * w)
+    rotations[:, 2, 0] = 2.0 * (x * z - y * w)
+    rotations[:, 2, 1] = 2.0 * (y * z + x * w)
+    rotations[:, 2, 2] = 1.0 - 2.0 * (x * x + y * y)
+    return rotations
+
+
+def _obb_aabb_signed_separations(
+    payload_centers: np.ndarray,
+    payload_rotations: np.ndarray,
+    payload_half_extents: np.ndarray,
+    obstacle_centers: np.ndarray,
+    obstacle_half_extents: np.ndarray,
+    margin_m: float,
+) -> np.ndarray:
+    """Evaluate every payload-pose/obstacle SAT pair without Python loops."""
+
+    sample_count = len(payload_centers)
+    payload_axes = np.transpose(payload_rotations, (0, 2, 1))
+    world_axes = np.broadcast_to(np.eye(3), (sample_count, 3, 3))
+    cross_axes = np.cross(
+        payload_axes[:, :, None, :],
+        np.eye(3)[None, None, :, :],
+    ).reshape(sample_count, 9, 3)
+    axes = np.concatenate((payload_axes, world_axes, cross_axes), axis=1)
+    norms = np.linalg.norm(axes, axis=2)
+    valid = norms > 1.0e-10
+    directions = np.divide(
+        axes,
+        norms[:, :, None],
+        out=np.zeros_like(axes),
+        where=valid[:, :, None],
+    )
+
+    center_delta = obstacle_centers[None, :, :] - payload_centers[:, None, :]
+    projected_distance = np.abs(np.einsum("sod,sad->soa", center_delta, directions))
+    payload_local_axes = np.einsum("skd,sad->sak", payload_axes, directions)
+    payload_radius = np.einsum("k,sak->sa", payload_half_extents, np.abs(payload_local_axes))
+    obstacle_radius = np.einsum("od,sad->soa", obstacle_half_extents, np.abs(directions))
+    gaps = projected_distance - payload_radius[:, None, :] - obstacle_radius - float(margin_m)
+    gaps = np.where(valid[:, None, :], gaps, -np.inf)
+    return np.max(gaps, axis=2)
 
 
 def _obb_aabb_signed_separation(
