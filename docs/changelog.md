@@ -26,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - CuSADi batch decoding now keeps the translational DHB frame independent from
   tool orientation and accepts explicit per-trajectory initial linear frames.
+- Package and primitive exports are lazy, so contract/executor integrations do
+  not import SciPy, plotting, or native solver dependencies at startup.
 
 ## [0.4.1] - 2026-05-27
 

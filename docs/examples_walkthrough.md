@@ -66,7 +66,7 @@ does not run a simulator or robot and does not establish physical task success.
 
 **Run:**
 ```bash
-python3 examples/primitive_program.py
+pixi run primitive-example
 ```
 
 **Expected output:** A trace of active nodes and typed motion/gripper commands,
@@ -86,7 +86,7 @@ certification, and no manipulation task is executed.
 
 **Run:**
 ```bash
-python3 examples/benchmark_primitive_portfolio.py
+pixi run primitive-benchmark
 ```
 
 **Expected output:** Direct minimum jerk is rejected on all 20 trials and the

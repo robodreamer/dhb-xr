@@ -247,8 +247,8 @@ observation guards, evidence, and bounded transitions. See the [primitive
 program guide](docs/primitive_programs.md) and run:
 
 ```bash
-pixi run python examples/primitive_program.py
-pixi run python examples/benchmark_primitive_portfolio.py
+pixi run primitive-example
+pixi run primitive-benchmark
 ```
 
 ## Documentation

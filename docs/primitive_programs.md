@@ -114,12 +114,35 @@ before execution.
 Run the deterministic architecture example:
 
 ```bash
-pixi run python examples/primitive_program.py
+pixi run primitive-example
 ```
 
 The example executes approach, measured preshape, grasp-until-contact, lift and
 hold, supported release, and retreat. Its observations are synthetic and its
 evidence is explicitly `planned`.
+
+### Integrated external simulation pilot
+
+The sister `diffusion-flow-sim-lab` repository also exercises this exact
+executor through its Panda bottle-sort stack:
+
+```bash
+./scripts/run_registered_experiment.sh dhb_primitive_program_sim
+```
+
+Its frozen 2026-08-08 run completed 20/20 randomized nominal MuJoCo episodes,
+recovered from one injected close-command rejection with exactly one retry, and
+stopped/revalidated/resumed once after a deliberately stale transfer epoch.
+The result bundle is
+`results/architecture/dhb_primitive_program_sim/20260808T210441Z/results.json`
+in that repository, with SHA-256
+`17501bb005bcbb0b4c0ca082b448bae0c45e8b56053ffda39dfebfba3169b97d`.
+
+This validates integrated contract execution, not a unique DHB motion benefit.
+The pilot used privileged MuJoCo state, a fixed semantic plan, planned
+minimum-jerk geometry adapted through DHB-XR, a synthetic actuator fault, and
+an unchanged scene for stale-epoch revalidation. It did not compare motion
+sources, estimated perception, or real hardware.
 
 ## Candidate-source adapters
 
@@ -167,7 +190,7 @@ links, contacts, or swept volume.
 Run the 20-trial component benchmark:
 
 ```bash
-pixi run python examples/benchmark_primitive_portfolio.py
+pixi run primitive-benchmark
 ```
 
 The deterministic setup places a sphere on the direct route. Minimum jerk is a

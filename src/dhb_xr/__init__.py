@@ -1,44 +1,76 @@
+"""DHB Extended Representations for SE(3) trajectory encoding.
+
+Public convenience exports are loaded lazily so dependency-light subpackages
+such as :mod:`dhb_xr.primitives` do not import SciPy, Matplotlib, or the native
+extension merely because Python initialized the package root.
 """
-dhb_xr: DHB Extended Representations for SE(3) invariant trajectory encoding.
-"""
+
+from __future__ import annotations
+
+from importlib import import_module
+from typing import Any
 
 __version__ = "0.4.1"
 
-from dhb_xr.encoder.dhb_dr import encode_dhb_dr
-from dhb_xr.decoder.dhb_dr import decode_dhb_dr
-from dhb_xr.core.types import EncodingMethod, DHBMethod
+_LAZY_EXPORTS = {
+    "encode_dhb_dr": ("dhb_xr.encoder.dhb_dr", "encode_dhb_dr"),
+    "decode_dhb_dr": ("dhb_xr.decoder.dhb_dr", "decode_dhb_dr"),
+    "EncodingMethod": ("dhb_xr.core.types", "EncodingMethod"),
+    "DHBMethod": ("dhb_xr.core.types", "DHBMethod"),
+    "TrajectoryPreprocessor": (
+        "dhb_xr.preprocessing",
+        "TrajectoryPreprocessor",
+    ),
+    "ProcessedTrajectory": ("dhb_xr.preprocessing", "ProcessedTrajectory"),
+    "TrajectoryDiagnostics": (
+        "dhb_xr.preprocessing",
+        "TrajectoryDiagnostics",
+    ),
+    "analyze_trajectory": ("dhb_xr.preprocessing", "analyze_trajectory"),
+    "detect_reversals": ("dhb_xr.preprocessing", "detect_reversals"),
+    "detect_zero_motion": ("dhb_xr.preprocessing", "detect_zero_motion"),
+    "plot_se3_trajectory": (
+        "dhb_xr.visualization.plot",
+        "plot_se3_trajectory",
+    ),
+    "plot_se3_trajectories": (
+        "dhb_xr.visualization.plot",
+        "plot_se3_trajectories",
+    ),
+    "plot_invariants": ("dhb_xr.visualization.plot", "plot_invariants"),
+}
+_OPTIONAL_VISUALIZATION_EXPORTS = {
+    "plot_se3_trajectory",
+    "plot_se3_trajectories",
+    "plot_invariants",
+}
 
-# Preprocessing
-from dhb_xr.preprocessing import (
-    TrajectoryPreprocessor,
-    ProcessedTrajectory,
-    TrajectoryDiagnostics,
-    analyze_trajectory,
-    detect_reversals,
-    detect_zero_motion,
-)
 
-# Visualization
-try:
-    from dhb_xr.visualization.plot import (
-        plot_se3_trajectory,
-        plot_se3_trajectories,
-        plot_invariants,
-    )
-    _VIS_AVAILABLE = True
-except ImportError:
-    _VIS_AVAILABLE = False
-    plot_se3_trajectory = None
-    plot_se3_trajectories = None
-    plot_invariants = None
+def __getattr__(name: str) -> Any:
+    if name == "cpp_version":
+        try:
+            value = import_module("dhb_xr._dhb_xr_cpp").cpp_version
+        except ImportError:
+            value = None
+        globals()[name] = value
+        return value
+    try:
+        module_name, attribute = _LAZY_EXPORTS[name]
+    except KeyError as error:
+        raise AttributeError(f"module 'dhb_xr' has no attribute {name!r}") from error
+    try:
+        value = getattr(import_module(module_name), attribute)
+    except ImportError:
+        if name not in _OPTIONAL_VISUALIZATION_EXPORTS:
+            raise
+        value = None
+    globals()[name] = value
+    return value
 
-try:
-    from dhb_xr import _dhb_xr_cpp
-    cpp_version = _dhb_xr_cpp.cpp_version
-    _CPP_AVAILABLE = True
-except ImportError:
-    cpp_version = None
-    _CPP_AVAILABLE = False
+
+def __dir__() -> list[str]:
+    return sorted({*globals(), *_LAZY_EXPORTS, "cpp_version"})
+
 
 __all__ = [
     "__version__",
@@ -47,14 +79,12 @@ __all__ = [
     "EncodingMethod",
     "DHBMethod",
     "cpp_version",
-    # Preprocessing
     "TrajectoryPreprocessor",
     "ProcessedTrajectory",
     "TrajectoryDiagnostics",
     "analyze_trajectory",
     "detect_reversals",
     "detect_zero_motion",
-    # Visualization
     "plot_se3_trajectory",
     "plot_se3_trajectories",
     "plot_invariants",
