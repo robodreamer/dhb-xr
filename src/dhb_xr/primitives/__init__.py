@@ -74,6 +74,16 @@ _EXPORT_GROUPS = {
         "VerificationOutcome",
         "VerificationRecord",
     ),
+    "dhb_xr.primitives.skill_capsule": (
+        "CapsuleRelation",
+        "DhbDescriptorWindow",
+        "MultiscaleDhbDescriptor",
+        "ObjectCentricSkillCapsule",
+        "SparseMotionCompletionRequest",
+        "SparseMotionCompletionSource",
+        "build_multiscale_dhb_descriptor",
+        "object_relative_motion",
+    ),
     "dhb_xr.primitives.ingestion": (
         "DemonstrationTrace",
         "MinedPrimitiveSegment",
