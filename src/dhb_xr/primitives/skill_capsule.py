@@ -132,7 +132,7 @@ class DhbDescriptorWindow:
 
 @dataclass(frozen=True)
 class MultiscaleDhbDescriptor:
-    """Local-to-global DHB windows derived from one object-centric path."""
+    """Local-to-global DHB windows derived from one object-motion path."""
 
     windows: tuple[DhbDescriptorWindow, ...]
     frame_id: str
@@ -311,8 +311,12 @@ class ObjectCentricSkillCapsule:
             tcp_world=tcp_world,
             object_world=object_world,
             tcp_in_object=relative,
+            # The reusable geometry is the object's task-space path expressed
+            # in its initial pose. TCP-in-object is retained separately as the
+            # grasp/tool relation; encoding that often-nearly-constant path
+            # would erase the carry geometry that retrieval and completion need.
             descriptor=build_multiscale_dhb_descriptor(
-                relative,
+                motion_in_initial_frame(object_world),
                 scales=descriptor_scales,
                 stride_fraction=descriptor_stride_fraction,
             ),
@@ -397,6 +401,27 @@ def object_relative_motion(tcp_world: MotionPath, object_world: MotionPath) -> M
         quaternions,
         tcp_world.timestamps_s,
         frame_id=f"{tcp_world.frame_id}_tcp_in_{object_world.frame_id}_object",
+    )
+
+
+def motion_in_initial_frame(motion: MotionPath) -> MotionPath:
+    """Canonicalize a path to its initial pose before descriptor encoding."""
+
+    initial_position = motion.positions[0]
+    initial_inverse = geom.quat_inv(motion.quaternions_wxyz[0])
+    initial_rotation = geom.quat_to_rot(initial_inverse)
+    positions = (motion.positions - initial_position) @ initial_rotation.T
+    quaternions = np.stack(
+        [
+            geom.quat_multiply(initial_inverse, quaternion)
+            for quaternion in motion.quaternions_wxyz
+        ]
+    )
+    return MotionPath(
+        positions,
+        quaternions,
+        motion.timestamps_s,
+        frame_id=f"{motion.frame_id}_relative_to_initial_object_pose",
     )
 
 

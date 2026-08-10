@@ -82,6 +82,7 @@ _EXPORT_GROUPS = {
         "SparseMotionCompletionRequest",
         "SparseMotionCompletionSource",
         "build_multiscale_dhb_descriptor",
+        "motion_in_initial_frame",
         "object_relative_motion",
     ),
     "dhb_xr.primitives.ingestion": (

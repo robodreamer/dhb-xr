@@ -91,6 +91,7 @@ def test_capsule_preserves_object_relative_motion_and_round_trips(tmp_path):
     capsule = _capsule(tcp, obj)
 
     assert capsule.descriptor.scales == (8, 16, 33)
+    assert capsule.descriptor.frame_id == "world_relative_to_initial_object_pose"
     assert [item.relation_id for item in capsule.relations] == [
         "pre_aperture",
         "inside_aperture",
