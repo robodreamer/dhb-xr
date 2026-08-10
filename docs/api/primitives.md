@@ -12,6 +12,12 @@ FAISS, or plotting. Names listed here are exported from
     and serialized field names should remain compatible, while source and gate
     implementations may gain optional configuration fields.
 
+!!! info "Source history (provenance)"
+
+    In these APIs, *provenance* means where a motion came from and how it has
+    been tracked: source dataset or URI, revision, action convention, license,
+    generated artifacts, and verification records.
+
 ## Contracts and guards
 
 | API | Purpose |
@@ -20,7 +26,7 @@ FAISS, or plotting. Names listed here are exported from
 | `PrimitiveCandidate` | Unapproved geometry, end-effector semantics, guards, frames, epoch, evidence, and metadata. |
 | `PrimitiveProgram` | Validated immutable graph of candidates and transitions. |
 | `PrimitiveTransition` | Guarded success/failure/timeout/cancellation graph edge. |
-| `PrimitiveEvidence` | Evidence level plus provenance, revision, artifact, dataset, license, compatibility, and metadata. |
+| `PrimitiveEvidence` | Evidence level plus source history, revision, artifact, dataset, license, compatibility, and metadata. |
 | `EndEffectorCommand` | Embodiment-neutral gripper or suction command. |
 | `ScheduledEndEffectorAction` | Command timing, trigger, phase, and completion contract. |
 | `GuardCondition`, `GuardExpression` | Serializable observation predicates. |
@@ -77,9 +83,9 @@ verification.
 | API | Purpose |
 | --- | --- |
 | `PrimitiveMemory` | Evidence-preserving candidate store and semantic/geometric retrieval facade. |
-| `PrimitiveMemoryRecord` | Stored candidate, invariants, interaction signature, provenance, and history. |
+| `PrimitiveMemoryRecord` | Stored candidate, invariants, interaction signature, source details, and test history. |
 | `PrimitiveMemoryMatch` | Retrieval result with geometric distance and semantic penalty. |
-| `VerificationRecord` | Protocol-specific pass/fail record and artifact provenance. |
+| `VerificationRecord` | Protocol-specific pass/fail record and the source of its supporting artifact. |
 | `DemonstrationTrace` | Canonical motion, gripper, contact/object, dataset, license, URI, and convention input. |
 | `MinedPrimitiveSegment` | Proposed segment that retains source data and boundary reasons. |
 | `mine_demonstration_segments` | Propose typed segments from a demonstration trace. |

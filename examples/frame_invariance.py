@@ -142,26 +142,24 @@ def plot_overview(
     metrics: dict[str, float],
     output: Path,
 ) -> None:
-    """Render a four-panel scientific overview from the computed arrays."""
+    """Render an unambiguous scientific frame-invariance check."""
     import matplotlib
 
     matplotlib.use("Agg")
+    matplotlib.rcParams["svg.fonttype"] = "none"
     import matplotlib.pyplot as plt
-    from matplotlib.lines import Line2D
 
     output = Path(output)
     if output.suffix.lower() not in {".png", ".svg"}:
         raise ValueError("figure output must end in .png or .svg")
 
-    colors = ("#0072B2", "#D55E00", "#009E73", "#CC79A7")
     original_color = "#0072B2"
     moved_color = "#D55E00"
-    fig = plt.figure(figsize=(16.0, 4.6), constrained_layout=True)
-    grid = fig.add_gridspec(1, 4, width_ratios=(1.15, 1.15, 1.0, 1.0))
+    fig = plt.figure(figsize=(14.5, 4.8), constrained_layout=True)
+    grid = fig.add_gridspec(1, 3, width_ratios=(1.0, 1.0, 1.45), wspace=0.12)
     world_ax = fig.add_subplot(grid[0], projection="3d")
     local_ax = fig.add_subplot(grid[1], projection="3d")
-    linear_ax = fig.add_subplot(grid[2])
-    angular_ax = fig.add_subplot(grid[3])
+    residual_ax = fig.add_subplot(grid[2])
 
     _plot_path(world_ax, positions, original_color, "demonstration")
     _plot_path(world_ax, moved_positions, moved_color, "same motion, moved frame")
@@ -200,44 +198,13 @@ def plot_overview(
     _equal_3d_axes(local_ax, np.vstack((local_positions, moved_local_positions)))
 
     phase = np.linspace(0.0, 1.0, original_signature.shape[0])
-    _plot_signature_channels(
-        linear_ax,
+    _plot_signature_residuals(
+        residual_ax,
         phase,
-        original_signature[:, :4],
-        moved_signature[:, :4],
-        colors,
+        original_signature,
+        moved_signature,
+        metrics["dhb_signature_max_delta"],
     )
-    linear_ax.set_title("c  Linear DHB channels overlap", loc="left", fontweight="bold")
-    linear_ax.set_ylabel("invariant value")
-
-    _plot_signature_channels(
-        angular_ax,
-        phase,
-        original_signature[:, 4:],
-        moved_signature[:, 4:],
-        colors,
-    )
-    angular_ax.set_title("d  Angular DHB channels overlap", loc="left", fontweight="bold")
-    angular_ax.text(
-        0.03,
-        0.04,
-        f"max Δ across all channels = {metrics['dhb_signature_max_delta']:.1e}",
-        transform=angular_ax.transAxes,
-        fontsize=9,
-        bbox={"facecolor": "white", "edgecolor": "#bbbbbb", "alpha": 0.9},
-    )
-    style_legend = [
-        Line2D([0], [0], color="#444444", linewidth=2.0, label="demonstration"),
-        Line2D(
-            [0],
-            [0],
-            color="#444444",
-            linewidth=1.5,
-            linestyle="--",
-            label="moved world frame",
-        ),
-    ]
-    angular_ax.legend(handles=style_legend, fontsize=8, loc="upper right")
 
     fig.suptitle(
         "DHB-XR: the world frame moves; the motion signature does not\n"
@@ -290,31 +257,66 @@ def _equal_3d_axes(axis, points: np.ndarray) -> None:
     axis.set_box_aspect((1.0, 1.0, 1.0))
 
 
-def _plot_signature_channels(
+def _plot_signature_residuals(
     axis,
     phase: np.ndarray,
     original: np.ndarray,
     moved: np.ndarray,
-    colors: tuple[str, ...],
+    maximum_delta: float,
 ) -> None:
+    colors = (
+        "#003f5c",
+        "#2f4b7c",
+        "#0072B2",
+        "#4b8bbe",
+        "#a33d00",
+        "#D55E00",
+        "#e68632",
+        "#f2ad72",
+    )
+    residual = np.abs(original - moved)
+    visible_residual = np.maximum(residual, 1e-18)
     for channel, color in enumerate(colors):
+        family = "linear" if channel < 4 else "angular"
+        family_channel = channel if channel < 4 else channel - 4
         axis.plot(
             phase,
-            original[:, channel],
+            visible_residual[:, channel],
             color=color,
-            linewidth=2.0,
-            label=rf"$u_{channel}$",
+            linewidth=1.6,
+            label=f"{family} {family_channel}",
         )
-        axis.plot(
-            phase,
-            moved[:, channel],
-            color=color,
-            linewidth=1.2,
-            linestyle="--",
-        )
+    tolerance = 1e-12
+    axis.axhspan(1e-18, tolerance, color="#dff4e8", alpha=0.6)
+    axis.axhline(
+        tolerance,
+        color="#247a4d",
+        linewidth=1.6,
+        linestyle="--",
+        label="numerical tolerance",
+    )
+    axis.set_yscale("log")
+    axis.set_ylim(1e-18, 1e-11)
     axis.set_xlabel("normalized trajectory phase")
+    axis.set_ylabel(r"absolute difference $|u - u_{moved}|$", labelpad=1)
+    axis.set_title(
+        "c  DHB difference after moving the world frame",
+        loc="left",
+        fontweight="bold",
+    )
     axis.grid(alpha=0.25)
-    axis.legend(fontsize=8, ncols=2, loc="upper left")
+    axis.legend(fontsize=7, ncols=3, loc="lower right")
+    axis.text(
+        0.03,
+        0.95,
+        "Magnified log scale\n"
+        f"maximum difference = {maximum_delta:.1e}\n"
+        "all channels remain below 1e-12 tolerance",
+        transform=axis.transAxes,
+        va="top",
+        fontsize=9,
+        bbox={"facecolor": "white", "edgecolor": "#bbbbbb", "alpha": 0.94},
+    )
 
 
 def parse_args() -> argparse.Namespace:

@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1600" viewBox="0 0 360 800" role="img" aria-labelledby="title desc">
+  <title id="title">DHB-XR mobile package overview</title>
+  <desc id="desc">The same motion in two world frames becomes one reusable representation for retargeting, retrieval, composition, and reliable multi-step behavior.</desc>
+  <defs>
+    <linearGradient id="brand-mobile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#155eef"/>
+      <stop offset="1" stop-color="#0040c1"/>
+    </linearGradient>
+    <marker id="arrow-mobile" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#64748b"/>
+    </marker>
+    <style>
+      text { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .title { font-size: 21px; font-weight: 760; fill: #0f172a; }
+      .card-title { font-size: 13px; font-weight: 750; fill: #0f172a; }
+      .body { font-size: 10.5px; fill: #52627a; }
+      .small { font-size: 9px; fill: #64748b; }
+      .metric { font-size: 10px; font-weight: 700; fill: #0f172a; }
+    </style>
+  </defs>
+
+  <rect width="360" height="800" rx="18" fill="#f8fafc"/>
+  <text x="18" y="25" font-size="9px" font-weight="750" letter-spacing="0.8" fill="#155eef">DHB-XR · REUSABLE 6-DOF ROBOT MOTION</text>
+  <text x="18" y="53" class="title">The world frame changes.</text>
+  <text x="18" y="77" class="title">The encoded motion stays</text>
+  <text x="18" y="101" class="title">the same.</text>
+
+  <g transform="translate(0 22)">
+  <!-- Stage 1 -->
+  <rect x="16" y="96" width="328" height="167" rx="14" fill="#ffffff" stroke="#dbe4f0"/>
+  <circle cx="35" cy="117" r="10" fill="#e8f0ff"/><text x="35" y="121" text-anchor="middle" font-size="9" font-weight="750" fill="#155eef">1</text>
+  <text x="52" y="121" class="card-title">Same motion, two world frames</text>
+  <text x="28" y="140" class="body">The pose coordinates change after a rigid transform.</text>
+  <rect x="28" y="151" width="142" height="75" rx="9" fill="#f8fafc" stroke="#dbe4f0"/>
+  <rect x="190" y="151" width="142" height="75" rx="9" fill="#fff9f3" stroke="#f0dcc8"/>
+  <text x="38" y="166" class="small" font-weight="700">FRAME A</text>
+  <text x="200" y="166" class="small" font-weight="700">FRAME B</text>
+  <path d="M40 211 C60 178 76 218 95 185 C111 158 135 186 157 168" fill="none" stroke="#155eef" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="40" cy="211" r="4" fill="#155eef"/>
+  <g transform="rotate(-22 260 189)">
+    <path d="M202 211 C222 178 238 218 257 185 C273 158 297 186 319 168" fill="none" stroke="#e66b18" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="202" cy="211" r="4" fill="#e66b18"/>
+  </g>
+  <rect x="28" y="235" width="304" height="19" rx="6" fill="#f1f5f9"/>
+  <text x="38" y="248" class="metric">0.136 m RMS world-coordinate change</text>
+
+  <line x1="180" y1="268" x2="180" y2="280" stroke="#64748b" stroke-width="2" marker-end="url(#arrow-mobile)"/>
+
+  <!-- Stage 2 -->
+  <rect x="50" y="286" width="260" height="115" rx="14" fill="url(#brand-mobile)"/>
+  <text x="68" y="311" font-size="13" font-weight="750" fill="#ffffff">2 · DHB-XR</text>
+  <text x="68" y="339" font-size="17" font-weight="750" fill="#ffffff">Separate the motion</text>
+  <text x="68" y="360" font-size="17" font-weight="750" fill="#ffffff">from its world frame.</text>
+  <path d="M69 379 C93 353 117 400 141 374 C165 348 189 400 213 374 C237 348 261 395 287 370" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round"/>
+  <text x="180" y="392" text-anchor="middle" font-size="9" fill="#dcecff">Encode relative to the trajectory's starting frame</text>
+
+  <line x1="180" y1="406" x2="180" y2="418" stroke="#64748b" stroke-width="2" marker-end="url(#arrow-mobile)"/>
+
+  <!-- Stage 3 -->
+  <rect x="16" y="424" width="328" height="163" rx="14" fill="#ffffff" stroke="#dbe4f0"/>
+  <circle cx="35" cy="445" r="10" fill="#e8f0ff"/><text x="35" y="449" text-anchor="middle" font-size="9" font-weight="750" fill="#155eef">3</text>
+  <text x="52" y="449" class="card-title">One reusable motion representation</text>
+  <text x="28" y="468" class="body">Blue and orange overlap after the frame change is removed.</text>
+  <rect x="28" y="479" width="304" height="58" rx="9" fill="#f8fafc" stroke="#dbe4f0"/>
+  <path d="M43 523 C77 472 110 532 148 493 C184 456 222 523 315 488" fill="none" stroke="#155eef" stroke-width="7" stroke-linecap="round"/>
+  <path d="M43 523 C77 472 110 532 148 493 C184 456 222 523 315 488" fill="none" stroke="#e66b18" stroke-width="3" stroke-dasharray="7 6" stroke-linecap="round"/>
+  <text x="180" y="532" text-anchor="middle" class="small" font-weight="700">BLUE + ORANGE OVERLAP</text>
+  <rect x="28" y="546" width="145" height="30" rx="7" fill="#eef4ff"/>
+  <text x="37" y="559" class="small">Initial-frame path difference</text><text x="37" y="571" class="metric">1.5 × 10⁻¹⁶ m</text>
+  <rect x="187" y="546" width="145" height="30" rx="7" fill="#eefaf5"/>
+  <text x="196" y="559" class="small">Maximum DHB difference</text><text x="196" y="571" class="metric">9.7 × 10⁻¹⁴</text>
+
+  <!-- Compact capability rail -->
+  <text x="18" y="614" font-size="11" font-weight="750" fill="#0f172a">USE THE SAME REPRESENTATION TO</text>
+  <rect x="16" y="627" width="158" height="42" rx="10" fill="#ffffff" stroke="#dbe4f0"/>
+  <text x="30" y="653" class="card-title" fill="#155eef">→ Retarget</text>
+  <rect x="186" y="627" width="158" height="42" rx="10" fill="#ffffff" stroke="#dbe4f0"/>
+  <text x="200" y="653" class="card-title" fill="#16865c">⌕ Retrieve</text>
+  <rect x="16" y="678" width="158" height="42" rx="10" fill="#ffffff" stroke="#dbe4f0"/>
+  <text x="30" y="704" class="card-title" fill="#d55f0a">□ Compose</text>
+  <rect x="186" y="678" width="158" height="42" rx="10" fill="#ffffff" stroke="#dbe4f0"/>
+  <text x="200" y="704" class="card-title" fill="#6941c6">✓ Run reliably</text>
+
+  <text x="18" y="741" class="small">Computed example: 65° rotation + translation. Floating-point agreement,</text>
+  <text x="18" y="753" class="small">not a claim of robot task success or certified safety.</text>
+  </g>
+</svg>

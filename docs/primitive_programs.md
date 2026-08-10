@@ -256,10 +256,15 @@ tradeoff.
 
 ## Evidence-preserving memory
 
+The package keeps each skill's source and test history—often called
+**provenance**. Concretely, that means where the motion came from, which version
+or episode supplied it, the action convention and license, and which simulation
+or robot checks it has passed or failed.
+
 `PrimitiveMemory` stores the raw typed candidate, DHB-DR geometry, interaction
-signature, source convention, license/provenance fields, and complete
-verification history. Retrieval filters interaction semantics before ranking
-geometric similarity.
+signature, source convention, license, source details, and complete test
+history. Retrieval filters interaction semantics before ranking geometric
+similarity.
 
 ```python
 from dhb_xr.primitives import (

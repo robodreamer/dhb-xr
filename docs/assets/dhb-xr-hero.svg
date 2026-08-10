@@ -1,0 +1,141 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="760" viewBox="0 0 1440 760" role="img" aria-labelledby="title desc">
+  <title id="title">DHB-XR turns motion in different world frames into one reusable representation</title>
+  <desc id="desc">A package overview showing the same robot-tool path in two coordinate frames, DHB-XR encoding relative to the starting frame, an overlapping canonical path, and four uses: retarget, retrieve, compose, and run reliably.</desc>
+  <defs>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#155eef"/>
+      <stop offset="1" stop-color="#0040c1"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#0f172a" flood-opacity="0.10"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+    </marker>
+    <style>
+      text { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .eyebrow { font-size: 15px; font-weight: 700; letter-spacing: 1.3px; fill: #155eef; }
+      .headline { font-size: 31px; font-weight: 750; fill: #0f172a; }
+      .card-title { font-size: 17px; font-weight: 750; fill: #0f172a; }
+      .body { font-size: 15px; fill: #475569; }
+      .small { font-size: 13px; fill: #64748b; }
+      .metric { font-size: 14px; font-weight: 700; fill: #0f172a; }
+      .rail-title { font-size: 16px; font-weight: 750; fill: #0f172a; }
+      .rail-body { font-size: 13px; fill: #475569; }
+    </style>
+  </defs>
+
+  <rect width="1440" height="760" rx="28" fill="#f8fafc"/>
+  <text x="54" y="45" class="eyebrow">DHB-XR · REUSABLE 6-DOF ROBOT MOTION</text>
+  <text x="54" y="87" class="headline">The world frame changes. The encoded motion stays the same.</text>
+  <text x="54" y="116" class="body">One controlled example establishes frame invariance; the package turns that representation into practical motion tools.</text>
+
+  <!-- Stage 1 -->
+  <g filter="url(#shadow)">
+    <rect x="54" y="146" width="398" height="326" rx="20" fill="#ffffff" stroke="#dbe4f0"/>
+  </g>
+  <circle cx="80" cy="177" r="14" fill="#e8f0ff"/>
+  <text x="80" y="182" text-anchor="middle" font-size="13" font-weight="750" fill="#155eef">1</text>
+  <text x="105" y="183" class="card-title">Same motion, two world frames</text>
+  <text x="80" y="210" class="small">The pose coordinates change after a rigid transform.</text>
+
+  <rect x="78" y="230" width="166" height="158" rx="13" fill="#f8fafc" stroke="#dbe4f0"/>
+  <text x="92" y="251" class="small" font-weight="700">FRAME A</text>
+  <line x1="104" y1="356" x2="133" y2="356" stroke="#d1495b" stroke-width="2"/>
+  <polygon points="133,356 127,352 127,360" fill="#d1495b"/>
+  <line x1="104" y1="356" x2="104" y2="327" stroke="#2a9d65" stroke-width="2"/>
+  <polygon points="104,327 100,333 108,333" fill="#2a9d65"/>
+  <path d="M105 344 C122 319 139 363 157 323 C174 285 196 300 219 272" fill="none" stroke="#155eef" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="105" cy="344" r="6" fill="#155eef"/>
+  <path d="M215 270 l10 2 l-5 9 z" fill="#155eef"/>
+
+  <rect x="263" y="230" width="166" height="158" rx="13" fill="#fffaf5" stroke="#f0dcc8"/>
+  <text x="277" y="251" class="small" font-weight="700">FRAME B</text>
+  <g transform="rotate(-28 338 326)">
+    <line x1="287" y1="356" x2="316" y2="356" stroke="#d1495b" stroke-width="2"/>
+    <polygon points="316,356 310,352 310,360" fill="#d1495b"/>
+    <line x1="287" y1="356" x2="287" y2="327" stroke="#2a9d65" stroke-width="2"/>
+    <polygon points="287,327 283,333 291,333" fill="#2a9d65"/>
+    <path d="M288 344 C305 319 322 363 340 323 C357 285 379 300 402 272" fill="none" stroke="#e66b18" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="288" cy="344" r="6" fill="#e66b18"/>
+    <path d="M398 270 l10 2 l-5 9 z" fill="#e66b18"/>
+  </g>
+  <rect x="78" y="409" width="350" height="42" rx="10" fill="#f1f5f9"/>
+  <text x="94" y="435" class="metric">0.136 m RMS world-coordinate change</text>
+
+  <!-- Flow arrow 1 -->
+  <line x1="466" y1="307" x2="500" y2="307" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- Stage 2 -->
+  <g filter="url(#shadow)">
+    <rect x="516" y="146" width="310" height="326" rx="20" fill="url(#brand)"/>
+  </g>
+  <circle cx="550" cy="181" r="17" fill="#ffffff" fill-opacity="0.17"/>
+  <text x="550" y="187" text-anchor="middle" font-size="14" font-weight="750" fill="#ffffff">2</text>
+  <text x="576" y="187" font-size="19" font-weight="750" fill="#ffffff">DHB-XR</text>
+  <text x="550" y="229" font-size="24" font-weight="750" fill="#ffffff">Separate the motion</text>
+  <text x="550" y="259" font-size="24" font-weight="750" fill="#ffffff">from its world frame.</text>
+  <path d="M572 310 C605 270 639 350 671 310 C703 270 737 350 770 310" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round"/>
+  <path d="M572 337 C605 297 639 377 671 337 C703 297 737 377 770 337" fill="none" stroke="#8dd7ff" stroke-width="4" stroke-linecap="round"/>
+  <rect x="550" y="381" width="242" height="58" rx="12" fill="#ffffff" fill-opacity="0.13" stroke="#ffffff" stroke-opacity="0.25"/>
+  <text x="571" y="405" font-size="14" font-weight="700" fill="#ffffff">Encode relative to the</text>
+  <text x="571" y="427" font-size="14" font-weight="700" fill="#ffffff">trajectory's starting frame</text>
+
+  <!-- Flow arrow 2 -->
+  <line x1="840" y1="307" x2="878" y2="307" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- Stage 3 -->
+  <g filter="url(#shadow)">
+    <rect x="894" y="146" width="492" height="326" rx="20" fill="#ffffff" stroke="#dbe4f0"/>
+  </g>
+  <circle cx="922" cy="177" r="14" fill="#e8f0ff"/>
+  <text x="922" y="182" text-anchor="middle" font-size="13" font-weight="750" fill="#155eef">3</text>
+  <text x="947" y="183" class="card-title">One reusable motion representation</text>
+  <text x="922" y="210" class="small">The blue and orange copies overlap after removing the frame change.</text>
+
+  <rect x="922" y="232" width="436" height="125" rx="13" fill="#f8fafc" stroke="#dbe4f0"/>
+  <path d="M954 329 C1001 251 1052 343 1104 274 C1152 212 1212 309 1322 251" fill="none" stroke="#155eef" stroke-width="10" stroke-linecap="round"/>
+  <path d="M954 329 C1001 251 1052 343 1104 274 C1152 212 1212 309 1322 251" fill="none" stroke="#e66b18" stroke-width="4" stroke-dasharray="10 9" stroke-linecap="round"/>
+  <circle cx="954" cy="329" r="7" fill="#155eef"/>
+  <path d="M1316 247 l13 2 l-7 11 z" fill="#155eef"/>
+  <rect x="1144" y="315" width="190" height="28" rx="8" fill="#ffffff" stroke="#dbe4f0"/>
+  <text x="1239" y="334" text-anchor="middle" class="small" font-weight="700">BLUE + ORANGE OVERLAP</text>
+
+  <rect x="922" y="377" width="204" height="62" rx="11" fill="#eef4ff"/>
+  <text x="939" y="401" class="small">Initial-frame path difference</text>
+  <text x="939" y="425" class="metric">1.5 × 10⁻¹⁶ m</text>
+  <rect x="1144" y="377" width="214" height="62" rx="11" fill="#eefaf5"/>
+  <text x="1161" y="401" class="small">Maximum DHB difference</text>
+  <text x="1161" y="425" class="metric">9.7 × 10⁻¹⁴</text>
+
+  <!-- Capability rail -->
+  <g filter="url(#shadow)">
+    <rect x="54" y="512" width="319" height="142" rx="17" fill="#ffffff" stroke="#dbe4f0"/>
+    <rect x="392" y="512" width="319" height="142" rx="17" fill="#ffffff" stroke="#dbe4f0"/>
+    <rect x="730" y="512" width="319" height="142" rx="17" fill="#ffffff" stroke="#dbe4f0"/>
+    <rect x="1068" y="512" width="318" height="142" rx="17" fill="#ffffff" stroke="#dbe4f0"/>
+  </g>
+  <circle cx="84" cy="546" r="17" fill="#e8f0ff"/><path d="M76 547 h16 M88 541 l6 6 l-6 6" fill="none" stroke="#155eef" stroke-width="2.5"/>
+  <text x="112" y="552" class="rail-title">Retarget</text>
+  <text x="80" y="585" class="rail-body">Adapt to new starts, goals,</text>
+  <text x="80" y="606" class="rail-body">and object relationships.</text>
+
+  <circle cx="422" cy="546" r="17" fill="#e9f8f1"/><circle cx="420" cy="543" r="6" fill="none" stroke="#16865c" stroke-width="2.5"/><line x1="425" y1="548" x2="432" y2="555" stroke="#16865c" stroke-width="2.5"/>
+  <text x="450" y="552" class="rail-title">Retrieve</text>
+  <text x="418" y="585" class="rail-body">Search by how motion moves,</text>
+  <text x="418" y="606" class="rail-body">not where it was recorded.</text>
+
+  <circle cx="760" cy="546" r="17" fill="#fff3e8"/><path d="M751 541 h18 v12 h-18 z M756 536 h8" fill="none" stroke="#d55f0a" stroke-width="2.3"/>
+  <text x="788" y="552" class="rail-title">Compose</text>
+  <text x="756" y="585" class="rail-body">Combine motion with gripper,</text>
+  <text x="756" y="606" class="rail-body">tool, and interaction steps.</text>
+
+  <circle cx="1098" cy="546" r="17" fill="#f1edff"/><path d="M1090 546 l6 6 l11-14" fill="none" stroke="#6941c6" stroke-width="2.8"/>
+  <text x="1126" y="552" class="rail-title">Run reliably</text>
+  <text x="1094" y="585" class="rail-body">Check observations and feedback;</text>
+  <text x="1094" y="606" class="rail-body">retry or stop within explicit limits.</text>
+
+  <line x1="54" y1="693" x2="1386" y2="693" stroke="#dbe4f0"/>
+  <text x="54" y="721" class="small">Computed example: every pose is rotated 65° and translated. Agreement is floating-point precision, not a claim of robot task success or certified safety.</text>
+  <text x="1386" y="721" text-anchor="end" class="small" font-weight="700">pixi run overview-example</text>
+</svg>

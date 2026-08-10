@@ -10,12 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.5.0] - 2026-08-09
 
 ### Added
-- A minimal frame-invariance example and publication-style overview figure that
-  show changed world coordinates, overlapping initial-frame geometry, and
-  matching linear/angular DHB channels from the same computed trajectory.
-- Object-centric, provenance-preserving skill capsules that retain raw world
-  motion, TCP-in-object motion, sparse relations, end-effector actions, source
-  evidence, and reproducible multiscale DHB descriptor indexes.
+- A package-style overview plus a minimal frame-invariance example whose
+  technical figure shows changed world coordinates, overlapping initial-frame
+  geometry, and DHB residuals below a declared numerical tolerance.
+- Object-centric, source-traceable skill capsules that retain raw world motion,
+  TCP-in-object motion, sparse relations, end-effector actions, source dataset,
+  revision, license, and reproducible multiscale DHB descriptor indexes.
 - Merge-triggered, trusted PyPI publishing with synchronized release-metadata
   validation, immutable tag checks, separately retained build artifacts, and a
   GitHub release created only after publication succeeds.
@@ -35,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   segmentation, shared transition-waypoint utilities, and adapters for DHB/OCP
   and learned candidate sources.
 - Canonical demonstration-trace ingestion that preserves dataset, license,
-  action convention, raw signal provenance, and requires explicit semantics
+  action convention, raw-signal source details, and requires explicit semantics
   before candidate promotion.
 - A matched primitive portfolio with common epoch, endpoint, and sampled-TCP
   clearance gates plus a reproducible 20-trial component benchmark.

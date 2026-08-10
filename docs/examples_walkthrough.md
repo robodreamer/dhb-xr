@@ -8,7 +8,7 @@ Core example scripts were run from the repo root with `PYTHONPATH=src python3 ex
 
 | Example | Output |
 |--------|--------|
-| `frame_invariance.py` | Scientific four-panel figure showing changed world coordinates and matching DHB signatures |
+| `frame_invariance.py` | Three-panel check showing changed world coordinates and DHB residual below numerical tolerance |
 | `basic_encoding.py` | Encoded invariants `(52, 4)`, decoded positions `(50, 3)`, quaternions `(50, 4)` |
 | `trajectory_adaptation.py` | Adapted positions `(28, 3)`, first/last pose printed |
 | `dhb_qr_comparison.py` | DHB-DR linear `(42, 4)`, DHB-QR linear `(42, 5)` |
@@ -43,14 +43,19 @@ python3 examples/basic_encoding.py
 
 **What it does:** Creates one smooth 6-DoF trajectory, applies the same rigid
 rotation and translation to every pose, and encodes both versions using their
-own initial pose as the reference frame. It renders the exact figure shown on
-the documentation home page.
+own initial pose as the reference frame. It renders the technical check below
+and supplies the computed values used by the package overview on the
+documentation home page.
 
 **What to look for:**
 
 - The paths have different world coordinates.
 - Expressing each path relative to its own first pose makes the geometry overlap.
 - All eight DHB-DR channels overlap to floating-point precision.
+
+![Technical frame-invariance check: two world-frame paths, overlapping
+initial-frame paths, and absolute DHB residuals below numerical
+tolerance.](assets/dhb-xr-overview.svg)
 
 ```bash
 pixi run overview-example
@@ -61,7 +66,11 @@ On the release fixture, the world-coordinate RMS change is `0.136 m`, while the
 maximum difference is about `1.5e-16 m` in initial-frame position and `9.7e-14`
 across DHB channels. These values demonstrate frame invariance for this
 controlled trajectory; they are not speed, task-success, or robot-safety
-benchmarks.
+benchmarks. The residual panel deliberately magnifies floating-point differences
+on a logarithmic scale; every channel remains below the declared `1e-12`
+numerical tolerance. “Frame-invariant” means corresponding values do not change
+when the world frame moves—it does not mean a channel stays constant while the
+motion itself evolves.
 
 ---
 
