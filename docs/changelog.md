@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.5.0] - 2026-08-09
 
 ### Added
+- Object-centric, provenance-preserving skill capsules that retain raw world
+  motion, TCP-in-object motion, sparse relations, end-effector actions, source
+  evidence, and reproducible multiscale DHB descriptor indexes.
+- Merge-triggered, trusted PyPI publishing with synchronized release-metadata
+  validation, immutable tag checks, separately retained build artifacts, and a
+  GitHub release created only after publication succeeds.
 - Typed intermediate relational-pose anchors, a common anchor gate, persistent
   matched FATROP regularizers, and a strong piecewise raw-SE(3) anchor control
   for representation-isolation experiments.
