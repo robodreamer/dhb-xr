@@ -8,7 +8,7 @@ not imply a higher one.
 
 | Change | User/research value | Evidence now | Release implication |
 | --- | --- | --- | --- |
-| Typed primitive contracts and guarded executor | Makes geometry, gripper semantics, evidence, epochs, and recovery explicit and serializable. | Unit tests plus deterministic end-to-end state-machine example. | Meaningful reusable infrastructure; downstream robot adapters remain responsible for command realization and safety. |
+| Typed primitive contracts and executor with explicit checks and recovery | Makes geometry, gripper semantics, evidence, epochs, and recovery explicit and serializable. | Unit tests plus deterministic end-to-end state-machine example. | Meaningful reusable infrastructure; downstream robot adapters remain responsible for command realization and safety. |
 | Analytic sources and common portfolio gates | Gives cheap baselines and forces matched evaluation across proposal sources. | Deterministic direct-path negative control and detour positive control. | Strong experimental hygiene; not evidence that DHB is better. |
 | Demonstration ingestion, segmentation, and memory | Preserves provenance and avoids silently promoting change points into semantic skills. | Contract, round-trip, retrieval, and segmentation tests. | Useful foundation, but dataset-scale retrieval quality and curation cost are still unmeasured. |
 | Raw-SE(3) endpoint and relational controls | Prevents comparisons against weak replay baselines. | Included in isolated synthetic screens. | Increases scientific credibility even when the control wins; should remain in future evaluations. |

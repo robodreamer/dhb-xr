@@ -45,6 +45,13 @@ def validate_release_metadata(
         "dhb_xr.__version__",
     )
 
+    examples_init = (project_root / "examples" / "__init__.py").read_text()
+    examples_version = _match_once(
+        r'^__version__\s*=\s*["\']([^"\']+)["\']\s*$',
+        examples_init,
+        "examples.__version__",
+    )
+
     mkdocs = (project_root / "mkdocs.yml").read_text()
     docs_version = _match_once(
         r'^  version:\s*["\']([^"\']+)["\']\s*$',
@@ -60,6 +67,7 @@ def validate_release_metadata(
     versions = {
         "pyproject": package_version,
         "runtime": runtime_version,
+        "examples": examples_version,
         "mkdocs": docs_version,
         "site_description": site_version,
     }

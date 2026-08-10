@@ -13,8 +13,8 @@ This library implements the double-reflection (DHB-DR) and quaternion-relative (
 - **VLA support**: VQ-VAE/RVQ tokenization for streaming action representation
 - **Motion database**: Similarity search, DTW alignment, and retrieval
 - **Primitive programs**: Analytic, OCP, DHB-memory, and learned candidates with
-  first-class gripper actions, evidence, guarded sequencing, and stale-epoch
-  cancellation
+  built-in gripper/tool actions, evidence, explicit checks and bounded recovery,
+  and revalidation when scene observations change
 - **Imitation learning**: Invariant-space and geodesic losses
 
 ## Installation
@@ -163,11 +163,14 @@ dhb_xr-examples
 This creates a local copy you can modify and experiment with.
 
 The examples package includes:
+- **Frame-invariance overview**: One transformed 6-DoF trajectory, matching DHB
+  signatures, and a publication-style four-panel SVG
 - **Core examples**: Basic encoding/decoding, trajectory adaptation, DHB-DR vs QR
 - **Advanced examples**: GPU batch optimization, VLA tokenization, motion databases
 - **VLA integration**: Full LIBERO simulation, perturbation robustness demos
 - **Research examples**: Imitation learning losses, time-invariant reparameterization
-- **Primitive example**: Guarded approach, grasp, lift, release, and retreat
+- **Primitive example**: Approach, grasp, lift, release, and retreat with
+  explicit checks and recovery
 - **Portfolio benchmark**: Matched analytic candidates under identical gates
 - **Tutorial notebooks**: Interactive Jupyter notebooks in the source repository
 
@@ -220,7 +223,7 @@ out = encode_dhb_dr_ti(positions, quaternions, M=30, progress_kind="hybrid", alp
 
 See `examples/dhb_ti_time_invariant.py`.
 
-### Guarded manipulation primitives
+### Manipulation primitives with explicit checks
 
 Use `dhb_xr.primitives` to bind SE(3) paths to official end-effector actions,
 observation guards, evidence, and bounded transitions. See the [primitive

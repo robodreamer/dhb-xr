@@ -33,11 +33,13 @@ def _write_release_metadata(
     release_date: str | None = "2026-08-09",
 ) -> None:
     (root / "src" / "dhb_xr").mkdir(parents=True)
+    (root / "examples").mkdir()
     (root / "docs").mkdir()
     (root / "pyproject.toml").write_text(
         f'[project]\nname = "dhb_xr"\nversion = "{package_version}"\n'
     )
     (root / "src" / "dhb_xr" / "__init__.py").write_text(f'__version__ = "{runtime_version}"\n')
+    (root / "examples" / "__init__.py").write_text(f'__version__ = "{runtime_version}"\n')
     (root / "mkdocs.yml").write_text(
         f'site_description: SE(3) tools (v{docs_version})\nextra:\n  version: "{docs_version}"\n'
     )
@@ -67,6 +69,14 @@ def test_validate_release_metadata_rejects_version_mismatch(
         runtime_version=runtime_version,
         docs_version=docs_version,
     )
+
+    with pytest.raises(ValueError, match="version mismatch"):
+        validate_release_metadata(tmp_path)
+
+
+def test_validate_release_metadata_rejects_stale_examples_version(tmp_path: Path) -> None:
+    _write_release_metadata(tmp_path)
+    (tmp_path / "examples" / "__init__.py").write_text('__version__ = "0.4.0"\n')
 
     with pytest.raises(ValueError, match="version mismatch"):
         validate_release_metadata(tmp_path)
@@ -108,6 +118,7 @@ def test_set_version_updates_every_version_surface(tmp_path: Path) -> None:
 
     assert 'version = "0.6.0"' in (tmp_path / "pyproject.toml").read_text()
     assert '__version__ = "0.6.0"' in (tmp_path / "src" / "dhb_xr" / "__init__.py").read_text()
+    assert '__version__ = "0.6.0"' in (tmp_path / "examples" / "__init__.py").read_text()
     mkdocs = (tmp_path / "mkdocs.yml").read_text()
     assert "(v0.6.0)" in mkdocs
     assert 'version: "0.6.0"' in mkdocs

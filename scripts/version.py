@@ -49,6 +49,7 @@ def set_version(new_version: str, project_root: Path = PROJECT_ROOT) -> None:
     """Set every package and documentation version surface."""
     pyproject_path = project_root / "pyproject.toml"
     init_path = project_root / "src" / "dhb_xr" / "__init__.py"
+    examples_init_path = project_root / "examples" / "__init__.py"
     mkdocs_path = project_root / "mkdocs.yml"
 
     # Replace only the project metadata version, not similarly named tool tasks.
@@ -67,6 +68,14 @@ def set_version(new_version: str, project_root: Path = PROJECT_ROOT) -> None:
         "dhb_xr.__version__",
     )
     init_path.write_text(init_content)
+
+    examples_content = _replace_once(
+        examples_init_path.read_text(),
+        r'^__version__\s*=\s*["\'][^"\']+["\']',
+        f'__version__ = "{new_version}"',
+        "examples.__version__",
+    )
+    examples_init_path.write_text(examples_content)
 
     mkdocs_content = _replace_once(
         mkdocs_path.read_text(),

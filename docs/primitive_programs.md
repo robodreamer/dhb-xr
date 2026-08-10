@@ -1,9 +1,10 @@
 # Primitive programs
 
 DHB-XR primitive programs bind reusable SE(3) geometry to official
-end-effector actions, evidence, observation epochs, and guarded execution. The
-module is intentionally dependency-light: analytic generation and contract
-validation do not require CasADi, CUDA, FAISS, a simulator, or a robot driver.
+end-effector actions, evidence, observation epochs, and explicit execution
+checks. The module is intentionally dependency-light: analytic generation and
+contract validation do not require CasADi, CUDA, FAISS, a simulator, or a robot
+driver.
 
 !!! warning "Evidence boundary"
 
@@ -91,7 +92,7 @@ Actions can run before motion, during a declared phase, after motion, or after
 an observation event. Completion guards should use measured aperture, force,
 contact, pressure, or object state rather than a fixed delay.
 
-## Guarded execution
+## Execution checks and recovery
 
 `PrimitiveProgram` is an immutable graph. `PrimitiveProgramExecutor` consumes
 timestamped `ExecutionObservation` and `PrimitiveFeedback` values and emits

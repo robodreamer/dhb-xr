@@ -5,6 +5,7 @@ This package contains comprehensive examples demonstrating DHB-XR usage across
 various robotics and VLA applications, including both Python scripts and Jupyter notebooks.
 
 Quick Start Examples:
+- frame_invariance: Minimal visual proof of the central frame-invariance idea
 - basic_encoding: Core DHB-DR/DHB-QR encoding and decoding
 - trajectory_adaptation: Retargeting trajectories to new poses
 - dhb_qr_comparison: Comparing DHB-DR vs DHB-QR representations
@@ -13,7 +14,7 @@ Quick Start Examples:
 - motion_database: Similarity search and trajectory retrieval
 - imitation_learning: Invariant-based imitation learning losses
 - dhb_ti_time_invariant: Time-invariant reparameterization
-- primitive_program: Guarded motion and end-effector sequencing
+- primitive_program: Motion and end-effector sequencing with checks and recovery
 - benchmark_primitive_portfolio: Matched candidate-source gate benchmark
 
 VLA Integration Examples:
@@ -39,9 +40,10 @@ Usage:
     # pixi run notebook
 """
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 _EXAMPLE_EXPORTS = {
+    "run_frame_invariance": (".frame_invariance", "run_example"),
     "run_basic_encoding": (".basic_encoding", "run_example"),
     "run_trajectory_adaptation": (".trajectory_adaptation", "run_example"),
     "run_dhb_comparison": (".dhb_qr_comparison", "run_example"),
@@ -64,6 +66,7 @@ def __getattr__(name):
     value = getattr(module, attr_name)
     globals()[name] = value
     return value
+
 
 def __dir__():
     """List all available examples."""

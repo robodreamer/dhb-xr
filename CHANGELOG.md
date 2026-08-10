@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.5.0] - 2026-08-09
 
 ### Added
+- A minimal frame-invariance example and publication-style overview figure that
+  show changed world coordinates, overlapping initial-frame geometry, and
+  matching linear/angular DHB channels from the same computed trajectory.
 - Object-centric, provenance-preserving skill capsules that retain raw world
   motion, TCP-in-object motion, sparse relations, end-effector actions, source
   evidence, and reproducible multiscale DHB descriptor indexes.
@@ -23,7 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   payload/fixture clearance gate, and an exploratory matched retarget-isolation
   benchmark for identifying where DHB-XR geometry is actually distinctive.
 - Typed manipulation primitive contracts spanning SE(3) motion, portable
-  end-effector commands, observation guards, evidence, and guarded program graphs.
+  end-effector commands, observation checks, evidence, and program graphs with
+  explicit recovery paths.
 - Minimum-jerk, affordance-normal, arc, screw, and shared-waypoint analytic paths.
 - Deterministic primitive-program execution with bounded retries, reobservation,
   stale-epoch cancellation, and concise typed commands.

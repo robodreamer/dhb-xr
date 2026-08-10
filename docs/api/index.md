@@ -17,7 +17,7 @@ This section provides comprehensive documentation for all DHB-XR modules and fun
 ### Advanced Features
 - [Optimization](optimization.md) - Trajectory adaptation and optimization
 - [Motion Database](database.md) - Storage and similarity search
-- [Primitive Programs](primitives.md) - Motion, gripper, evidence, guarded execution, and memory
+- [Primitive Programs](primitives.md) - Motion, gripper/tool actions, evidence, execution checks, recovery, and memory
 - [Tokenization](tokenization.md) - VQ-VAE for discrete representations
 - [Loss Functions](losses.md) - Imitation learning losses
 - [Visualization](visualization.md) - Plotting and visualization utilities

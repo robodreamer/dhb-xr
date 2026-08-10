@@ -8,6 +8,7 @@ Core example scripts were run from the repo root with `PYTHONPATH=src python3 ex
 
 | Example | Output |
 |--------|--------|
+| `frame_invariance.py` | Scientific four-panel figure showing changed world coordinates and matching DHB signatures |
 | `basic_encoding.py` | Encoded invariants `(52, 4)`, decoded positions `(50, 3)`, quaternions `(50, 4)` |
 | `trajectory_adaptation.py` | Adapted positions `(28, 3)`, first/last pose printed |
 | `dhb_qr_comparison.py` | DHB-DR linear `(42, 4)`, DHB-QR linear `(42, 5)` |
@@ -16,7 +17,7 @@ Core example scripts were run from the repo root with `PYTHONPATH=src python3 ex
 | `motion_database.py` | Added 4 trajectories; top-3 retrieval with L2 distances and metadata |
 | `imitation_learning.py` | Invariant matching loss, SE(3) geodesic loss, hybrid loss printed |
 | `dhb_ti_time_invariant.py` | Progress totals (trans/angular/hybrid), resampled shapes, DHB-TI (DR/QR) invariant shapes |
-| `primitive_program.py` | Guarded approach, grasp, lift, release, and retreat architecture trace |
+| `primitive_program.py` | Approach, grasp, lift, release, and retreat with explicit checks and recovery |
 | `benchmark_primitive_portfolio.py` | 20-trial matched direct-versus-detour sampled-TCP gate benchmark |
 | `plot_primitive_benchmark.py` | JSON-to-SVG/PNG dashboard for primitive benchmark review |
 
@@ -38,6 +39,32 @@ python3 examples/basic_encoding.py
 
 ---
 
+## frame_invariance.py — The world frame moves; the motion signature does not
+
+**What it does:** Creates one smooth 6-DoF trajectory, applies the same rigid
+rotation and translation to every pose, and encodes both versions using their
+own initial pose as the reference frame. It renders the exact figure shown on
+the documentation home page.
+
+**What to look for:**
+
+- The paths have different world coordinates.
+- Expressing each path relative to its own first pose makes the geometry overlap.
+- All eight DHB-DR channels overlap to floating-point precision.
+
+```bash
+pixi run overview-example
+# writes artifacts/dhb-xr-frame-invariance.svg
+```
+
+On the release fixture, the world-coordinate RMS change is `0.136 m`, while the
+maximum difference is about `1.5e-16 m` in initial-frame position and `9.7e-14`
+across DHB channels. These values demonstrate frame invariance for this
+controlled trajectory; they are not speed, task-success, or robot-safety
+benchmarks.
+
+---
+
 ## basic_encoding.py — Encode and decode a trajectory
 
 **What it does:** Builds a short SE(3) trajectory (50 poses: positions + identity quaternions), encodes it to DHB-DR invariants, then decodes back to poses.
@@ -55,7 +82,7 @@ python3 examples/basic_encoding.py
 
 ---
 
-## primitive_program.py — Guarded manipulation sequence
+## primitive_program.py — Manipulation sequence with explicit checks and recovery
 
 **What it does:** Builds a typed approach → grasp → lift → release → retreat
 program. Minimum-jerk paths are synchronized with measured preshape,

@@ -1,4 +1,4 @@
-"""Run a deterministic guarded pick-and-place primitive program.
+"""Run a deterministic pick-and-place program with explicit checks and recovery.
 
 This example exercises DHB-XR's primitive contracts and executive with synthetic
 feedback. It demonstrates control flow and authority boundaries; it is not a
@@ -237,7 +237,7 @@ def run_example():
         )
     )
 
-    print("DHB-XR guarded primitive-program trace")
+    print("DHB-XR primitive-program trace with checks and recovery")
     print("Evidence: deterministic architecture demonstration; no simulator or robot")
     for decision in decisions:
         _show(decision)
