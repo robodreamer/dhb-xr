@@ -17,9 +17,6 @@ Core example scripts were run from the repo root with `PYTHONPATH=src python3 ex
 | `motion_database.py` | Added 4 trajectories; top-3 retrieval with L2 distances and metadata |
 | `imitation_learning.py` | Invariant matching loss, SE(3) geodesic loss, hybrid loss printed |
 | `dhb_ti_time_invariant.py` | Progress totals (trans/angular/hybrid), resampled shapes, DHB-TI (DR/QR) invariant shapes |
-| `primitive_program.py` | Approach, grasp, lift, release, and retreat with explicit checks and recovery |
-| `benchmark_primitive_portfolio.py` | 20-trial matched direct-versus-detour sampled-TCP gate benchmark |
-| `plot_primitive_benchmark.py` | JSON-to-SVG/PNG dashboard for primitive benchmark review |
 
 ## Prerequisites
 
@@ -89,66 +86,6 @@ motion itself evolves.
 python3 examples/basic_encoding.py
 ```
 **Expected output:** Encoded invariants shape `(52, 4)` (for N=50 with padding), decoded positions/quaternions shapes `(50, 3)` and `(50, 4)`.
-
----
-
-## primitive_program.py — Manipulation sequence with explicit checks and recovery
-
-**What it does:** Builds a typed approach → grasp → lift → release → retreat
-program. Minimum-jerk paths are synchronized with measured preshape,
-close-until-contact, hold, and supported-release conditions. Synthetic feedback
-drives the deterministic executive to a terminal success state.
-
-**Evidence boundary:** This validates contract and control-flow composition. It
-does not run a simulator or robot and does not establish physical task success.
-
-**Run:**
-```bash
-pixi run primitive-example
-```
-
-**Expected output:** A trace of active nodes and typed motion/gripper commands,
-ending with `status=succeeded`.
-
----
-
-## benchmark_primitive_portfolio.py — Matched source and gate accounting
-
-**What it does:** Runs 20 repeated requests through direct minimum jerk and a
-shared-waypoint detour. Both sources face the same epoch, endpoint, and
-sampled-TCP sphere gates.
-
-**Evidence boundary:** The benchmark validates candidate generation and common
-gate behavior. Sampled TCP spheres are not link-level or swept-volume collision
-certification, and no manipulation task is executed.
-
-**Run:**
-```bash
-pixi run primitive-benchmark \
-  --output artifacts/primitive-portfolio.json \
-  --figure artifacts/primitive-portfolio.svg
-```
-
-**Expected output:** Direct minimum jerk is rejected on all 20 trials and the
-detour is accepted on all 20, with machine-dependent generation latency.
-The optional report and figure are suitable for CI artifacts; the JSON remains
-the source of truth and the image is derived from it.
-
----
-
-## plot_primitive_benchmark.py — Benchmark dashboard
-
-**What it does:** Reads a saved portfolio, endpoint-retarget, or relational
-retarget JSON report and renders matched acceptance rates plus latency. When a
-report contains representative paths, it also shows top-down path geometry.
-
-**Run:**
-
-```bash
-PYTHONPATH=src pixi run python examples/plot_primitive_benchmark.py \
-  artifacts/primitive-portfolio.json \
-  --output artifacts/primitive-portfolio.png
-```
 
 ---
 

@@ -1,5 +1,11 @@
 # Primitive programs
 
+!!! warning "Development preview"
+
+    This subsystem has software and isolated component tests, but it has not
+    been validated as a simulator or robot manipulation system. It is documented
+    separately from the validated release highlights, and its APIs may change.
+
 DHB-XR primitive programs bind reusable SE(3) geometry to official
 end-effector actions, evidence, observation epochs, and explicit execution
 checks. The module is intentionally dependency-light: analytic generation and
@@ -159,8 +165,8 @@ unapproved proposal; it cannot approve safety or task success.
 
 ## Demonstration segmentation
 
-`exact_gripper_run_control_indices` reproduces the p5570 scalar change-point
-baseline. `hysteretic_gripper_control_indices` avoids creating a segment at
+`exact_gripper_run_control_indices` reproduces a sample-exact scalar
+change-point baseline. `hysteretic_gripper_control_indices` avoids creating a segment at
 every value in a continuous gripper ramp. `propose_primitive_boundaries` can
 also add contact transitions and object-motion onset.
 
@@ -295,8 +301,8 @@ measured coverage gap or improves evidence.
 
 ## Recommended validation order
 
-1. Compare wrist-only, sample-synchronous scalar gripper, exact p5570
-   segmentation, and event-driven primitive programs.
+1. Compare wrist-only, sample-synchronous scalar gripper, sample-exact
+   change-point segmentation, and event-driven primitive programs.
 2. Hold tasks, seeds, observation information, controller, feasibility gates,
    and compute accounting fixed.
 3. Compare direct minimum jerk, analytic portfolio, rigid replay, DHB retarget,

@@ -19,7 +19,7 @@ class BoundaryProposal:
 
 
 def exact_gripper_run_control_indices(commands: np.ndarray) -> tuple[int, ...]:
-    """Reproduce the scalar change-point baseline used by the p5570 prototype."""
+    """Reproduce the sample-exact scalar gripper change-point baseline."""
 
     values = _commands(commands)
     indices = [0]

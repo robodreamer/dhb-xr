@@ -3,13 +3,13 @@
 **Teach the motion once. Reuse it across coordinate frames.**
 
 DHB-XR separates how a robot tool moves from where that motion was recorded.
-Use the same 6-DoF representation to adapt trajectories, search motion memory,
-compare motion generators, tokenize actions for VLA models, and build reusable
-manipulation skills.
+Use the same 6-DoF representation to encode and reconstruct trajectories,
+adapt endpoints, search motion data, and prepare frame-independent inputs for
+action tokenization.
 
 <picture>
   <source media="(max-width: 700px)" srcset="assets/dhb-xr-hero-mobile.svg">
-  <img src="assets/dhb-xr-hero.svg" alt="DHB-XR package overview: the same motion in two world frames becomes one reusable representation for retargeting, retrieval, VLA tokenization, and reliable multi-step behavior.">
+  <img src="assets/dhb-xr-hero.svg" alt="DHB-XR package overview: the same motion in two world frames becomes one reusable representation for retargeting, retrieval, VLA tokenization, and encoding or decoding.">
 </picture>
 
 *The numbers in this package overview come from the runnable
@@ -25,9 +25,9 @@ robot task success.*
 | Reuse a demonstrated motion | Translate or rotate the coordinate frame without changing the underlying motion representation |
 | Adapt instead of starting over | Retarget a motion to new starts, goals, and object relationships |
 | Find related motions | Search by motion shape rather than absolute world position |
-| Keep a complete reusable skill | Store motion with object relationships, gripper/tool actions, where it came from, and how it has been tested |
-| Run multi-step behavior reliably | Require fresh observations and measured feedback; retry or stop within explicit limits |
-| Compare methods consistently | Check analytic, DHB, optimization, raw-pose, and learned proposals using the same criteria |
+| Reconstruct a trajectory | Decode the representation from a declared starting pose |
+| Reduce timing sensitivity | Reparameterize motion by geometric progress with DHB-TI |
+| Prepare VLA action inputs | Feed invariant sequences to tested continuous or discrete token interfaces |
 
 ```mermaid
 flowchart LR
@@ -35,32 +35,30 @@ flowchart LR
     B --> C[Decode or retarget]
     B --> D[Search motion memory]
     B --> E[Tokenize for VLA]
-    B --> F[Reusable skill capsule]
-    F --> G[Motion + gripper/tool steps]
-    G --> H[Check scene, feedback, and retry limits]
-    H --> I[Simulator or robot adapter]
 ```
 
 The NumPy core covers DHB-DR/DHB-QR encoding and decoding. Optional layers add
 FATROP retargeting, fixed-horizon CusADi GPU decode, motion databases,
-tokenizers, and manipulation programs. The final simulator or robot adapter
-remains responsible for IK, collision checking, control, and physical safety.
+and tokenizers. The final simulator or robot adapter remains responsible for
+IK, collision checking, control, and physical safety.
 
-## New in 0.5.0
+## Validated in 0.5.0
 
-- **Reusable skill capsules:** keep the original observation, motion in the
-  object's initial frame, interaction events, actions, source dataset or file,
-  usage license, and test history together. DHB descriptors remain rebuildable
-  indexes rather than the only copy of the motion.
-- **Motion programs with explicit checks and recovery:** combine motion and
-  gripper/tool steps with preconditions, measured feedback, bounded retries,
-  and reobservation when scene information changes.
-- **More credible comparisons:** evaluate analytic, DHB, optimization, learned,
-  and strong raw-pose baselines using the same endpoint, relation, epoch, and
-  payload-clearance checks.
-- **Faster, lighter integration:** reuse a compiled relational FATROP solve
-  surface across requests and import primitive contracts without eagerly
-  loading plotting or solver stacks.
+- **Reproducible frame-invariance check:** one controlled fixture moves every
+  pose by the same 65° rotation and translation. Start-relative positions agree
+  within `1.5e-16 m`, and all DHB channels remain below the declared `1e-12`
+  numerical tolerance.
+- **Clear relative-action baseline:** the technical figure now shows that a
+  correctly constructed initial-frame pose chunk is already frame-invariant;
+  DHB-XR does not claim otherwise.
+- **Release automation:** merge-triggered publishing validates synchronized
+  version metadata, builds retained distributions, uses trusted PyPI
+  publishing, and creates the GitHub release only after publication succeeds.
+
+Experimental primitive programs, skill capsules, and representation-isolation
+benchmarks are kept in [development notes](development_notes.md). Their software
+tests do not establish simulator or robot task performance, so they are not
+release highlights.
 
 ## Research Background
 
@@ -80,9 +78,6 @@ on SE(3)"**.
 - **CusADi GPU decode**: Optional fixed-horizon decode libraries for `50`, `80`, `100`, `150`, and `200` samples
 - **Tokenization**: VQ-VAE / RVQ for DHB-Token (VLA action representation)
 - **Motion database**: Storage, similarity (L2, DTW), and retrieval
-- **Primitive programs**: Analytic, DHB-memory, OCP, and learned motion proposals
-  with portable gripper/tool actions, evidence, explicit checks and recovery,
-  and revalidation when scene observations change
 - **Imitation learning**: Invariant matching, SE(3) geodesic, and hybrid losses
 - **Robust encoding**: Handles reversals, zero-motion segments, and frame alignment issues
 
@@ -154,10 +149,11 @@ and [Qwen-VLA](https://arxiv.org/abs/2605.30280).
 | Initial-frame relative chunk | Removes the global starting pose and keeps the chunk stable under a shared SE(3) transform |
 | **DHB-XR motion layer** | Keeps that frame independence while adding a geometric motion signature that can be decoded, retargeted, retrieved, time-normalized, or tokenized |
 
-This is a broader systems interface, not a claim that DHB-XR is *more
-frame-invariant* than a correctly constructed relative-pose chunk. Its proposed
-VLA advantage is that the predicted motion can flow through the same tested
-tools for adaptation, memory, action-token streaming, and execution checks.
+The release validates the representation-level frame stability shown above and
+the package's software interfaces. It does not yet establish that a DHB action
+head improves learned-policy success or data efficiency over a relative-pose
+action head; that hypothesis remains in the
+[development notes](development_notes.md#vla-evaluation-hypothesis).
 
 DHB-XR integrates with Vision-Language-Action benchmarks:
 
@@ -168,9 +164,8 @@ See [VLA Integration Guide](integration/vla_integration.md) for setup and usage.
 
 ## API Reference
 
-See the [primitive-program guide](primitive_programs.md) and [API
-reference](api/index.md) for core encoding, decoding, optimization, database,
-typed manipulation primitives, tokenization, losses, and visualization modules.
+See the [API reference](api/index.md) for validated core encoding, decoding,
+optimization, database, tokenization, losses, and visualization modules.
 
 ## License
 

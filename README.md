@@ -12,9 +12,6 @@ This library implements the double-reflection (DHB-DR) and quaternion-relative (
 - **GPU acceleration**: PyTorch batched operations and optional Cusadi for large-scale optimization
 - **VLA support**: VQ-VAE/RVQ tokenization for streaming action representation
 - **Motion database**: Similarity search, DTW alignment, and retrieval
-- **Primitive programs**: Analytic, OCP, DHB-memory, and learned candidates with
-  built-in gripper/tool actions, evidence, explicit checks and bounded recovery,
-  and revalidation when scene observations change
 - **Imitation learning**: Invariant-space and geodesic losses
 
 ## Installation
@@ -164,14 +161,11 @@ This creates a local copy you can modify and experiment with.
 
 The examples package includes:
 - **Frame-invariance overview**: One transformed 6-DoF trajectory, matching DHB
-  signatures, and a publication-style four-panel SVG
+  signatures, and a three-panel technical SVG
 - **Core examples**: Basic encoding/decoding, trajectory adaptation, DHB-DR vs QR
 - **Advanced examples**: GPU batch optimization, VLA tokenization, motion databases
 - **VLA integration**: Full LIBERO simulation, perturbation robustness demos
 - **Research examples**: Imitation learning losses, time-invariant reparameterization
-- **Primitive example**: Approach, grasp, lift, release, and retreat with
-  explicit checks and recovery
-- **Portfolio benchmark**: Matched analytic candidates under identical gates
 - **Tutorial notebooks**: Interactive Jupyter notebooks in the source repository
 
 ## Quick start
@@ -223,20 +217,13 @@ out = encode_dhb_dr_ti(positions, quaternions, M=30, progress_kind="hybrid", alp
 
 See `examples/dhb_ti_time_invariant.py`.
 
-### Manipulation primitives with explicit checks
+### Development preview
 
-Use `dhb_xr.primitives` to bind SE(3) paths to official end-effector actions,
-observation guards, evidence, and bounded transitions. See the [primitive
-program guide](docs/primitive_programs.md) and run:
-
-```bash
-pixi run primitive-example
-pixi run primitive-validation
-```
-
-The validation task writes an auditable JSON report and an SVG dashboard under
-`artifacts/`. See the [release-validation guide](docs/release_validation.md) for
-what those results do—and do not—demonstrate.
+Primitive programs, skill capsules, and matched representation-isolation
+benchmarks are under active development. They have software and component-level
+tests but no release-level simulator or robot task evidence. See the
+[development notes](docs/development_notes.md) for their current scope and
+validation boundary.
 
 ## Documentation
 

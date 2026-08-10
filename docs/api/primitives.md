@@ -5,12 +5,12 @@ importing contracts or the executor does not import CasADi, Rockit, CUDA,
 FAISS, or plotting. Names listed here are exported from
 `dhb_xr.primitives.__all__`.
 
-!!! info "Release maturity"
+!!! warning "Development-preview maturity"
 
-    The primitive namespace is additive, but new for the next minor release.
-    Treat it as a provisional public API for one release cycle: typed contracts
-    and serialized field names should remain compatible, while source and gate
-    implementations may gain optional configuration fields.
+    This namespace has software and isolated component coverage, not simulator
+    or robot task validation. Treat it as a provisional API: typed contracts and
+    serialized field names should remain compatible, while source and gate
+    implementations may change before promotion into validated release features.
 
 !!! info "Source history (provenance)"
 

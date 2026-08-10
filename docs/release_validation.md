@@ -1,4 +1,11 @@
-# Release validation
+# Experimental feature validation notes
+
+!!! warning "Not release-facing evidence"
+
+    This page tracks development-preview primitives and representation
+    experiments. Its unit tests and isolated fixtures do not establish simulator
+    or robot task performance and are intentionally excluded from the validated
+    release highlights.
 
 This page separates software correctness, component behavior, representation
 value, and physical-task evidence. Passing a lower layer is required but does
@@ -17,10 +24,9 @@ not imply a higher one.
 | Lazy package exports | Keeps contract/executor imports free of plotting and solver stacks. | Import-isolation tests. | Clear integration value for lightweight consumers and deployment processes. |
 | Dense oriented-payload gate | Screens orientation-dependent payload/fixture interference. | Scalar/vector parity and benchmark coverage. | Better than TCP-only clearance, but still excludes robot links, swept continuous time, and dynamics. |
 
-The additive namespace and breadth of the feature set justify the `0.5.0`
-minor release rather than a patch. Package metadata, `dhb_xr.__version__`,
-MkDocs metadata, and the changelog release heading must agree before creating
-the matching `v0.5.0` tag.
+These items remain development previews until the evidence required by their
+claim level is available. Package metadata validation is independent of their
+promotion status.
 
 ## Evidence ladder
 

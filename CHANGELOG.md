@@ -16,12 +16,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - VLA guidance that positions initial-frame relative actions as the strong
   baseline, then distinguishes DHB-XR through reusable motion geometry,
   retargeting, retrieval, time normalization, and action-token interfaces.
-- Object-centric, source-traceable skill capsules that retain raw world motion,
-  TCP-in-object motion, sparse relations, end-effector actions, source dataset,
-  revision, license, and reproducible multiscale DHB descriptor indexes.
 - Merge-triggered, trusted PyPI publishing with synchronized release-metadata
   validation, immutable tag checks, separately retained build artifacts, and a
   GitHub release created only after publication succeeds.
+
+### Development preview
+
+The following additions have software or isolated component coverage but are
+not validated simulator or robot capabilities. They are documented separately
+from the release highlights.
+
+- Object-centric, source-traceable skill capsules that retain raw world motion,
+  TCP-in-object motion, sparse relations, end-effector actions, source dataset,
+  revision, license, and reproducible multiscale DHB descriptor indexes.
 - Typed intermediate relational-pose anchors, a common anchor gate, persistent
   matched FATROP regularizers, and a strong piecewise raw-SE(3) anchor control
   for representation-isolation experiments.
@@ -34,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Minimum-jerk, affordance-normal, arc, screw, and shared-waypoint analytic paths.
 - Deterministic primitive-program execution with bounded retries, reobservation,
   stale-epoch cancellation, and concise typed commands.
-- Evidence-preserving primitive memory, p5570-compatible and hysteretic gripper
+- Evidence-preserving primitive memory, sample-exact and hysteretic gripper
   segmentation, shared transition-waypoint utilities, and adapters for DHB/OCP
   and learned candidate sources.
 - Canonical demonstration-trace ingestion that preserves dataset, license,
@@ -47,22 +54,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and JSON-derived PNG/SVG dashboards for isolated primitive benchmarks.
 
 ### Changed
+- CuSADi batch decoding now keeps the translational DHB frame independent from
+  tool orientation and accepts explicit per-trajectory initial linear frames.
+
+### Development-preview changes
+
 - Persistent relational FATROP now transcribes a reusable CasADi solve
   function once, so steady-state requests avoid repeated Rockit value,
   initialization, and solve-surface setup. The dense oriented-payload SAT gate
   is vectorized across path samples and fixtures with scalar parity coverage.
-- CuSADi batch decoding now keeps the translational DHB frame independent from
-  tool orientation and accepts explicit per-trajectory initial linear frames.
 - Package and primitive exports are lazy, so contract/executor integrations do
   not import SciPy, plotting, or native solver dependencies at startup.
 - Backend results that explicitly report `success=False` now fail closed
   instead of being promoted into gateable primitive candidates.
 
 ### Fixed
-- Isolated retarget benchmark reports now serialize NumPy-valued nested gate
-  metrics instead of failing after all trials have completed.
 - Restored missing type imports in the Torch decoder and DHB-TI annotations,
   and made hierarchical residual initialization explicit.
+
+### Development-preview fixes
+
+- Isolated retarget benchmark reports now serialize NumPy-valued nested gate
+  metrics instead of failing after all trials have completed.
 
 ## [0.4.1] - 2026-05-27
 
