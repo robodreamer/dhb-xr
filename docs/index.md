@@ -9,7 +9,7 @@ manipulation skills.
 
 <picture>
   <source media="(max-width: 700px)" srcset="assets/dhb-xr-hero-mobile.svg">
-  <img src="assets/dhb-xr-hero.svg" alt="DHB-XR package overview: the same motion in two world frames becomes one reusable representation for retargeting, retrieval, composition, and reliable multi-step behavior.">
+  <img src="assets/dhb-xr-hero.svg" alt="DHB-XR package overview: the same motion in two world frames becomes one reusable representation for retargeting, retrieval, VLA tokenization, and reliable multi-step behavior.">
 </picture>
 
 *The numbers in this package overview come from the runnable
@@ -138,7 +138,28 @@ See [Examples](examples_walkthrough.md) for a walkthrough of the example scripts
 
 ## VLA Integration
 
-DHB-XR integrates with Vision-Language-Action (VLA) benchmarks:
+**Relative actions are the right starting point. DHB-XR turns them into reusable
+motion.**
+
+Representing a future pose chunk relative to its initial end-effector frame is
+already a strong VLA design: a shared rotation or translation of the world does
+not change that relative chunk. This direction appears in the
+[UMI policy interface](https://arxiv.org/abs/2402.10329), a
+[NeurIPS 2025 study of relative trajectory actions](https://papers.nips.cc/paper_files/paper/2025/hash/8756b018fb31576a8cdbb8bcb14ec7be-Abstract-Conference.html),
+and [Qwen-VLA](https://arxiv.org/abs/2605.30280).
+
+| Representation layer | What it provides |
+| --- | --- |
+| World-frame pose chunk | Direct targets, but the numbers change when the world frame changes |
+| Initial-frame relative chunk | Removes the global starting pose and keeps the chunk stable under a shared SE(3) transform |
+| **DHB-XR motion layer** | Keeps that frame independence while adding a geometric motion signature that can be decoded, retargeted, retrieved, time-normalized, or tokenized |
+
+This is a broader systems interface, not a claim that DHB-XR is *more
+frame-invariant* than a correctly constructed relative-pose chunk. Its proposed
+VLA advantage is that the predicted motion can flow through the same tested
+tools for adaptation, memory, action-token streaming, and execution checks.
+
+DHB-XR integrates with Vision-Language-Action benchmarks:
 
 - **LIBERO**: Load trajectories, encode to DHB invariants, run in simulation
 - **RoboCASA**: HDF5 dataset support with motion retrieval

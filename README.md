@@ -376,15 +376,21 @@ print(f"Solved in {result['solve_time']*1000:.1f} ms")
 
 DHB-XR includes adapters for loading trajectory data from popular VLA benchmarks, with full support for **LIBERO-PRO** — the extended LIBERO benchmark that tests policy robustness under spatial, object, semantic, task, and environment perturbations.
 
-**Why DHB-XR for VLA:** Current VLA models (RT-2, Octo, OpenVLA) map (vision + language) → actions, but struggle when the scene layout changes. DHB-XR provides a **structured trajectory representation** that decouples *motion shape* from *spatial context*:
+**Why DHB-XR for VLA:** Initial-frame relative action chunks are already a
+strong way to remove the global starting pose. DHB-XR builds on that idea with a
+structured motion representation that can be decoded, retargeted, retrieved,
+time-normalized, and passed through continuous or discrete VLA action heads.
 
-| Without DHB-XR | With DHB-XR |
-|---------------|-------------|
-| Retrain or add data augmentation | Re-decode from new pose (~5-10ms decode, <1s Fatrop) |
-| Actions tied to absolute positions | Invariants are SE(3)-invariant by construction |
-| 100s of demos per spatial arrangement | **1 demo + DHB adaptation covers spatial variations** |
+| Representation | Role |
+|---------------|------|
+| World-frame poses | Direct targets whose values change with the world frame |
+| Initial-frame relative poses | A strong invariant action baseline |
+| DHB-XR | Frame-independent motion geometry plus package tools for reuse |
 
-When LIBERO-PRO perturbs object positions or swaps objects, DHB can adapt the demonstration trajectory to the new configuration while perfectly preserving the original motion geometry (0.000 mm shape error).
+This is a package-capability claim, not evidence that DHB-XR outperforms a
+relative-action VLA. See the
+[VLA Integration Guide](docs/integration/vla_integration.md#relative-action-chunks-are-already-a-strong-baseline)
+for the comparison, research context, and current validation boundary.
 
 ### Quick Start: DHB Encoding Only
 

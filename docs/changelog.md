@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A package-style overview plus a minimal frame-invariance example whose
   technical figure shows changed world coordinates, overlapping initial-frame
   geometry, and DHB residuals below a declared numerical tolerance.
+- VLA guidance that positions initial-frame relative actions as the strong
+  baseline, then distinguishes DHB-XR through reusable motion geometry,
+  retargeting, retrieval, time normalization, and action-token interfaces.
 - Object-centric, source-traceable skill capsules that retain raw world motion,
   TCP-in-object motion, sparse relations, end-effector actions, source dataset,
   revision, license, and reproducible multiscale DHB descriptor indexes.

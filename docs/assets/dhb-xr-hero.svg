@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1440" height="760" viewBox="0 0 1440 760" role="img" aria-labelledby="title desc">
   <title id="title">DHB-XR turns motion in different world frames into one reusable representation</title>
-  <desc id="desc">A package overview showing the same robot-tool path in two coordinate frames, DHB-XR encoding relative to the starting frame, an overlapping canonical path, and four uses: retarget, retrieve, compose, and run reliably.</desc>
+  <desc id="desc">A package overview showing the same robot-tool path in two coordinate frames, DHB-XR encoding relative to the starting frame, an overlapping canonical path, and four uses: retarget, retrieve, tokenize for VLA, and run reliably.</desc>
   <defs>
     <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#155eef"/>
@@ -126,9 +126,9 @@
   <text x="418" y="606" class="rail-body">not where it was recorded.</text>
 
   <circle cx="760" cy="546" r="17" fill="#fff3e8"/><path d="M751 541 h18 v12 h-18 z M756 536 h8" fill="none" stroke="#d55f0a" stroke-width="2.3"/>
-  <text x="788" y="552" class="rail-title">Compose</text>
-  <text x="756" y="585" class="rail-body">Combine motion with gripper,</text>
-  <text x="756" y="606" class="rail-body">tool, and interaction steps.</text>
+  <text x="788" y="552" class="rail-title">Tokenize for VLA</text>
+  <text x="756" y="585" class="rail-body">Predict invariant motion chunks;</text>
+  <text x="756" y="606" class="rail-body">decode them into anchored poses.</text>
 
   <circle cx="1098" cy="546" r="17" fill="#f1edff"/><path d="M1090 546 l6 6 l11-14" fill="none" stroke="#6941c6" stroke-width="2.8"/>
   <text x="1126" y="552" class="rail-title">Run reliably</text>

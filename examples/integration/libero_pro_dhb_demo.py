@@ -18,20 +18,14 @@ adapted trajectory that preserves the original motion's geometry.
 
 Implications for VLA (Vision-Language-Action) Systems
 -----------------------------------------------------
-DHB-XR addresses a core VLA challenge: spatial generalization.
+Initial-frame relative action chunks already remove one shared global SE(3)
+transform and are a strong VLA baseline. DHB-XR builds on the same geometric
+premise with a representation that can also be retargeted, retrieved,
+time-normalized, tokenized, and routed through checked execution utilities.
 
-Current VLA models learn (vision + language) → actions, but struggle when objects
-move or the scene layout changes. DHB-XR provides a structured trajectory
-representation layer that decouples *motion shape* from *spatial context*:
-
-  - **Data efficiency**: Instead of collecting 1000s of demos across different
-    spatial arrangements, collect a few demos and use DHB to analytically generate
-    the spatial variations.
-  - **Robustness**: SE(3)-invariant encoding is immune to spatial perturbations by
-    construction — no data augmentation needed for translation/rotation changes.
-  - **Speed**: Fatrop solver adapts in ~7ms, enabling real-time replanning (100+ Hz).
-  - **Few-shot transfer**: 1 demo → encode to invariants → adapt to any new
-    start/goal pose without retraining.
+This script verifies representation invariance and solver behavior; it does not
+train a VLA or establish task-success or data-efficiency gains over a relative
+action policy.
 
 See also: libero_swap_demo.py for a direct comparison of naive replay vs
 DHB-adapted trajectory under spatial swap perturbation.

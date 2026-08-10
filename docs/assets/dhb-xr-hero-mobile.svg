@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="720" height="1600" viewBox="0 0 360 800" role="img" aria-labelledby="title desc">
   <title id="title">DHB-XR mobile package overview</title>
-  <desc id="desc">The same motion in two world frames becomes one reusable representation for retargeting, retrieval, composition, and reliable multi-step behavior.</desc>
+  <desc id="desc">The same motion in two world frames becomes one reusable representation for retargeting, retrieval, VLA tokenization, and reliable multi-step behavior.</desc>
   <defs>
     <linearGradient id="brand-mobile" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#155eef"/>
@@ -77,7 +77,7 @@
   <rect x="186" y="627" width="158" height="42" rx="10" fill="#ffffff" stroke="#dbe4f0"/>
   <text x="200" y="653" class="card-title" fill="#16865c">⌕ Retrieve</text>
   <rect x="16" y="678" width="158" height="42" rx="10" fill="#ffffff" stroke="#dbe4f0"/>
-  <text x="30" y="704" class="card-title" fill="#d55f0a">□ Compose</text>
+  <text x="30" y="704" class="card-title" fill="#d55f0a">□ Tokenize for VLA</text>
   <rect x="186" y="678" width="158" height="42" rx="10" fill="#ffffff" stroke="#dbe4f0"/>
   <text x="200" y="704" class="card-title" fill="#6941c6">✓ Run reliably</text>
 

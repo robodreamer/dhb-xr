@@ -182,14 +182,15 @@ def plot_overview(
         linestyle="--",
     )
     _draw_frame(local_ax, np.zeros(3), np.eye(3))
-    local_ax.set_title("b  Initial-frame geometry overlaps", loc="left", fontweight="bold")
+    local_ax.set_title("b  Start-relative path also overlaps", loc="left", fontweight="bold")
     local_ax.set_xlabel("local x (m)")
     local_ax.set_ylabel("local y (m)")
     local_ax.set_zlabel("local z (m)")
     local_ax.legend(fontsize=8, loc="upper left")
     local_ax.text2D(
         0.03,
-        0.84,
+        0.69,
+        "relative-action baseline\n"
         f"max Δ = {metrics['initial_frame_position_max_delta_m']:.1e} m",
         transform=local_ax.transAxes,
         fontsize=9,

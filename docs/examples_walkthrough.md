@@ -50,7 +50,8 @@ documentation home page.
 **What to look for:**
 
 - The paths have different world coordinates.
-- Expressing each path relative to its own first pose makes the geometry overlap.
+- Expressing each path relative to its own first pose—the common relative-action
+  baseline—makes the geometry overlap.
 - All eight DHB-DR channels overlap to floating-point precision.
 
 ![Technical frame-invariance check: two world-frame paths, overlapping
@@ -490,19 +491,30 @@ pixi run python examples/integration/libero_pro_dhb_demo.py --batch
 - Comparison image: `/tmp/dhb_pro_simulation_comparison.png`
 - Invariant comparison: `/tmp/dhb_pro_invariant_comparison.png`
 
-**Key insight:** When LIBERO-PRO perturbs the scene (swaps objects, replaces objects, changes environment), a traditional replay-based approach fails because the actions are tied to specific spatial coordinates. DHB encodes the motion shape in a coordinate-free representation, enabling re-decoding from any new starting pose. This is the foundation for perturbation-robust VLA policies.
+**Key insight:** Unchanged world-frame replay remains tied to the recorded
+coordinates. DHB encodes motion geometry separately from its world-frame anchor,
+so the package can re-decode or retarget it from a new pose. A correctly
+constructed initial-frame relative action chunk also removes the shared world
+transform and is the appropriate VLA baseline for future policy comparisons.
 
 ---
 
 ### libero_swap_demo.py — DHB-XR vs Naive Replay under Spatial Swap
 
-**What it does:** The most compelling demo — directly compares naive replay vs DHB-adapted trajectory when LIBERO-PRO swaps object positions (~17cm shift). Shows that naive replay reaches for the **old** target position while DHB-adapted trajectory correctly targets the **new** position.
+**What it does:** Compares unchanged replay with a solver-adapted trajectory
+when LIBERO-PRO swaps object positions by about 17 cm. It measures whether the
+end effector remains near the old target or moves closer to the new one.
 
-**Why this matters for VLA:** Current VLA policies (vision + language → actions) fail under spatial perturbations because actions are tied to absolute positions. DHB-XR decouples motion shape from spatial context, enabling adaptation to new object positions without retraining:
+**Why this matters for VLA:** It isolates the limitation of world-frame replay
+and demonstrates the package's geometric adaptation path. It does **not** compare
+against a learned VLA or an initial-frame relative-action policy:
 
-- 1 demo → encode invariants → adapt to any spatial configuration (SE(3) decode, ~5-10ms)
-- Data augmentation for spatial variations becomes unnecessary
-- The same invariants work regardless of where objects are placed
+- Shared rigid frame changes leave both initial-frame relative actions and DHB
+  invariants unchanged.
+- DHB-XR additionally routes the representation through retargeting, retrieval,
+  time normalization, tokenization, and checked execution tools.
+- Whether that broader interface improves VLA task success or data efficiency
+  requires a matched learned-policy evaluation.
 
 **Run:**
 ```bash

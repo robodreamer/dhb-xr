@@ -12,22 +12,15 @@ Vision-Language-Action (VLA) systems:
 
 VLA Relevance
 -------------
-Current VLA models (RT-2, Octo, OpenVLA) learn a mapping from (vision + language)
-to actions. When the scene changes, they either fail or require massive data
-augmentation. DHB-XR turns this generalization problem from a *learning* problem
-into a *geometry* problem:
+This fixture isolates unchanged world-frame replay from solver-based geometric
+adaptation. Initial-frame relative action chunks are already invariant to one
+shared rigid world transform and are the correct baseline for a learned VLA.
+DHB-XR adds a reusable motion layer around that same principle: invariant motion
+geometry can flow through retargeting, retrieval, tokenization, and checked
+execution utilities.
 
-  Traditional VLA:  Vision → Policy → Actions (tied to absolute positions)
-  With DHB-XR:      Vision → Object Pose → DHB Adaptation → Actions
-                                            (same motion shape, new target)
-
-Key advantages for VLA:
-  - **Data efficiency**: 1 demo + DHB adaptation covers spatial variations that
-    would otherwise require 100s of demonstrations
-  - **Robustness**: SE(3)-invariant encoding is immune to spatial perturbations
-  - **Speed**: Fatrop solver adapts trajectory in ~7ms (100+ Hz replanning)
-  - **Composability**: DHB invariants can augment any VLA policy as a trajectory
-    representation layer
+The script does not train or evaluate a VLA, so its endpoint result must not be
+read as evidence of better policy success or data efficiency.
 
 Results from this demo:
   - Naive replay: EE ends 5.2cm from OLD plate, 11.1cm from NEW plate
