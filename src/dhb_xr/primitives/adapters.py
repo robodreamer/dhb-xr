@@ -53,6 +53,10 @@ def candidate_from_backend_result(
 ) -> PrimitiveCandidate:
     """Bind backend geometry to the request's interaction and authority context."""
 
+    if "success" in result and not bool(result["success"]):
+        raise PrimitiveContractError(
+            f"backend source {source_id!r} reported success=False; refusing candidate promotion"
+        )
     primitive_id = request.primitive_id if rank is None else f"{request.primitive_id}:rank-{rank}"
     backend_metadata = {
         key: value

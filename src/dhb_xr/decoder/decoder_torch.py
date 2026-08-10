@@ -11,7 +11,7 @@ if torch is not None:
 
     import numpy as np
     from dhb_xr.decoder.dhb_dr import decode_dhb_dr
-    from dhb_xr.core.types import DHBMethod
+    from dhb_xr.core.types import DHBMethod, EncodingMethod
 
     class DHBDecoderTorch(nn.Module):
         """

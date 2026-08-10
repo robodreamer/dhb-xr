@@ -139,6 +139,20 @@ def test_ocp_source_uses_same_candidate_contract():
     assert candidate.motion.duration_s == 1.5
 
 
+def test_backend_explicit_failure_is_not_promoted_to_candidate():
+    failed = _result()
+    failed["success"] = False
+    source = BackendPrimitiveSource(
+        "ocp:failed",
+        PrimitiveFamily.CONSTRAINED_OCP,
+        EVIDENCE,
+        backend=lambda request: failed,
+    )
+
+    with pytest.raises(PrimitiveContractError, match="success=False"):
+        source.propose(_request())
+
+
 def test_dhb_retarget_source_rejects_malformed_reference_before_backend_call():
     with pytest.raises(PrimitiveContractError, match="reference_quaternions_wxyz"):
         DHBRetargetSource(

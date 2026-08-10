@@ -13,23 +13,21 @@ validation do not require CasADi, CUDA, FAISS, a simulator, or a robot driver.
 
 ## Architecture
 
-```text
-grounded interaction intent
-        |
-        v
-candidate source
- analytic | OCP | DHB memory | learned flow/diffusion
-        |
-        v
-PrimitiveCandidate
- SE(3) motion + end-effector actions + guards + provenance
-        |
-        v
-external safety / feasibility gates
-        |
-        v
-PrimitiveProgramExecutor
- bounded commands, observations, transitions, recovery, or stop
+```mermaid
+flowchart TD
+    A[Grounded interaction intent] --> B{Candidate sources}
+    B --> B1[Analytic]
+    B --> B2[OCP / FATROP]
+    B --> B3[DHB memory]
+    B --> B4[Flow / diffusion]
+    B1 --> C[PrimitiveCandidate]
+    B2 --> C
+    B3 --> C
+    B4 --> C
+    C --> D[Common external feasibility gates]
+    D --> E[PrimitiveProgramExecutor]
+    E --> F[Motion and end-effector commands]
+    E --> G[Reobserve / recover / stop]
 ```
 
 DHB invariants continue to represent geometry. Gripper/contact semantics are
@@ -193,12 +191,16 @@ does not certify continuous time, robot links, or contact dynamics.
 Run the 20-trial component benchmark:
 
 ```bash
-pixi run primitive-benchmark
+pixi run primitive-benchmark \
+  --output artifacts/primitive-portfolio.json \
+  --figure artifacts/primitive-portfolio.svg
 ```
 
 The deterministic setup places a sphere on the direct route. Minimum jerk is a
 negative control and is rejected; a shared-waypoint detour is accepted. This
 checks common proposal/gate accounting, not manipulation-task success.
+The JSON report is authoritative; the SVG visualizes representative geometry,
+all-gate acceptance, and generation latency from the same report.
 
 The exploratory retarget-isolation screen adds a strong non-DHB reuse control:
 `EndpointCorrectedReferenceSource` applies smooth Cartesian and quaternion
@@ -207,7 +209,9 @@ control, direct minimum jerk, and DHB retargeting on an asymmetric payload
 passing through wide-short and narrow-tall apertures:
 
 ```bash
-pixi run -e cuda retarget-isolation --trials 20
+pixi run -e cuda retarget-isolation --trials 20 \
+  --output artifacts/retarget-isolation.json \
+  --figure artifacts/retarget-isolation.svg
 ```
 
 The reference is oracle-selected and synthetic. This screen is designed to
@@ -235,7 +239,9 @@ direct minimum jerk is insufficient.
 
 ```bash
 pixi run -e fatrop relational-retarget \
-  --hard-trials 60 --easy-trials 20 --output result.json
+  --hard-trials 60 --easy-trials 20 \
+  --output artifacts/relational-retarget.json \
+  --figure artifacts/relational-retarget.svg
 ```
 
 The current FATROP graph optimizes the linear DHB state. Intermediate
@@ -296,3 +302,6 @@ measured coverage gap or improves evidence.
 The decisive DHB claim is bounded: retained full-SE(3) geometry should provide
 unique value on declared nontrivial transfer cases. Open-space motion where
 minimum jerk is sufficient remains a necessary negative control.
+
+See [release validation](release_validation.md) for the value assessment,
+claim-to-benchmark matrix, artifact format, and release gates.

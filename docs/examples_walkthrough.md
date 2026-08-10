@@ -18,6 +18,7 @@ Core example scripts were run from the repo root with `PYTHONPATH=src python3 ex
 | `dhb_ti_time_invariant.py` | Progress totals (trans/angular/hybrid), resampled shapes, DHB-TI (DR/QR) invariant shapes |
 | `primitive_program.py` | Guarded approach, grasp, lift, release, and retreat architecture trace |
 | `benchmark_primitive_portfolio.py` | 20-trial matched direct-versus-detour sampled-TCP gate benchmark |
+| `plot_primitive_benchmark.py` | JSON-to-SVG/PNG dashboard for primitive benchmark review |
 
 ## Prerequisites
 
@@ -86,11 +87,31 @@ certification, and no manipulation task is executed.
 
 **Run:**
 ```bash
-pixi run primitive-benchmark
+pixi run primitive-benchmark \
+  --output artifacts/primitive-portfolio.json \
+  --figure artifacts/primitive-portfolio.svg
 ```
 
 **Expected output:** Direct minimum jerk is rejected on all 20 trials and the
 detour is accepted on all 20, with machine-dependent generation latency.
+The optional report and figure are suitable for CI artifacts; the JSON remains
+the source of truth and the image is derived from it.
+
+---
+
+## plot_primitive_benchmark.py — Benchmark dashboard
+
+**What it does:** Reads a saved portfolio, endpoint-retarget, or relational
+retarget JSON report and renders matched acceptance rates plus latency. When a
+report contains representative paths, it also shows top-down path geometry.
+
+**Run:**
+
+```bash
+PYTHONPATH=src pixi run python examples/plot_primitive_benchmark.py \
+  artifacts/primitive-portfolio.json \
+  --output artifacts/primitive-portfolio.png
+```
 
 ---
 

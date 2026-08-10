@@ -80,7 +80,7 @@ pixi install -e cuda
 
 # Verify CUDA is available
 pixi run -e cuda check-cuda
-# Output: PyTorch 2.5.1, CUDA available: True, CUDA version: 12.4
+# Reports the installed PyTorch build, CUDA availability, and toolkit version
 
 # Run notebooks with CUDA
 pixi run -e cuda notebook-cuda
@@ -89,52 +89,32 @@ pixi run -e cuda notebook-cuda
 pixi run -e cuda test
 ```
 
-**Performance (GPU position decode):**
-- 1000 trajectories: **6.8 ms** (146k traj/s)
-- Per-trajectory: **6.8 µs**
+GPU timing depends on the horizon, batch size, GPU, generated library, warm-up,
+and synchronization policy. Run `examples/benchmark_backends.py` on the target
+machine and publish those fields with any performance number.
 
 <details>
 <summary><strong>Technical notes on pixi + PyTorch CUDA setup</strong></summary>
 
-Getting CUDA-enabled PyTorch to work with pixi required careful configuration. Here are the key insights:
-
-**Problem:** By default, pixi's dependency solver picks PyTorch from conda-forge, which is CPU-only (`pytorch-2.x.x-cpu_mkl_*`). Simply adding `pytorch-cuda` doesn't make it pick the CUDA build.
-
-**Solution:** The `cuda` feature in `pyproject.toml` uses these techniques:
-
-1. **Channel priority**: The cuda feature specifies `channels = ["pytorch", "nvidia", "conda-forge"]` with `channel-priority = "strict"` so PyTorch comes from the pytorch channel (which has CUDA builds), not conda-forge.
-
-2. **Explicit channel specification**: Dependencies use `{ version = ">=2.0", channel = "pytorch" }` to force the pytorch channel:
-   ```toml
-   [tool.pixi.feature.cuda]
-   channels = ["pytorch", "nvidia", "conda-forge"]
-   channel-priority = "strict"
-
-   [tool.pixi.feature.cuda.target.linux-64.dependencies]
-   pytorch = { version = ">=2.0", channel = "pytorch" }
-   pytorch-cuda = { version = ">=12.1", channel = "pytorch" }
-   ```
-
-3. **Platform-specific**: `pytorch-cuda` only exists for `linux-64`, so we use `target.linux-64.dependencies` to avoid solve failures on macOS.
-
-4. **Separate solve group**: The cuda environment uses `solve-group = "cuda"` to avoid conflicts with the default CPU environment.
+The `cuda` environment is Linux-specific and separate from the default solve
+group. It installs a maintained CUDA-enabled PyTorch wheel and keeps `nvcc` on
+a compatible host compiler for local CusADi library builds. The lock file is
+the authoritative dependency record; this README deliberately does not pin an
+example output to one workstation.
 
 **Verification:**
 ```bash
-# Check which pytorch package is installed
-pixi list -e cuda | grep pytorch
-# Should show: pytorch 2.x.x from pytorch channel (not conda-forge)
-# Should show: pytorch-cuda 12.x from pytorch channel
-
-# Verify CUDA is actually available
-pixi run -e cuda python -c "import torch; print(torch.version.cuda)"
-# Should print: 12.4 (not None)
+pixi run -e cuda check-cuda
+pixi run -e cuda python -m dhb_xr.optimization.build_cusadi_decode --dry-run
 ```
 
 **Common pitfalls:**
-- Using `pytorch-cuda = "12.4"` fails (ambiguous version); use `"12.4.*"` or `">=12.1"`
-- Not specifying channel priority causes conda-forge's CPU pytorch to be picked
-- Forgetting `target.linux-64` causes solve failures on non-Linux platforms
+- A CUDA-enabled PyTorch wheel does not provide `nvcc`; library compilation
+  also needs the CUDA toolkit from the environment.
+- A compiled decode library is horizon-specific.
+- Driver, wheel, toolkit, generated source, and GPU architecture must be
+  compatible; use `cusadi_decode="gpu_required"` when fallback would invalidate
+  a benchmark.
 
 </details>
 
@@ -248,8 +228,12 @@ program guide](docs/primitive_programs.md) and run:
 
 ```bash
 pixi run primitive-example
-pixi run primitive-benchmark
+pixi run primitive-validation
 ```
+
+The validation task writes an auditable JSON report and an SVG dashboard under
+`artifacts/`. See the [release-validation guide](docs/release_validation.md) for
+what those results do—and do not—demonstrate.
 
 ## Documentation
 

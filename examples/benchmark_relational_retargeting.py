@@ -45,6 +45,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--samples", type=int, default=40)
     parser.add_argument("--solver", choices=("fatrop", "ipopt"), default="fatrop")
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--figure", type=Path, help="Write a PNG or SVG dashboard")
     return parser.parse_args()
 
 
@@ -333,12 +334,20 @@ def main() -> None:
         "summary": summary,
         "rows": rows,
     }
-    report["claim_gate"] = _claim_gate(rows)
+    report["claim_gate"] = _claim_gate(rows, args.solver)
     print(json.dumps(summary, indent=2), flush=True)
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(report, indent=2, default=_json_default) + "\n")
         print(f"Wrote {args.output}", flush=True)
+    if args.figure:
+        try:
+            from examples.plot_primitive_benchmark import plot_report
+        except ModuleNotFoundError:
+            from plot_primitive_benchmark import plot_report
+
+        plot_report(report, args.figure)
+        print(f"Wrote {args.figure}", flush=True)
 
 
 def _json_default(value):
@@ -349,12 +358,19 @@ def _json_default(value):
     raise TypeError(f"cannot serialize {type(value).__name__}")
 
 
-def _claim_gate(rows: list[dict]) -> dict:
+def _claim_gate(rows: list[dict], solver: str) -> dict:
     hard = [row for row in rows if row["condition"] == "hard_relational_shift"]
-    by_source = defaultdict(dict)
-    for row in hard:
-        by_source[row["source"]][row["trial"]] = bool(row["accepted"])
-    dhb = by_source["dhb-regularized:fatrop_relational"]
+    easy = [row for row in rows if row["condition"] == "easy_control"]
+
+    def paired_by_source(selected_rows):
+        by_source = defaultdict(dict)
+        for row in selected_rows:
+            by_source[row["source"]][row["trial"]] = bool(row["accepted"])
+        return by_source
+
+    by_source = paired_by_source(hard)
+    dhb_source = f"dhb-regularized:{solver}_relational"
+    dhb = by_source[dhb_source]
     raw = by_source["reference:relational_anchor_se3"]
     common = sorted(set(dhb) & set(raw))
     differences = np.asarray([float(dhb[index]) - float(raw[index]) for index in common])
@@ -365,15 +381,30 @@ def _claim_gate(rows: list[dict]) -> dict:
         lower, upper = np.percentile(np.mean(sampled, axis=1), [2.5, 97.5])
     else:
         lower = upper = float("nan")
-    passed = bool(observed >= 0.15 and lower > 0.0)
+    easy_by_source = paired_by_source(easy)
+    easy_dhb = easy_by_source[dhb_source]
+    easy_raw = easy_by_source["reference:relational_anchor_se3"]
+    easy_common = sorted(set(easy_dhb) & set(easy_raw))
+    easy_delta = (
+        float(np.mean([float(easy_dhb[index]) - float(easy_raw[index]) for index in easy_common]))
+        if easy_common
+        else float("nan")
+    )
+    easy_tolerance = 0.05
+    passed = bool(
+        observed >= 0.15 and lower > 0.0 and len(easy_common) > 0 and easy_delta >= -easy_tolerance
+    )
     return {
         "passed": passed,
-        "comparison": ("dhb-regularized:fatrop_relational minus reference:relational_anchor_se3"),
+        "comparison": f"{dhb_source} minus reference:relational_anchor_se3",
         "paired_trials": len(common),
         "acceptance_delta": observed,
         "paired_bootstrap_95_interval": [float(lower), float(upper)],
         "required_delta": 0.15,
         "required_lower_bound": 0.0,
+        "easy_control_paired_trials": len(easy_common),
+        "easy_control_acceptance_delta": easy_delta,
+        "easy_control_regression_tolerance": easy_tolerance,
         "bootstrap_resamples": 10_000,
         "bootstrap_seed": 26081001,
     }

@@ -78,7 +78,8 @@ class PersistentRelationalFatropRetargeter:
 
     @property
     def source_id(self) -> str:
-        return f"{self.regularization}-regularized:fatrop_relational"
+        solver = "fatrop" if self.generator.use_fatrop else "ipopt"
+        return f"{self.regularization}-regularized:{solver}_relational"
 
     def generate(
         self,

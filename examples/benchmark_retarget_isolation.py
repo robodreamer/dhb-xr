@@ -39,6 +39,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--samples", type=int, default=50)
     parser.add_argument("--dhb-backend", default="fatrop")
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--figure", type=Path, help="Write a PNG or SVG dashboard")
     return parser.parse_args()
 
 
@@ -280,8 +281,24 @@ def main() -> None:
     print(json.dumps(summary, indent=2), flush=True)
     if args.output is not None:
         args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(json.dumps(report, indent=2) + "\n")
+        args.output.write_text(json.dumps(report, indent=2, default=_json_default) + "\n")
         print(f"Wrote {args.output}", flush=True)
+    if args.figure is not None:
+        try:
+            from examples.plot_primitive_benchmark import plot_report
+        except ModuleNotFoundError:
+            from plot_primitive_benchmark import plot_report
+
+        plot_report(report, args.figure)
+        print(f"Wrote {args.figure}", flush=True)
+
+
+def _json_default(value):
+    if isinstance(value, np.ndarray):
+        return value.tolist()
+    if isinstance(value, np.generic):
+        return value.item()
+    raise TypeError(f"cannot serialize {type(value).__name__}")
 
 
 if __name__ == "__main__":

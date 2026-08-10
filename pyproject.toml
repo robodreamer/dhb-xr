@@ -1,10 +1,10 @@
 [project]
 name = "dhb_xr"
-version = "0.4.1"
+version = "0.5.0"
 description = "DHB Extended Representations - SE(3) invariant trajectory encoding for robotics and VLA"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
 authors = [{ name = "Andy Park", email = "andypark.purdue@gmail.com" }]
 keywords = [
     "robotics",
@@ -17,7 +17,6 @@ keywords = [
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -204,6 +203,7 @@ version = "python scripts/version.py"
 benchmark = "python examples/benchmark_backends.py"
 primitive-example = "PYTHONPATH=src python examples/primitive_program.py"
 primitive-benchmark = "PYTHONPATH=src python examples/benchmark_primitive_portfolio.py"
+primitive-validation = "PYTHONPATH=src python examples/benchmark_primitive_portfolio.py --output artifacts/primitive-portfolio.json --figure artifacts/primitive-portfolio.svg"
 retarget-isolation = "PYTHONPATH=src python examples/benchmark_retarget_isolation.py"
 relational-retarget = "PYTHONPATH=src python examples/benchmark_relational_retargeting.py"
 docs = "cp CHANGELOG.md docs/changelog.md && mkdocs build"

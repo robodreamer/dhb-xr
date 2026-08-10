@@ -95,6 +95,14 @@ FATROP path:
 - `dhb_xr.optimization.fatrop_solver.generate_trajectory_fatrop`
 - `dhb_xr.optimization.fatrop_solver.FatropTrajectoryGenerator`
 - `dhb_xr.optimization.fatrop_solver.ConstrainedTrajectoryGenerator`
+- `dhb_xr.optimization.PersistentRelationalFatropRetargeter`
+
+`PersistentRelationalFatropRetargeter` builds one parameterized graph for a
+fixed reference and horizon, then accepts new endpoints and ordered
+`RelationalPoseAnchor` values through `generate(...)`. Its `dhb` and
+`cartesian` modes are matched experimental regularizers. The current shared
+quaternion correction means comparisons support a linear-path representation
+claim only.
 
 CusADi path:
 
