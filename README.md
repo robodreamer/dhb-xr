@@ -1,6 +1,11 @@
-# dhb_xr
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/brand/dhb-xr-wordmark-dark.svg">
+    <img src="docs/assets/brand/dhb-xr-wordmark-light.svg" width="440" alt="DHB-XR">
+  </picture>
+</p>
 
-DHB Extended Representations — SE(3) invariant trajectory encoding for robotics, VLAs, and motion data management.
+<p align="center"><strong>DHB Extended Representations — SE(3)-invariant trajectory encoding for robotics, VLAs, and motion data management.</strong></p>
 
 ## Overview
 

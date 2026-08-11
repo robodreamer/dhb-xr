@@ -1,3 +1,10 @@
+<p style="text-align:center; margin:0 0 1.5rem;">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/dhb-xr-wordmark-dark.svg">
+    <img src="assets/brand/dhb-xr-wordmark-light.svg" width="380" alt="DHB-XR">
+  </picture>
+</p>
+
 # DHB-XR
 
 **Teach the motion once. Reuse it across coordinate frames.**

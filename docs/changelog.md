@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A responsive DHB-XR identity system with separate display, compact,
+  navigation, and 24 px masters for light and dark documentation surfaces.
+
 ## [0.5.0] - 2026-08-09
 
 ### Added
