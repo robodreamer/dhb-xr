@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/brand/dhb-xr-wordmark-dark.svg">
-    <img src="docs/assets/brand/dhb-xr-wordmark-light.svg" width="440" alt="DHB-XR">
+    <source media="(prefers-color-scheme: dark)" srcset="https://robodreamer.github.io/dhb-xr/assets/brand/dhb-xr-wordmark-dark.svg">
+    <img src="https://robodreamer.github.io/dhb-xr/assets/brand/dhb-xr-wordmark-light.svg" width="440" alt="DHB-XR">
   </picture>
 </p>
 
@@ -70,7 +70,7 @@ pixi run build-dist
 ```
 
 Publishing and version-management commands live in
-[docs/development.md](docs/development.md).
+[development guide](https://robodreamer.github.io/dhb-xr/development/).
 
 ## CUDA Environment
 
@@ -227,7 +227,7 @@ See `examples/dhb_ti_time_invariant.py`.
 Primitive programs, skill capsules, and matched representation-isolation
 benchmarks are under active development. They have software and component-level
 tests but no release-level simulator or robot task evidence. See the
-[development notes](docs/development_notes.md) for their current scope and
+[development notes](https://robodreamer.github.io/dhb-xr/development_notes/) for their current scope and
 validation boundary.
 
 ## Documentation
@@ -311,7 +311,7 @@ missing CUDA assets should fail instead of falling back to CPU. Use
 `cusadi_decode_library_dir=...` to point at prebuilt libraries outside the
 default cache.
 
-See the [GPU Decode guide](docs/gpu_decode.md) and the
+See the [GPU Decode guide](https://robodreamer.github.io/dhb-xr/gpu_decode/) and the
 [CusADi paper](https://arxiv.org/abs/2408.09662) for details.
 
 ### Fatrop Fast Optimization (optional)
@@ -381,7 +381,7 @@ time-normalized, and passed through continuous or discrete VLA action heads.
 
 This is a package-capability claim, not evidence that DHB-XR outperforms a
 relative-action VLA. See the
-[VLA Integration Guide](docs/integration/vla_integration.md#relative-action-chunks-are-already-a-strong-baseline)
+[VLA Integration Guide](https://robodreamer.github.io/dhb-xr/integration/vla_integration/#relative-action-chunks-are-already-a-strong-baseline)
 for the comparison, research context, and current validation boundary.
 
 ### Quick Start: DHB Encoding Only
@@ -545,7 +545,8 @@ DHB invariants are perfectly frame-independent: adapting a trajectory to any per
 | Task | Change goal/task entirely | `libero_spatial_task` |
 | Environment | Change table/scene environment | `libero_spatial_env` |
 
-See [VLA Integration Guide](docs/integration/vla_integration.md) for full documentation.
+See the [VLA Integration Guide](https://robodreamer.github.io/dhb-xr/integration/vla_integration/)
+for full documentation.
 
 ## Testing
 
