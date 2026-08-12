@@ -7,25 +7,26 @@
   </picture>
 </p>
 
-The logo uses responsive masters so the mechanical detail never competes with
-letter recognition.
+The mark separates the icon from the wordmark so neither has to compete for
+space. Two opposing brackets suggest changing coordinate frames, while the
+single blue path and its three pose samples represent one reusable motion.
 
 | Use | Asset |
 | --- | --- |
 | README or large light surface | `dhb-xr-wordmark-light.svg` |
 | Large dark surface | `dhb-xr-wordmark-dark.svg` |
-| Compact light lockup | `dhb-xr-wordmark-compact-light.svg` |
-| Compact dark lockup | `dhb-xr-wordmark-compact-dark.svg` |
 | Standalone display mark | `dhb-xr-mark-display-light.svg` or `-dark.svg` |
 | Standalone mark below 64 px | `dhb-xr-mark-compact-light.svg` or `-dark.svg` |
 | MkDocs navigation | `dhb-xr-logo-nav.svg` |
 | Browser or package tile | `dhb-xr-favicon.svg` |
 
-Use the display master at 64 px and above. Below 64 px, use the compact master,
-which renders the Householder `H` as one color. At 24 px, use the favicon's
-simplified geometric construction. Do not add reflection ticks, pose axes, or
-extra trajectory echoes to the production mark.
+The outlined wordmark scales cleanly into navigation lockups without depending
+on installed fonts. Use the display mark at 64 px and above. Below 64 px, use
+the compact mark, which strengthens the trajectory and its three samples. At
+24 px, use the favicon tile. Keep the brackets, trajectory, and nodes separate;
+do not overlap them with the `DHB-XR` wordmark or add pose axes and extra
+trajectory echoes.
 
-The palette is cobalt (`#3478F6`), orange (`#F97336`), and slate
-(`#1E293B` / `#475569`). Dark-surface variants use lighter equivalents chosen
-for contrast.
+The palette is cobalt (`#155EEF`), orange (`#F97336`), and navy (`#0F172A`).
+Dark-surface variants use white, cobalt (`#2563EB`), and a brighter orange
+chosen for contrast.

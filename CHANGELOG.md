@@ -10,7 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - A responsive DHB-XR identity system with separate display, compact,
-  navigation, and 24 px masters for light and dark documentation surfaces.
+  navigation, and 24 px masters for light and dark documentation surfaces. The
+  production mark keeps the frame brackets, reusable motion path, and wordmark
+  separate so the identity remains clear at documentation and favicon sizes.
 
 ## [0.5.0] - 2026-08-09
 
