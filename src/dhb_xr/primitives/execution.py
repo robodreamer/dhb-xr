@@ -311,6 +311,19 @@ class PrimitiveProgramExecutor:
             if self._actions_complete(ActionTiming.BEFORE_MOTION, observation):
                 commands.extend(self._start_motion(candidate))
         if self._motion_started:
+            missed_action = self._missed_during_motion_action(
+                candidate,
+                feedback.motion_phase,
+            )
+            if missed_action is not None:
+                return self._finish_primitive(
+                    TransitionEvent.FAILED,
+                    observation,
+                    reason=(
+                        "during-motion action window elapsed before command issuance: "
+                        f"action={missed_action}, phase={feedback.motion_phase:.6g}"
+                    ),
+                )
             commands.extend(
                 self._issue_eligible_actions(
                     candidate,
@@ -440,7 +453,7 @@ class PrimitiveProgramExecutor:
                 continue
             eligible = True
             if timing == ActionTiming.DURING_MOTION:
-                eligible = phase >= action.phase_start
+                eligible = action.phase_start <= phase <= action.phase_end
             elif timing == ActionTiming.ON_EVENT:
                 eligible = self._guards.evaluate(
                     action.trigger,
@@ -458,6 +471,22 @@ class PrimitiveProgramExecutor:
                 )
             )
         return commands
+
+    def _missed_during_motion_action(
+        self,
+        candidate: PrimitiveCandidate,
+        phase: float,
+    ) -> Optional[int]:
+        """Return the first unissued action whose inclusive phase window elapsed."""
+
+        for index, action in enumerate(candidate.end_effector_actions):
+            if (
+                action.timing == ActionTiming.DURING_MOTION
+                and index not in self._issued_actions
+                and phase > action.phase_end
+            ):
+                return index
+        return None
 
     def _actions_complete(
         self, timing: ActionTiming, observation: ExecutionObservation

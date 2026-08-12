@@ -288,6 +288,67 @@ def test_truthy_guard_handles_vector_signals_without_ambiguous_bool_error():
     )
 
 
+def test_during_motion_action_is_issued_only_inside_inclusive_phase_window():
+    action = ScheduledEndEffectorAction(
+        EndEffectorCommand(EndEffectorCommandType.OPEN),
+        ActionTiming.DURING_MOTION,
+        phase_start=0.2,
+        phase_end=0.4,
+    )
+    candidate = PrimitiveCandidate(
+        "move",
+        PrimitiveFamily.MINIMUM_JERK,
+        EVIDENCE,
+        motion=_path(),
+        end_effector_actions=(action,),
+        observation_epoch=2,
+    )
+    executor = PrimitiveProgramExecutor(PrimitiveProgram("move", (candidate,), (), "move"))
+    executor.start(_observation(0.0))
+
+    before_window = executor.update(
+        PrimitiveFeedback(_observation(0.1), motion_phase=0.1)
+    )
+    assert before_window.commands == ()
+
+    at_window_end = executor.update(
+        PrimitiveFeedback(_observation(0.2), motion_phase=0.4)
+    )
+    assert [command.command for command in at_window_end.commands] == [
+        ExecutionCommandType.END_EFFECTOR
+    ]
+
+
+def test_missed_during_motion_action_window_fails_closed_and_stops_motion():
+    action = ScheduledEndEffectorAction(
+        EndEffectorCommand(EndEffectorCommandType.OPEN),
+        ActionTiming.DURING_MOTION,
+        phase_start=0.1,
+        phase_end=0.2,
+    )
+    candidate = PrimitiveCandidate(
+        "move",
+        PrimitiveFamily.MINIMUM_JERK,
+        EVIDENCE,
+        motion=_path(),
+        end_effector_actions=(action,),
+        observation_epoch=2,
+    )
+    executor = PrimitiveProgramExecutor(PrimitiveProgram("move", (candidate,), (), "move"))
+    executor.start(_observation(0.0))
+
+    missed = executor.update(
+        PrimitiveFeedback(_observation(0.9), motion_phase=0.9)
+    )
+
+    assert missed.status == ExecutorStatus.FAILED
+    assert missed.event == TransitionEvent.FAILED
+    assert "action window elapsed" in missed.reason
+    assert [command.command for command in missed.commands] == [
+        ExecutionCommandType.STOP_MOTION
+    ]
+
+
 def test_executor_rejects_ambiguous_enabled_transitions():
     start = PrimitiveCandidate(
         "start",

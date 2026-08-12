@@ -94,9 +94,11 @@ grasp = ScheduledEndEffectorAction(
 )
 ```
 
-Actions can run before motion, during a declared phase, after motion, or after
-an observation event. Completion guards should use measured aperture, force,
-contact, pressure, or object state rather than a fixed delay.
+Actions can run before motion, during a declared inclusive phase window, after
+motion, or after an observation event. If feedback skips beyond an unissued
+during-motion action's window, execution fails closed and requests motion stop.
+Completion guards should use measured aperture, force, contact, pressure, or
+object state rather than a fixed delay.
 
 ## Execution checks and recovery
 
@@ -109,6 +111,7 @@ It fails closed when:
 - a candidate observation epoch is stale;
 - a start or completion condition is not satisfied;
 - a timeout or retry budget is exhausted;
+- a during-motion action misses its declared phase window;
 - more than one transition is enabled; or
 - a transition declares that downstream geometry must be regrounded.
 

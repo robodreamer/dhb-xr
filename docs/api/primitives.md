@@ -43,6 +43,11 @@ unsupported metadata, and missing command parameters fail closed. Arrays
 retained by immutable contracts are copied, normalized where applicable, and
 made read-only.
 
+For `DURING_MOTION` actions, `phase_start` and `phase_end` form an inclusive
+command-issuance window. If controller feedback advances beyond the end before
+the command is issued, the executor fails that primitive and emits a stop
+command rather than silently issuing the action late.
+
 ## Requests, generation, and sources
 
 | API | Purpose |
