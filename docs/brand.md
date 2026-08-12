@@ -1,10 +1,10 @@
 # DHB-XR brand assets
 
 <p style="text-align:center; margin:1rem 0 2rem;">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../assets/brand/dhb-xr-wordmark-dark.svg">
-    <img src="../assets/brand/dhb-xr-wordmark-light.svg" width="380" alt="DHB-XR">
-  </picture>
+  <span class="dhb-theme-wordmark" role="img" aria-label="DHB-XR">
+    <img class="dhb-theme-wordmark__light" src="../assets/brand/dhb-xr-wordmark-light.svg" width="380" alt="">
+    <img class="dhb-theme-wordmark__dark" src="../assets/brand/dhb-xr-wordmark-dark.svg" width="380" alt="">
+  </span>
 </p>
 
 The mark separates the icon from the wordmark so neither has to compete for

@@ -1,0 +1,23 @@
+/* Match brand artwork to the active Material theme, not the OS preference. */
+.dhb-theme-wordmark {
+  display: inline-block;
+  max-width: 100%;
+}
+
+.dhb-theme-wordmark img {
+  display: block;
+  height: auto;
+  max-width: 100%;
+}
+
+.dhb-theme-wordmark .dhb-theme-wordmark__dark {
+  display: none;
+}
+
+[data-md-color-scheme="slate"] .dhb-theme-wordmark__light {
+  display: none;
+}
+
+[data-md-color-scheme="slate"] .dhb-theme-wordmark__dark {
+  display: block;
+}
