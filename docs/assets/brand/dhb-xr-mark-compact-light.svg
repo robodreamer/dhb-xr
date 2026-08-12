@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 128 128" role="img" aria-label="DHB-XR">
+  <path d="M18 62V31C18 27.8 19.6 25.2 22.3 23.6L50.5 6.7C52.8 5.3 55.6 5.3 57.9 6.7L70 14H58L31 30.2V54.4Z" fill="#0F172A"/>
+  <path d="M110 66V97C110 100.2 108.4 102.8 105.7 104.4L77.5 121.3C75.2 122.7 72.4 122.7 70.1 121.3L58 114H70L97 97.8V73.6Z" fill="#F97336"/>
+  <path d="M38 103C42 85 51 75 66 65C80 57 89 45 94 27" fill="none" stroke="#155EEF" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="38" cy="103" r="8" fill="#155EEF"/><circle cx="66" cy="65" r="8" fill="#155EEF"/><circle cx="94" cy="27" r="8" fill="#155EEF"/>
+</svg>

@@ -18,38 +18,70 @@ The pipeline:
 4. **Adapt** trajectories to new initial poses (perturbation robustness)
 5. **Retrieve** similar motions or **tokenize** for VLA training
 
-### Why DHB-XR for VLA?
+### Relative action chunks are already a strong baseline
 
-Current VLA models (RT-2, Octo, OpenVLA) learn a mapping from **(vision + language) → actions**. When the scene changes — even slightly — they either fail, require massive data augmentation, or need fine-tuning. DHB-XR addresses this by providing a **structured trajectory representation layer** that decouples *motion shape* from *spatial context*:
+For world poses `T[i]`, an initial-frame relative action chunk uses
+`A[i] = inverse(T[0]) @ T[i]`. If every pose is moved by the same rigid transform
+`G`, then:
 
-```
-Traditional VLA:  Vision → Policy → Actions (tied to absolute positions)
-
-With DHB-XR:      Vision → Object Pose Detection → DHB Adaptation → Actions
-                            ↑                         ↑
-                     "Where is the plate now?"   "Same motion shape,
-                                                  new target pose"
+```text
+inverse(G @ T[0]) @ (G @ T[i]) = inverse(T[0]) @ T[i]
 ```
 
-DHB invariants are **SE(3)-invariant** — the encoded motion shape is independent of the global reference frame. This makes DHB a natural fit for VLA spatial generalization:
+The world coordinates change, but the relative action does not. This is an
+important and increasingly visible direction in robot learning:
 
-| VLA Scenario | Without DHB-XR | With DHB-XR |
-|-------------|---------------|-------------|
-| Object shifts on table | Retrain or fail | Re-decode from new pose (~5-10ms) |
-| Different robot starting config | Action replay fails | Adapt with same invariants |
-| Transfer between robots | Need new training data | Same invariants, different kinematics |
-| Few-shot learning | Need 100s of demos per arrangement | 1 demo + DHB adaptation covers spatial variations |
+- [Universal Manipulation Interface](https://arxiv.org/abs/2402.10329) uses a
+  relative-trajectory action representation in its policy interface.
+- [A Practical Guide for Incorporating Symmetry in Diffusion Policy](https://papers.nips.cc/paper_files/paper/2025/hash/8756b018fb31576a8cdbb8bcb14ec7be-Abstract-Conference.html)
+  studies relative trajectory actions as a practical route to invariant policy
+  learning.
+- [Qwen-VLA](https://arxiv.org/abs/2605.30280) represents future wrist motion
+  relative to an initial frame.
 
-**Key advantage — data efficiency:** Instead of collecting 1000s of demonstrations across different spatial arrangements, collect a few demos and use DHB to *analytically* generate the spatial variations. This is especially valuable for LIBERO-PRO's perturbation benchmarks, where each perturbation type would otherwise require separate training data.
+### What DHB-XR adds after relative actions
 
-**Demonstrated results (LIBERO-PRO spatial swap):**
+DHB-XR agrees with the premise behind relative action chunks. It adds a
+motion-centric layer and a set of downstream operations around that premise:
+
+| Capability | Initial-frame relative poses | DHB-XR |
+| --- | --- | --- |
+| Stable under one shared world-frame transform | Yes | Yes |
+| Direct sampled pose offsets | Yes | Reconstructed by the decoder |
+| Transported local linear and angular geometry | Must be derived separately | Encoded by DHB-DR or DHB-QR |
+| Start/goal or object-relative retargeting | Application-specific | Package solvers and primitive adapters |
+| Reduced sensitivity to execution speed or sampling | Application-specific | DHB-TI reparameterization |
+| Motion-shape retrieval | Requires a chosen feature and index | Invariant descriptors, DTW, and motion memory |
+| VLA action interface | Feed poses to a policy-specific head/tokenizer | Continuous heads plus VQ/RVQ, FAST, and OAT-style token paths |
+| Multi-step execution semantics | Outside the representation | Typed steps, measured checks, bounded retry, and stop conditions |
+
+The proposed VLA boundary is therefore:
+
+```text
+vision + language → DHB motion chunk → anchor / retarget → pose waypoints
+                                                        → IK + controller
+```
+
+DHB-XR is **not more frame-invariant** than a correctly constructed
+initial-frame relative-pose chunk. The stronger package claim is that one
+frame-independent motion representation can be reused for action prediction,
+adaptation, retrieval, token streaming, and checked execution. A head-to-head
+policy study against an initial-frame relative-action baseline is still needed
+before claiming better VLA task success or data efficiency.
+
+### Isolated spatial-swap measurement
+
+The repository's current LIBERO-PRO spatial-swap fixture reports:
 
 | Method | EE → OLD plate | EE → NEW plate |
 |--------|---------------|---------------|
 | Naive replay (same actions) | 5.2 cm | 11.1 cm |
 | DHB-adapted (Fatrop solver) | 20.8 cm | **4.6 cm** |
 
-When the plate moves ~17cm (via LIBERO-PRO swap perturbation), naive replay reaches for the old position and fails. DHB-adapted trajectory correctly targets the new plate position — 6.5cm closer to the correct target, decoded in ~5-10ms.
+When the plate moves about 17 cm, the solver-adapted trajectory ends 6.5 cm
+closer to the new target than unchanged replay in this fixture. This is an
+isolated geometric endpoint measurement, not a VLA task-success result and not
+a comparison against an initial-frame relative-action policy.
 
 ### LIBERO-PRO perturbation compatibility
 

@@ -31,6 +31,9 @@ jobs:
       - name: Build documentation strictly
         run: pixi run mkdocs build --strict
 
+      - name: Validate release metadata
+        run: pixi run validate-release
+
       - name: Build and validate distributions
         run: |
           pixi run python -m build

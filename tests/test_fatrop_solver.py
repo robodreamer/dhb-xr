@@ -371,6 +371,16 @@ class TestFatropOrientationSmooth:
             f"Identity adaptation has {max_step:.1f} deg/step max angular change — "
             f"orientations are spinning. Must be < 5 deg/step."
         )
+        expected_angles = np.radians(30) * np.linspace(0.0, 1.0, len(adapted_quat))
+        expected = np.zeros_like(adapted_quat)
+        expected[:, 0] = np.cos(expected_angles / 2.0)
+        expected[:, 3] = np.sin(expected_angles / 2.0)
+        alignment = np.abs(np.sum(adapted_quat * expected, axis=1))
+        maximum_error = float(2.0 * np.arccos(np.clip(alignment, 0.0, 1.0)).max())
+        assert maximum_error < np.deg2rad(3.0), (
+            "Identity adaptation is smooth but does not preserve the reference "
+            f"orientation: maximum error {np.degrees(maximum_error):.2f} deg."
+        )
 
     def test_shifted_goal_produces_smooth_orientation(self):
         """Position-only perturbation must still produce smooth orientations.

@@ -1,6 +1,11 @@
-# dhb_xr
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://robodreamer.github.io/dhb-xr/assets/brand/dhb-xr-wordmark-dark.svg">
+    <img src="https://robodreamer.github.io/dhb-xr/assets/brand/dhb-xr-wordmark-light.svg" width="440" alt="DHB-XR">
+  </picture>
+</p>
 
-DHB Extended Representations — SE(3) invariant trajectory encoding for robotics, VLAs, and motion data management.
+<p align="center"><strong>DHB Extended Representations — SE(3)-invariant trajectory encoding for robotics, VLAs, and motion data management.</strong></p>
 
 ## Overview
 
@@ -65,7 +70,7 @@ pixi run build-dist
 ```
 
 Publishing and version-management commands live in
-[docs/development.md](docs/development.md).
+[development guide](https://robodreamer.github.io/dhb-xr/development/).
 
 ## CUDA Environment
 
@@ -77,7 +82,7 @@ pixi install -e cuda
 
 # Verify CUDA is available
 pixi run -e cuda check-cuda
-# Output: PyTorch 2.5.1, CUDA available: True, CUDA version: 12.4
+# Reports the installed PyTorch build, CUDA availability, and toolkit version
 
 # Run notebooks with CUDA
 pixi run -e cuda notebook-cuda
@@ -86,52 +91,32 @@ pixi run -e cuda notebook-cuda
 pixi run -e cuda test
 ```
 
-**Performance (GPU position decode):**
-- 1000 trajectories: **6.8 ms** (146k traj/s)
-- Per-trajectory: **6.8 µs**
+GPU timing depends on the horizon, batch size, GPU, generated library, warm-up,
+and synchronization policy. Run `examples/benchmark_backends.py` on the target
+machine and publish those fields with any performance number.
 
 <details>
 <summary><strong>Technical notes on pixi + PyTorch CUDA setup</strong></summary>
 
-Getting CUDA-enabled PyTorch to work with pixi required careful configuration. Here are the key insights:
-
-**Problem:** By default, pixi's dependency solver picks PyTorch from conda-forge, which is CPU-only (`pytorch-2.x.x-cpu_mkl_*`). Simply adding `pytorch-cuda` doesn't make it pick the CUDA build.
-
-**Solution:** The `cuda` feature in `pyproject.toml` uses these techniques:
-
-1. **Channel priority**: The cuda feature specifies `channels = ["pytorch", "nvidia", "conda-forge"]` with `channel-priority = "strict"` so PyTorch comes from the pytorch channel (which has CUDA builds), not conda-forge.
-
-2. **Explicit channel specification**: Dependencies use `{ version = ">=2.0", channel = "pytorch" }` to force the pytorch channel:
-   ```toml
-   [tool.pixi.feature.cuda]
-   channels = ["pytorch", "nvidia", "conda-forge"]
-   channel-priority = "strict"
-
-   [tool.pixi.feature.cuda.target.linux-64.dependencies]
-   pytorch = { version = ">=2.0", channel = "pytorch" }
-   pytorch-cuda = { version = ">=12.1", channel = "pytorch" }
-   ```
-
-3. **Platform-specific**: `pytorch-cuda` only exists for `linux-64`, so we use `target.linux-64.dependencies` to avoid solve failures on macOS.
-
-4. **Separate solve group**: The cuda environment uses `solve-group = "cuda"` to avoid conflicts with the default CPU environment.
+The `cuda` environment is Linux-specific and separate from the default solve
+group. It installs a maintained CUDA-enabled PyTorch wheel and keeps `nvcc` on
+a compatible host compiler for local CusADi library builds. The lock file is
+the authoritative dependency record; this README deliberately does not pin an
+example output to one workstation.
 
 **Verification:**
 ```bash
-# Check which pytorch package is installed
-pixi list -e cuda | grep pytorch
-# Should show: pytorch 2.x.x from pytorch channel (not conda-forge)
-# Should show: pytorch-cuda 12.x from pytorch channel
-
-# Verify CUDA is actually available
-pixi run -e cuda python -c "import torch; print(torch.version.cuda)"
-# Should print: 12.4 (not None)
+pixi run -e cuda check-cuda
+pixi run -e cuda python -m dhb_xr.optimization.build_cusadi_decode --dry-run
 ```
 
 **Common pitfalls:**
-- Using `pytorch-cuda = "12.4"` fails (ambiguous version); use `"12.4.*"` or `">=12.1"`
-- Not specifying channel priority causes conda-forge's CPU pytorch to be picked
-- Forgetting `target.linux-64` causes solve failures on non-Linux platforms
+- A CUDA-enabled PyTorch wheel does not provide `nvcc`; library compilation
+  also needs the CUDA toolkit from the environment.
+- A compiled decode library is horizon-specific.
+- Driver, wheel, toolkit, generated source, and GPU architecture must be
+  compatible; use `cusadi_decode="gpu_required"` when fallback would invalidate
+  a benchmark.
 
 </details>
 
@@ -180,6 +165,8 @@ dhb_xr-examples
 This creates a local copy you can modify and experiment with.
 
 The examples package includes:
+- **Frame-invariance overview**: One transformed 6-DoF trajectory, matching DHB
+  signatures, and a three-panel technical SVG
 - **Core examples**: Basic encoding/decoding, trajectory adaptation, DHB-DR vs QR
 - **Advanced examples**: GPU batch optimization, VLA tokenization, motion databases
 - **VLA integration**: Full LIBERO simulation, perturbation robustness demos
@@ -234,6 +221,14 @@ out = encode_dhb_dr_ti(positions, quaternions, M=30, progress_kind="hybrid", alp
 ```
 
 See `examples/dhb_ti_time_invariant.py`.
+
+### Development preview
+
+Primitive programs, skill capsules, and matched representation-isolation
+benchmarks are under active development. They have software and component-level
+tests but no release-level simulator or robot task evidence. See the
+[development notes](https://robodreamer.github.io/dhb-xr/development_notes/) for their current scope and
+validation boundary.
 
 ## Documentation
 
@@ -316,7 +311,7 @@ missing CUDA assets should fail instead of falling back to CPU. Use
 `cusadi_decode_library_dir=...` to point at prebuilt libraries outside the
 default cache.
 
-See the [GPU Decode guide](docs/gpu_decode.md) and the
+See the [GPU Decode guide](https://robodreamer.github.io/dhb-xr/gpu_decode/) and the
 [CusADi paper](https://arxiv.org/abs/2408.09662) for details.
 
 ### Fatrop Fast Optimization (optional)
@@ -373,15 +368,21 @@ print(f"Solved in {result['solve_time']*1000:.1f} ms")
 
 DHB-XR includes adapters for loading trajectory data from popular VLA benchmarks, with full support for **LIBERO-PRO** — the extended LIBERO benchmark that tests policy robustness under spatial, object, semantic, task, and environment perturbations.
 
-**Why DHB-XR for VLA:** Current VLA models (RT-2, Octo, OpenVLA) map (vision + language) → actions, but struggle when the scene layout changes. DHB-XR provides a **structured trajectory representation** that decouples *motion shape* from *spatial context*:
+**Why DHB-XR for VLA:** Initial-frame relative action chunks are already a
+strong way to remove the global starting pose. DHB-XR builds on that idea with a
+structured motion representation that can be decoded, retargeted, retrieved,
+time-normalized, and passed through continuous or discrete VLA action heads.
 
-| Without DHB-XR | With DHB-XR |
-|---------------|-------------|
-| Retrain or add data augmentation | Re-decode from new pose (~5-10ms decode, <1s Fatrop) |
-| Actions tied to absolute positions | Invariants are SE(3)-invariant by construction |
-| 100s of demos per spatial arrangement | **1 demo + DHB adaptation covers spatial variations** |
+| Representation | Role |
+|---------------|------|
+| World-frame poses | Direct targets whose values change with the world frame |
+| Initial-frame relative poses | A strong invariant action baseline |
+| DHB-XR | Frame-independent motion geometry plus package tools for reuse |
 
-When LIBERO-PRO perturbs object positions or swaps objects, DHB can adapt the demonstration trajectory to the new configuration while perfectly preserving the original motion geometry (0.000 mm shape error).
+This is a package-capability claim, not evidence that DHB-XR outperforms a
+relative-action VLA. See the
+[VLA Integration Guide](https://robodreamer.github.io/dhb-xr/integration/vla_integration/#relative-action-chunks-are-already-a-strong-baseline)
+for the comparison, research context, and current validation boundary.
 
 ### Quick Start: DHB Encoding Only
 
@@ -544,7 +545,8 @@ DHB invariants are perfectly frame-independent: adapting a trajectory to any per
 | Task | Change goal/task entirely | `libero_spatial_task` |
 | Environment | Change table/scene environment | `libero_spatial_env` |
 
-See [VLA Integration Guide](docs/integration/vla_integration.md) for full documentation.
+See the [VLA Integration Guide](https://robodreamer.github.io/dhb-xr/integration/vla_integration/)
+for full documentation.
 
 ## Testing
 

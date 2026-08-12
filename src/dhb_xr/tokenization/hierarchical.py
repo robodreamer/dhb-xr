@@ -135,8 +135,14 @@ if HAS_TORCH:
             
             # Encode through hierarchy
             x = invariants
+            z_residual = None
             for level in range(max_level):
-                z = self.encoders[level](x if level == 0 else z_residual)
+                if level == 0:
+                    encoder_input = x
+                else:
+                    assert z_residual is not None
+                    encoder_input = z_residual
+                z = self.encoders[level](encoder_input)
                 indices, z_q_st, z_q = self.vqs[level](z)
                 
                 all_tokens.append(indices)

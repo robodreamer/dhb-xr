@@ -16,7 +16,7 @@ Uniform knots σ_k = k * Σ/(M-1), then interpolate poses at σ_k (position spli
 from __future__ import annotations
 
 import numpy as np
-from typing import Dict, Any, Optional, Literal
+from typing import Any, Dict, Literal, Optional, Union
 from scipy.interpolate import CubicSpline
 
 from dhb_xr.core import geometry as geom

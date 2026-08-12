@@ -1,5 +1,5 @@
 site_name: DHB-XR Documentation
-site_description: SE(3) invariant trajectory encoding for robotics and VLA applications (v0.4.1)
+site_description: SE(3) invariant trajectory encoding for robotics and VLA applications (v0.5.0)
 site_author: Andy Park
 site_url: https://robodreamer.github.io/dhb-xr/
 repo_url: https://github.com/robodreamer/dhb-xr
@@ -7,7 +7,7 @@ repo_name: robodreamer/dhb_xr
 edit_uri: edit/main/docs/
 copyright: Copyright &copy; 2026 Andy Park
 extra:
-  version: "0.4.1"
+  version: "0.5.0"
   author_email: "andypark.purdue@gmail.com"
 
 # Ensure proper URL handling - use directory URLs (transforms/ instead of transforms.html)
@@ -15,6 +15,8 @@ use_directory_urls: true
 
 theme:
   name: material
+  logo: assets/brand/dhb-xr-logo-nav.svg
+  favicon: assets/brand/dhb-xr-favicon.svg
   palette:
     - scheme: default
       primary: blue
@@ -77,5 +79,11 @@ nav:
     - Tokenization: api/tokenization.md
     - Losses: api/losses.md
     - Visualization: api/visualization.md
-  - Development: development.md
+  - Development:
+    - Contributor guide: development.md
+    - Brand assets: brand.md
+    - Experimental feature notes: development_notes.md
+    - Primitive programs: primitive_programs.md
+    - Provisional primitive API: api/primitives.md
+    - Experimental validation: release_validation.md
   - Changelog: changelog.md

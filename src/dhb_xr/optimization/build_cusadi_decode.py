@@ -93,20 +93,29 @@ def build_cusadi_decode_libraries(
     horizons: list[int],
     output_dir: str | None = None,
     dry_run: bool = False,
+    cuda_architectures: str | None = None,
+    cuda_host_compiler: str | None = None,
+    fresh: bool = False,
 ) -> list[Path]:
     """Build fixed-horizon decode libraries into a dhb_xr-owned cache directory."""
     output_dir = output_dir or default_cusadi_decode_cache_dir()
     project_dir = prepare_cusadi_decode_build(horizons=horizons, output_dir=output_dir)
     build_dir = project_dir / "build"
-    expected = [
-        build_dir / cusadi_decode_library_filename(horizon) for horizon in horizons
-    ]
+    expected = [build_dir / cusadi_decode_library_filename(horizon) for horizon in horizons]
 
     if dry_run:
         return expected
 
     build_dir.mkdir(parents=True, exist_ok=True)
-    subprocess.run(["cmake", "-S", str(project_dir), "-B", str(build_dir)], check=True)
+    configure_command = ["cmake"]
+    if fresh:
+        configure_command.append("--fresh")
+    configure_command.extend(["-S", str(project_dir), "-B", str(build_dir)])
+    if cuda_architectures:
+        configure_command.append(f"-DCMAKE_CUDA_ARCHITECTURES={cuda_architectures}")
+    if cuda_host_compiler:
+        configure_command.append(f"-DCMAKE_CUDA_HOST_COMPILER={cuda_host_compiler}")
+    subprocess.run(configure_command, check=True)
     subprocess.run(["cmake", "--build", str(build_dir), "-j"], check=True)
     missing = [path for path in expected if not path.exists()]
     if missing:
@@ -135,12 +144,33 @@ def main() -> None:
         action="store_true",
         help="Prepare the build project and print expected outputs without compiling.",
     )
+    parser.add_argument(
+        "--cuda-architectures",
+        default=None,
+        help=(
+            "CMake CUDA architecture list (for example '120' for Blackwell or "
+            "'89;120'). Defaults to the builder's portable 75/86 targets."
+        ),
+    )
+    parser.add_argument(
+        "--cuda-host-compiler",
+        default=None,
+        help="Optional host C++ compiler path passed to CMake (for example /usr/bin/g++-13).",
+    )
+    parser.add_argument(
+        "--fresh",
+        action="store_true",
+        help="Discard the existing CMake cache before configuring.",
+    )
     args = parser.parse_args()
 
     outputs = build_cusadi_decode_libraries(
         horizons=args.horizons,
         output_dir=args.output_dir,
         dry_run=args.dry_run,
+        cuda_architectures=args.cuda_architectures,
+        cuda_host_compiler=args.cuda_host_compiler,
+        fresh=args.fresh,
     )
     for path in outputs:
         print(path)

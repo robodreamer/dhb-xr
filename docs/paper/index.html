@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>DHB-XR: The Geometry Was Free All Along</title>
+  <link rel="icon" href="../assets/brand/dhb-xr-favicon.svg" type="image/svg+xml" />
 
   <!-- Bulma CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
@@ -73,6 +74,13 @@
       font-weight: 700;
       font-size: 1.1rem;
       text-decoration: none;
+      display: flex;
+      align-items: center;
+    }
+    .sticky-nav .nav-brand img {
+      display: block;
+      width: auto;
+      height: 30px;
     }
     .sticky-nav .nav-links a {
       color: rgba(255,255,255,0.75);
@@ -90,6 +98,13 @@
       background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e1b4b 100%);
       padding: 4rem 0 3rem;
       color: white;
+    }
+    .paper-wordmark {
+      display: block;
+      width: 260px;
+      max-width: 62vw;
+      height: auto;
+      margin: 0 0 1.1rem;
     }
 
     .hero-section .title {
@@ -455,7 +470,7 @@
 <!-- ═══════════════════════════════════════════════════════════ STICKY NAV -->
 <nav class="sticky-nav" id="sticky-nav">
   <div class="nav-inner">
-    <a href="#" class="nav-brand">DHB-XR</a>
+    <a href="#" class="nav-brand"><img src="../assets/brand/dhb-xr-wordmark-dark.svg" alt="DHB-XR" /></a>
     <div class="nav-links">
       <a href="assets/dhb_xr_corl2026.pdf" target="_blank">Paper</a>
       <a href="https://github.com/robodreamer/dhb-xr" target="_blank">Code</a>
@@ -478,6 +493,7 @@
   <div class="container">
     <div class="columns is-centered">
       <div class="column is-10">
+        <img class="paper-wordmark" src="../assets/brand/dhb-xr-wordmark-dark.svg" alt="DHB-XR" />
         <p class="venue-badge">CoRL 2026 (Under Review)</p>
         <h1 class="title mb-4">
           The Geometry Was Free All Along:<br/>

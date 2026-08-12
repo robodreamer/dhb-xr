@@ -100,15 +100,41 @@ dhb_xr/
 
 ## Release Process
 
-### Automated PyPI Publishing
+### Merge-triggered PyPI publishing
 
-1. Update version: `pixi run version --bump patch` or `pixi run version 0.4.0`
-2. Update `CHANGELOG.md`
-3. Commit and push changes
-4. Create and push a matching git tag, for example `git tag v0.4.0 && git push origin v0.4.0`
-5. The tag-triggered release workflow builds and publishes to PyPI
+Releases are prepared in a pull request and start automatically after that PR is
+merged to `main` with a changed `pyproject.toml` version.
 
-### Manual Publishing
+1. Update every version surface with `pixi run version --bump patch` or
+   `pixi run version 0.6.0`.
+2. Move the relevant notes from `[Unreleased]` into a dated heading such as
+   `## [0.6.0] - 2026-08-10`, then run `cp CHANGELOG.md docs/changelog.md`.
+3. Validate locally with `pixi run validate-release`, `pixi run pytest -q`, and
+   `pixi run mkdocs build --strict`.
+4. Open and merge the release PR. The **Prepare Release** workflow repeats those
+   checks, creates the annotated `v<version>` tag, and dispatches the
+   **Publish Package** workflow on that immutable tag.
+5. The publish workflow validates that the tag and metadata agree, builds and
+   checks the wheel and source distribution, publishes them to PyPI, and only
+   then creates the GitHub release.
+
+The explicit dispatch is intentional: a tag pushed with the repository's
+`GITHUB_TOKEN` does not start a second workflow. Both workflows are idempotent;
+an existing version tag is not recreated, and a failed publish can be retried
+by running **Publish Package** on that tag.
+
+### One-time repository configuration
+
+- The repository may keep its default workflow permission read-only. The
+  workflow grants only its tag/dispatch job explicit `contents: write` and
+  `actions: write` access.
+- Create a GitHub environment named `pypi`. Optional required reviewers can add
+  a human approval gate immediately before publication.
+- In the PyPI project settings, configure a trusted publisher with owner
+  `robodreamer`, repository `dhb-xr`, workflow `publish.yml`, and environment
+  `pypi`. No long-lived PyPI token is required by the automated workflow.
+
+### Manual fallback
 
 ```bash
 pixi run setup-pypirc
@@ -119,3 +145,5 @@ pixi run upload-pypi
 ```
 
 PyPI and TestPyPI API tokens are stored in `~/.pypirc` or environment variables.
+The fallback is independent of the trusted-publishing workflow and should only
+be used when GitHub Actions is unavailable.
